@@ -24,6 +24,8 @@ import RandomizerButton12 from './RandomizerButton12.astro';
 import RandomizerButton13 from './RandomizerButton13.astro';
 import RandomizerButton14 from './RandomizerButton14.astro';
 import RandomizerButton15 from './RandomizerButton15.astro';
+import LoopDebugButton from './LoopDebugButton.astro';
+import LiveSpeedButtons from './LiveSpeedButtons.astro';
 import GlitchBurstButton from './GlitchBurstButton.astro';
 
 const {
@@ -123,6 +125,8 @@ function applyLoop() {}
         <RandomizerButton13 />
         <RandomizerButton14 />
         <RandomizerButton15 />
+        <LoopDebugButton />
+        <LiveSpeedButtons />
       </div>
 
       <div class="analysis-card">
@@ -485,6 +489,11 @@ function applyLoop() {}
   let allowHalfDouble = true;
   let isDraggingMarker = false; // Track if dragging waveform markers
   let dragMarker = null; // Track which marker is being dragged ('start' or 'end')
+
+  // Initialize keyboard controller
+  import('../scripts/keyboard-controller.js').then(module => {
+    module.initKeyboardController();
+  });
 
   function normalizeBPM(bpm) {
     if (!allowHalfDouble) return bpm;
