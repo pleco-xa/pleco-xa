@@ -19,6 +19,11 @@ import RandomizerButton7 from './RandomizerButton7.astro';
 import RandomizerButton8 from './RandomizerButton8.astro';
 import RandomizerButton9 from './RandomizerButton9.astro';
 import RandomizerButton10 from './RandomizerButton10.astro';
+import RandomizerButton11 from './RandomizerButton11.astro';
+import RandomizerButton12 from './RandomizerButton12.astro';
+import RandomizerButton13 from './RandomizerButton13.astro';
+import RandomizerButton14 from './RandomizerButton14.astro';
+import RandomizerButton15 from './RandomizerButton15.astro';
 import GlitchBurstButton from './GlitchBurstButton.astro';
 
 const {
@@ -113,6 +118,11 @@ function applyLoop() {}
         <RandomizerButton8 />
         <RandomizerButton9 />
         <RandomizerButton10 />
+        <RandomizerButton11 />
+        <RandomizerButton12 />
+        <RandomizerButton13 />
+        <RandomizerButton14 />
+        <RandomizerButton15 />
       </div>
 
       <div class="analysis-card">
@@ -473,6 +483,8 @@ function applyLoop() {}
   let currentTrackName = '';
   let rawBPM = null;
   let allowHalfDouble = true;
+  let isDraggingMarker = false; // Track if dragging waveform markers
+  let dragMarker = null; // Track which marker is being dragged ('start' or 'end')
 
   function normalizeBPM(bpm) {
     if (!allowHalfDouble) return bpm;

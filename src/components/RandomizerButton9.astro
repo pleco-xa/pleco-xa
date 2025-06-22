@@ -127,6 +127,22 @@ const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoo
         if (op === 'half') timing = tickMs * 0.6; // Rapid fragmentation
         if (i >= 36 && i < 48) timing = tickMs * 0.5; // Violent deconstruction is fastest
         
+        // Anti-destruction protection - prevent getting stuck in violence
+        const minTiming = 60;
+        const maxDestructionSequence = 5;
+        if (timing < minTiming) {
+          const destructionCount = (window.destructionSequenceCount || 0) + 1;
+          window.destructionSequenceCount = destructionCount;
+          
+          if (destructionCount > maxDestructionSequence) {
+            timing = tickMs * 1.2; // Slow down the destruction
+            window.destructionSequenceCount = 0;
+            enqueueToast('💥 Destruction slowed - tactical pause');
+          }
+        } else {
+          window.destructionSequenceCount = 0;
+        }
+        
         await new Promise(r => setTimeout(r, timing));
       }
     };

@@ -1,7 +1,7 @@
 // debug.js 
 export let DEBUG_ENABLED = Boolean(
-  (typeof process !== 'undefined' && process.env && process.env.PLECO_DEBUG) 
-    (typeof window !== 'undefined' && window.PLECO_DEBUG),
+  (typeof process !== 'undefined' && process.env && process.env.PLECO_DEBUG) ||
+    (typeof window !== 'undefined' && window.PLECO_DEBUG)
 )
 
 export function setDebug(enabled) {
