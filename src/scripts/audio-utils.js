@@ -1,7 +1,7 @@
-/**
+/** audio-util.js
  * Audio utility functions for processing and manipulating audio data.
  */
-// @ts-check
+// 
 /**
  * Create a loopable AudioBuffer with custom waveform, multichannel support, and export options.
  *

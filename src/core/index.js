@@ -1,3 +1,4 @@
+//index.js
 export { signatureDemo } from './demoSequences.js';
 export {
   detectLoop,

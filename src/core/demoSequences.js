@@ -1,3 +1,4 @@
+// demoSequences.js
 import {
   halfLoop,
   doubleLoop,

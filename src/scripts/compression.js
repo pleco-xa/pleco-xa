@@ -1,4 +1,4 @@
-// @ts-check
+// 
 /**
  * Audio time compression and manipulation
  * Part of Pleco Xa audio analysis engine

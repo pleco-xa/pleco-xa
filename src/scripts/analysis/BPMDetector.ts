@@ -1,4 +1,4 @@
-/**
+/** BPMDetector.ts
  * BPMDetector - Framework-agnostic BPM detection module
  *
  * Provides pure functions for detecting beats per minute in audio using

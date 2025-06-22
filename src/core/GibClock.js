@@ -1,3 +1,4 @@
+//GibClock.js
 export class GibClock {
   constructor(intervalMs) {
     this.intervalMs = intervalMs;
