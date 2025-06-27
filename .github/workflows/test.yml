@@ -20,22 +20,21 @@ jobs:
         with:
           node-version: 20
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
       - run: npm ci
-      - run: npm test
 
-      - name: Run Go tests with coverage
-        run: go test -coverprofile=coverage.txt ./...
+      # Install Jest as a dev dependency (if not already in package.json)
+      - run: npm install --save-dev jest
 
-      - name: Upload Go coverage report
+      # Run Jest tests with coverage
+      - name: Run Jest with coverage
+        run: npx jest --coverage
+
+      # Upload Jest coverage folder
+      - name: Upload Jest coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: go-coverage
-          path: coverage.txt
+          name: jest-coverage
+          path: coverage/
 
       - run: npm run build
 
