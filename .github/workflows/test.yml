@@ -22,14 +22,19 @@ jobs:
 
       - run: npm ci
 
-      # Install Jest as a dev dependency (if not already in package.json)
+      # Install Jest as a dev dependency if not already present
       - run: npm install --save-dev jest
 
-      # Run Jest tests with coverage
       - name: Run Jest with coverage
         run: npx jest --coverage
 
-      # Upload Jest coverage folder
+      # Upload Jest coverage to Codecov
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      # Optionally, upload the coverage as a downloadable artifact as well
       - name: Upload Jest coverage report
         uses: actions/upload-artifact@v4
         with:
