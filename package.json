@@ -1,8 +1,8 @@
 {
   "name": "pleco-xa",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "type": "module",
-  "description": "Browser-native audio analysis library for intelligent loop detection and BPM tracking",
+  "description": "Browser-native audio analysis library with 300+ functions, enhanced BPM detection, and dual demo experience (Astro + HTML BPM demo)",
   "main": "dist/pleco-xa.js",
   "module": "dist/pleco-xa.js",
   "browser": "dist/pleco-xa.min.js",
@@ -16,7 +16,9 @@
   "files": [
     "dist/",
     "src/",
-    "core/",
+    "astro/",
+    "public/",
+    "BPM-DEMO/",
     "index.js",
     "LICENSE",
     "README.md"
