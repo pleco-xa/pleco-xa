@@ -1,0 +1,86 @@
+---
+// Layout
+import MainLayout from '../components/MainLayout.astro';
+
+// Audio components
+import AudioAnalyzer from '../components/AudioAnalyzer.astro';
+
+const title = 'Pleco-XA: Audio Analysis';
+const description = 'Browser-native audio analysis library for intelligent loop detection and BPM tracking.';
+---
+
+<MainLayout {...{title, description}}>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family:
+        -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(
+        135deg,
+        #0c0c0c 0%,
+        #1a1a2e 50%,
+        #16213e 100%
+      );
+      background-attachment: fixed;
+      min-height: 100vh;
+      color: white;
+      padding: 2rem;
+    }
+
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .main-title {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      background: linear-gradient(45deg, #ff6b6b, #ffd93d, #6bcf7f, #4ecdc4);
+      background-size: 400% 400%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 4s ease-in-out infinite;
+    }
+
+    @keyframes gradientShift {
+      0%,
+      100% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .main-title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+
+  <div class="main-container">
+    <div class="header">
+      <h1 class="main-title">Pleco-XA</h1>
+      <p>Professional Audio Analysis Engine</p>
+      <button onclick="toggleTheme()" class="mt-4 px-3 py-1 rounded bg-gray-700 text-white hover:bg-gray-600">
+        Toggle Theme
+      </button>
+    </div>
+
+    <!-- Use the new AudioAnalyzer component -->
+    <AudioAnalyzer />
+  </div>
+</MainLayout>

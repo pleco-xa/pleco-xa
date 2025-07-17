@@ -1,0 +1,83 @@
+{
+  "name": "pleco-xa",
+  "version": "1.1.1",
+  "type": "module",
+  "description": "Browser-native audio analysis library for intelligent loop detection and BPM tracking",
+  "main": "dist/pleco-xa.js",
+  "module": "dist/pleco-xa.js",
+  "browser": "dist/pleco-xa.min.js",
+  "exports": {
+    ".": {
+      "import": "./dist/pleco-xa.js",
+      "require": "./dist/pleco-xa.js",
+      "browser": "./dist/pleco-xa.min.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "core/",
+    "index.js",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "audio",
+    "analysis",
+    "bpm",
+    "loop",
+    "detection",
+    "web-audio",
+    "music",
+    "timing",
+    "browser",
+    "fft",
+    "spectral",
+    "tempo",
+    "beat-tracking"
+  ],
+  "author": "Cameron Brooks",
+  "license": "MIT",
+  "homepage": "https://github.com/cameronbrooks/pleco-xa",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cameronbrooks/pleco-xa.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cameronbrooks/pleco-xa/issues"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "build:lib": "rollup -c",
+    "build:demo": "astro build",
+    "dev": "astro dev",
+    "dev:demo": "astro dev",
+    "preview": "astro preview",
+    "prepublishOnly": "npm run build",
+    "test": "vitest",
+    "setup": "npm ci"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@astrojs/node": "^9.2.2",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "astro": "5.8.1",
+    "autoprefixer": "^10.4.21",
+    "gsap": "^3.13.0",
+    "jsdom": "^26.1.0",
+    "lenis": "^1.3.3",
+    "modern-normalize": "^3.0.1",
+    "rollup": "^4.28.1",
+    "rollup-plugin-esbuild": "^6.2.1",
+    "sass": "^1.89.0",
+    "terser": "^5.37.0",
+    "vitest": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "browserslist": [
+    "defaults",
+    "not ie 11"
+  ]
+}

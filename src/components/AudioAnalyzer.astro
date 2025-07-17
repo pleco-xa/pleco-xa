@@ -1,0 +1,1559 @@
+---
+/** 
+ * AudioAnalyzer - Audio analysis component with BPM detection and loop finding
+ * Handles audio loading, analysis, and visualization
+ */
+interface Props {
+  title?: string;
+  showControls?: boolean;
+  class?: string;
+}
+import SignatureDemoButton from './SignatureDemoButton.astro';
+import RandomizerButton from './RandomizerButton.astro';
+import RandomizerButton2 from './RandomizerButton2.astro';
+import RandomizerButton3 from './RandomizerButton3.astro';
+import RandomizerButton4 from './RandomizerButton4.astro';
+import RandomizerButton5 from './RandomizerButton5.astro';
+import RandomizerButton6 from './RandomizerButton6.astro';
+import RandomizerButton7 from './RandomizerButton7.astro';
+import RandomizerButton8 from './RandomizerButton8.astro';
+import RandomizerButton9 from './RandomizerButton9.astro';
+import RandomizerButton10 from './RandomizerButton10.astro';
+import RandomizerButton11 from './RandomizerButton11.astro';
+import RandomizerButton12 from './RandomizerButton12.astro';
+import RandomizerButton13 from './RandomizerButton13.astro';
+import RandomizerButton14 from './RandomizerButton14.astro';
+import RandomizerButton15 from './RandomizerButton15.astro';
+import LoopDebugButton from './LoopDebugButton.astro';
+import LiveSpeedButtons from './LiveSpeedButtons.astro';
+import GlitchBurstButton from './GlitchBurstButton.astro';
+
+const {
+  title = 'Audio Analysis',
+  showControls = true,
+  class: className = ''
+} = Astro.props;
+
+let currentAudioBuffer = null;
+let audioContext = null;
+function applyLoop() {}
+
+---
+
+<div class={`pleco-audio-analyzer ${className}`}>
+  <div class="analyzer-header">
+    <h3>{title}</h3>
+  </div>
+
+  <div class="sample-buttons">
+    <button class="sample-btn" data-sample="12-8-Jazzy-Drumset-03.aif">
+      Jazz Drums
+    </button>
+    <button class="sample-btn" data-sample="Bassline For Doppler Song - 11.aif">
+      Bassline
+    </button>
+    <button class="sample-btn" data-sample="Drive Through Beat.aif">
+      Drive Beat
+    </button>
+    <button class="sample-btn" data-sample="ui.wav">UI Loop Test</button>
+    <input type="file" id="audioFileInput" accept="audio/*" style="display: none;" />
+    <button class="sample-btn" id="uploadBtn">📁 Upload Audio</button>
+  </div>
+
+  {showControls && (
+    <div class="playback-controls">
+      <button class="play-btn" id="playBtn">▶️ Play</button>
+      <button class="play-btn" id="stopBtn">⏹️ Stop</button>
+    </div>
+  )}
+
+  <div class="analysis-display">
+    <div class="bpm-display">
+      <div class="bpm-value" id="bpmValue" aria-live="polite" tabindex="0">--</div>
+      <div class="bpm-label">BPM</div>
+
+      <label class="allow-toggle">
+        <input type="checkbox" id="allowHalfDoubleToggle" checked />
+        Allow Half/Double
+      </label>
+
+      <div class="timeline-container">
+        <div class="timeline-circle">
+          <div class="timeline-hand" id="timelineHand"></div>
+          <div class="timeline-center"></div>
+          <div class="timeline-marker"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="waveform-container">
+      <h3 class="waveform-title">Waveform & Loop Detection</h3>
+      <canvas class="waveform-canvas" id="waveformCanvas" width="800" height="200"></canvas>
+      <progress id="analysisProgress" max="1" value="0" style="width:100%;display:none;margin-top:0.5rem;"></progress>
+      <div class="loop-controls">
+        <button class="loop-btn" id="detectLoopBtn">🔍 Detect Loop</button>
+        <button class="loop-btn" id="halfLoopBtn">½ Half Loop</button>
+        <button class="loop-btn" id="doubleLoopBtn">2× Double Loop</button>
+        <button class="loop-btn" id="moveForwardBtn">→ Move Forward</button>
+        <button class="loop-btn" id="reverseLoopBtn">🔄 Reverse Loop</button>
+        <button class="loop-btn" id="resetPlayheadBtn">📏 Reset Playhead</button>
+        <button class="loop-btn" id="resetLoopBtn">♻️ Reset Loop</button>
+        <button class="loop-btn" id="halfSpeedBtn">🐌 Half Speed Free</button>
+        <button class="loop-btn" id="halfSpeedQuantzBtn">⚡ Half Speed Quantz</button>
+        <button class="loop-btn" id="doubleSpeedQuantzBtn">🏃 Double Speed Quantz</button>
+        <button class="loop-btn-small" id="nudgeBtn">👁️ Nudge</button>
+      </div>
+    </div>
+
+    <div class="analysis-cards">
+      <div class="analysis-card">
+        <h4 class="card-title">Track Info</h4>
+        <div class="card-value" id="trackName">No track loaded</div>
+        <p class="card-description" id="trackStatus">Load a sample to begin</p>
+        <RandomizerButton />
+        <RandomizerButton2 />
+        <RandomizerButton3 />
+        <RandomizerButton4 />
+        <RandomizerButton5 />
+        <RandomizerButton6 />
+        <RandomizerButton7 />
+        <RandomizerButton8 />
+        <RandomizerButton9 />
+        <RandomizerButton10 />
+        <RandomizerButton11 />
+        <RandomizerButton12 />
+        <RandomizerButton13 />
+        <RandomizerButton14 />
+        <RandomizerButton15 />
+        <LoopDebugButton />
+        <LiveSpeedButtons />
+      </div>
+
+      <div class="analysis-card">
+        <h4 class="card-title">Loop Status</h4>
+        <div class="card-value" id="loopInfo">Full Track</div>
+        <p class="card-description">Current loop boundaries</p>
+      </div>
+
+      <div class="analysis-card">
+        <h4 class="card-title">Audio Format</h4>
+        <div class="card-value" id="audioFormat">--</div>
+        <p class="card-description">Decoded audio information</p>
+      </div>
+      <SignatureDemoButton
+        audioBuffer={currentAudioBuffer}
+        ctx={audioContext}
+        applyLoop={applyLoop}
+      />
+
+    </div>
+  </div>
+
+
+  <slot />
+</div>
+
+<style>
+  .pleco-audio-analyzer {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: white;
+  }
+
+  .analyzer-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .sample-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .sample-btn {
+    padding: 1rem 2rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 25px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+
+  .sample-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-3px);
+  }
+
+  .playback-controls {
+    margin: 2rem 0;
+    text-align: center;
+  }
+
+  .play-btn {
+    padding: 1rem 2rem;
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    border: none;
+    border-radius: 25px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 0 0.5rem;
+  }
+
+  .analysis-display {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 2fr) 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+
+  .bpm-display {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 1.5rem;
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .bpm-value {
+    font-size: 3rem;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+    margin-bottom: 0.5rem;
+    transition: all 0.1s ease-out;
+    transform-origin: center;
+  }
+
+  .bpm-value.beat-pulse {
+    transform: scale(1.15);
+    color: #ff6b6b;
+    text-shadow: 0 0 40px rgba(255, 107, 107, 0.8);
+  }
+
+  .bpm-label {
+    font-size: 1.2rem;
+    opacity: 0.8;
+  }
+
+  .allow-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+  }
+
+  .timeline-container {
+    position: relative;
+    width: 150px;
+    height: 150px;
+  }
+
+  .timeline-circle {
+    width: 100%;
+    height: 100%;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    position: relative;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05), transparent);
+  }
+
+  .timeline-hand {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 60px;
+    background: linear-gradient(180deg, #ffd700, #ff6b6b);
+    transform-origin: bottom;
+    transform: translate(-50%, -100%) rotate(0deg);
+    transition: transform 0.1s ease;
+    border-radius: 2px;
+  }
+
+  .timeline-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    background: #ffd700;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  }
+
+  .timeline-marker {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    width: 3px;
+    height: 15px;
+    background: #4ecdc4;
+    transform: translateX(-50%);
+    border-radius: 2px;
+  }
+
+  .waveform-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 2rem;
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .waveform-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #ffd700;
+    text-align: center;
+  }
+
+  .waveform-canvas {
+    width: 100%;
+    height: 200px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  #analysisProgress {
+    width: 100%;
+    height: 8px;
+    margin-top: 0.5rem;
+  }
+
+  .loop-controls {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .loop-btn {
+    padding: 0.8rem 1.5rem;
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    border: none;
+    border-radius: 25px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+  }
+
+  .loop-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .loop-btn-small {
+    padding: 0.4rem 0.8rem;
+    background: linear-gradient(45deg, #4ecdc4, #6bcf7f);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+  }
+
+  .loop-btn-small:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .analysis-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .analysis-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 1.5rem;
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #ffd700;
+  }
+
+  .card-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-description {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    line-height: 1.4;
+  }
+
+
+  @media (max-width: 768px) {
+    .analysis-display {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    .bpm-value {
+      font-size: 2.5rem;
+    }
+  }
+</style>
+
+<script client:load>
+  // Set up animation frame for continuous waveform updates
+  let animationFrameId = null;
+  
+  // Dynamic imports for browser context
+  let initAudioProcessor, loadAudioFile, drawWaveform;
+  let applyLoopHelper;
+  let detectBPM;
+  let findLoop, manipulateLoop;
+  let enqueueToast;
+  
+  // Load modules dynamically
+  async function loadModules() {
+    try {
+      console.log('🔄 Loading modules...');
+      
+      const coreModule = await import('/scripts/xa-audio-core.js');
+      initAudioProcessor = coreModule.initAudioProcessor;
+      loadAudioFile = coreModule.loadAudioFile;
+      drawWaveform = coreModule.drawWaveform;
+      console.log('✅ Core module loaded');
+      
+      const applyLoopModule = await import('/scripts/ui/applyLoop.js');
+      applyLoopHelper = applyLoopModule.applyLoop;
+      console.log('✅ ApplyLoop module loaded');
+      
+      const bpmModule = await import('/scripts/xa-bpm-detection.js');
+      detectBPM = bpmModule.detectBPM;
+      console.log('✅ BPM module loaded');
+      
+      const loopModule = await import('/scripts/xa-loop-detection.js');
+      findLoop = loopModule.findLoop;
+      manipulateLoop = loopModule.manipulateLoop;
+      console.log('✅ Loop module loaded');
+      
+      const toastModule = await import('/scripts/ui/toastQueue.js');
+      enqueueToast = toastModule.enqueueToast;
+      console.log('✅ Toast module loaded');
+      
+      console.log('✅ All modules loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading modules:', error);
+      throw error;
+    }
+  }
+
+  // Worker for heavy analysis
+  let analysisWorker = null;
+  
+  // Initialize state
+  let audioProcessor;
+  let originalAudioBuffer = null; // Keep original for easter egg
+  currentAudioBuffer = null;
+  if (typeof window !== 'undefined') {
+    window.currentAudioBuffer ||= null;
+    window.audioContext ||= null;
+  }
+  let isPlaying = false;
+  let currentBeats = []; // Store beat times from BPM detection
+  let currentTrackName = '';
+  let rawBPM = null;
+  let allowHalfDouble = true;
+  let isDraggingMarker = false; // Track if dragging waveform markers
+  let dragMarker = null; // Track which marker is being dragged ('start' or 'end')
+
+  // Initialize keyboard controller
+  import('../scripts/keyboard-controller.js').then(module => {
+    module.initKeyboardController();
+  });
+
+  function normalizeBPM(bpm) {
+    if (!allowHalfDouble) return bpm;
+    if (bpm > 160) return bpm / 2;
+    if (bpm < 80) return bpm * 2;
+    return bpm;
+  }
+
+  
+  // Initialize audio processor when DOM is ready
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      // Load modules first
+      await loadModules();
+      
+      // Initialize the audio processor
+      audioProcessor = initAudioProcessor();
+
+      // Create analysis worker (disabled for now to debug)
+      // analysisWorker = new Worker(new URL('../workers/analysisWorker.js', import.meta.url), { type: 'module' });
+      console.log('⚠️ Analysis worker disabled for debugging');
+      
+      // Set up event listeners
+      setupEventListeners();
+      
+      console.log('✅ Audio analyzer initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize audio analyzer:', error);
+      showError(`Initialization error: ${error.message}`);
+    }
+  });
+  
+  // Set up all event listeners
+  function setupEventListeners() {
+    // Sample buttons
+    document.querySelectorAll('.sample-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.sample) {
+          loadSampleFile(`/audio/${btn.dataset.sample}`, btn.textContent);
+        }
+      });
+    });
+    
+    // Upload button
+    document.getElementById('uploadBtn')?.addEventListener('click', () => {
+      document.getElementById('audioFileInput').click();
+    });
+    
+    // File input
+    document.getElementById('audioFileInput')?.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        try {
+          clearAnalysisDisplay();
+          updateTrackInfo(file.name, 'Loading...');
+          currentTrackName = file.name;
+
+          // Load and analyze the file
+
+          const result = await loadAudioFile(file);
+          currentAudioBuffer = result.audioBuffer;
+          originalAudioBuffer = result.audioBuffer; // Store original
+          window.currentAudioBuffer = currentAudioBuffer;
+          audioContext = result.audioContext;
+          window.currentAudioBuffer = currentAudioBuffer;
+
+          window.audioContext = audioContext;
+          // if (analysisWorker && result.arrayBuffer) {
+          //   analysisWorker.postMessage(result.arrayBuffer);
+          // }
+          console.log('⚠️ Worker analysis disabled for debugging');
+          
+          // Update UI with file info
+          updateTrackInfo(
+            file.name,
+            `${currentAudioBuffer.duration.toFixed(1)}s`
+          );
+          
+          document.getElementById('audioFormat').textContent =
+            `${currentAudioBuffer.sampleRate}Hz / ${currentAudioBuffer.numberOfChannels}ch`;
+          
+          // Fallback BPM detection if worker fails
+          const bpmResult = await detectBPM(currentAudioBuffer);
+          rawBPM = bpmResult.bpm;
+          const normalized = normalizeBPM(rawBPM);
+          window.currentBPM = normalized;
+          document.getElementById('bpmValue').textContent = normalized.toFixed(1);
+
+          // BPM and loop detection handled by worker; show placeholder
+          document.getElementById('bpmValue').textContent = '...';
+          
+          // Draw waveform with loop points
+          drawWaveform(currentAudioBuffer, 'waveformCanvas', { start: 0, end: 1 });
+          
+          console.log('✅ Audio loaded and analyzed');
+        } catch (error) {
+          console.error('❌ Error loading file:', error);
+          showError(`Failed to load ${file.name}: ${error.message}`);
+        }
+      }
+    });
+    
+    // Playback controls
+    document.getElementById('playBtn')?.addEventListener('click', playAudio);
+    document.getElementById('stopBtn')?.addEventListener('click', stopAudio);
+    
+    // Loop controls
+    document.getElementById('detectLoopBtn')?.addEventListener('click', async () => {
+      if (!currentAudioBuffer) {
+        showError('No audio loaded. Please load an audio file first.');
+        return;
+      }
+      
+      try {
+        // Show loading state
+        const detectBtn = document.getElementById('detectLoopBtn');
+        const originalText = detectBtn.textContent;
+        detectBtn.textContent = '⏳ Detecting...';
+        detectBtn.disabled = true;
+        
+        // Force a small delay to ensure UI updates
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Run loop detection
+        const loopResult = await findLoop(currentAudioBuffer, {
+          bpmHint: parseFloat(document.getElementById('bpmValue').textContent) || 120
+        });
+        
+        // Apply loop points
+        audioProcessor.setLoopPoints(loopResult.start, loopResult.end);
+        updateLoopInfo(loopResult);
+        drawWaveform(currentAudioBuffer, 'waveformCanvas', loopResult);
+        
+        // Reset button state
+        detectBtn.textContent = originalText;
+        detectBtn.disabled = false;
+        
+        // Show success message
+        showError('Loop detected successfully!');
+      } catch (error) {
+        document.getElementById('detectLoopBtn').textContent = '🔍 Detect Loop';
+        document.getElementById('detectLoopBtn').disabled = false;
+        showError(`Loop detection failed: ${error.message}`);
+      }
+    });
+    
+    // Other loop manipulation buttons
+    document.getElementById('halfLoopBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      const newLoop = manipulateLoop('half', audioProcessor, currentAudioBuffer);
+      
+      // Disable nudge when loop boundaries change
+      nudgeEnabled = false;
+      currentNudgeLoop = null;
+      
+      updateLoopInfo(newLoop);
+      drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
+    });
+    
+    document.getElementById('doubleLoopBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      const newLoop = manipulateLoop('double', audioProcessor, currentAudioBuffer);
+      
+      // Disable nudge when loop boundaries change
+      nudgeEnabled = false;
+      currentNudgeLoop = null;
+      
+      updateLoopInfo(newLoop);
+      drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
+    });
+    
+    document.getElementById('moveForwardBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      const newLoop = manipulateLoop('forward', audioProcessor, currentAudioBuffer);
+      
+      // Disable nudge when loop position changes
+      nudgeEnabled = false;
+      currentNudgeLoop = null;
+      
+      updateLoopInfo(newLoop);
+      drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
+    });
+    
+    document.getElementById('resetLoopBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      const newLoop = manipulateLoop('reset', audioProcessor, currentAudioBuffer);
+      
+      // Disable nudge when loop boundaries change
+      nudgeEnabled = false;
+      currentNudgeLoop = null;
+      
+      updateLoopInfo(newLoop);
+      drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
+    });
+    
+    document.getElementById('halfSpeedBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      enqueueToast('Applying half speed...');
+      
+      try {
+        const currentLoop = audioProcessor.getLoopPoints();
+        const newBuffer = halfSpeedLoop(currentAudioBuffer, currentLoop);
+        currentAudioBuffer = newBuffer;
+        window.currentAudioBuffer = newBuffer;
+        
+        // Loop stays the same normalized position but now represents stretched audio
+        updateLoopInfo(currentLoop);
+        drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+        enqueueToast('✅ Half speed applied');
+      } catch (error) {
+        console.error('Half speed error:', error);
+        enqueueToast('❌ Half speed failed');
+      }
+    });
+    
+    document.getElementById('halfSpeedQuantzBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      enqueueToast('Applying half speed quantz...');
+      
+      try {
+        const currentLoop = audioProcessor.getLoopPoints();
+        const newBuffer = halfSpeedQuantzLoop(currentAudioBuffer, currentLoop);
+        currentAudioBuffer = newBuffer;
+        window.currentAudioBuffer = newBuffer;
+        
+        // Enable nudge for this specific loop
+        nudgeEnabled = true;
+        currentNudgeLoop = { start: currentLoop.start, end: currentLoop.end };
+        nudgeState = 'first';
+        nudgeReverseState = false; // Half speed starts non-reversed
+        
+        updateLoopInfo(currentLoop);
+        drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+        enqueueToast('✅ Half speed quantz applied (nudge enabled)');
+      } catch (error) {
+        console.error('Half speed quantz error:', error);
+        enqueueToast('❌ Half speed quantz failed');
+      }
+    });
+    
+    document.getElementById('doubleSpeedQuantzBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      enqueueToast('Applying double speed quantz...');
+      
+      try {
+        const currentLoop = audioProcessor.getLoopPoints();
+        const newBuffer = doubleSpeedQuantzLoop(currentAudioBuffer, currentLoop);
+        currentAudioBuffer = newBuffer;
+        window.currentAudioBuffer = newBuffer;
+        
+        // Disable nudge for double speed (no hidden half to reveal)
+        nudgeEnabled = false;
+        currentNudgeLoop = null;
+        
+        updateLoopInfo(currentLoop);
+        drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+        enqueueToast('✅ Double speed quantz applied');
+      } catch (error) {
+        console.error('Double speed quantz error:', error);
+        enqueueToast('❌ Double speed quantz failed');
+      }
+    });
+    
+    document.getElementById('resetPlayheadBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      
+      // Stop playback if playing
+      if (isPlaying) {
+        audioProcessor.stop();
+        isPlaying = false;
+        document.getElementById('playBtn').textContent = '▶️ Play';
+        stopWaveformAnimation();
+      }
+      
+      // Reset playhead to start of loop
+      const loopPoints = audioProcessor.getLoopPoints();
+      drawWaveform(currentAudioBuffer, 'waveformCanvas', loopPoints, {
+        isPlaying: false,
+        position: loopPoints.start
+      });
+    });
+    
+    // Reverse button (simplified - removed easter egg)
+    document.getElementById('reverseLoopBtn')?.addEventListener('click', async () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+
+      try {
+        // Get current loop points
+        const loopPoints = audioProcessor.getLoopPoints();
+
+        // Stop playback if playing
+        const wasPlaying = isPlaying;
+        if (isPlaying) {
+          audioProcessor.stop();
+          isPlaying = false;
+          document.getElementById('playBtn').textContent = '▶️ Play';
+          stopWaveformAnimation();
+        }
+        
+        // Normal reverse
+        const startSample = Math.floor(loopPoints.start * currentAudioBuffer.length);
+        const endSample = Math.floor(loopPoints.end * currentAudioBuffer.length);
+        currentAudioBuffer = reverseBufferSection(currentAudioBuffer, startSample, endSample);
+        
+        // Update nudge reverse state if nudge is enabled for this loop
+        if (nudgeEnabled && currentNudgeLoop && 
+            Math.abs(loopPoints.start - currentNudgeLoop.start) < 0.001 &&
+            Math.abs(loopPoints.end - currentNudgeLoop.end) < 0.001) {
+          nudgeReverseState = !nudgeReverseState; // Toggle reverse state
+        }
+        
+        window.currentAudioBuffer = currentAudioBuffer;
+
+        // Update the waveform display
+        drawWaveform(currentAudioBuffer, 'waveformCanvas', loopPoints);
+
+        // Apply changes to playback/UI
+        applyLoop(currentAudioBuffer, { startSample, endSample }, 'reverse', undefined);
+
+        // Resume playback if it was playing
+        if (wasPlaying) {
+          await audioProcessor.play(currentAudioBuffer);
+          isPlaying = true;
+          document.getElementById('playBtn').textContent = '⏸️ Pause';
+          startTimelineAnimation();
+          startWaveformAnimation();
+        }
+
+        showError('Loop section reversed successfully');
+      } catch (error) {
+        console.error('❌ Error reversing loop:', error);
+        showError(`Failed to reverse loop: ${error.message}`);
+      }
+    });
+    
+    // Nudge button (toggle between first and second half)
+    let nudgeState = 'first'; // Track which half we're showing
+    let nudgeEnabled = false; // Only enable after half-speed processing
+    let currentNudgeLoop = null; // Track which loop nudge applies to
+    let nudgeReverseState = false; // Track if the half-speed content is currently reversed
+    
+    document.getElementById('nudgeBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor || !originalAudioBuffer) return;
+      
+      const currentLoop = audioProcessor.getLoopPoints();
+      
+      // Check if nudge is enabled and we're still in the same loop
+      if (!nudgeEnabled || !currentNudgeLoop || 
+          Math.abs(currentLoop.start - currentNudgeLoop.start) > 0.001 ||
+          Math.abs(currentLoop.end - currentNudgeLoop.end) > 0.001) {
+        enqueueToast('❌ Nudge only works on half-speed processed loops');
+        return;
+      }
+      
+      try {
+        if (nudgeState === 'first') {
+          // Currently showing first half, switch to second half
+          currentAudioBuffer = revealHiddenHalf(currentAudioBuffer, originalAudioBuffer, currentNudgeLoop, nudgeReverseState);
+          nudgeState = 'second';
+          enqueueToast('👁️ Nudged to second half');
+        } else {
+          // Currently showing second half, switch back to first half  
+          currentAudioBuffer = revealFirstHalf(currentAudioBuffer, originalAudioBuffer, currentNudgeLoop, nudgeReverseState);
+          nudgeState = 'first';
+          enqueueToast('👁️ Nudged to first half');
+        }
+        
+        window.currentAudioBuffer = currentAudioBuffer;
+        updateLoopInfo(currentLoop);
+        drawWaveform(currentAudioBuffer, 'waveformCanvas', currentLoop);
+      } catch (error) {
+        console.error('Nudge error:', error);
+        enqueueToast('❌ Nudge failed');
+      }
+    });
+
+    // ===== Waveform marker drag =====
+    const canvas = document.getElementById('waveformCanvas');
+    if (canvas) {
+      canvas.addEventListener('mousedown', (e) => {
+        if (!currentAudioBuffer || !audioProcessor) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const { start, end } = audioProcessor.getLoopPoints();
+        const startX = start * canvas.width;
+        const endX = end * canvas.width;
+
+        if (Math.abs(x - startX) < 10) {
+          isDraggingMarker = true;
+          dragMarker = 'start';
+        } else if (Math.abs(x - endX) < 10) {
+          isDraggingMarker = true;
+          dragMarker = 'end';
+        }
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (!isDraggingMarker || !currentAudioBuffer || !audioProcessor) return;
+
+        const rect = canvas.getBoundingClientRect();
+        let pos = (e.clientX - rect.left) / canvas.width;
+        pos = Math.min(1, Math.max(0, pos));
+
+        let { start, end } = audioProcessor.getLoopPoints();
+        if (dragMarker === 'start') {
+          start = Math.min(pos, end - 0.01);
+        } else if (dragMarker === 'end') {
+          end = Math.max(pos, start + 0.01);
+        }
+
+        audioProcessor.setLoopPoints(start, end);
+        updateLoopInfo({ start, end });
+
+        drawWaveform(currentAudioBuffer, 'waveformCanvas', { start, end });
+      });
+
+      canvas.addEventListener('mouseup', () => {
+        isDraggingMarker = false;
+        dragMarker = null;
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        isDraggingMarker = false;
+        dragMarker = null;
+      });
+    }
+
+    document.getElementById('allowHalfDoubleToggle')?.addEventListener('change', (e) => {
+      allowHalfDouble = e.target.checked;
+      if (rawBPM !== null) {
+        const bpm = normalizeBPM(rawBPM);
+        window.currentBPM = bpm;
+        document.getElementById('bpmValue').textContent = bpm.toFixed(1);
+      }
+    });
+  }
+  
+  // Load a sample audio file
+  async function loadSampleFile(url, name) {
+    try {
+      console.log(`🎵 Loading sample: ${name} from ${url}`);
+      
+      // Disable all sample buttons during loading
+      document.querySelectorAll('.sample-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+      });
+
+      clearAnalysisDisplay();
+      updateTrackInfo(name, 'Loading...');
+      document.getElementById('bpmValue').textContent = '...';
+      
+      // First load the audio file
+      console.log('📁 Loading audio file...');
+      const result = await loadAudioFile(url);
+      currentAudioBuffer = result.audioBuffer;
+      originalAudioBuffer = result.audioBuffer; // Store original
+      window.currentAudioBuffer = currentAudioBuffer;
+      audioContext = result.audioContext;
+      window.currentAudioBuffer = currentAudioBuffer;
+
+      window.audioContext = audioContext;
+      currentTrackName = name;
+      // if (analysisWorker && result.arrayBuffer) {
+      //   analysisWorker.postMessage(result.arrayBuffer);
+      // }
+      console.log('⚠️ Worker analysis disabled for debugging');
+      
+      // Update UI with file info immediately
+      updateTrackInfo(
+        name,
+        `${currentAudioBuffer.duration.toFixed(1)}s`
+      );
+      
+      document.getElementById('audioFormat').textContent =
+        `${currentAudioBuffer.sampleRate}Hz`;
+      
+      // Draw waveform right away
+      drawWaveform(currentAudioBuffer, 'waveformCanvas', { start: 0, end: 1 });
+      
+      // Re-enable buttons now that audio is loaded
+      document.querySelectorAll('.sample-btn').forEach(btn => {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      });
+      
+      // Worker will handle BPM and loop detection
+      document.getElementById('bpmValue').textContent = '...';
+      
+      console.log('✅ Audio loaded');
+    } catch (error) {
+      console.error('❌ Error loading audio:', error);
+      showError(`Load error: ${error.message}`);
+      
+      // Re-enable buttons on error
+      document.querySelectorAll('.sample-btn').forEach(btn => {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      });
+    }
+  }
+  
+  // Play audio
+  async function playAudio() {
+    if (!currentAudioBuffer || !audioProcessor) {
+      showError('No audio loaded');
+      return;
+    }
+    
+    try {
+      if (isPlaying) {
+        await audioProcessor.stop();
+        isPlaying = false;
+        document.getElementById('playBtn').textContent = '▶️ Play';
+        stopWaveformAnimation();
+        return;
+      }
+      
+      await audioProcessor.play(currentAudioBuffer);
+      isPlaying = true;
+      document.getElementById('playBtn').textContent = '⏸️ Pause';
+      
+      // Start animations
+      startTimelineAnimation();
+      startWaveformAnimation();
+    } catch (error) {
+      showError(`Playback error: ${error.message}`);
+    }
+  }
+  
+  // Animate waveform with playhead and perform live BPM detection
+  function startWaveformAnimation() {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+    
+    let lastBeatTime = 0;
+    let lastBPMUpdateTime = 0;
+    let currentBeatIndex = 0;
+    const beatInterval = window.currentBPM ? (60 / window.currentBPM) : 0.5; // Default to 120 BPM if not set
+    const bpmUpdateInterval = 2.0; // Update BPM every 2 seconds
+    
+    function animate() {
+      if (!isPlaying || !currentAudioBuffer || !audioProcessor) {
+        console.log('Animation stopped:', { isPlaying, hasBuffer: !!currentAudioBuffer, hasProcessor: !!audioProcessor });
+        return;
+      }
+      
+      // Get current playback position
+      const position = audioProcessor.getCurrentPosition();
+      const loopPoints = audioProcessor.getLoopPoints();
+      const currentTimeInSeconds = position * currentAudioBuffer.duration;
+      
+      console.log('Animation frame:', { position, isPlaying, currentTimeInSeconds });
+      
+      // Draw waveform with playhead
+      drawWaveform(currentAudioBuffer, 'waveformCanvas', loopPoints, {
+        isPlaying: true,
+        position: position
+      });
+      
+      // Handle live BPM feedback with beat pulses and periodic updates
+      if (audioContext) {
+        const currentTime = audioContext.currentTime;
+        
+        // Pulse on beat using stored beat times if available
+        if (currentBeats.length > 0) {
+          // Determine loop boundaries in seconds
+          const loopStartTime = loopPoints.start * currentAudioBuffer.duration;
+          const loopEndTime = loopPoints.end * currentAudioBuffer.duration;
+          const isLooping = loopStartTime < loopEndTime && loopEndTime <= currentAudioBuffer.duration;
+          
+          // Find current beat based on playback position
+          if (isLooping) {
+            // Adjust for looping: map current time to within loop bounds for beat checking
+            if (currentTimeInSeconds >= loopStartTime && currentTimeInSeconds <= loopEndTime) {
+              // Find beats within loop range
+              if (currentBeatIndex >= currentBeats.length || currentBeats[currentBeatIndex] > loopEndTime) {
+                currentBeatIndex = currentBeats.findIndex(t => t >= loopStartTime);
+              }
+            } else if (currentTimeInSeconds > loopEndTime) {
+              // Reset to start of loop if past end
+              currentBeatIndex = currentBeats.findIndex(t => t >= loopStartTime);
+            }
+          }
+          
+          while (currentBeatIndex < currentBeats.length) {
+            const beatTime = currentBeats[currentBeatIndex];
+            if (isLooping && (beatTime < loopStartTime || beatTime > loopEndTime)) {
+              currentBeatIndex++;
+              continue; // Skip beats outside loop range
+            }
+            if (currentTimeInSeconds >= beatTime - 0.05 && currentTimeInSeconds <= beatTime + 0.05) {
+              const bpmElement = document.getElementById('bpmValue');
+              if (bpmElement) {
+                bpmElement.classList.add('beat-pulse');
+                setTimeout(() => bpmElement.classList.remove('beat-pulse'), 100);
+              }
+              currentBeatIndex++;
+              break;
+            } else if (currentTimeInSeconds < beatTime - 0.05) {
+              break; // Wait for next frame
+            }
+            currentBeatIndex++;
+          }
+          
+          // Reset index if past relevant beats, considering loop
+          if (currentBeatIndex >= currentBeats.length || (isLooping && currentBeats[currentBeatIndex] > loopEndTime)) {
+            currentBeatIndex = currentBeats.findIndex(t => t >= loopStartTime);
+            if (currentBeatIndex === -1) {
+              currentBeatIndex = 0;
+            }
+          }
+        } else if (window.currentBPM && currentTime - lastBeatTime >= beatInterval) {
+          // Fallback to interval-based pulsing if no beat data
+          const bpmElement = document.getElementById('bpmValue');
+          if (bpmElement) {
+            bpmElement.classList.add('beat-pulse');
+            setTimeout(() => bpmElement.classList.remove('beat-pulse'), 100);
+          }
+          lastBeatTime = currentTime;
+        }
+        
+        // Periodically update BPM with windowed analysis
+        if (currentTime - lastBPMUpdateTime >= bpmUpdateInterval) {
+          // Calculate current sample position
+          const currentSample = Math.floor(position * currentAudioBuffer.length);
+          // Perform windowed BPM detection (use a 4-second window)
+          detectBPM(currentAudioBuffer, { windowStart: currentSample, windowDuration: 4.0 }).then(result => {
+            rawBPM = result.bpm;
+            const bpm = normalizeBPM(rawBPM);
+            window.currentBPM = bpm;
+            document.getElementById('bpmValue').textContent = bpm.toFixed(1);
+            console.log('✅ Live BPM updated:', bpm);
+          }).catch(error => {
+            console.error('❌ Live BPM update error:', error);
+          });
+          lastBPMUpdateTime = currentTime;
+        }
+      }
+      
+      animationFrameId = requestAnimationFrame(animate);
+    }
+    
+    animationFrameId = requestAnimationFrame(animate);
+  }
+  
+  // Stop waveform animation
+  function stopWaveformAnimation() {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    
+    // Draw final frame without playhead
+    if (currentAudioBuffer && audioProcessor) {
+      drawWaveform(currentAudioBuffer, 'waveformCanvas', audioProcessor.getLoopPoints());
+    }
+  }
+  
+  // Stop audio
+  function stopAudio() {
+    if (audioProcessor) {
+      audioProcessor.stop();
+      isPlaying = false;
+      document.getElementById('playBtn').textContent = '▶️ Play';
+      stopWaveformAnimation();
+    }
+  }
+  
+  // Update track info in UI
+  function updateTrackInfo(name, status) {
+    document.getElementById('trackName').textContent = name;
+    document.getElementById('trackStatus').textContent = status;
+  }
+  
+  // Update loop info in UI
+  function updateLoopInfo(loopData) {
+    if (!currentAudioBuffer || !loopData) return;
+
+    const startTime = loopData.start * currentAudioBuffer.duration;
+    const endTime = loopData.end * currentAudioBuffer.duration;
+    const duration = endTime - startTime;
+
+    const reverseBtn = document.getElementById('reverseLoopBtn');
+
+    let loopText;
+    if (loopData.start === 0 && loopData.end === 1) {
+      loopText = 'Full Track';
+      if (reverseBtn) reverseBtn.disabled = true;
+    } else {
+      loopText = `${duration.toFixed(2)}s (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
+      if (reverseBtn) reverseBtn.disabled = false;
+    }
+
+    document.getElementById('loopInfo').textContent = loopText;
+  }
+
+  // Clear BPM, waveform canvas and loop markers
+  function clearAnalysisDisplay() {
+    const bpmEl = document.getElementById('bpmValue');
+    if (bpmEl) bpmEl.textContent = '--';
+
+    const canvas = document.getElementById('waveformCanvas');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    document.getElementById('loopInfo').textContent = 'Full Track';
+    audioProcessor?.setLoopPoints(0, 1);
+  }
+  
+  // Reveal hidden half with half-speed processing applied
+  function revealHiddenHalf(currentBuffer, originalBuffer, loopData, shouldReverse = false) {
+    const startSample = Math.floor(loopData.start * currentBuffer.length);
+    const endSample = Math.floor(loopData.end * currentBuffer.length);
+    const loopLength = endSample - startSample;
+    
+    // Create new buffer
+    const newBuffer = audioContext.createBuffer(
+      currentBuffer.numberOfChannels,
+      currentBuffer.length,
+      currentBuffer.sampleRate
+    );
+    
+    // Copy all current buffer data
+    for (let channel = 0; channel < currentBuffer.numberOfChannels; channel++) {
+      const currentData = currentBuffer.getChannelData(channel);
+      const originalData = originalBuffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+      
+      // Copy everything from current buffer
+      for (let i = 0; i < currentBuffer.length; i++) {
+        outputData[i] = currentData[i];
+      }
+      
+      // Replace loop section with "hidden half" from original, half-speed processed AND reversed
+      for (let i = 0; i < loopLength; i++) {
+        // Map to the "second half" of the original loop with half-speed stretch
+        const halfSpeedPos = i * 0.5; // Half speed mapping
+        const originalHalfOffset = loopLength / 2; // Start from second half of original
+        // Use the stored nudge loop position to read from correct part of original
+        const nudgeStartSample = Math.floor(loopData.start * originalBuffer.length);
+        const srcIndex = nudgeStartSample + originalHalfOffset + halfSpeedPos;
+        
+        const srcIndexFloor = Math.floor(srcIndex);
+        const nudgeEndSample = Math.floor(loopData.end * originalBuffer.length);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, nudgeEndSample - 1);
+        const fraction = srcIndex - srcIndexFloor;
+        
+        // Linear interpolation from the second half of original, half-speed processed
+        if (srcIndexFloor < nudgeEndSample && srcIndexFloor >= nudgeStartSample + originalHalfOffset) {
+          const sample1 = originalData[srcIndexFloor] || 0;
+          const sample2 = originalData[srcIndexCeil] || 0;
+          const interpolatedSample = sample1 + (sample2 - sample1) * fraction;
+          
+          // Apply reverse only if shouldReverse is true
+          if (shouldReverse) {
+            const reversedIndex = startSample + (loopLength - 1 - i);
+            outputData[reversedIndex] = interpolatedSample;
+          } else {
+            outputData[startSample + i] = interpolatedSample;
+          }
+        }
+      }
+    }
+    
+    return newBuffer;
+  }
+
+  // Reveal first half with half-speed processing applied
+  function revealFirstHalf(currentBuffer, originalBuffer, loopData, shouldReverse = false) {
+    const startSample = Math.floor(loopData.start * currentBuffer.length);
+    const endSample = Math.floor(loopData.end * currentBuffer.length);
+    const loopLength = endSample - startSample;
+    
+    // Create new buffer
+    const newBuffer = audioContext.createBuffer(
+      currentBuffer.numberOfChannels,
+      currentBuffer.length,
+      currentBuffer.sampleRate
+    );
+    
+    // Copy all current buffer data
+    for (let channel = 0; channel < currentBuffer.numberOfChannels; channel++) {
+      const currentData = currentBuffer.getChannelData(channel);
+      const originalData = originalBuffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+      
+      // Copy everything from current buffer
+      for (let i = 0; i < currentBuffer.length; i++) {
+        outputData[i] = currentData[i];
+      }
+      
+      // Replace loop section with "first half" from original, half-speed processed AND reversed
+      for (let i = 0; i < loopLength; i++) {
+        // Map to the "first half" of the original loop with half-speed stretch
+        const halfSpeedPos = i * 0.5; // Half speed mapping
+        // Use the stored nudge loop position to read from correct part of original
+        const nudgeStartSample = Math.floor(loopData.start * originalBuffer.length);
+        const srcIndex = nudgeStartSample + halfSpeedPos; // Start from beginning of original
+        
+        const srcIndexFloor = Math.floor(srcIndex);
+        const nudgeEndSample = Math.floor(loopData.end * originalBuffer.length);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, nudgeStartSample + (loopLength / 2) - 1);
+        const fraction = srcIndex - srcIndexFloor;
+        
+        // Linear interpolation from the first half of original, half-speed processed
+        if (srcIndexFloor < nudgeStartSample + (loopLength / 2)) {
+          const sample1 = originalData[srcIndexFloor] || 0;
+          const sample2 = originalData[srcIndexCeil] || 0;
+          const interpolatedSample = sample1 + (sample2 - sample1) * fraction;
+          
+          // Apply reverse only if shouldReverse is true
+          if (shouldReverse) {
+            const reversedIndex = startSample + (loopLength - 1 - i);
+            outputData[reversedIndex] = interpolatedSample;
+          } else {
+            outputData[startSample + i] = interpolatedSample;
+          }
+        }
+      }
+    }
+    
+    return newBuffer;
+  }
+
+  // Half speed quantz (time stretch with masking to preserve track length)
+  function halfSpeedQuantzLoop(audioBuffer, loopData) {
+    const startSample = Math.floor(loopData.start * audioBuffer.length);
+    const endSample = Math.floor(loopData.end * audioBuffer.length);
+    const loopLength = endSample - startSample;
+    
+    // Create new buffer with same length (no track length change)
+    const newBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      audioBuffer.length,
+      audioBuffer.sampleRate
+    );
+    
+    // Copy data to new buffer with masked time stretching
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const inputData = audioBuffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+      
+      // Copy data before the loop unchanged
+      for (let i = 0; i < startSample; i++) {
+        outputData[i] = inputData[i];
+      }
+      
+      // Apply half speed stretch within loop boundaries (mask/clip effect)
+      for (let i = 0; i < loopLength; i++) {
+        // Map output position to input position with 2x stretch (half speed)
+        const stretchedInputPos = i * 0.5; // Half speed = half position in source
+        const srcIndex = startSample + stretchedInputPos;
+        const srcIndexFloor = Math.floor(srcIndex);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
+        const fraction = srcIndex - srcIndexFloor;
+        
+        // Linear interpolation - only from the FIRST HALF of loop content
+        if (srcIndexFloor < endSample) {
+          const sample1 = inputData[srcIndexFloor] || 0;
+          const sample2 = inputData[srcIndexCeil] || 0;
+          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
+        } else {
+          outputData[startSample + i] = 0; // Silence if beyond source material
+        }
+      }
+      
+      // Copy data after the loop unchanged
+      for (let i = endSample; i < audioBuffer.length; i++) {
+        outputData[i] = inputData[i];
+      }
+    }
+    
+    return newBuffer;
+  }
+
+  // Half speed (time stretch) a loop section
+  function halfSpeedLoop(audioBuffer, loopData) {
+    const startSample = Math.floor(loopData.start * audioBuffer.length);
+    const endSample = Math.floor(loopData.end * audioBuffer.length);
+    const loopLength = endSample - startSample;
+    const stretchedLength = loopLength * 2; // Double the length for half speed
+    
+    // Create new buffer with extra space for stretched audio
+    const newLength = audioBuffer.length + stretchedLength - loopLength;
+    const newBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      newLength,
+      audioBuffer.sampleRate
+    );
+    
+    // Copy data to new buffer with time stretching
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const inputData = audioBuffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+      
+      // Copy data before the loop
+      for (let i = 0; i < startSample; i++) {
+        outputData[i] = inputData[i];
+      }
+      
+      // Stretch the loop section (simple linear interpolation)
+      for (let i = 0; i < stretchedLength; i++) {
+        const srcIndex = startSample + (i * loopLength) / stretchedLength;
+        const srcIndexFloor = Math.floor(srcIndex);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
+        const fraction = srcIndex - srcIndexFloor;
+        
+        // Linear interpolation
+        const sample1 = inputData[srcIndexFloor] || 0;
+        const sample2 = inputData[srcIndexCeil] || 0;
+        outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
+      }
+      
+      // Copy data after the loop
+      const outputOffset = startSample + stretchedLength;
+      for (let i = endSample; i < audioBuffer.length; i++) {
+        const outputIndex = outputOffset + (i - endSample);
+        if (outputIndex < newLength) {
+          outputData[outputIndex] = inputData[i];
+        }
+      }
+    }
+    
+    return newBuffer;
+  }
+
+  // Double speed quantz (compress 2x content into same loop window)
+  function doubleSpeedQuantzLoop(audioBuffer, loopData) {
+    const startSample = Math.floor(loopData.start * audioBuffer.length);
+    const endSample = Math.floor(loopData.end * audioBuffer.length);
+    const loopLength = endSample - startSample;
+    
+    // Create new buffer with same length (no track length change)
+    const newBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      audioBuffer.length,
+      audioBuffer.sampleRate
+    );
+    
+    // Copy data to new buffer with double speed compression
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const inputData = audioBuffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+      
+      // Copy data before the loop unchanged
+      for (let i = 0; i < startSample; i++) {
+        outputData[i] = inputData[i];
+      }
+      
+      // Compress double content into loop boundaries (double speed effect)
+      for (let i = 0; i < loopLength; i++) {
+        // Map output position to input position with 2x compression (double speed)
+        const compressedInputPos = i * 2.0; // Double speed = double position in source
+        const srcIndex = startSample + compressedInputPos;
+        const srcIndexFloor = Math.floor(srcIndex);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, audioBuffer.length - 1);
+        const fraction = srcIndex - srcIndexFloor;
+        
+        // Linear interpolation - reads 2x the content in same time window
+        if (srcIndexFloor < audioBuffer.length) {
+          const sample1 = inputData[srcIndexFloor] || 0;
+          const sample2 = inputData[srcIndexCeil] || 0;
+          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
+        } else {
+          outputData[startSample + i] = 0; // Silence if beyond source material
+        }
+      }
+      
+      // Copy data after the loop unchanged
+      for (let i = endSample; i < audioBuffer.length; i++) {
+        outputData[i] = inputData[i];
+      }
+    }
+    
+    return newBuffer;
+  }
+
+  // Reverse a section of an audio buffer
+  function reverseBufferSection(audioBuffer, startSample, endSample) {
+    // Create a new buffer with the same properties
+    const newBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      audioBuffer.length,
+      audioBuffer.sampleRate
+    );
+
+    // Copy all channels
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const originalData = audioBuffer.getChannelData(channel);
+      const newData = newBuffer.getChannelData(channel);
+      
+      // Copy the entire buffer first
+      newData.set(originalData);
+      
+      // Reverse just the loop section
+      const loopLength = endSample - startSample;
+      for (let i = 0; i < loopLength; i++) {
+        const originalIndex = startSample + i;
+        const reversedIndex = startSample + (loopLength - 1 - i);
+        newData[originalIndex] = originalData[reversedIndex];
+      }
+    }
+    
+    return newBuffer;
+  }
+
+  // Show error message
+  function showError(message) {
+    enqueueToast(message, 5000);
+  }
+
+  function showStatus(message) {
+    enqueueToast(message, 2000);
+  }
+
+  // Timeline animation
+  function startTimelineAnimation() {
+    if (!isPlaying || !audioProcessor) return;
+    
+    const timelineHand = document.getElementById('timelineHand');
+    const startTime = Date.now();
+    const loopDuration = audioProcessor.getLoopDuration();
+    
+    function animateTimeline() {
+      if (!isPlaying) return;
+      
+      const elapsed = (Date.now() - startTime) / 1000;
+      const progress = (elapsed % loopDuration) / loopDuration;
+      const rotation = progress * 360;
+      
+      timelineHand.style.transform = `translate(-50%, -100%) rotate(${rotation}deg)`;
+      
+      requestAnimationFrame(animateTimeline);
+    }
+    
+    requestAnimationFrame(animateTimeline);
+  }
+
+  // Wrapper using shared helper
+  function applyLoop(buf, loop, op, subOps) {
+    applyLoopHelper(buf, loop, op, subOps, {
+      audioProcessor,
+      drawWaveform,
+      updateLoopInfo,
+      updateTrackInfo,
+      currentTrackName: currentTrackName || '',
+      setCurrentBuffer: (b) => {
+        currentAudioBuffer = b
+        window.currentAudioBuffer = b
+      },
+      restart: isPlaying,
+      startTimelineAnimation,
+      startWaveformAnimation,
+    })
+
+  }
+  window.applyLoop = applyLoop;
+</script>

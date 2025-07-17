@@ -1,0 +1,36 @@
+---
+interface Props {
+  audioBufferVar?: string
+  applyLoopVar?: string
+}
+const { audioBufferVar = 'currentAudioBuffer', applyLoopVar = 'applyLoop' } = Astro.props
+---
+<button id="glitchToggleBtn">Start Glitch</button>
+
+<script>
+  import { startBeatGlitch } from '../core/index.js'
+  let stop = null
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('glitchToggleBtn')
+    btn?.addEventListener('click', () => {
+      if (!stop) {
+        const buffer = window[audioBufferVar]
+        const applyLoop = window[applyLoopVar]
+        if (!buffer || typeof applyLoop !== 'function') return
+        stop = startBeatGlitch(buffer, {
+          maxOpsPerBar: 1,
+          onUpdate: res => applyLoop(res.buffer, res.loop, res.op)
+        })
+        btn.textContent = 'Stop Glitch'
+      } else {
+        stop()
+        stop = null
+        btn.textContent = 'Start Glitch'
+      }
+    })
+  })
+</script>
+
+<style>
+#glitchToggleBtn { margin-top: .5rem; padding: .4rem .8rem; }
+</style>

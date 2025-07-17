@@ -1,0 +1,39 @@
+---
+import { glitchBurst } from '../core/index.js';
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const {
+  audioBufferVar = 'currentAudioBuffer',
+  ctxVar = 'audioContext',
+  applyLoopVar = 'applyLoop'
+} = Astro.props;
+
+function runBurst() {
+  const buffer = window[audioBufferVar];
+  const ctx = window[ctxVar];
+  const applyLoop = window[applyLoopVar];
+  if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+  glitchBurst(buffer, { ctx, durationMs: 8000, onUpdate: applyLoop });
+}
+---
+<button class="glitch-burst" id="glitchBurstBtn">
+  ⚡ Glitch Burst (8 s)
+</button>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('glitchBurstBtn');
+    btn?.addEventListener('click', runBurst);
+  });
+</script>
+
+<style>
+.glitch-burst {
+  margin-top: .5rem;
+  padding: .4rem .8rem;
+  background: var(--accent);
+}
+</style>

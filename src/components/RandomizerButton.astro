@@ -1,0 +1,48 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  🎲 Smart Random
+</button>
+
+<script>
+  import { randomSequence } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      const seq = randomSequence(buffer, {
+        minMs: 10,
+        maxMs: buffer.duration * 1000,
+        steps: 41
+      });
+      enqueueToast(seq.map(fn => fn.op || fn.action).join(' -> '));
+      let buf = buffer;
+      for (const step of seq) {
+        const { buffer: newBuf, loop } = step();
+        buf = newBuf;
+        applyLoop(buf, loop, step.op || step.action, undefined);
+        await new Promise(r => setTimeout(r, 100));
+      }
+      enqueueToast('Randomization done');
+    });
+  });
+</script>
+

@@ -1,0 +1,161 @@
+---
+/** BPM detection component for Astro */
+interface Props {
+  showConfidence?: boolean
+  autoDetect?: boolean
+  threshold?: number
+  class?: string
+}
+
+const { showConfidence = true, autoDetect = true, threshold = 0.3, class: className = '' } = Astro.props
+---
+
+<div class={`pleco-bpm-detector ${className}`}>
+  <div class="bpm-upload">
+    <input type="file" id="bpmFileInput" accept="audio/*" />
+    <label for="bpmFileInput" tabindex="0">Detect BPM</label>
+  </div>
+
+  <div class="bpm-display" id="bpmDisplay">
+    <div class="bpm-value" id="bpmValue" aria-live="polite" tabindex="0">-- BPM</div>
+    {
+      showConfidence && (
+        <div class="bpm-confidence" id="bpmConfidence">
+          --
+        </div>
+      )
+    }
+  </div>
+
+  <slot />
+</div>
+
+<style>
+  .pleco-bpm-detector {
+    display: inline-block;
+    text-align: center;
+    padding: 15px;
+    background: #222;
+    border-radius: 8px;
+    color: #fff;
+    font-family: monospace;
+  }
+
+  .bpm-upload input[type='file'] {
+    display: none;
+  }
+
+  .bpm-upload label {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #0066cc;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+  }
+
+  .bpm-upload label.error {
+    background: #b00020;
+  }
+
+  .bpm-upload label:hover {
+    background: #0052a3;
+  }
+
+  .bpm-display {
+    margin-top: 15px;
+  }
+
+  .bpm-value {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #00ff00;
+    margin-bottom: 5px;
+  }
+
+  .bpm-confidence {
+    font-size: 12px;
+    color: #888;
+  }
+</style>
+
+<script>
+  import { fastBPMDetect } from '../scripts/xa-beat.js'
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const fileInput = document.getElementById('bpmFileInput')
+    const bpmValue = document.getElementById('bpmValue')
+    const bpmConfidence = document.getElementById('bpmConfidence')
+    const uploadLabel = document.querySelector('label[for="bpmFileInput"]')
+
+    if (uploadLabel) {
+      uploadLabel.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          fileInput?.click()
+        }
+      })
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener('change', async (e) => {
+        const target = e.target
+        const file = target.files && target.files[0]
+        if (!file) return
+
+        try {
+          bpmValue.textContent = 'Analyzing...'
+
+          // Load and analyze
+          const AudioContextConstructor =
+            window.AudioContext || (window as any).webkitAudioContext
+          const audioContext = new AudioContextConstructor()
+          const arrayBuffer = await file.arrayBuffer()
+          let audioBuffer
+          try {
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+          } catch (decodeError) {
+            console.error('Audio decoding failed:', decodeError)
+            const btn = fileInput.nextElementSibling
+            if (btn) {
+              btn.classList.add('error')
+              btn.setAttribute('title', 'Unsupported format')
+              setTimeout(() => {
+                btn.classList.remove('error')
+                btn.removeAttribute('title')
+              }, 5000)
+            }
+            bpmValue.textContent = 'Error'
+            if (bpmConfidence) {
+              bpmConfidence.textContent = 'Detection failed'
+            }
+            return
+          }
+
+          const result = fastBPMDetect(audioBuffer, { minBPM: 60, maxBPM: 180 })
+
+          // Update display
+          bpmValue.textContent = `${result.bpm.toFixed(1)} BPM`
+          if (bpmConfidence) {
+            bpmConfidence.textContent = `${(result.confidence * 100).toFixed(1)}% confidence`;
+          }
+
+          // Dispatch event
+          const bpmEvent = new CustomEvent('bpmEvent', {
+            detail: { bpm: result.bpm, confidence: result.confidence },
+          })
+          document.dispatchEvent(bpmEvent)
+        } catch (error) {
+          console.error('BPM detection failed:', error);
+          console.error('Detailed error stack:', error.stack);
+          bpmValue.textContent = 'Error';
+          if (bpmConfidence) {
+            bpmConfidence.textContent = 'Detection failed';
+          }
+        }
+      })
+    }
+  })
+</script>

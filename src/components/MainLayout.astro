@@ -1,0 +1,40 @@
+---
+const { title, description } = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <!-- Tailwind via CDN with dark mode using data-theme attribute -->
+    <script>
+      tailwind.config = { darkMode: ['class', '[data-theme="dark"]'] };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      const storedTheme =
+        typeof localStorage !== 'undefined' && localStorage.getItem('theme');
+      const prefersDark =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = storedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      window.toggleTheme = () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        document.documentElement.classList.toggle('dark', next === 'dark');
+        if (typeof localStorage !== 'undefined') localStorage.setItem('theme', next);
+      };
+    </script>
+    <!-- Additional meta tags or styles can be added here -->
+  </head>
+  <body>
+    <slot />
+    <!-- Common footer or navigation can be added here -->
+  </body>
+</html>

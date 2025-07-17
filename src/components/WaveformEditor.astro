@@ -1,0 +1,108 @@
+<script>
+  import { WaveformEditor } from '../scripts/WaveformEditor.js'
+  import { LoopPlayer } from '../scripts/LoopPlayer.js'
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const elements = {
+      fileInput: document.getElementById('waveformFileInput'),
+      container: document.getElementById('waveformContainer'),
+      canvas: document.getElementById('waveformCanvas'),
+      loopInfo: document.getElementById('loopInfo'),
+      playBtn: document.getElementById('playWaveform'),
+      stopBtn: document.getElementById('stopWaveform'),
+      resetBtn: document.getElementById('resetLoop')
+    }
+    
+    let editor = null
+    let player = null
+
+    // Update loop info display
+    function updateLoopInfo(start, end) {
+      const duration = end - start
+      elements.loopInfo.textContent = `${start.toFixed(3)}s - ${end.toFixed(3)}s (${duration.toFixed(3)}s)`
+    }
+
+    // Load and initialize audio
+    async function initAudio(file) {
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+        let audioBuffer
+        try {
+          audioBuffer = await audioContext.decodeAudioData(await file.arrayBuffer())
+        } catch (decodeError) {
+          console.error('Audio decoding failed:', decodeError)
+          const btn = elements.fileInput?.nextElementSibling
+          if (btn) {
+            btn.classList.add('error')
+            btn.setAttribute('title', 'Unsupported format')
+            setTimeout(() => {
+              btn.classList.remove('error')
+              btn.removeAttribute('title')
+            }, 5000)
+          }
+          return
+        }
+        
+        const loopStart = 0
+        const loopEnd = audioBuffer.duration
+        
+        // Initialize editor and player
+        editor = new WaveformEditor(elements.canvas, audioBuffer, { loopStart, loopEnd })
+        player = new LoopPlayer(audioBuffer)
+        player.setLoopPoints(loopStart, loopEnd)
+        
+        updateLoopInfo(loopStart, loopEnd)
+        elements.container.style.display = 'block'
+        
+        // Listen for loop changes
+        elements.canvas.addEventListener('loopChange', (e) => {
+          const { loopStart, loopEnd } = (e as CustomEvent).detail
+          player.setLoopPoints(loopStart, loopEnd)
+          updateLoopInfo(loopStart, loopEnd)
+          
+          document.dispatchEvent(new CustomEvent('waveformLoopChange', {
+            detail: { loopStart, loopEnd, duration: loopEnd - loopStart }
+          }))
+        })
+      } catch (error) {
+        console.error('Waveform editor failed:', error)
+      }
+    }
+
+    // Event listeners
+    elements.fileInput?.addEventListener('change', e => {
+      const file = e.target.files && e.target.files[0]
+      if (file) initAudio(file)
+    })
+
+    elements.playBtn?.addEventListener('click', async () => {
+      if (player) {
+        await player.play()
+        elements.playBtn.classList.add('active')
+        elements.stopBtn?.classList.remove('active')
+      }
+    })
+
+    elements.stopBtn?.addEventListener('click', () => {
+      if (player) {
+        player.stop()
+        elements.stopBtn.classList.add('active')
+        elements.playBtn?.classList.remove('active')
+      }
+    })
+
+    elements.resetBtn?.addEventListener('click', () => {
+      if (editor && player) {
+        const loopStart = 0
+        const loopEnd = editor.audioBuffer.duration
+        
+        editor.loopStart = loopStart
+        editor.loopEnd = loopEnd
+        editor.draw()
+        
+        player.setLoopPoints(loopStart, loopEnd)
+        updateLoopInfo(loopStart, loopEnd)
+      }
+    })
+  })
+</script>

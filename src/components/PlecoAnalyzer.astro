@@ -1,0 +1,329 @@
+---
+/**
+ * PlecoAnalyzer - Complete audio analysis component for Astro
+ * Provides BPM detection, loop analysis, and interactive controls
+ */
+
+export interface Props {
+  showBPM?: boolean
+  showLoopPoints?: boolean
+  showSpectral?: boolean
+  allowUpload?: boolean
+  autoAnalyze?: boolean
+  class?: string
+}
+
+const {
+  showBPM = true,
+  showLoopPoints = true,
+  showSpectral = false,
+  allowUpload = true,
+  autoAnalyze = true,
+  class: className = '',
+} = Astro.props
+---
+
+<div class={`pleco-analyzer ${className}`}>
+  {
+    allowUpload && (
+      <div class="pleco-upload">
+        <input type="file" id="plecoFileInput" accept="assets/audio/*" />
+        <label for="plecoFileInput" tabindex="0">Choose Audio File</label>
+
+      </div>
+    )
+  }
+
+  <div class="pleco-results" id="plecoResults" style="display: none;">
+    {
+      showBPM && (
+        <div class="pleco-bpm">
+          <h3>BPM Detection</h3>
+          <div class="bpm-value" id="bpmValue" aria-live="polite" tabindex="0">
+            --
+          </div>
+          <div class="bpm-confidence" id="bpmConfidence">
+            --
+          </div>
+        </div>
+      )
+    }
+
+    {
+      showLoopPoints && (
+        <div class="pleco-loops">
+          <h3>Loop Analysis</h3>
+          <div class="loop-info" id="loopInfo">
+            --
+          </div>
+          <div class="loop-controls">
+            <button id="playLoop">Play Loop</button>
+            <button id="stopLoop">Stop</button>
+          </div>
+        </div>
+      )
+    }
+
+    {
+      showSpectral && (
+        <div class="pleco-spectral">
+          <h3>Spectral Analysis</h3>
+          <div class="spectral-info" id="spectralInfo">
+            --
+          </div>
+        </div>
+      )
+    }
+  </div>
+
+  <slot />
+</div>
+
+<style>
+  .pleco-analyzer {
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    background: #111;
+    color: #fff;
+    font-family: monospace;
+  }
+
+  .pleco-upload {
+    margin-bottom: 20px;
+  }
+
+  .pleco-upload input[type='file'] {
+    display: none;
+  }
+
+  .pleco-upload label {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #0066cc;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .pleco-upload label.error {
+    background: #b00020;
+  }
+
+  .pleco-upload label:hover {
+    background: #0052a3;
+  }
+
+  .pleco-results {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .pleco-bpm,
+  .pleco-loops,
+  .pleco-spectral {
+    background: #222;
+    padding: 15px;
+    border-radius: 4px;
+  }
+
+  .bpm-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #00ff00;
+  }
+
+  .loop-controls {
+    margin-top: 10px;
+  }
+
+  .loop-controls button {
+    margin-right: 10px;
+    padding: 8px 16px;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .loop-controls button:hover {
+    background: #555;
+  }
+
+  .loop-controls button.active {
+    background: #0066cc;
+  }
+</style>
+
+<script>
+  import { fastBPMDetect } from '/src/scripts/xa-beat.js'
+  import { fastLoopAnalysis } from '../scripts/xa-loop.js'
+  import { LoopPlayer } from '../scripts/LoopPlayer.js'
+  import { computeRMS } from '../scripts/audio-utils.js'
+  import { spectralCentroid } from '../scripts/xa-spectral.js'
+
+  let currentPlayer = null
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const fileInput = document.getElementById('plecoFileInput')
+    const resultsDiv = document.getElementById('plecoResults')
+    const bpmValue = document.getElementById('bpmValue')
+    const bpmConfidence = document.getElementById('bpmConfidence')
+    const loopInfo = document.getElementById('loopInfo')
+    const spectralInfo = document.getElementById('spectralInfo')
+    const playBtn = document.getElementById('playLoop')
+    const stopBtn = document.getElementById('stopLoop')
+    const uploadLabel = document.querySelector('label[for="plecoFileInput"]')
+
+    if (uploadLabel) {
+      uploadLabel.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          fileInput?.click()
+        }
+      })
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener('change', async (e) => {
+        const target = e.target
+        const file = target.files && target.files[0]
+        if (!file) return
+
+        try {
+          // Load audio
+          const AudioContextConstructor =
+            window.AudioContext || (window as any).webkitAudioContext
+          const audioContext = new AudioContextConstructor()
+          const arrayBuffer = await file.arrayBuffer()
+          let audioBuffer
+          try {
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+          } catch (decodeError) {
+            console.error('Audio decoding failed:', decodeError)
+            const btn = fileInput.nextElementSibling
+            if (btn) {
+              btn.classList.add('error')
+              btn.setAttribute('title', 'Unsupported format')
+              setTimeout(() => {
+                btn.classList.remove('error')
+                btn.removeAttribute('title')
+              }, 5000)
+            }
+            return
+          }
+
+          // Analyze with Pleco Xa using fast functions
+          let bpmResult;
+          try {
+            if (typeof fastBPMDetect !== 'undefined') {
+              bpmResult = fastBPMDetect(audioBuffer);
+            } else {
+              throw new Error('fastBPMDetect function not available in the current environment');
+            }
+          } catch (error) {
+            console.error('❌ fastBPMDetect not found or failed:', error);
+            console.error('Detailed error stack:', error.stack);
+            bpmResult = { bpm: 120, confidence: 0 };
+            console.log('⚠️ Using fallback BPM: 120 due to missing or failing fastBPMDetect');
+          }
+
+          let loopResult;
+          try {
+            if (typeof fastLoopAnalysis !== 'undefined') {
+              loopResult = await fastLoopAnalysis(audioBuffer);
+            } else {
+              throw new Error('fastLoopAnalysis function not available in the current environment');
+            }
+          } catch (error) {
+            console.error('❌ fastLoopAnalysis not found or failed:', error);
+            console.error('Detailed error stack:', error.stack);
+            const barDuration = (60 / bpmResult.bpm) * 4;
+            const loopDuration = Math.min(barDuration * 4, audioBuffer.duration);
+            loopResult = { loopStart: 0, loopEnd: loopDuration, confidence: 0 };
+            console.log('⚠️ Using fallback BPM-based loop due to missing or failing fastLoopAnalysis');
+          }
+
+          const analysis = {
+            start: loopResult.loopStart,
+            end: loopResult.loopEnd
+          };
+
+          // Update UI
+          if (bpmValue && bpmConfidence) {
+            bpmValue.textContent = `${bpmResult.bpm.toFixed(1)} BPM`
+            bpmConfidence.textContent = `Confidence: ${(bpmResult.confidence * 100).toFixed(1)}%`
+          }
+
+          if (loopInfo) {
+            const loopDuration = analysis.end - analysis.start
+            loopInfo.innerHTML = `
+              <div>Start: ${analysis.start.toFixed(3)}s</div>
+              <div>End: ${analysis.end.toFixed(3)}s</div>
+              <div>Duration: ${loopDuration.toFixed(3)}s</div>
+              <div>Musical: ${loopResult.musicalDivision ? loopResult.musicalDivision.toFixed(1) + ' bars' : 'N/A'}</div>
+            `
+          }
+
+          if (spectralInfo) {
+            const spectralCentroidValues = spectralCentroid({
+              y: audioBuffer.getChannelData(0),
+              sr: audioBuffer.sampleRate,
+            })
+            // Compute mean if array, or use directly if single value
+            const spectralCentroidValue = Array.isArray(spectralCentroidValues)
+              ? spectralCentroidValues.reduce((sum, val) => sum + val, 0) /
+                spectralCentroidValues.length
+              : spectralCentroidValues
+            const rms = computeRMS(audioBuffer)
+            spectralInfo.innerHTML = `
+              <div>Spectral Centroid: ${spectralCentroidValue.toFixed(0)} Hz</div>
+              <div>RMS Energy: ${rms.toFixed(4)}</div>
+            `
+          }
+
+          // Set up player
+          currentPlayer = new LoopPlayer(audioBuffer)
+          currentPlayer.setLoopPoints(analysis.start, analysis.end)
+
+          // Show results
+          if (resultsDiv) {
+            resultsDiv.style.display = 'block'
+          }
+
+          // Dispatch custom event for parent components
+          const analysisEvent = new CustomEvent('plecoAnalysis', {
+            detail: { bpmResult, analysis, audioBuffer },
+          })
+          document.dispatchEvent(analysisEvent)
+        } catch (error) {
+          console.error('Pleco analysis failed:', error)
+        }
+      })
+    }
+
+    // Play/stop controls
+    if (playBtn) {
+      playBtn.addEventListener('click', async () => {
+        if (currentPlayer) {
+          await currentPlayer.play()
+          playBtn.classList.add('active')
+          stopBtn?.classList.remove('active')
+        }
+      })
+    }
+
+    if (stopBtn) {
+      stopBtn.addEventListener('click', () => {
+        if (currentPlayer) {
+          currentPlayer.stop()
+          stopBtn.classList.add('active')
+          playBtn?.classList.remove('active')
+        }
+      })
+    }
+  })
+</script>
