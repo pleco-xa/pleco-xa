@@ -1208,7 +1208,7 @@ function applyLoop() {}
     let loopText;
     if (loopData.start === 0 && loopData.end === 1) {
       loopText = 'Full Track';
-      if (reverseBtn) reverseBtn.disabled = true;
+      if (reverseBtn) reverseBtn.disabled = false; // Allow reverse on full track
     } else {
       loopText = `${duration.toFixed(2)}s (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
       if (reverseBtn) reverseBtn.disabled = false;

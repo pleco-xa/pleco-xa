@@ -12,19 +12,37 @@ class KeyboardController {
     this.currentPresetIndex = 0; // Current preset in the cycle
     this.beatPlaying = false; // Track if beat pattern is playing
     this.beatInterval = null; // Store beat interval
-    this.realtchBuffer = null; // For Y key relatch functionality
-    
+    this.relatchBuffer = null; // For Y key relatch functionality
+    this.undoStack = []; // Buffer history for undo
+    this.maxUndoSteps = 20; // Max undo history
+
+    // Phaser parameters (adjustable)
+    this.phaserParams = {
+      wetMix: 0.9,
+      minDelay: 0.0005,
+      maxDelay: 0.005
+    };
+
     this.keyMappings = {
       // Audio Effects
-      'p': { name: 'phase', description: 'Phase Shift' },
-      'k': { name: 'fractal', description: 'Fractal Echo' }, 
+      'p': { name: 'phase', description: 'Phaser Effect' },
+      'k': { name: 'fractal', description: 'Fractal Echo' },
       'l': { name: 'silence', description: 'Silence/Rest' },
       'o': { name: 'stutter', description: 'Stutter Micro-Repeat' },
-      
+
+      // Phaser Controls
+      '[': { name: 'phaserDepthDown', description: 'Phaser Depth -' },
+      ']': { name: 'phaserDepthUp', description: 'Phaser Depth +' },
+      ';': { name: 'phaserRangeDown', description: 'Phaser Range -' },
+      "'": { name: 'phaserRangeUp', description: 'Phaser Range +' },
+
+      // Undo/Reset
+      'r': { name: 'undo', description: 'Undo Last Effect' },
+
       // Navigation
       ',': { name: 'prevPreset', description: 'Previous Beat Preset' },
       '.': { name: 'nextPreset', description: 'Next Beat Preset' },
-      
+
       // Control
       'm': { name: 'beatToggle', description: 'Play/Stop Beat Pattern' },
       'y': { name: 'relatch', description: 'Relatch Audio Effects' }
@@ -85,7 +103,10 @@ class KeyboardController {
     this.keysPressed.add(key);
     
     // Handle based on mode and mapping type
-    if (['prevPreset', 'nextPreset', 'beatToggle', 'relatch'].includes(mapping.name)) {
+    const controlKeys = ['prevPreset', 'nextPreset', 'beatToggle', 'relatch', 'undo',
+                         'phaserDepthDown', 'phaserDepthUp', 'phaserRangeDown', 'phaserRangeUp'];
+
+    if (controlKeys.includes(mapping.name)) {
       // Control keys - always immediate action
       this.handleControlKey(mapping.name);
     } else {
@@ -146,17 +167,35 @@ class KeyboardController {
       case 'relatch':
         this.relatchEffects();
         break;
+      case 'undo':
+        this.undoLastEffect();
+        break;
+      case 'phaserDepthDown':
+        this.adjustPhaserDepth(-0.1);
+        break;
+      case 'phaserDepthUp':
+        this.adjustPhaserDepth(0.1);
+        break;
+      case 'phaserRangeDown':
+        this.adjustPhaserRange(-0.001);
+        break;
+      case 'phaserRangeUp':
+        this.adjustPhaserRange(0.001);
+        break;
     }
   }
   
   activateEffect(effectName) {
     const buffer = window.currentAudioBuffer;
-    
+
     if (!buffer) {
       enqueueToast('❌ No audio loaded');
       return;
     }
-    
+
+    // Save to undo stack before modifying
+    this.saveToUndoStack(buffer);
+
     // Debug what we have access to
     console.log('🎹 Keyboard effect debug:', {
       effectName,
@@ -164,27 +203,31 @@ class KeyboardController {
       hasApplyLoop: typeof window.applyLoop,
       windowKeys: Object.keys(window).filter(k => k.includes('apply') || k.includes('Audio'))
     });
-    
+
     try {
       let loop = detectLoop(buffer);
+
+      // Pass phaser parameters if it's the phase effect
+      if (effectName === 'phase') {
+        window.phaserParams = this.phaserParams;
+      }
+
       const result = applyQuantumOp(effectName, buffer, loop);
-      
+
       // Store for relatch functionality
       this.relatchBuffer = result.buffer;
-      
-      // Try different ways to access applyLoop
-      const applyLoop = window.applyLoop || window.globalApplyLoop || 
-                       document.querySelector('[data-apply-loop-var]')?.dataset.applyLoopVar;
-      
-      if (typeof applyLoop === 'function') {
-        applyLoop(result.buffer, result.loop, effectName);
+
+      // Use window.applyLoop (initialized in AudioAnalyzer.astro)
+      if (typeof window.applyLoop === 'function') {
+        window.applyLoop(result.buffer, result.loop, effectName);
       } else {
+        console.warn('⚠️ window.applyLoop not initialized yet');
         // Fallback: just update the window buffer
         window.currentAudioBuffer = result.buffer;
       }
-      
+
       enqueueToast(`✅ ${this.keyMappings[this.getKeyForEffect(effectName)].description} ON`);
-      
+
     } catch (error) {
       console.error(`Effect ${effectName} failed:`, error);
       enqueueToast(`❌ ${effectName} failed: ${error.message}`);
@@ -311,6 +354,113 @@ class KeyboardController {
     }
     console.log(`Mode: ${this.sustainMode ? 'Sustain' : 'Toggle'} (toggle via allowHalfDouble checkbox)`);
     enqueueToast('⌨️ Keyboard shortcuts logged to console');
+  }
+
+  // Save buffer to undo stack
+  saveToUndoStack(buffer) {
+    if (!buffer) return;
+
+    try {
+      // Clone the buffer using OfflineAudioContext
+      const offlineCtx = new OfflineAudioContext(
+        buffer.numberOfChannels,
+        buffer.length,
+        buffer.sampleRate
+      );
+
+      const clone = offlineCtx.createBuffer(
+        buffer.numberOfChannels,
+        buffer.length,
+        buffer.sampleRate
+      );
+
+      for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+        const sourceData = buffer.getChannelData(channel);
+        const destData = clone.getChannelData(channel);
+        destData.set(sourceData);
+      }
+
+      this.undoStack.push(clone);
+
+      // Limit undo stack size
+      if (this.undoStack.length > this.maxUndoSteps) {
+        this.undoStack.shift();
+      }
+    } catch (error) {
+      console.warn('Failed to save undo state:', error);
+    }
+  }
+
+  // Undo last effect
+  undoLastEffect() {
+    if (this.undoStack.length === 0) {
+      enqueueToast('❌ Nothing to undo');
+      return;
+    }
+
+    const previousBuffer = this.undoStack.pop();
+    window.currentAudioBuffer = previousBuffer;
+
+    // Restart playback if playing
+    if (typeof window.applyLoop === 'function') {
+      let loop = detectLoop(previousBuffer);
+      window.applyLoop(previousBuffer, loop, 'undo');
+    }
+
+    enqueueToast(`⏮️ Undone (${this.undoStack.length} steps remaining)`);
+  }
+
+  // Adjust phaser wet/dry mix (depth)
+  adjustPhaserDepth(delta) {
+    this.phaserParams.wetMix = Math.max(0, Math.min(1, this.phaserParams.wetMix + delta));
+    enqueueToast(`🌊 Phaser Depth: ${(this.phaserParams.wetMix * 100).toFixed(0)}%`);
+    console.log('Phaser wetMix:', this.phaserParams.wetMix);
+
+    // Re-apply phaser if it's currently active with volume reduction
+    if (this.activeEffects.has('p')) {
+      this.reapplyPhaserWithGain(0.5); // 50% volume
+    }
+  }
+
+  // Adjust phaser delay range
+  adjustPhaserRange(delta) {
+    this.phaserParams.maxDelay = Math.max(0.001, Math.min(0.02, this.phaserParams.maxDelay + delta));
+    enqueueToast(`📏 Phaser Range: ${(this.phaserParams.maxDelay * 1000).toFixed(2)}ms`);
+    console.log('Phaser maxDelay:', this.phaserParams.maxDelay);
+
+    // Re-apply phaser if it's currently active with volume reduction
+    if (this.activeEffects.has('p')) {
+      this.reapplyPhaserWithGain(0.5); // 50% volume
+    }
+  }
+
+  // Reapply phaser with volume compensation
+  reapplyPhaserWithGain(gain) {
+    const buffer = window.currentAudioBuffer;
+    if (!buffer) return;
+
+    try {
+      let loop = detectLoop(buffer);
+      window.phaserParams = this.phaserParams;
+
+      const result = applyQuantumOp('phase', buffer, loop);
+
+      // Apply gain reduction to prevent loudness buildup
+      for (let channel = 0; channel < result.buffer.numberOfChannels; channel++) {
+        const channelData = result.buffer.getChannelData(channel);
+        for (let i = 0; i < channelData.length; i++) {
+          channelData[i] *= gain;
+        }
+      }
+
+      if (typeof window.applyLoop === 'function') {
+        window.applyLoop(result.buffer, result.loop, 'phase-adjust');
+      } else {
+        window.currentAudioBuffer = result.buffer;
+      }
+    } catch (error) {
+      console.error('Phaser adjustment failed:', error);
+    }
   }
 }
 
