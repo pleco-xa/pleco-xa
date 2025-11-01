@@ -9,11 +9,7 @@ const { title, description } = Astro.props
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <title>{title}</title>
-    <!-- Tailwind via CDN with dark mode using data-theme attribute -->
-    <script>
-      tailwind.config = { darkMode: ['class', '[data-theme="dark"]'] };
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Basic styling for now -->
     <script>
       const storedTheme =
         typeof localStorage !== 'undefined' && localStorage.getItem('theme');
@@ -35,6 +31,69 @@ const { title, description } = Astro.props
   </head>
   <body>
     <slot />
+
+    <!-- Keyboard Shortcuts Help -->
+    <div style="position: fixed; top: 66px; right: 16px; z-index: 50;">
+    <button style="background: #374151; color: white; padding: 8px; border-radius: 50%; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: background-color 0.2s; cursor: pointer;"
+    title="Keyboard Shortcuts (hover or click for help)"
+    onmouseover="showKeyboardHelp()"
+    onmouseout="hideKeyboardHelp()"
+            onclick="toggleKeyboardHelp()">
+        ⌨️
+    </button>
+
+    <div id="keyboard-tooltip" style="position: absolute; top: 100%; right: 0; margin-top: 8px; background: #111827; color: white; padding: 12px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); opacity: 0; visibility: hidden; transition: all 0.2s; min-width: 200px;">
+    <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #d1d5db;">Keyboard Shortcuts</div>
+    <div style="line-height: 1.5; font-size: 12px;">
+    <div><kbd style="background: #374151; padding: 2px 4px; border-radius: 3px;">P</kbd> Phase Shift</div>
+    <div><kbd style="background: #374151; padding: 2px 4px; border-radius: 3px;">K</kbd> Fractal Echo</div>
+    <div><kbd style="background: #374151; padding: 2px 4px; border-radius: 3px;">L</kbd> Silence/Rest</div>
+    <div><kbd style="background: #374151; padding: 2px 4px; border-radius: 3px;">O</kbd> Stutter Micro-Repeat</div>
+    <div><kbd style="background: #374151; padding: 2px 4px; border-radius: 3px;">,</kbd> Previous Beat Preset</div>
+    <div><kbd style="background: #374151; padding: 2px 4px; border-radius: 3px;">.</kbd> Next Beat Preset</div>
+      <div><kbd style="background: #374151; padding: 2px 4px; border-radius: 3px;">M</kbd> Play/Stop Beat Pattern</div>
+      <div><kbd style="background: #374151; padding: 2px 4px; border-radius: 3px;">Y</kbd> Relatch Audio Effects</div>
+    </div>
+    <div style="font-size: 12px; color: #9ca3af; margin-top: 8px; padding-top: 8px; border-top: 1px solid #374151;">
+        Mode: Toggle/Sustain (via checkbox)
+        </div>
+      </div>
+    </div>
+
+    <script>
+    window.tooltipVisible = false;
+
+    window.showKeyboardHelp = function() {
+      const tooltip = document.getElementById('keyboard-tooltip');
+    if (tooltip && !window.tooltipVisible) {
+      tooltip.style.opacity = '0.5';
+      tooltip.style.visibility = 'visible';
+    }
+    };
+
+    window.hideKeyboardHelp = function() {
+    const tooltip = document.getElementById('keyboard-tooltip');
+      if (tooltip && !window.tooltipVisible) {
+        tooltip.style.opacity = '0';
+        tooltip.style.visibility = 'hidden';
+    }
+    };
+
+    window.toggleKeyboardHelp = function() {
+    const tooltip = document.getElementById('keyboard-tooltip');
+    if (tooltip) {
+      window.tooltipVisible = !window.tooltipVisible;
+        if (window.tooltipVisible) {
+          tooltip.style.opacity = '0.5';
+          tooltip.style.visibility = 'visible';
+      } else {
+        tooltip.style.opacity = '0';
+        tooltip.style.visibility = 'hidden';
+    }
+    }
+    };
+    </script>
+
     <!-- Common footer or navigation can be added here -->
   </body>
 </html>
