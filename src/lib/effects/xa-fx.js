@@ -1,9 +1,22 @@
-// Extended audio operations including quantum rhythm operations
-import {
-  halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop, detectLoop
-} from '../core/index.js';
+// xa-fx.js - Pleco-XA Effects Library
+// All audio effects in one clean module
 
-/* -------- NEW quantum operations ---------- */
+import {
+  halfLoop,
+  doubleLoop,
+  moveForward,
+  reverseBufferSection,
+  resetLoop,
+  detectLoop
+} from '../../core/index.js';
+
+/**
+ * Stutter effect - Micro-repeat first 10ms
+ * @param {Object} loop - Loop bounds {startSample, endSample}
+ * @param {AudioBuffer} buffer - Audio buffer to process
+ * @param {number} repeats - Number of repeats (default 3)
+ * @returns {Object} {buffer, loop}
+ */
 export function stutter(loop, buffer, repeats = 3) {
   const span = Math.min(0.01 * buffer.sampleRate,
                         loop.endSample - loop.startSample);
@@ -29,6 +42,10 @@ export function stutter(loop, buffer, repeats = 3) {
 /**
  * Simple variable-delay phaser effect with LFO
  * Creates obvious sweeping comb-filter notches
+ * @param {Object} loop - Loop bounds {startSample, endSample}
+ * @param {AudioBuffer} buffer - Audio buffer to process
+ * @param {number} depth - Wet/dry mix (0-1, default 1.0)
+ * @returns {Object} {buffer, loop}
  */
 export function phase(loop, buffer, depth = 1.0) {
   const sampleRate = buffer.sampleRate;
@@ -103,12 +120,25 @@ export function phase(loop, buffer, depth = 1.0) {
   return { buffer, loop };
 }
 
+/**
+ * Fractal effect - Reverse first half of loop
+ * @param {Object} loop - Loop bounds {startSample, endSample}
+ * @param {AudioBuffer} buffer - Audio buffer to process
+ * @returns {Object} {buffer, loop}
+ */
 export function fractal(loop, buffer) {
   const mid = Math.floor((loop.startSample + loop.endSample) / 2);
   buffer = reverseBufferSection(buffer, loop.startSample, mid);
   return { buffer, loop };
 }
 
+/**
+ * Apply a quantum operation to audio buffer
+ * @param {string} op - Operation name
+ * @param {AudioBuffer} buffer - Audio buffer
+ * @param {Object} loop - Loop bounds
+ * @returns {Object} {buffer, loop}
+ */
 export const applyQuantumOp = (op, buffer, loop) => {
   switch (op) {
     case 'half':
@@ -149,4 +179,19 @@ export const applyQuantumOp = (op, buffer, loop) => {
       console.warn('Unknown quantum op', op);
   }
   return { buffer, loop };
+};
+
+// Export all effects as named exports
+export default {
+  phase,
+  stutter,
+  fractal,
+  applyQuantumOp,
+  // Re-export core helpers for convenience
+  halfLoop,
+  doubleLoop,
+  moveForward,
+  reverseBufferSection,
+  resetLoop,
+  detectLoop
 };

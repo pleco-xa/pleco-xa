@@ -1,7 +1,7 @@
 // Keyboard shortcut controller for Pleco-XA
 import { detectLoop } from '../core/index.js';
 import { enqueueToast } from './ui/toastQueue.js';
-import { applyQuantumOp } from './audio-ops-extended.js';
+import { applyQuantumOp } from '../lib/effects/xa-fx.js';
 import { allPresets } from './beat-presets.js';
 
 class KeyboardController {
