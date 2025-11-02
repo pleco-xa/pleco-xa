@@ -471,9 +471,6 @@ function applyLoop() {}
     }
   }
 
-  // Worker for heavy analysis
-  let analysisWorker = null;
-  
   // Initialize state
   let audioProcessor;
   let originalAudioBuffer = null; // Keep original for easter egg
@@ -512,33 +509,6 @@ function applyLoop() {}
       // Initialize the audio processor
       audioProcessor = initAudioProcessor();
 
-      // Create analysis worker (disabled for now to debug)
-      // try {
-      //   analysisWorker = new Worker(new URL('../workers/analysisWorker.js', import.meta.url), { type: 'module' });
-      //
-      //   analysisWorker.onmessage = (event) => {
-      //     const data = event.data;
-      //     if (data.error) {
-      //       console.error('Worker error:', data.error);
-      //       return;
-      //     }
-      //     if (data.bpm !== undefined) {
-      //       const bpmValue = typeof data.bpm === 'object' ? data.bpm.bpm : data.bpm;
-      //       const bpmElement = document.getElementById('bpmValue');
-      //       if (bpmElement && bpmValue) {
-      //         bpmElement.textContent = bpmValue.toFixed(1);
-      //       }
-      //     }
-      //   };
-      //
-      //   analysisWorker.onerror = (error) => {
-      //     console.error('Worker error:', error);
-      //   };
-      // } catch (error) {
-      //   analysisWorker = null;
-      // }
-      console.log('⚠️ Analysis worker disabled for debugging');
-      
       // Set up event listeners
       setupEventListeners();
       
@@ -584,11 +554,7 @@ function applyLoop() {}
           window.currentAudioBuffer = currentAudioBuffer;
 
           window.audioContext = audioContext;
-          // Send audio data to worker for analysis
-          if (analysisWorker && result.arrayBuffer) {
-            analysisWorker.postMessage(result.arrayBuffer);
-          }
-          
+
           // Update UI with file info
           updateTrackInfo(
             file.name,
@@ -981,12 +947,7 @@ function applyLoop() {}
 
       window.audioContext = audioContext;
       currentTrackName = name;
-      // Send audio data to worker for analysis
-      if (analysisWorker && result.arrayBuffer) {
-        analysisWorker.postMessage(result.arrayBuffer);
-        console.log('📤 Sample audio data sent to analysis worker');
-      }
-      
+
       // Update UI with file info immediately
       updateTrackInfo(
         name,
