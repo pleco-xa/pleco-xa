@@ -10,20 +10,6 @@ interface Props {
 }
 import SignatureDemoButton from './SignatureDemoButton.astro';
 import RandomizerButton from './RandomizerButton.astro';
-import RandomizerButton2 from './RandomizerButton2.astro';
-import RandomizerButton3 from './RandomizerButton3.astro';
-import RandomizerButton4 from './RandomizerButton4.astro';
-import RandomizerButton5 from './RandomizerButton5.astro';
-import RandomizerButton6 from './RandomizerButton6.astro';
-import RandomizerButton7 from './RandomizerButton7.astro';
-import RandomizerButton8 from './RandomizerButton8.astro';
-import RandomizerButton9 from './RandomizerButton9.astro';
-import RandomizerButton10 from './RandomizerButton10.astro';
-import RandomizerButton11 from './RandomizerButton11.astro';
-import RandomizerButton12 from './RandomizerButton12.astro';
-import RandomizerButton13 from './RandomizerButton13.astro';
-import RandomizerButton14 from './RandomizerButton14.astro';
-import RandomizerButton15 from './RandomizerButton15.astro';
 import LoopDebugButton from './LoopDebugButton.astro';
 import LiveSpeedButtons from './LiveSpeedButtons.astro';
 import GlitchBurstButton from './GlitchBurstButton.astro';
@@ -110,21 +96,21 @@ function applyLoop() {}
         <h4 class="card-title">Track Info</h4>
         <div class="card-value" id="trackName">No track loaded</div>
         <p class="card-description" id="trackStatus">Load a sample to begin</p>
-        <RandomizerButton />
-        <RandomizerButton2 />
-        <RandomizerButton3 />
-        <RandomizerButton4 />
-        <RandomizerButton5 />
-        <RandomizerButton6 />
-        <RandomizerButton7 />
-        <RandomizerButton8 />
-        <RandomizerButton9 />
-        <RandomizerButton10 />
-        <RandomizerButton11 />
-        <RandomizerButton12 />
-        <RandomizerButton13 />
-        <RandomizerButton14 />
-        <RandomizerButton15 />
+        <RandomizerButton id="randomizeLoopBtn" label="🎲 Smart Random" algorithm="smart" />
+        <RandomizerButton id="randomizeLoopBtn2" label="🔄 Reverse Heavy" algorithm="reverseHeavy" />
+        <RandomizerButton id="randomizeLoopBtn3" label="🥁 Rhythmic Sequence" algorithm="rhythmic" />
+        <RandomizerButton id="randomizeLoopBtn4" label="🌀 Spiral Morph" algorithm="spiralMorph" />
+        <RandomizerButton id="randomizeLoopBtn5" label="⚡ Micro Crusher" algorithm="halfBias" />
+        <RandomizerButton id="randomizeLoopBtn6" label="⚖️ Invertible Sequence" algorithm="invertible" />
+        <RandomizerButton id="randomizeLoopBtn7" label="🌀 Aphex Polyrhythm" algorithm="aphexPolyrhythm" />
+        <RandomizerButton id="randomizeLoopBtn8" label="🔄 Perfect Inversion" algorithm="perfectInversion" />
+        <RandomizerButton id="randomizeLoopBtn9" label="💥 Destructive Symphony" algorithm="destructive" />
+        <RandomizerButton id="randomizeLoopBtn10" label="🎵 Epic Journey" algorithm="moveIntensive" />
+        <RandomizerButton id="randomizeLoopBtn11" label="🌊 Fibonacci Flow" algorithm="doubleBias" />
+        <RandomizerButton id="randomizeLoopBtn12" label="🔢 Prime Pulse" algorithm="rhythmic" steps={47} />
+        <RandomizerButton id="randomizeLoopBtn13" label="🎭 Fractal Symmetry" algorithm="smart" />
+        <RandomizerButton id="randomizeLoopBtn14" label="🌀 Chaos Theory" algorithm="chaosTheory" />
+        <RandomizerButton id="randomizeLoopBtn15" label="🌌 Quantum Vector" algorithm="quantumLeap" />
         <LoopDebugButton />
         <LiveSpeedButtons />
       </div>
@@ -471,9 +457,6 @@ function applyLoop() {}
     }
   }
 
-  // Worker for heavy analysis
-  let analysisWorker = null;
-  
   // Initialize state
   let audioProcessor;
   let originalAudioBuffer = null; // Keep original for easter egg
@@ -512,33 +495,6 @@ function applyLoop() {}
       // Initialize the audio processor
       audioProcessor = initAudioProcessor();
 
-      // Create analysis worker (disabled for now to debug)
-      // try {
-      //   analysisWorker = new Worker(new URL('../workers/analysisWorker.js', import.meta.url), { type: 'module' });
-      //
-      //   analysisWorker.onmessage = (event) => {
-      //     const data = event.data;
-      //     if (data.error) {
-      //       console.error('Worker error:', data.error);
-      //       return;
-      //     }
-      //     if (data.bpm !== undefined) {
-      //       const bpmValue = typeof data.bpm === 'object' ? data.bpm.bpm : data.bpm;
-      //       const bpmElement = document.getElementById('bpmValue');
-      //       if (bpmElement && bpmValue) {
-      //         bpmElement.textContent = bpmValue.toFixed(1);
-      //       }
-      //     }
-      //   };
-      //
-      //   analysisWorker.onerror = (error) => {
-      //     console.error('Worker error:', error);
-      //   };
-      // } catch (error) {
-      //   analysisWorker = null;
-      // }
-      console.log('⚠️ Analysis worker disabled for debugging');
-      
       // Set up event listeners
       setupEventListeners();
       
@@ -584,11 +540,7 @@ function applyLoop() {}
           window.currentAudioBuffer = currentAudioBuffer;
 
           window.audioContext = audioContext;
-          // Send audio data to worker for analysis
-          if (analysisWorker && result.arrayBuffer) {
-            analysisWorker.postMessage(result.arrayBuffer);
-          }
-          
+
           // Update UI with file info
           updateTrackInfo(
             file.name,
@@ -981,12 +933,7 @@ function applyLoop() {}
 
       window.audioContext = audioContext;
       currentTrackName = name;
-      // Send audio data to worker for analysis
-      if (analysisWorker && result.arrayBuffer) {
-        analysisWorker.postMessage(result.arrayBuffer);
-        console.log('📤 Sample audio data sent to analysis worker');
-      }
-      
+
       // Update UI with file info immediately
       updateTrackInfo(
         name,

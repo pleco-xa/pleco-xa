@@ -9,7 +9,9 @@
     "preview": "astro preview",
     "start": "node dist/server/entry.mjs",
     "test": "vitest",
-    "setup": "npm ci"
+    "setup": "npm ci",
+    "sync-deps": "node scripts/sync-public-deps.js",
+    "prebuild": "npm run sync-deps"
   },
   "dependencies": {
     "@astrojs/node": "^9.5.0",
