@@ -441,26 +441,26 @@ function applyLoop() {}
     try {
       console.log('🔄 Loading modules...');
 
-      const coreModule = await import('../scripts/xa-audio-core.js');
+      const coreModule = await import('/scripts/xa-audio-core.js');
       initAudioProcessor = coreModule.initAudioProcessor;
       loadAudioFile = coreModule.loadAudioFile;
       drawWaveform = coreModule.drawWaveform;
       console.log('✅ Core module loaded');
 
-      const applyLoopModule = await import('../scripts/ui/applyLoop.js');
+      const applyLoopModule = await import('/scripts/ui/applyLoop.js');
       applyLoopHelper = applyLoopModule.applyLoop;
       console.log('✅ ApplyLoop module loaded');
 
-      const bpmModule = await import('../scripts/xa-bpm-detection.js');
+      const bpmModule = await import('/scripts/xa-bpm-detection.js');
       detectBPM = bpmModule.detectBPM;
       console.log('✅ BPM module loaded');
 
-      const loopModule = await import('../scripts/xa-loop-detection.js');
+      const loopModule = await import('/scripts/xa-loop-detection.js');
       findLoop = loopModule.findLoop;
       manipulateLoop = loopModule.manipulateLoop;
       console.log('✅ Loop module loaded');
 
-      const toastModule = await import('../scripts/ui/toastQueue.js');
+      const toastModule = await import('/scripts/ui/toastQueue.js');
       enqueueToast = toastModule.enqueueToast;
       console.log('✅ Toast module loaded');
 
@@ -491,7 +491,7 @@ function applyLoop() {}
   let dragMarker = null; // Track which marker is being dragged ('start' or 'end')
 
   // Initialize keyboard controller
-  import('../scripts/keyboard-controller.js').then(module => {
+  import('/scripts/keyboard-controller.js').then(module => {
     module.initKeyboardController();
   });
 
