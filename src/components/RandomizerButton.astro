@@ -326,7 +326,7 @@ const {
           newBuffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
           break;
         case 'reset':
-          newLoop = resetLoop(buffer);
+          newLoop = resetLoop(newBuffer);
           break;
       }
       return { buffer: newBuffer, loop: newLoop, op: action };
