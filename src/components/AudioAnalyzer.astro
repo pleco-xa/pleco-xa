@@ -491,7 +491,9 @@ function applyLoop() {}
   let dragMarker = null; // Track which marker is being dragged ('start' or 'end')
 
   // Initialize keyboard controller
-  import { initKeyboardController } from '../scripts/keyboard-controller.js';
+  import('../scripts/keyboard-controller.js').then(module => {
+    module.initKeyboardController();
+  });
 
   function normalizeBPM(bpm) {
     if (!allowHalfDouble) return bpm;
