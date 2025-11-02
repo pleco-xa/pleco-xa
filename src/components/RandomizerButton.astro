@@ -51,7 +51,8 @@ const {
     },
 
     reverseHeavy: (buffer, { steps = 41 } = {}) => {
-      let loop = detectLoop(buffer);
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
       const sequence = [];
       const minSamples = (10 / 1000) * buffer.sampleRate;
       const actions = [
@@ -75,15 +76,21 @@ const {
           }
         }
 
-        const fn = createSequenceStep(buffer, loop, action, minSamples);
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
         fn.op = action;
         sequence.push(fn);
+
+        // Update currentLoop and currentBuffer for next iteration by executing the step
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
       }
       return sequence;
     },
 
     moveIntensive: (buffer, { steps = 41 } = {}) => {
-      let loop = detectLoop(buffer);
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
       const sequence = [];
       const minSamples = (10 / 1000) * buffer.sampleRate;
       const actions = [
@@ -107,15 +114,21 @@ const {
           }
         }
 
-        const fn = createSequenceStep(buffer, loop, action, minSamples);
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
         fn.op = action;
         sequence.push(fn);
+
+        // Update currentLoop and currentBuffer for next iteration
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
       }
       return sequence;
     },
 
     halfBias: (buffer, { steps = 41 } = {}) => {
-      let loop = detectLoop(buffer);
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
       const sequence = [];
       const minSamples = (10 / 1000) * buffer.sampleRate;
       const actions = [
@@ -139,15 +152,21 @@ const {
           }
         }
 
-        const fn = createSequenceStep(buffer, loop, action, minSamples);
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
         fn.op = action;
         sequence.push(fn);
+
+        // Update currentLoop and currentBuffer for next iteration
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
       }
       return sequence;
     },
 
     doubleBias: (buffer, { steps = 41 } = {}) => {
-      let loop = detectLoop(buffer);
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
       const sequence = [];
       const minSamples = (10 / 1000) * buffer.sampleRate;
       const actions = [
@@ -171,15 +190,21 @@ const {
           }
         }
 
-        const fn = createSequenceStep(buffer, loop, action, minSamples);
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
         fn.op = action;
         sequence.push(fn);
+
+        // Update currentLoop and currentBuffer for next iteration
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
       }
       return sequence;
     },
 
     rhythmic: (buffer, { steps = 32 } = {}) => {
-      let loop = detectLoop(buffer);
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
       const sequence = [];
       const rhythmicPattern = [
         'half', 'half', 'move', 'reverse',
@@ -196,54 +221,115 @@ const {
 
       for (let i = 0; i < steps; i++) {
         const action = rhythmicPattern[i % rhythmicPattern.length];
-        const fn = createSequenceStep(buffer, loop, action, minSamples);
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
         fn.op = action;
         sequence.push(fn);
+
+        // Update currentLoop and currentBuffer for next iteration
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
       }
       return sequence;
     },
 
-    // Add more algorithms as needed - chaosTheory, spiralMorph, etc.
-    // For now, use reverseHeavy as fallback for unimplemented ones
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects chaosTheory to reverseHeavy.
+     */
     chaosTheory: function(buffer, opts) { return this.reverseHeavy(buffer, opts); },
+
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects spiralMorph to moveIntensive.
+     */
     spiralMorph: function(buffer, opts) { return this.moveIntensive(buffer, opts); },
+
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects invertible to reverseHeavy.
+     */
     invertible: function(buffer, opts) { return this.reverseHeavy(buffer, opts); },
+
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects aphexPolyrhythm to rhythmic.
+     */
     aphexPolyrhythm: function(buffer, opts) { return this.rhythmic(buffer, opts); },
+
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects perfectInversion to reverseHeavy.
+     */
     perfectInversion: function(buffer, opts) { return this.reverseHeavy(buffer, opts); },
+
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects destructive to reverseHeavy.
+     */
     destructive: function(buffer, opts) { return this.reverseHeavy(buffer, opts); },
+
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects silentExplorer to halfBias.
+     */
     silentExplorer: function(buffer, opts) { return this.halfBias(buffer, opts); },
+
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects fractalDescent to halfBias.
+     */
     fractalDescent: function(buffer, opts) { return this.halfBias(buffer, opts); },
+
+    /**
+     * @todo Proper implementation needed.
+     * Temporary placeholder: redirects quantumLeap to smart.
+     */
     quantumLeap: function(buffer, opts) { return this.smart(buffer, opts); },
   };
 
+  /**
+   * Creates a sequence step function with explicit buffer and loop parameters.
+   * Returns a function that when called, applies the action and returns the new state.
+   *
+   * @param {AudioBuffer} buffer - Current audio buffer
+   * @param {Object} loop - Current loop state {startSample, endSample}
+   * @param {string} action - Action to perform (half, double, move, reverse, reset)
+   * @param {number} minSamples - Minimum sample size threshold
+   * @returns {Function} Function that returns {buffer, loop, op}
+   */
   function createSequenceStep(buffer, loop, action, minSamples) {
+    // Capture current state as function parameters instead of relying on closure mutation
     return () => {
+      let newLoop = loop;
+      let newBuffer = buffer;
+
       switch (action) {
         case 'half':
           if (loop.endSample - loop.startSample >= 2 * minSamples) {
-            loop = halfLoop(loop);
+            newLoop = halfLoop(loop);
           }
           break;
         case 'double':
-          loop = doubleLoop(loop, buffer.length);
+          newLoop = doubleLoop(loop, buffer.length);
           break;
         case 'move': {
           const duration = loop.endSample - loop.startSample;
           const newStart = loop.startSample + duration;
           const newEnd = loop.endSample + duration;
           if (newEnd <= buffer.length) {
-            loop = { startSample: newStart, endSample: newEnd };
+            newLoop = { startSample: newStart, endSample: newEnd };
           }
           break;
         }
         case 'reverse':
-          buffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
+          newBuffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
           break;
         case 'reset':
-          loop = resetLoop(buffer);
+          newLoop = resetLoop(newBuffer);
           break;
       }
-      return { buffer, loop, op: action };
+      return { buffer: newBuffer, loop: newLoop, op: action };
     };
   }
 
