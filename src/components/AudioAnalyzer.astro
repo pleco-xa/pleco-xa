@@ -1850,7 +1850,8 @@ function applyLoop() {}
     }
 
     // Calculate new loop end position
-    const newLoopEnd = loopData.end; // Loop end stays at same ratio
+    // Loop end sample position stays the same, but ratio must be recalculated for shorter buffer
+    const newLoopEnd = (loopData.end * audioBuffer.length) / newBufferLength;
 
     return { buffer: newBuffer, newLoopEnd: newLoopEnd, gapSize: gap.size };
   }
@@ -1890,8 +1891,9 @@ function applyLoop() {}
       }
     }
 
-    // Calculate new loop end position (shifts left as buffer is shorter)
-    const newLoopEnd = loopData.end * (newBufferLength / audioBuffer.length);
+    // Calculate new loop end position
+    // Loop end sample position stays the same, but ratio must be recalculated for shorter buffer
+    const newLoopEnd = (loopData.end * audioBuffer.length) / newBufferLength;
 
     return { buffer: newBuffer, newLoopEnd: newLoopEnd, gapSize: gap.size };
   }
