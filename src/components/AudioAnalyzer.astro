@@ -86,6 +86,7 @@ function applyLoop() {}
         <button class="loop-btn" id="resetLoopBtn">♻️ Reset Loop</button>
         <button class="loop-btn" id="halfSpeedBtn">🐌 Half Speed Free</button>
         <button class="loop-btn" id="halfSpeedQuantzBtn">⚡ Half Speed Quantz</button>
+        <button class="loop-btn" id="unHalfSpeedQuantzBtn">↩️ UnHalf Speed Quantz</button>
         <button class="loop-btn" id="doubleSpeedQuantzBtn">🏃 Double Speed Quantz</button>
         <button class="loop-btn" id="doubleSpeedUnquantzBtn">🏃 Double Speed Unquantz</button>
         <button class="loop-btn-small" id="nudgeBtn">👁️ Nudge</button>
@@ -602,13 +603,17 @@ function applyLoop() {}
         
         // Apply loop points
         audioProcessor.setLoopPoints(loopResult.start, loopResult.end);
+
+        // Clear history stack when loop points change
+        clearHalfSpeedHistory();
+
         updateLoopInfo(loopResult);
         drawWaveform(currentAudioBuffer, 'waveformCanvas', loopResult);
-        
+
         // Reset button state
         detectBtn.textContent = originalText;
         detectBtn.disabled = false;
-        
+
         // Show success message
         showError('Loop detected successfully!');
       } catch (error) {
@@ -626,43 +631,55 @@ function applyLoop() {}
       // Disable nudge when loop boundaries change
       nudgeEnabled = false;
       currentNudgeLoop = null;
-      
+
+      // Clear history stack when loop points change
+      clearHalfSpeedHistory();
+
       updateLoopInfo(newLoop);
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
-    
+
     document.getElementById('doubleLoopBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       const newLoop = manipulateLoop('double', audioProcessor, currentAudioBuffer);
-      
+
       // Disable nudge when loop boundaries change
       nudgeEnabled = false;
       currentNudgeLoop = null;
-      
+
+      // Clear history stack when loop points change
+      clearHalfSpeedHistory();
+
       updateLoopInfo(newLoop);
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
-    
+
     document.getElementById('moveForwardBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       const newLoop = manipulateLoop('forward', audioProcessor, currentAudioBuffer);
-      
+
       // Disable nudge when loop position changes
       nudgeEnabled = false;
       currentNudgeLoop = null;
-      
+
+      // Clear history stack when loop points change
+      clearHalfSpeedHistory();
+
       updateLoopInfo(newLoop);
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
-    
+
     document.getElementById('resetLoopBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       const newLoop = manipulateLoop('reset', audioProcessor, currentAudioBuffer);
-      
+
       // Disable nudge when loop boundaries change
       nudgeEnabled = false;
       currentNudgeLoop = null;
-      
+
+      // Clear history stack when loop points change
+      clearHalfSpeedHistory();
+
       updateLoopInfo(newLoop);
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
@@ -683,13 +700,18 @@ function applyLoop() {}
           stopWaveformAnimation();
         }
 
-        const newBuffer = halfSpeedLoop(currentAudioBuffer, currentLoop);
-        currentAudioBuffer = newBuffer;
-        window.currentAudioBuffer = newBuffer;
+        // Apply half speed with updated loop points
+        const result = halfSpeedLoop(currentAudioBuffer, currentLoop);
+        currentAudioBuffer = result.buffer;
+        window.currentAudioBuffer = result.buffer;
 
-        // Loop stays the same normalized position but now represents stretched audio
-        updateLoopInfo(currentLoop);
-        drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+        // Update loop points to encompass the stretched content
+        const newLoop = { start: result.loopStart, end: result.loopEnd };
+        audioProcessor.setBuffer(result.buffer);
+        audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
+
+        updateLoopInfo(newLoop);
+        drawWaveform(result.buffer, 'waveformCanvas', newLoop);
 
         // Resume playback if it was playing
         if (wasPlaying) {
@@ -723,6 +745,17 @@ function applyLoop() {}
           stopWaveformAnimation();
         }
 
+        // Save current state to history stack before applying operation
+        halfSpeedQuantzHistory.push({
+          buffer: currentAudioBuffer,
+          originalBuffer: originalAudioBuffer,
+          loopPoints: { start: currentLoop.start, end: currentLoop.end },
+          nudgeState: nudgeState,
+          nudgeEnabled: nudgeEnabled,
+          nudgeLoop: currentNudgeLoop ? { start: currentNudgeLoop.start, end: currentNudgeLoop.end } : null,
+          nudgeReverseState: nudgeReverseState
+        });
+
         const newBuffer = halfSpeedQuantzLoop(currentAudioBuffer, currentLoop);
         currentAudioBuffer = newBuffer;
         window.currentAudioBuffer = newBuffer;
@@ -751,7 +784,57 @@ function applyLoop() {}
         enqueueToast('❌ Half speed quantz failed');
       }
     });
-    
+
+    document.getElementById('unHalfSpeedQuantzBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+
+      // Check if there's anything in the history stack
+      if (halfSpeedQuantzHistory.length === 0) {
+        enqueueToast('ℹ️ No half speed quantz operations to undo');
+        return;
+      }
+
+      try {
+        // Pop the last saved state from the history stack
+        const previousState = halfSpeedQuantzHistory.pop();
+
+        // Restore the previous state
+        currentAudioBuffer = previousState.buffer;
+        window.currentAudioBuffer = previousState.buffer;
+        originalAudioBuffer = previousState.originalBuffer;
+
+        // Restore loop points
+        const restoredLoop = previousState.loopPoints;
+        audioProcessor.setBuffer(previousState.buffer);
+        audioProcessor.setLoopPoints(restoredLoop.start, restoredLoop.end);
+
+        // Restore nudge state
+        nudgeState = previousState.nudgeState;
+        nudgeEnabled = previousState.nudgeEnabled;
+        currentNudgeLoop = previousState.nudgeLoop;
+        nudgeReverseState = previousState.nudgeReverseState;
+
+        updateLoopInfo(restoredLoop);
+        drawWaveform(previousState.buffer, 'waveformCanvas', restoredLoop);
+
+        const remaining = halfSpeedQuantzHistory.length;
+        if (remaining > 0) {
+          enqueueToast(`↩️ Undid half speed quantz (${remaining} more in history)`);
+        } else {
+          enqueueToast('↩️ Undid half speed quantz (fully restored)');
+        }
+
+        // Restart playback if playing
+        if (isPlaying) {
+          stopAudio();
+          setTimeout(() => playAudio(), 50);
+        }
+      } catch (error) {
+        console.error('UnHalf speed quantz error:', error);
+        enqueueToast('❌ UnHalf speed quantz failed');
+      }
+    });
+
     document.getElementById('doubleSpeedQuantzBtn')?.addEventListener('click', async () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       enqueueToast('Applying double speed quantz...');
@@ -965,6 +1048,14 @@ function applyLoop() {}
     let nudgeEnabled = false; // Only enable after half-speed processing
     let currentNudgeLoop = null; // Track which loop nudge applies to
     let nudgeReverseState = false; // Track if the half-speed content is currently reversed
+
+    // History stack for non-destructive undo of half speed quantz operations
+    let halfSpeedQuantzHistory = []; // Stack of { buffer, loopPoints, nudgeState, nudgeEnabled, nudgeLoop, nudgeReverseState }
+
+    // Helper to clear history stack (called when loop points change)
+    function clearHalfSpeedHistory() {
+      halfSpeedQuantzHistory = [];
+    }
     
     document.getElementById('nudgeBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor || !originalAudioBuffer) return;
@@ -986,15 +1077,22 @@ function applyLoop() {}
           nudgeState = 'second';
           enqueueToast('👁️ Nudged to second half');
         } else {
-          // Currently showing second half, switch back to first half  
+          // Currently showing second half, switch back to first half
           currentAudioBuffer = revealFirstHalf(currentAudioBuffer, originalAudioBuffer, currentNudgeLoop, nudgeReverseState);
           nudgeState = 'first';
           enqueueToast('👁️ Nudged to first half');
         }
-        
+
         window.currentAudioBuffer = currentAudioBuffer;
+        audioProcessor.setBuffer(currentAudioBuffer);
         updateLoopInfo(currentLoop);
         drawWaveform(currentAudioBuffer, 'waveformCanvas', currentLoop);
+
+        // Restart playback to hear the change immediately
+        if (isPlaying) {
+          stopAudio();
+          setTimeout(() => playAudio(), 50);
+        }
       } catch (error) {
         console.error('Nudge error:', error);
         enqueueToast('❌ Nudge failed');
@@ -1507,7 +1605,7 @@ function applyLoop() {}
     const endSample = Math.floor(loopData.end * audioBuffer.length);
     const loopLength = endSample - startSample;
     const stretchedLength = loopLength * 2; // Double the length for half speed
-    
+
     // Create new buffer with extra space for stretched audio
     const newLength = audioBuffer.length + stretchedLength - loopLength;
     const newBuffer = audioContext.createBuffer(
@@ -1515,30 +1613,30 @@ function applyLoop() {}
       newLength,
       audioBuffer.sampleRate
     );
-    
+
     // Copy data to new buffer with time stretching
     for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
       const inputData = audioBuffer.getChannelData(channel);
       const outputData = newBuffer.getChannelData(channel);
-      
+
       // Copy data before the loop
       for (let i = 0; i < startSample; i++) {
         outputData[i] = inputData[i];
       }
-      
+
       // Stretch the loop section (simple linear interpolation)
       for (let i = 0; i < stretchedLength; i++) {
         const srcIndex = startSample + (i * loopLength) / stretchedLength;
         const srcIndexFloor = Math.floor(srcIndex);
         const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
         const fraction = srcIndex - srcIndexFloor;
-        
+
         // Linear interpolation
         const sample1 = inputData[srcIndexFloor] || 0;
         const sample2 = inputData[srcIndexCeil] || 0;
         outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
       }
-      
+
       // Copy data after the loop
       const outputOffset = startSample + stretchedLength;
       for (let i = endSample; i < audioBuffer.length; i++) {
@@ -1548,8 +1646,12 @@ function applyLoop() {}
         }
       }
     }
-    
-    return newBuffer;
+
+    // Calculate new loop points (loop start stays same, loop end moves to end of stretched content)
+    const newLoopStart = startSample / newLength;
+    const newLoopEnd = (startSample + stretchedLength) / newLength;
+
+    return { buffer: newBuffer, loopStart: newLoopStart, loopEnd: newLoopEnd };
   }
 
   // Double speed quantz (compress 2x content into same loop window)
