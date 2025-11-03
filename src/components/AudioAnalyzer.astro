@@ -696,7 +696,8 @@ function applyLoop() {}
         if (isPlaying) {
           await audioProcessor.stop();
           isPlaying = false;
-          document.getElementById('playBtn')?.textContent = '▶️ Play';
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '▶️ Play';
           stopWaveformAnimation();
         }
 
@@ -717,7 +718,8 @@ function applyLoop() {}
         if (wasPlaying) {
           await audioProcessor.play(currentAudioBuffer);
           isPlaying = true;
-          document.getElementById('playBtn')?.textContent = '⏸️ Pause';
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '⏸️ Pause';
           startTimelineAnimation();
           startWaveformAnimation();
         }
@@ -741,7 +743,8 @@ function applyLoop() {}
         if (isPlaying) {
           audioProcessor.stop();
           isPlaying = false;
-          document.getElementById('playBtn')?.textContent = '▶️ Play';
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '▶️ Play';
           stopWaveformAnimation();
         }
 
@@ -773,7 +776,8 @@ function applyLoop() {}
         if (wasPlaying) {
           await audioProcessor.play(currentAudioBuffer);
           isPlaying = true;
-          document.getElementById('playBtn')?.textContent = '⏸️ Pause';
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '⏸️ Pause';
           startTimelineAnimation();
           startWaveformAnimation();
         }
@@ -847,7 +851,8 @@ function applyLoop() {}
         if (isPlaying) {
           audioProcessor.stop();
           isPlaying = false;
-          document.getElementById('playBtn')?.textContent = '▶️ Play';
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '▶️ Play';
           stopWaveformAnimation();
         }
 
@@ -872,7 +877,8 @@ function applyLoop() {}
         if (wasPlaying) {
           await audioProcessor.play(currentAudioBuffer);
           isPlaying = true;
-          document.getElementById('playBtn')?.textContent = '⏸️ Pause';
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '⏸️ Pause';
           startTimelineAnimation();
           startWaveformAnimation();
         }
@@ -978,10 +984,11 @@ function applyLoop() {}
       if (isPlaying) {
         audioProcessor.stop();
         isPlaying = false;
-        document.getElementById('playBtn')?.textContent = '▶️ Play';
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn) playBtn.textContent = '▶️ Play';
         stopWaveformAnimation();
       }
-      
+
       // Reset playhead to start of loop
       const loopPoints = audioProcessor.getLoopPoints();
       drawWaveform(currentAudioBuffer, 'waveformCanvas', loopPoints, {
@@ -1003,22 +1010,23 @@ function applyLoop() {}
         if (isPlaying) {
           audioProcessor.stop();
           isPlaying = false;
-          document.getElementById('playBtn')?.textContent = '▶️ Play';
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '▶️ Play';
           stopWaveformAnimation();
         }
-        
+
         // Normal reverse
         const startSample = Math.floor(loopPoints.start * currentAudioBuffer.length);
         const endSample = Math.floor(loopPoints.end * currentAudioBuffer.length);
         currentAudioBuffer = reverseBufferSection(currentAudioBuffer, startSample, endSample);
-        
+
         // Update nudge reverse state if nudge is enabled for this loop
-        if (nudgeEnabled && currentNudgeLoop && 
+        if (nudgeEnabled && currentNudgeLoop &&
             Math.abs(loopPoints.start - currentNudgeLoop.start) < 0.001 &&
             Math.abs(loopPoints.end - currentNudgeLoop.end) < 0.001) {
           nudgeReverseState = !nudgeReverseState; // Toggle reverse state
         }
-        
+
         window.currentAudioBuffer = currentAudioBuffer;
 
         // Update the waveform display
@@ -1031,7 +1039,8 @@ function applyLoop() {}
         if (wasPlaying) {
           await audioProcessor.play(currentAudioBuffer);
           isPlaying = true;
-          document.getElementById('playBtn')?.textContent = '⏸️ Pause';
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '⏸️ Pause';
           startTimelineAnimation();
           startWaveformAnimation();
         }
@@ -1233,14 +1242,16 @@ function applyLoop() {}
       if (isPlaying) {
         await audioProcessor.stop();
         isPlaying = false;
-        document.getElementById('playBtn')?.textContent = '▶️ Play';
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn) playBtn.textContent = '▶️ Play';
         stopWaveformAnimation();
         return;
       }
-      
+
       await audioProcessor.play(currentAudioBuffer);
       isPlaying = true;
-      document.getElementById('playBtn')?.textContent = '⏸️ Pause';
+      const playBtn = document.getElementById('playBtn');
+      if (playBtn) playBtn.textContent = '⏸️ Pause';
       
       // Start animations
       startTimelineAnimation();
@@ -1385,7 +1396,8 @@ function applyLoop() {}
     if (audioProcessor) {
       audioProcessor.stop();
       isPlaying = false;
-      document.getElementById('playBtn')?.textContent = '▶️ Play';
+      const playBtn = document.getElementById('playBtn');
+      if (playBtn) playBtn.textContent = '▶️ Play';
       stopWaveformAnimation();
     }
   }
