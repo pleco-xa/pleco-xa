@@ -1620,7 +1620,12 @@ function applyLoop() {}
 
     // Create new buffer with extra space for stretched audio
     const newLength = audioBuffer.length + stretchedLength - loopLength;
-    const newBuffer = audioContext.createBuffer(
+
+    // Ensure we have a valid audio context
+    const ctx = audioContext || window.audioContext || audioProcessor.getAudioContext();
+    if (!ctx) throw new Error('Audio context not initialized');
+
+    const newBuffer = ctx.createBuffer(
       audioBuffer.numberOfChannels,
       newLength,
       audioBuffer.sampleRate
