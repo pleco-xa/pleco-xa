@@ -1779,44 +1779,40 @@ function applyLoop() {}
       return null; // No gap - not enough space
     }
 
-    // Scan for silence starting from loop end
-    let gapStart = endSample;
-    let gapEnd = endSample;
-    let foundGap = false;
-
+    // For each channel, find the first silence region after endSample
+    let silenceRegions = [];
     for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
       const data = audioBuffer.getChannelData(channel);
-
-      // Find the start of the gap (silence region)
       let silenceStart = -1;
+      let found = false;
       for (let i = endSample; i < audioBuffer.length; i++) {
         if (Math.abs(data[i]) < silenceThreshold) {
           if (silenceStart === -1) {
             silenceStart = i;
           }
         } else {
-          // Found non-silence
           if (silenceStart !== -1 && (i - silenceStart) >= minGapSize) {
-            // Found a gap of sufficient size
-            foundGap = true;
-            gapStart = silenceStart;
-            gapEnd = i;
+            // Found a silence region
+            silenceRegions.push({ start: silenceStart, end: i });
+            found = true;
             break;
           }
           silenceStart = -1;
         }
       }
-
       // Check if silence extends to the end
-      if (silenceStart !== -1 && (audioBuffer.length - silenceStart) >= minGapSize) {
-        foundGap = true;
-        gapStart = silenceStart;
-        gapEnd = audioBuffer.length;
-        break;
+      if (!found && silenceStart !== -1 && (audioBuffer.length - silenceStart) >= minGapSize) {
+        silenceRegions.push({ start: silenceStart, end: audioBuffer.length });
+      } else if (!found && silenceStart === -1) {
+        // No silence region found for this channel
+        return null;
       }
     }
 
-    if (!foundGap) {
+    // Find intersection of silence regions across all channels
+    let gapStart = Math.max(...silenceRegions.map(r => r.start));
+    let gapEnd = Math.min(...silenceRegions.map(r => r.end));
+    if (gapEnd - gapStart < minGapSize) {
       return null;
     }
 
