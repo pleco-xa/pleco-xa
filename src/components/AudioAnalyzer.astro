@@ -664,19 +664,39 @@ function applyLoop() {}
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
     
-    document.getElementById('halfSpeedBtn')?.addEventListener('click', () => {
+    document.getElementById('halfSpeedBtn')?.addEventListener('click', async () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       enqueueToast('Applying half speed...');
-      
+
       try {
         const currentLoop = audioProcessor.getLoopPoints();
+
+        // Check if currently playing
+        const wasPlaying = isPlaying;
+        if (isPlaying) {
+          await audioProcessor.stop();
+          isPlaying = false;
+          document.getElementById('playBtn')?.textContent = '▶️ Play';
+          stopWaveformAnimation();
+        }
+
         const newBuffer = halfSpeedLoop(currentAudioBuffer, currentLoop);
         currentAudioBuffer = newBuffer;
         window.currentAudioBuffer = newBuffer;
-        
+
         // Loop stays the same normalized position but now represents stretched audio
         updateLoopInfo(currentLoop);
         drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+
+        // Resume playback if it was playing
+        if (wasPlaying) {
+          await audioProcessor.play(currentAudioBuffer);
+          isPlaying = true;
+          document.getElementById('playBtn')?.textContent = '⏸️ Pause';
+          startTimelineAnimation();
+          startWaveformAnimation();
+        }
+
         enqueueToast('✅ Half speed applied');
       } catch (error) {
         console.error('Half speed error:', error);
@@ -684,24 +704,44 @@ function applyLoop() {}
       }
     });
     
-    document.getElementById('halfSpeedQuantzBtn')?.addEventListener('click', () => {
+    document.getElementById('halfSpeedQuantzBtn')?.addEventListener('click', async () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       enqueueToast('Applying half speed quantz...');
-      
+
       try {
         const currentLoop = audioProcessor.getLoopPoints();
+
+        // Check if currently playing
+        const wasPlaying = isPlaying;
+        if (isPlaying) {
+          audioProcessor.stop();
+          isPlaying = false;
+          document.getElementById('playBtn')?.textContent = '▶️ Play';
+          stopWaveformAnimation();
+        }
+
         const newBuffer = halfSpeedQuantzLoop(currentAudioBuffer, currentLoop);
         currentAudioBuffer = newBuffer;
         window.currentAudioBuffer = newBuffer;
-        
+
         // Enable nudge for this specific loop
         nudgeEnabled = true;
         currentNudgeLoop = { start: currentLoop.start, end: currentLoop.end };
         nudgeState = 'first';
         nudgeReverseState = false; // Half speed starts non-reversed
-        
+
         updateLoopInfo(currentLoop);
         drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+
+        // Resume playback if it was playing
+        if (wasPlaying) {
+          await audioProcessor.play(currentAudioBuffer);
+          isPlaying = true;
+          document.getElementById('playBtn')?.textContent = '⏸️ Pause';
+          startTimelineAnimation();
+          startWaveformAnimation();
+        }
+
         enqueueToast('✅ Half speed quantz applied (nudge enabled)');
       } catch (error) {
         console.error('Half speed quantz error:', error);
@@ -709,22 +749,42 @@ function applyLoop() {}
       }
     });
     
-    document.getElementById('doubleSpeedQuantzBtn')?.addEventListener('click', () => {
+    document.getElementById('doubleSpeedQuantzBtn')?.addEventListener('click', async () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       enqueueToast('Applying double speed quantz...');
-      
+
       try {
         const currentLoop = audioProcessor.getLoopPoints();
+
+        // Check if currently playing
+        const wasPlaying = isPlaying;
+        if (isPlaying) {
+          audioProcessor.stop();
+          isPlaying = false;
+          document.getElementById('playBtn')?.textContent = '▶️ Play';
+          stopWaveformAnimation();
+        }
+
         const newBuffer = doubleSpeedQuantzLoop(currentAudioBuffer, currentLoop);
         currentAudioBuffer = newBuffer;
         window.currentAudioBuffer = newBuffer;
-        
+
         // Disable nudge for double speed (no hidden half to reveal)
         nudgeEnabled = false;
         currentNudgeLoop = null;
-        
+
         updateLoopInfo(currentLoop);
         drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+
+        // Resume playback if it was playing
+        if (wasPlaying) {
+          await audioProcessor.play(currentAudioBuffer);
+          isPlaying = true;
+          document.getElementById('playBtn')?.textContent = '⏸️ Pause';
+          startTimelineAnimation();
+          startWaveformAnimation();
+        }
+
         enqueueToast('✅ Double speed quantz applied');
       } catch (error) {
         console.error('Double speed quantz error:', error);
@@ -739,7 +799,7 @@ function applyLoop() {}
       if (isPlaying) {
         audioProcessor.stop();
         isPlaying = false;
-        document.getElementById('playBtn').textContent = '▶️ Play';
+        document.getElementById('playBtn')?.textContent = '▶️ Play';
         stopWaveformAnimation();
       }
       
@@ -764,7 +824,7 @@ function applyLoop() {}
         if (isPlaying) {
           audioProcessor.stop();
           isPlaying = false;
-          document.getElementById('playBtn').textContent = '▶️ Play';
+          document.getElementById('playBtn')?.textContent = '▶️ Play';
           stopWaveformAnimation();
         }
         
@@ -792,7 +852,7 @@ function applyLoop() {}
         if (wasPlaying) {
           await audioProcessor.play(currentAudioBuffer);
           isPlaying = true;
-          document.getElementById('playBtn').textContent = '⏸️ Pause';
+          document.getElementById('playBtn')?.textContent = '⏸️ Pause';
           startTimelineAnimation();
           startWaveformAnimation();
         }
@@ -979,14 +1039,14 @@ function applyLoop() {}
       if (isPlaying) {
         await audioProcessor.stop();
         isPlaying = false;
-        document.getElementById('playBtn').textContent = '▶️ Play';
+        document.getElementById('playBtn')?.textContent = '▶️ Play';
         stopWaveformAnimation();
         return;
       }
       
       await audioProcessor.play(currentAudioBuffer);
       isPlaying = true;
-      document.getElementById('playBtn').textContent = '⏸️ Pause';
+      document.getElementById('playBtn')?.textContent = '⏸️ Pause';
       
       // Start animations
       startTimelineAnimation();
@@ -1131,7 +1191,7 @@ function applyLoop() {}
     if (audioProcessor) {
       audioProcessor.stop();
       isPlaying = false;
-      document.getElementById('playBtn').textContent = '▶️ Play';
+      document.getElementById('playBtn')?.textContent = '▶️ Play';
       stopWaveformAnimation();
     }
   }
