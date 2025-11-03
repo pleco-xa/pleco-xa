@@ -1,5 +1,9 @@
 ---
-/** BPM detection component for Astro */
+/**
+ * BPM Detector Component
+ * Orchestrates BPM detection with complete console logging from lb
+ * Preserves ALL console.log statements for debugging tempo octave errors
+ */
 interface Props {
   showConfidence?: boolean
   autoDetect?: boolean
@@ -81,72 +85,298 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
   }
 </style>
 
-<script>
-  import { fastBPMDetect } from '../scripts/xa-beat.js'
+<script type="module">
+  import { analyzeWithProgress } from '../scripts/xa-bpm-algorithm.js';
 
+  /**
+   * Main BPM detection function that matches lb/index.html lines 216-364
+   * Includes ALL console.log statements and calculations
+   */
+  async function detectBPMWithLogs(audioBuffer, options = {}) {
+    const y = audioBuffer.getChannelData(0);
+    const sr = audioBuffer.sampleRate;
+
+    // Determine analysis parameters (lb lines 224-226)
+    const duration = audioBuffer.duration;
+    const windowSize = duration > 30 ? 8 : 4; // seconds
+    const hopSize = duration > 30 ? 2 : 1;    // seconds
+
+    console.log(`🎵 Starting BPM analysis...`);
+    console.log(`Sample rate: ${sr} Hz`);
+    console.log(`Duration: ${duration.toFixed(2)} seconds`);
+    console.log(`Window size: ${windowSize}s, Hop size: ${hopSize}s`);
+
+    try {
+      // Main analysis (lb line 235)
+      const result = await analyzeWithProgress(y, sr, windowSize, hopSize);
+
+      // Extract all values from result (lb lines 239-250)
+      const globalTempo = result.globalTempo;
+      const globalConfidence = result.globalConfidence;
+      const globalCandidates = result.globalCandidates;
+      const tempo = result.tempo;
+      const confidence = result.confidence;
+      const times = result.times;
+      const onsetEnvelope = result.onsetEnvelope;
+      const tempogram = result.tempogram;
+
+      // Validate tempo (lb lines 252-258)
+      const validatedTempo = (globalTempo >= 30 && globalTempo <= 300) ? globalTempo : null;
+
+      if (globalTempo !== validatedTempo) {
+        console.log(`⚠️ Tempo ${globalTempo.toFixed(1)} out of range, detection failed`);
+        if (!validatedTempo) {
+          return {
+            bpm: null,
+            confidence: 0,
+            error: `Tempo ${globalTempo.toFixed(1)} BPM is outside reasonable range (30-300)`,
+            failed: true
+          };
+        }
+      }
+
+      // Log main result (lb lines 260-263)
+      console.log(`\n📊 Global Tempo: ${globalTempo.toFixed(1)} BPM`);
+      console.log(`Confidence: ${(globalConfidence * 100).toFixed(1)}%`);
+      console.log(`Validated: ${validatedTempo.toFixed(1)} BPM`);
+
+      // Log candidates (lb lines 265-272)
+      if (globalCandidates && globalCandidates.length > 0) {
+        console.log(`\n🎯 Top Tempo Candidates:`);
+        globalCandidates.slice(0, 5).forEach((c, i) => {
+          console.log(`  ${i + 1}. ${c.bpm.toFixed(1)} BPM (score: ${c.score.toFixed(3)})`);
+        });
+      }
+
+      // Log tempogram peaks (lb lines 274-282)
+      if (tempogram && tempogram.peakTempos && tempogram.peakTempos.length > 0) {
+        console.log(`\n📈 Tempogram Peaks:`);
+        for (let i = 0; i < Math.min(tempogram.peakTempos.length, 8); i++) {
+          const peak = tempogram.peakTempos[i];
+          console.log(`  ${peak.bpm.toFixed(1)} BPM (strength: ${peak.strength.toFixed(3)})`);
+        }
+      }
+
+      // Calculate stability metrics (lb lines 284-286) - CRITICAL
+      const deviations = tempo.map(t => Math.abs(t - globalTempo));
+      const avgDeviation = deviations.reduce((a, b) => a + b, 0) / deviations.length;
+      const maxDeviation = Math.max(...deviations);
+
+      // Log stability analysis (lb lines 288-293)
+      console.log(`\n📉 Tempo Stability:`);
+      console.log(`  Windows analyzed: ${tempo.length}`);
+      console.log(`  Average deviation: ${avgDeviation.toFixed(1)} BPM`);
+      console.log(`  Max deviation: ${maxDeviation.toFixed(1)} BPM`);
+      console.log(`  Stability: ${((1 - avgDeviation / 50) * 100).toFixed(1)}%`);
+
+      // Compare methods (lb lines 295-298)
+      const autocorrBPM = globalTempo;
+      const tempogramBPM = tempogram?.peakTempos?.[0]?.bpm || globalTempo;
+      console.log(`\n🔄 Method Comparison:`);
+      console.log(`  Autocorrelation: ${autocorrBPM.toFixed(1)} BPM`);
+      console.log(`  Tempogram: ${tempogramBPM.toFixed(1)} BPM`);
+
+      // Log detailed window analysis (from lb's live tracking)
+      if (tempo.length > 0) {
+        console.log(`\n🪟 Window-by-window BPMs:`);
+        const windowsToShow = Math.min(10, tempo.length);
+        for (let i = 0; i < windowsToShow; i++) {
+          console.log(`  Window ${i + 1}: ${tempo[i].toFixed(1)} BPM (confidence: ${(confidence[i] * 100).toFixed(1)}%)`);
+        }
+        if (tempo.length > windowsToShow) {
+          console.log(`  ... and ${tempo.length - windowsToShow} more windows`);
+        }
+      }
+
+      // BPM Ranking - MOST IMPORTANT for debugging octave errors (lb lines 337-352)
+      console.log(`\n🏆 BPM Ranking (for debugging octave errors):`);
+
+      // Create ranking from all sources
+      const bpmRanking = new Map();
+
+      // Add autocorrelation result
+      bpmRanking.set(globalTempo, {
+        source: 'autocorrelation',
+        score: globalConfidence,
+        primary: true
+      });
+
+      // Add tempogram peaks
+      if (tempogram?.peakTempos) {
+        tempogram.peakTempos.forEach((peak, i) => {
+          if (!bpmRanking.has(peak.bpm)) {
+            bpmRanking.set(peak.bpm, {
+              source: `tempogram_peak_${i + 1}`,
+              score: peak.strength / (i + 1), // Decay by position
+              primary: false
+            });
+          }
+        });
+      }
+
+      // Add candidate tempos
+      if (globalCandidates) {
+        globalCandidates.forEach((cand, i) => {
+          if (!bpmRanking.has(cand.bpm)) {
+            bpmRanking.set(cand.bpm, {
+              source: `candidate_${i + 1}`,
+              score: cand.score * 0.8, // Slightly lower weight
+              primary: false
+            });
+          }
+        });
+      }
+
+      // Sort by score and display
+      const sortedBPMs = Array.from(bpmRanking.entries())
+        .sort((a, b) => b[1].score - a[1].score)
+        .slice(0, 10);
+
+      sortedBPMs.forEach(([bpm, info], i) => {
+        const crown = i === 0 ? '👑' : `${i + 1}.`;
+        const marker = info.primary ? '⭐' : '';
+        console.log(`  ${crown} ${bpm.toFixed(1)} BPM ${marker} (${info.source}, score: ${info.score.toFixed(3)})`);
+      });
+
+      // Check for octave errors
+      const primaryBPM = sortedBPMs[0][0];
+      const halfBPM = primaryBPM / 2;
+      const doubleBPM = primaryBPM * 2;
+
+      const hasHalfCandidate = sortedBPMs.some(([bpm]) =>
+        Math.abs(bpm - halfBPM) < 5
+      );
+      const hasDoubleCandidate = sortedBPMs.some(([bpm]) =>
+        Math.abs(bpm - doubleBPM) < 5
+      );
+
+      if (hasHalfCandidate || hasDoubleCandidate) {
+        console.log(`\n⚠️ Possible tempo octave error detected!`);
+        if (hasHalfCandidate) {
+          console.log(`  Half-time candidate: ${halfBPM.toFixed(1)} BPM`);
+        }
+        if (hasDoubleCandidate) {
+          console.log(`  Double-time candidate: ${doubleBPM.toFixed(1)} BPM`);
+        }
+        console.log(`  Consider if ${primaryBPM.toFixed(1)} BPM should actually be ${hasHalfCandidate ? halfBPM.toFixed(1) : doubleBPM.toFixed(1)} BPM`);
+      }
+
+      // Final result (lb line 337)
+      const confidenceLabel = globalConfidence > 0.8 ? 'High' :
+                            globalConfidence > 0.6 ? 'Medium' : 'Low';
+
+      console.log(`\n✅ Final Result: ${validatedTempo.toFixed(1)} BPM (${confidenceLabel} confidence)`);
+
+      // Return result matching xa-bpm-detection.js interface
+      return {
+        bpm: validatedTempo,
+        confidence: globalConfidence,
+        original: globalTempo,
+        // Additional data for debugging
+        candidates: globalCandidates,
+        tempogram: tempogram,
+        stability: {
+          avgDeviation,
+          maxDeviation,
+          windows: tempo.length
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ BPM detection failed:', error);
+      console.error('Stack trace:', error.stack);
+
+      // Don't lie about BPM - report the failure
+      return {
+        bpm: null,
+        confidence: 0,
+        error: error.message,
+        failed: true
+      };
+    }
+  }
+
+  // Export for use in AudioAnalyzer.astro
+  window.detectBPMWithLogs = detectBPMWithLogs;
+
+  // Handle file upload UI
   document.addEventListener('DOMContentLoaded', () => {
-    const fileInput = document.getElementById('bpmFileInput')
-    const bpmValue = document.getElementById('bpmValue')
-    const bpmConfidence = document.getElementById('bpmConfidence')
-    const uploadLabel = document.querySelector('label[for="bpmFileInput"]')
+    const fileInput = document.getElementById('bpmFileInput');
+    const bpmValue = document.getElementById('bpmValue');
+    const bpmConfidence = document.getElementById('bpmConfidence');
+    const uploadLabel = document.querySelector('label[for="bpmFileInput"]');
 
     if (uploadLabel) {
       uploadLabel.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          fileInput?.click()
+          e.preventDefault();
+          fileInput?.click();
         }
-      })
+      });
     }
 
     if (fileInput) {
       fileInput.addEventListener('change', async (e) => {
-        const target = e.target
-        const file = target.files && target.files[0]
-        if (!file) return
+        const target = e.target;
+        const file = target.files && target.files[0];
+        if (!file) return;
 
         try {
-          bpmValue.textContent = 'Analyzing...'
+          bpmValue.textContent = 'Analyzing...';
 
           // Load and analyze
-          const AudioContextConstructor =
-            window.AudioContext || (window as any).webkitAudioContext
-          const audioContext = new AudioContextConstructor()
-          const arrayBuffer = await file.arrayBuffer()
-          let audioBuffer
+          const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+          const audioContext = new AudioContextConstructor();
+          const arrayBuffer = await file.arrayBuffer();
+          let audioBuffer;
+
           try {
-            audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
           } catch (decodeError) {
-            console.error('Audio decoding failed:', decodeError)
-            const btn = fileInput.nextElementSibling
+            console.error('Audio decoding failed:', decodeError);
+            const btn = fileInput.nextElementSibling;
             if (btn) {
-              btn.classList.add('error')
-              btn.setAttribute('title', 'Unsupported format')
+              btn.classList.add('error');
+              btn.setAttribute('title', 'Unsupported format');
               setTimeout(() => {
-                btn.classList.remove('error')
-                btn.removeAttribute('title')
-              }, 5000)
+                btn.classList.remove('error');
+                btn.removeAttribute('title');
+              }, 5000);
             }
-            bpmValue.textContent = 'Error'
+            bpmValue.textContent = 'Error';
             if (bpmConfidence) {
-              bpmConfidence.textContent = 'Detection failed'
+              bpmConfidence.textContent = 'Detection failed';
             }
-            return
+            return;
           }
 
-          const result = fastBPMDetect(audioBuffer, { minBPM: 60, maxBPM: 180 })
+          // Use new lb-based detection with all logs
+          const result = await detectBPMWithLogs(audioBuffer);
 
-          // Update display
-          bpmValue.textContent = `${result.bpm.toFixed(1)} BPM`
-          if (bpmConfidence) {
-            bpmConfidence.textContent = `${(result.confidence * 100).toFixed(1)}% confidence`;
+          // Update display based on result
+          if (result.failed || result.bpm === null) {
+            bpmValue.textContent = 'Failed';
+            if (bpmConfidence) {
+              bpmConfidence.textContent = result.error || 'Could not detect BPM';
+            }
+          } else {
+            bpmValue.textContent = `${result.bpm.toFixed(1)} BPM`;
+            if (bpmConfidence) {
+              bpmConfidence.textContent = `${(result.confidence * 100).toFixed(1)}% confidence`;
+            }
           }
 
           // Dispatch event
           const bpmEvent = new CustomEvent('bpmEvent', {
-            detail: { bpm: result.bpm, confidence: result.confidence },
-          })
-          document.dispatchEvent(bpmEvent)
+            detail: {
+              bpm: result.bpm,
+              confidence: result.confidence,
+              candidates: result.candidates,
+              stability: result.stability,
+              failed: result.failed || false
+            },
+          });
+          document.dispatchEvent(bpmEvent);
         } catch (error) {
           console.error('BPM detection failed:', error);
           console.error('Detailed error stack:', error.stack);
@@ -155,7 +385,7 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
             bpmConfidence.textContent = 'Detection failed';
           }
         }
-      })
+      });
     }
-  })
+  });
 </script>
