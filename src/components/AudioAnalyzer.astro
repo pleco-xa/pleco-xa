@@ -674,7 +674,7 @@ function applyLoop() {}
         // Check if currently playing
         const wasPlaying = isPlaying;
         if (isPlaying) {
-          audioProcessor.stop();
+          await audioProcessor.stop();
           isPlaying = false;
           document.getElementById('playBtn').textContent = '▶️ Play';
           stopWaveformAnimation();
