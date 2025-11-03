@@ -69,3 +69,9 @@ test-worker.cjs
 
 # Exclude large npm package files
 pleco-xa-*.tgz
+
+# librosa clone for testing
+librosa/
+
+# lb BPM detector for testing
+lb/

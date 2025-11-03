@@ -684,44 +684,35 @@ function applyLoop() {}
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
     
-    document.getElementById('halfSpeedBtn')?.addEventListener('click', async () => {
+    document.getElementById('halfSpeedBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       enqueueToast('Applying half speed...');
 
       try {
         const currentLoop = audioProcessor.getLoopPoints();
+        const startSample = Math.floor(currentLoop.start * currentAudioBuffer.length);
+        const endSample = Math.floor(currentLoop.end * currentAudioBuffer.length);
+        const loopLength = endSample - startSample;
+        const stretchedLength = loopLength * 2;
 
-        // Check if currently playing
-        const wasPlaying = isPlaying;
-        if (isPlaying) {
-          await audioProcessor.stop();
-          isPlaying = false;
-          const playBtn = document.getElementById('playBtn');
-          if (playBtn) playBtn.textContent = '▶️ Play';
-          stopWaveformAnimation();
-        }
+        const newBuffer = halfSpeedLoop(currentAudioBuffer, currentLoop);
+        currentAudioBuffer = newBuffer;
+        window.currentAudioBuffer = newBuffer;
 
-        // Apply half speed with updated loop points
-        const result = halfSpeedLoop(currentAudioBuffer, currentLoop);
-        currentAudioBuffer = result.buffer;
-        window.currentAudioBuffer = result.buffer;
+        // Calculate new loop points to encompass the stretched content
+        const newLength = newBuffer.length;
+        const newLoopStart = startSample / newLength;
+        const newLoopEnd = (startSample + stretchedLength) / newLength;
+        const newLoop = { start: newLoopStart, end: newLoopEnd };
 
-        // Update loop points to encompass the stretched content
-        const newLoop = { start: result.loopStart, end: result.loopEnd };
-        audioProcessor.setBuffer(result.buffer);
         audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
-
         updateLoopInfo(newLoop);
-        drawWaveform(result.buffer, 'waveformCanvas', newLoop);
+        drawWaveform(newBuffer, 'waveformCanvas', newLoop);
 
-        // Resume playback if it was playing
-        if (wasPlaying) {
-          await audioProcessor.play(currentAudioBuffer);
-          isPlaying = true;
-          const playBtn = document.getElementById('playBtn');
-          if (playBtn) playBtn.textContent = '⏸️ Pause';
-          startTimelineAnimation();
-          startWaveformAnimation();
+        // Restart playback immediately if playing
+        if (isPlaying) {
+          stopAudio();
+          setTimeout(() => playAudio(), 50);
         }
 
         enqueueToast('✅ Half speed applied');
@@ -1066,20 +1057,30 @@ function applyLoop() {}
       halfSpeedQuantzHistory = [];
     }
     
-    document.getElementById('nudgeBtn')?.addEventListener('click', () => {
+    document.getElementById('nudgeBtn')?.addEventListener('click', async () => {
       if (!currentAudioBuffer || !audioProcessor || !originalAudioBuffer) return;
-      
+
       const currentLoop = audioProcessor.getLoopPoints();
-      
+
       // Check if nudge is enabled and we're still in the same loop
-      if (!nudgeEnabled || !currentNudgeLoop || 
+      if (!nudgeEnabled || !currentNudgeLoop ||
           Math.abs(currentLoop.start - currentNudgeLoop.start) > 0.001 ||
           Math.abs(currentLoop.end - currentNudgeLoop.end) > 0.001) {
         enqueueToast('❌ Nudge only works on half-speed processed loops');
         return;
       }
-      
+
       try {
+        // Stop playback if playing
+        const wasPlaying = isPlaying;
+        if (isPlaying) {
+          audioProcessor.stop();
+          isPlaying = false;
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '▶️ Play';
+          stopWaveformAnimation();
+        }
+
         if (nudgeState === 'first') {
           // Currently showing first half, switch to second half
           currentAudioBuffer = revealHiddenHalf(currentAudioBuffer, originalAudioBuffer, currentNudgeLoop, nudgeReverseState);
@@ -1093,14 +1094,17 @@ function applyLoop() {}
         }
 
         window.currentAudioBuffer = currentAudioBuffer;
-        audioProcessor.setBuffer(currentAudioBuffer);
         updateLoopInfo(currentLoop);
         drawWaveform(currentAudioBuffer, 'waveformCanvas', currentLoop);
 
-        // Restart playback to hear the change immediately
-        if (isPlaying) {
-          stopAudio();
-          setTimeout(() => playAudio(), 50);
+        // Resume playback if it was playing
+        if (wasPlaying) {
+          await audioProcessor.play(currentAudioBuffer);
+          isPlaying = true;
+          const playBtn = document.getElementById('playBtn');
+          if (playBtn) playBtn.textContent = '⏸️ Pause';
+          startTimelineAnimation();
+          startWaveformAnimation();
         }
       } catch (error) {
         console.error('Nudge error:', error);
@@ -1620,12 +1624,7 @@ function applyLoop() {}
 
     // Create new buffer with extra space for stretched audio
     const newLength = audioBuffer.length + stretchedLength - loopLength;
-
-    // Ensure we have a valid audio context
-    const ctx = audioContext || window.audioContext || audioProcessor.getAudioContext();
-    if (!ctx) throw new Error('Audio context not initialized');
-
-    const newBuffer = ctx.createBuffer(
+    const newBuffer = audioContext.createBuffer(
       audioBuffer.numberOfChannels,
       newLength,
       audioBuffer.sampleRate
@@ -1664,11 +1663,7 @@ function applyLoop() {}
       }
     }
 
-    // Calculate new loop points (loop start stays same, loop end moves to end of stretched content)
-    const newLoopStart = startSample / newLength;
-    const newLoopEnd = (startSample + stretchedLength) / newLength;
-
-    return { buffer: newBuffer, loopStart: newLoopStart, loopEnd: newLoopEnd };
+    return newBuffer;
   }
 
   // Double speed quantz (compress 2x content into same loop window)
