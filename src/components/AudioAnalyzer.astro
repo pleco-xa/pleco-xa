@@ -86,8 +86,12 @@ function applyLoop() {}
         <button class="loop-btn" id="resetLoopBtn">♻️ Reset Loop</button>
         <button class="loop-btn" id="halfSpeedBtn">🐌 Half Speed Free</button>
         <button class="loop-btn" id="halfSpeedQuantzBtn">⚡ Half Speed Quantz</button>
+        <button class="loop-btn" id="unHalfSpeedQuantzBtn">↩️ UnHalf Speed Quantz</button>
         <button class="loop-btn" id="doubleSpeedQuantzBtn">🏃 Double Speed Quantz</button>
+        <button class="loop-btn" id="doubleSpeedUnquantzBtn">🏃 Double Speed Unquantz</button>
         <button class="loop-btn-small" id="nudgeBtn">👁️ Nudge</button>
+        <button class="loop-btn-small" id="closeGapLeftBtn">◀️ Close Gap Left</button>
+        <button class="loop-btn-small" id="closeGapRightBtn">▶️ Close Gap Right</button>
       </div>
     </div>
 
@@ -599,13 +603,17 @@ function applyLoop() {}
         
         // Apply loop points
         audioProcessor.setLoopPoints(loopResult.start, loopResult.end);
+
+        // Clear history stack when loop points change
+        clearHalfSpeedHistory();
+
         updateLoopInfo(loopResult);
         drawWaveform(currentAudioBuffer, 'waveformCanvas', loopResult);
-        
+
         // Reset button state
         detectBtn.textContent = originalText;
         detectBtn.disabled = false;
-        
+
         // Show success message
         showError('Loop detected successfully!');
       } catch (error) {
@@ -623,43 +631,55 @@ function applyLoop() {}
       // Disable nudge when loop boundaries change
       nudgeEnabled = false;
       currentNudgeLoop = null;
-      
+
+      // Clear history stack when loop points change
+      clearHalfSpeedHistory();
+
       updateLoopInfo(newLoop);
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
-    
+
     document.getElementById('doubleLoopBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       const newLoop = manipulateLoop('double', audioProcessor, currentAudioBuffer);
-      
+
       // Disable nudge when loop boundaries change
       nudgeEnabled = false;
       currentNudgeLoop = null;
-      
+
+      // Clear history stack when loop points change
+      clearHalfSpeedHistory();
+
       updateLoopInfo(newLoop);
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
-    
+
     document.getElementById('moveForwardBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       const newLoop = manipulateLoop('forward', audioProcessor, currentAudioBuffer);
-      
+
       // Disable nudge when loop position changes
       nudgeEnabled = false;
       currentNudgeLoop = null;
-      
+
+      // Clear history stack when loop points change
+      clearHalfSpeedHistory();
+
       updateLoopInfo(newLoop);
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
-    
+
     document.getElementById('resetLoopBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       const newLoop = manipulateLoop('reset', audioProcessor, currentAudioBuffer);
-      
+
       // Disable nudge when loop boundaries change
       nudgeEnabled = false;
       currentNudgeLoop = null;
-      
+
+      // Clear history stack when loop points change
+      clearHalfSpeedHistory();
+
       updateLoopInfo(newLoop);
       drawWaveform(currentAudioBuffer, 'waveformCanvas', newLoop);
     });
@@ -680,13 +700,18 @@ function applyLoop() {}
           stopWaveformAnimation();
         }
 
-        const newBuffer = halfSpeedLoop(currentAudioBuffer, currentLoop);
-        currentAudioBuffer = newBuffer;
-        window.currentAudioBuffer = newBuffer;
+        // Apply half speed with updated loop points
+        const result = halfSpeedLoop(currentAudioBuffer, currentLoop);
+        currentAudioBuffer = result.buffer;
+        window.currentAudioBuffer = result.buffer;
 
-        // Loop stays the same normalized position but now represents stretched audio
-        updateLoopInfo(currentLoop);
-        drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+        // Update loop points to encompass the stretched content
+        const newLoop = { start: result.loopStart, end: result.loopEnd };
+        audioProcessor.setBuffer(result.buffer);
+        audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
+
+        updateLoopInfo(newLoop);
+        drawWaveform(result.buffer, 'waveformCanvas', newLoop);
 
         // Resume playback if it was playing
         if (wasPlaying) {
@@ -720,6 +745,17 @@ function applyLoop() {}
           stopWaveformAnimation();
         }
 
+        // Save current state to history stack before applying operation
+        halfSpeedQuantzHistory.push({
+          buffer: currentAudioBuffer,
+          originalBuffer: originalAudioBuffer,
+          loopPoints: { start: currentLoop.start, end: currentLoop.end },
+          nudgeState: nudgeState,
+          nudgeEnabled: nudgeEnabled,
+          nudgeLoop: currentNudgeLoop ? { start: currentNudgeLoop.start, end: currentNudgeLoop.end } : null,
+          nudgeReverseState: nudgeReverseState
+        });
+
         const newBuffer = halfSpeedQuantzLoop(currentAudioBuffer, currentLoop);
         currentAudioBuffer = newBuffer;
         window.currentAudioBuffer = newBuffer;
@@ -748,7 +784,57 @@ function applyLoop() {}
         enqueueToast('❌ Half speed quantz failed');
       }
     });
-    
+
+    document.getElementById('unHalfSpeedQuantzBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+
+      // Check if there's anything in the history stack
+      if (halfSpeedQuantzHistory.length === 0) {
+        enqueueToast('ℹ️ No half speed quantz operations to undo');
+        return;
+      }
+
+      try {
+        // Pop the last saved state from the history stack
+        const previousState = halfSpeedQuantzHistory.pop();
+
+        // Restore the previous state
+        currentAudioBuffer = previousState.buffer;
+        window.currentAudioBuffer = previousState.buffer;
+        originalAudioBuffer = previousState.originalBuffer;
+
+        // Restore loop points
+        const restoredLoop = previousState.loopPoints;
+        audioProcessor.setBuffer(previousState.buffer);
+        audioProcessor.setLoopPoints(restoredLoop.start, restoredLoop.end);
+
+        // Restore nudge state
+        nudgeState = previousState.nudgeState;
+        nudgeEnabled = previousState.nudgeEnabled;
+        currentNudgeLoop = previousState.nudgeLoop;
+        nudgeReverseState = previousState.nudgeReverseState;
+
+        updateLoopInfo(restoredLoop);
+        drawWaveform(previousState.buffer, 'waveformCanvas', restoredLoop);
+
+        const remaining = halfSpeedQuantzHistory.length;
+        if (remaining > 0) {
+          enqueueToast(`↩️ Undid half speed quantz (${remaining} more in history)`);
+        } else {
+          enqueueToast('↩️ Undid half speed quantz (fully restored)');
+        }
+
+        // Restart playback if playing
+        if (isPlaying) {
+          stopAudio();
+          setTimeout(() => playAudio(), 50);
+        }
+      } catch (error) {
+        console.error('UnHalf speed quantz error:', error);
+        enqueueToast('❌ UnHalf speed quantz failed');
+      }
+    });
+
     document.getElementById('doubleSpeedQuantzBtn')?.addEventListener('click', async () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       enqueueToast('Applying double speed quantz...');
@@ -765,16 +851,22 @@ function applyLoop() {}
           stopWaveformAnimation();
         }
 
-        const newBuffer = doubleSpeedQuantzLoop(currentAudioBuffer, currentLoop);
-        currentAudioBuffer = newBuffer;
-        window.currentAudioBuffer = newBuffer;
+        // Apply gapless double speed quantz
+        const result = doubleSpeedQuantzLoop(currentAudioBuffer, currentLoop);
+        currentAudioBuffer = result.buffer;
+        window.currentAudioBuffer = result.buffer;
+
+        // Update loop end to the new shorter position
+        const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
+        audioProcessor.setBuffer(result.buffer);
+        audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
 
         // Disable nudge for double speed (no hidden half to reveal)
         nudgeEnabled = false;
         currentNudgeLoop = null;
 
-        updateLoopInfo(currentLoop);
-        drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+        updateLoopInfo(newLoop);
+        drawWaveform(result.buffer, 'waveformCanvas', newLoop);
 
         // Resume playback if it was playing
         if (wasPlaying) {
@@ -785,13 +877,100 @@ function applyLoop() {}
           startWaveformAnimation();
         }
 
-        enqueueToast('✅ Double speed quantz applied');
+        enqueueToast('✅ Double speed quantz applied (gapless)');
       } catch (error) {
         console.error('Double speed quantz error:', error);
         enqueueToast('❌ Double speed quantz failed');
       }
     });
-    
+
+    document.getElementById('doubleSpeedUnquantzBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      enqueueToast('Applying double speed unquantz...');
+
+      try {
+        const currentLoop = audioProcessor.getLoopPoints();
+        const newBuffer = doubleSpeedUnquantzLoop(currentAudioBuffer, currentLoop);
+        currentAudioBuffer = newBuffer;
+        window.currentAudioBuffer = newBuffer;
+
+        // Disable nudge for double speed (no hidden half to reveal)
+        nudgeEnabled = false;
+        currentNudgeLoop = null;
+
+        updateLoopInfo(currentLoop);
+        drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
+        enqueueToast('✅ Double speed unquantz applied (with gap)');
+      } catch (error) {
+        console.error('Double speed unquantz error:', error);
+        enqueueToast('❌ Double speed unquantz failed');
+      }
+    });
+
+    document.getElementById('closeGapLeftBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      enqueueToast('Detecting and closing gap left...');
+
+      try {
+        const currentLoop = audioProcessor.getLoopPoints();
+        const result = closeGapLeft(currentAudioBuffer, currentLoop);
+
+        if (!result) {
+          enqueueToast('ℹ️ No gap detected after loop end');
+          return;
+        }
+
+        currentAudioBuffer = result.buffer;
+        window.currentAudioBuffer = result.buffer;
+
+        // Update loop points with new positions
+        const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
+        audioProcessor.setBuffer(result.buffer);
+        audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
+
+        updateLoopInfo(newLoop);
+        drawWaveform(result.buffer, 'waveformCanvas', newLoop);
+
+        const gapMs = Math.round((result.gapSize / audioProcessor.audioBuffer.sampleRate) * 1000);
+        enqueueToast(`✅ Gap closed left (${gapMs}ms removed)`);
+      } catch (error) {
+        console.error('Close gap left error:', error);
+        enqueueToast('❌ Close gap left failed');
+      }
+    });
+
+    document.getElementById('closeGapRightBtn')?.addEventListener('click', () => {
+      if (!currentAudioBuffer || !audioProcessor) return;
+      enqueueToast('Detecting and closing gap right...');
+
+      try {
+        const currentLoop = audioProcessor.getLoopPoints();
+        const result = closeGapRight(currentAudioBuffer, currentLoop);
+
+        if (!result) {
+          enqueueToast('ℹ️ No gap detected after loop end');
+          return;
+        }
+
+        currentAudioBuffer = result.buffer;
+        window.currentAudioBuffer = result.buffer;
+
+        // Update loop points with new positions
+        const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
+        audioProcessor.setBuffer(result.buffer);
+        audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
+
+        updateLoopInfo(newLoop);
+        drawWaveform(result.buffer, 'waveformCanvas', newLoop);
+
+        const gapMs = Math.round((result.gapSize / audioProcessor.audioBuffer.sampleRate) * 1000);
+        enqueueToast(`✅ Gap closed right (${gapMs}ms removed)`);
+      } catch (error) {
+        console.error('Close gap right error:', error);
+        enqueueToast('❌ Close gap right failed');
+      }
+    });
+
     document.getElementById('resetPlayheadBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
       
@@ -869,6 +1048,14 @@ function applyLoop() {}
     let nudgeEnabled = false; // Only enable after half-speed processing
     let currentNudgeLoop = null; // Track which loop nudge applies to
     let nudgeReverseState = false; // Track if the half-speed content is currently reversed
+
+    // History stack for non-destructive undo of half speed quantz operations
+    let halfSpeedQuantzHistory = []; // Stack of { buffer, loopPoints, nudgeState, nudgeEnabled, nudgeLoop, nudgeReverseState }
+
+    // Helper to clear history stack (called when loop points change)
+    function clearHalfSpeedHistory() {
+      halfSpeedQuantzHistory = [];
+    }
     
     document.getElementById('nudgeBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor || !originalAudioBuffer) return;
@@ -890,15 +1077,22 @@ function applyLoop() {}
           nudgeState = 'second';
           enqueueToast('👁️ Nudged to second half');
         } else {
-          // Currently showing second half, switch back to first half  
+          // Currently showing second half, switch back to first half
           currentAudioBuffer = revealFirstHalf(currentAudioBuffer, originalAudioBuffer, currentNudgeLoop, nudgeReverseState);
           nudgeState = 'first';
           enqueueToast('👁️ Nudged to first half');
         }
-        
+
         window.currentAudioBuffer = currentAudioBuffer;
+        audioProcessor.setBuffer(currentAudioBuffer);
         updateLoopInfo(currentLoop);
         drawWaveform(currentAudioBuffer, 'waveformCanvas', currentLoop);
+
+        // Restart playback to hear the change immediately
+        if (isPlaying) {
+          stopAudio();
+          setTimeout(() => playAudio(), 50);
+        }
       } catch (error) {
         console.error('Nudge error:', error);
         enqueueToast('❌ Nudge failed');
@@ -1411,7 +1605,7 @@ function applyLoop() {}
     const endSample = Math.floor(loopData.end * audioBuffer.length);
     const loopLength = endSample - startSample;
     const stretchedLength = loopLength * 2; // Double the length for half speed
-    
+
     // Create new buffer with extra space for stretched audio
     const newLength = audioBuffer.length + stretchedLength - loopLength;
     const newBuffer = audioContext.createBuffer(
@@ -1419,30 +1613,30 @@ function applyLoop() {}
       newLength,
       audioBuffer.sampleRate
     );
-    
+
     // Copy data to new buffer with time stretching
     for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
       const inputData = audioBuffer.getChannelData(channel);
       const outputData = newBuffer.getChannelData(channel);
-      
+
       // Copy data before the loop
       for (let i = 0; i < startSample; i++) {
         outputData[i] = inputData[i];
       }
-      
+
       // Stretch the loop section (simple linear interpolation)
       for (let i = 0; i < stretchedLength; i++) {
         const srcIndex = startSample + (i * loopLength) / stretchedLength;
         const srcIndexFloor = Math.floor(srcIndex);
         const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
         const fraction = srcIndex - srcIndexFloor;
-        
+
         // Linear interpolation
         const sample1 = inputData[srcIndexFloor] || 0;
         const sample2 = inputData[srcIndexCeil] || 0;
         outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
       }
-      
+
       // Copy data after the loop
       const outputOffset = startSample + stretchedLength;
       for (let i = endSample; i < audioBuffer.length; i++) {
@@ -1452,33 +1646,38 @@ function applyLoop() {}
         }
       }
     }
-    
-    return newBuffer;
+
+    // Calculate new loop points (loop start stays same, loop end moves to end of stretched content)
+    const newLoopStart = startSample / newLength;
+    const newLoopEnd = (startSample + stretchedLength) / newLength;
+
+    return { buffer: newBuffer, loopStart: newLoopStart, loopEnd: newLoopEnd };
   }
 
   // Double speed quantz (compress 2x content into same loop window)
-  function doubleSpeedQuantzLoop(audioBuffer, loopData) {
+  // Double speed unquantz - leaves a gap (original behavior)
+  function doubleSpeedUnquantzLoop(audioBuffer, loopData) {
     const startSample = Math.floor(loopData.start * audioBuffer.length);
     const endSample = Math.floor(loopData.end * audioBuffer.length);
     const loopLength = endSample - startSample;
-    
+
     // Create new buffer with same length (no track length change)
     const newBuffer = audioContext.createBuffer(
       audioBuffer.numberOfChannels,
       audioBuffer.length,
       audioBuffer.sampleRate
     );
-    
+
     // Copy data to new buffer with double speed compression
     for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
       const inputData = audioBuffer.getChannelData(channel);
       const outputData = newBuffer.getChannelData(channel);
-      
+
       // Copy data before the loop unchanged
       for (let i = 0; i < startSample; i++) {
         outputData[i] = inputData[i];
       }
-      
+
       // Compress double content into loop boundaries (double speed effect)
       for (let i = 0; i < loopLength; i++) {
         // Map output position to input position with 2x compression (double speed)
@@ -1487,7 +1686,7 @@ function applyLoop() {}
         const srcIndexFloor = Math.floor(srcIndex);
         const srcIndexCeil = Math.min(srcIndexFloor + 1, audioBuffer.length - 1);
         const fraction = srcIndex - srcIndexFloor;
-        
+
         // Linear interpolation - reads 2x the content in same time window
         if (srcIndexFloor < audioBuffer.length) {
           const sample1 = inputData[srcIndexFloor] || 0;
@@ -1497,14 +1696,204 @@ function applyLoop() {}
           outputData[startSample + i] = 0; // Silence if beyond source material
         }
       }
-      
+
       // Copy data after the loop unchanged
       for (let i = endSample; i < audioBuffer.length; i++) {
         outputData[i] = inputData[i];
       }
     }
-    
+
     return newBuffer;
+  }
+
+  // Double speed quantz - gapless version (shifts audio left to close gap)
+  function doubleSpeedQuantzLoop(audioBuffer, loopData) {
+    const startSample = Math.floor(loopData.start * audioBuffer.length);
+    const endSample = Math.floor(loopData.end * audioBuffer.length);
+    const loopLength = endSample - startSample;
+
+    // Calculate the gap size (effectively half the loop length when doubled)
+    const gapSize = Math.floor(loopLength / 2);
+
+    // Create new buffer that's shorter by the gap size
+    const newBufferLength = audioBuffer.length - gapSize;
+    const newBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      newBufferLength,
+      audioBuffer.sampleRate
+    );
+
+    // Copy data to new buffer with double speed compression and gap closure
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const inputData = audioBuffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+
+      // Copy data before the loop unchanged
+      for (let i = 0; i < startSample; i++) {
+        outputData[i] = inputData[i];
+      }
+
+      // Compress double content into loop boundaries (double speed effect)
+      for (let i = 0; i < loopLength; i++) {
+        // Map output position to input position with 2x compression (double speed)
+        const compressedInputPos = i * 2.0; // Double speed = double position in source
+        const srcIndex = startSample + compressedInputPos;
+        const srcIndexFloor = Math.floor(srcIndex);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, audioBuffer.length - 1);
+        const fraction = srcIndex - srcIndexFloor;
+
+        // Linear interpolation - reads 2x the content in same time window
+        if (srcIndexFloor < audioBuffer.length) {
+          const sample1 = inputData[srcIndexFloor] || 0;
+          const sample2 = inputData[srcIndexCeil] || 0;
+          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
+        } else {
+          outputData[startSample + i] = 0; // Silence if beyond source material
+        }
+      }
+
+      // Copy data after the loop, shifted left to close the gap
+      const afterStartInInput = endSample;
+      const afterStartInOutput = startSample + loopLength;
+      for (let i = 0; i < audioBuffer.length - endSample; i++) {
+        if (afterStartInOutput + i < newBufferLength) {
+          outputData[afterStartInOutput + i] = inputData[afterStartInInput + i];
+        }
+      }
+    }
+
+    // Calculate new loop end position (as ratio of new buffer length)
+    const newLoopEnd = (startSample + loopLength) / newBufferLength;
+
+    return { buffer: newBuffer, newLoopEnd: newLoopEnd };
+  }
+
+  // Detect gap (silence or near-silence) after the loop end
+  function detectGap(audioBuffer, loopData) {
+    const endSample = Math.floor(loopData.end * audioBuffer.length);
+    const silenceThreshold = 0.01; // Adjust as needed
+    const minGapSize = 100; // Minimum gap size in samples to detect
+
+    // Check if there's enough space after the loop to have a gap
+    if (endSample + minGapSize >= audioBuffer.length) {
+      return null; // No gap - not enough space
+    }
+
+    // For each channel, find the first silence region after endSample
+    let silenceRegions = [];
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const data = audioBuffer.getChannelData(channel);
+      let silenceStart = -1;
+      let found = false;
+      for (let i = endSample; i < audioBuffer.length; i++) {
+        if (Math.abs(data[i]) < silenceThreshold) {
+          if (silenceStart === -1) {
+            silenceStart = i;
+          }
+        } else {
+          if (silenceStart !== -1 && (i - silenceStart) >= minGapSize) {
+            // Found a silence region
+            silenceRegions.push({ start: silenceStart, end: i });
+            found = true;
+            break;
+          }
+          silenceStart = -1;
+        }
+      }
+      // Check if silence extends to the end
+      if (!found && silenceStart !== -1 && (audioBuffer.length - silenceStart) >= minGapSize) {
+        silenceRegions.push({ start: silenceStart, end: audioBuffer.length });
+      } else if (!found && silenceStart === -1) {
+        // No silence region found for this channel
+        return null;
+      }
+    }
+
+    // Find intersection of silence regions across all channels
+    let gapStart = Math.max(...silenceRegions.map(r => r.start));
+    let gapEnd = Math.min(...silenceRegions.map(r => r.end));
+    if (gapEnd - gapStart < minGapSize) {
+      return null;
+    }
+
+    return { start: gapStart, end: gapEnd, size: gapEnd - gapStart };
+  }
+
+  // Close gap by shifting audio left
+  function closeGapLeft(audioBuffer, loopData) {
+    const gap = detectGap(audioBuffer, loopData);
+
+    if (!gap) {
+      return null; // No gap detected
+    }
+
+    const newBufferLength = audioBuffer.length - gap.size;
+    const newBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      newBufferLength,
+      audioBuffer.sampleRate
+    );
+
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const inputData = audioBuffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+
+      // Copy everything before the gap
+      for (let i = 0; i < gap.start; i++) {
+        outputData[i] = inputData[i];
+      }
+
+      // Copy everything after the gap, shifted left
+      for (let i = gap.end; i < audioBuffer.length; i++) {
+        outputData[i - gap.size] = inputData[i];
+      }
+    }
+
+    // Calculate new loop end position
+    const newLoopEnd = loopData.end; // Loop end stays at same ratio
+
+    return { buffer: newBuffer, newLoopEnd: newLoopEnd, gapSize: gap.size };
+  }
+
+  // Close gap by shifting audio right (shifting content after gap to the right)
+  function closeGapRight(audioBuffer, loopData) {
+    const gap = detectGap(audioBuffer, loopData);
+
+    if (!gap) {
+      return null; // No gap detected
+    }
+
+    const newBufferLength = audioBuffer.length - gap.size;
+    const newBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      newBufferLength,
+      audioBuffer.sampleRate
+    );
+
+    const endSample = Math.floor(loopData.end * audioBuffer.length);
+
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const inputData = audioBuffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+
+      // Copy everything before the loop end
+      for (let i = 0; i < endSample; i++) {
+        outputData[i] = inputData[i];
+      }
+
+      // Skip the gap and copy the rest
+      for (let i = gap.end; i < audioBuffer.length; i++) {
+        const outputIndex = i - gap.size;
+        if (outputIndex < newBufferLength) {
+          outputData[outputIndex] = inputData[i];
+        }
+      }
+    }
+
+    // Calculate new loop end position (shifts left as buffer is shorter)
+    const newLoopEnd = loopData.end * (newBufferLength / audioBuffer.length);
+
+    return { buffer: newBuffer, newLoopEnd: newLoopEnd, gapSize: gap.size };
   }
 
   // Reverse a section of an audio buffer
