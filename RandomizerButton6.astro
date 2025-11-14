@@ -1,0 +1,153 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn6"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  ⚖️ Invertible Sequence
+</button>
+
+<script>
+  import { halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop, detectLoop } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  
+  function invertibleSequence(buffer, { steps = 16 } = {}) {
+    let loop = detectLoop(buffer);
+    const forwardSequence = [];
+    const inverseSequence = [];
+    
+    // Forward sequence pattern - builds complexity
+    const forwardPattern = [
+      'half', 'half', 'reverse', 'move',
+      'double', 'reverse', 'half', 'move', 
+      'reverse', 'double', 'half', 'reverse',
+      'move', 'half', 'reverse', 'double'
+    ];
+    
+    // Create forward sequence
+    for (let i = 0; i < steps; i++) {
+      const action = forwardPattern[i % forwardPattern.length];
+      
+      const fn = () => {
+        switch (action) {
+          case 'half':
+            if (loop.endSample - loop.startSample >= 2 * (10 / 1000) * buffer.sampleRate) {
+              loop = halfLoop(loop);
+            }
+            break;
+          case 'double':
+            loop = doubleLoop(loop, buffer.length);
+            break;
+          case 'move':
+            const duration = loop.endSample - loop.startSample;
+            const newStart = loop.startSample + duration;
+            const newEnd = loop.endSample + duration;
+            if (newEnd <= buffer.length) {
+              loop = { startSample: newStart, endSample: newEnd };
+            }
+            break;
+          case 'reverse':
+            buffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
+            break;
+        }
+        return { buffer, loop, op: action };
+      };
+      fn.op = action;
+      forwardSequence.push(fn);
+      
+      // Create inverse operation for this step
+      const inverseAction = getInverseAction(action);
+      const inverseFn = () => {
+        switch (inverseAction) {
+          case 'double': // inverse of half
+            loop = doubleLoop(loop, buffer.length);
+            break;
+          case 'half': // inverse of double
+            if (loop.endSample - loop.startSample >= 2 * (10 / 1000) * buffer.sampleRate) {
+              loop = halfLoop(loop);
+            }
+            break;
+          case 'moveBack': // inverse of move
+            const duration = loop.endSample - loop.startSample;
+            const newStart = loop.startSample - duration;
+            const newEnd = loop.endSample - duration;
+            if (newStart >= 0) {
+              loop = { startSample: newStart, endSample: newEnd };
+            }
+            break;
+          case 'reverse': // inverse of reverse (same operation)
+            buffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
+            break;
+        }
+        return { buffer, loop, op: inverseAction };
+      };
+      inverseFn.op = inverseAction;
+      // Add to beginning of inverse sequence (reverse order)
+      inverseSequence.unshift(inverseFn);
+    }
+    
+    return { forward: forwardSequence, inverse: inverseSequence };
+  }
+  
+  function getInverseAction(action) {
+    const inverseMap = {
+      'half': 'double',
+      'double': 'half', 
+      'move': 'moveBack',
+      'reverse': 'reverse' // reversing twice cancels out
+    };
+    return inverseMap[action] || action;
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn6');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      
+      const { forward, inverse } = invertibleSequence(buffer, { steps: 16 });
+      
+      // Store original state for verification
+      const originalLoop = detectLoop(buffer);
+      
+      enqueueToast('⚖️ Forward sequence: ' + forward.map(fn => fn.op).join(' → '));
+      
+      let buf = buffer;
+      
+      // Apply forward sequence
+      for (const step of forward) {
+        const { buffer: newBuf, loop } = step();
+        buf = newBuf;
+        applyLoop(buf, loop, step.op, undefined);
+        await new Promise(r => setTimeout(r, 120));
+      }
+      
+      await new Promise(r => setTimeout(r, 500)); // Pause between sequences
+      
+      enqueueToast('⚖️ Inverse sequence: ' + inverse.map(fn => fn.op).join(' → '));
+      
+      // Apply inverse sequence
+      for (const step of inverse) {
+        const { buffer: newBuf, loop } = step();
+        buf = newBuf;
+        applyLoop(buf, loop, step.op, undefined);
+        await new Promise(r => setTimeout(r, 120));
+      }
+      
+      enqueueToast('⚖️ Invertible sequence complete - returned to origin');
+    });
+  });
+</script>

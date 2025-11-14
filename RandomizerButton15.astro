@@ -1,0 +1,142 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn15"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  🌌 Quantum Vector
+</button>
+
+<script>
+  import { detectLoop } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  import { playQuantumOps, buildQuantumOpList, buildQuantumSequence } from '../scripts/quantum-sequencer.js';
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn15');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      
+      enqueueToast('🌌 Quantum Vector Sequencer: Activating 3D Rhythm Space');
+      
+      // Generate quantum operation list
+      const opList = buildQuantumOpList(128, 4);
+      enqueueToast(`🔮 Quantum sequence generated: ${opList.length} operations`);
+      
+      // Build executable sequence
+      const sequence = buildQuantumSequence(buffer, opList);
+      
+      let buf = buffer;
+      let currentLoop = detectLoop(buf);
+      let quantumPhase = 0;
+      let complexity = 0;
+      let currentSection = "";
+      
+      // Track preset injections for announcements
+      const presetNames = ['hip-hop', 'reggaeton', 'dubstep', 'breakbeat', 'techno', 'jungle'];
+      let lastPresetAnnouncement = 0;
+      
+      for (let i = 0; i < sequence.length; i++) {
+        const step = sequence[i];
+        const result = step();
+        buf = result.buffer;
+        currentLoop = result.loop;
+        
+        const op = step.op;
+        
+        // Detect preset injections (when we get 8 consecutive non-basic ops)
+        const basicOps = ['half', 'double', 'move', 'reverse', 'reset'];
+        if (!basicOps.includes(op) && i - lastPresetAnnouncement > 20) {
+          const presetName = presetNames[Math.floor(Math.random() * presetNames.length)];
+          enqueueToast(`🎵 ${presetName} groove injection detected`);
+          lastPresetAnnouncement = i;
+        }
+        
+        // Phase tracking for quantum announcements
+        if (i === 32) enqueueToast('🌊 Quantum phase 1: Vector transformation');
+        if (i === 64) enqueueToast('⚡ Quantum phase 2: Entanglement cascade');
+        if (i === 96) enqueueToast('🌀 Quantum phase 3: Dimensional collapse');
+        
+        // Use the raw operation name, not the quantum-prefixed version
+        const baseOp = step.op; // This is the raw operation like 'stutter', 'phase', etc.
+        
+        // Debug: log what we're trying to apply
+        console.log(`🌌 Applying quantum op: ${baseOp}`, {buffer: buf, loop: currentLoop});
+        
+        applyLoop(buf, currentLoop, baseOp, undefined);
+        
+        // Quantum timing calculation
+        quantumPhase += 0.1;
+        let timing = 160; // base BPM ~93
+        
+        // Operation-specific timing
+        if (op === 'stutter') timing *= 0.5;
+        if (op === 'fractal') timing *= 1.5;
+        if (op === 'silence') timing *= 0.3;
+        if (op === 'phase') timing *= 0.8;
+        
+        // Quantum oscillation
+        const quantumMod = 1 + (Math.sin(quantumPhase) * 0.3);
+        timing *= quantumMod;
+        
+        // Complexity tracking
+        if (['stutter', 'fractal', 'phase'].includes(op)) {
+          complexity++;
+        } else if (op === 'silence') {
+          complexity = Math.max(0, complexity - 1);
+        }
+        
+        // Breathing space when too complex
+        if (complexity > 5 && Math.random() < 0.3) {
+          timing *= 2;
+          complexity = 0;
+          enqueueToast('🧘 Quantum breathing space');
+        }
+        
+        // Anti-micro-quantum protection - enhanced
+        const minTiming = 100; // Higher minimum for quantum
+        const maxQuantumSequence = 2; // Very low tolerance for quantum micro-loops
+        if (timing < minTiming) {
+          const quantumCount = (window.quantumSequenceCount || 0) + 1;
+          window.quantumSequenceCount = quantumCount;
+          
+          if (quantumCount > maxQuantumSequence) {
+            timing = 160 * 2.5; // Much longer recovery time
+            window.quantumSequenceCount = 0;
+            enqueueToast('🌌 Quantum field stabilized - micro-loop broken');
+          }
+        } else {
+          window.quantumSequenceCount = 0;
+        }
+        
+        // Quantum safety floor - absolute minimum timing
+        timing = Math.max(timing, 95);
+        
+        // Emergency brake for runaway quantum effects
+        if (timing < 50) {
+          timing = 200;
+          enqueueToast('⚠️ Quantum emergency brake activated');
+        }
+        
+        await new Promise(r => setTimeout(r, Math.abs(timing)));
+      }
+      
+      enqueueToast('🌌 Quantum Vector Sequence Complete - Reality Restored');
+    });
+  });
+</script>

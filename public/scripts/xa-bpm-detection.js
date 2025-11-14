@@ -20,17 +20,7 @@ export async function detectBPM(audioBuffer, options = {}) {
   };
   
   const opts = { ...defaultOptions, ...options };
-  
-  // Special case for Jazz Drums file which is known to cause freezing
-  if (options.fileName && options.fileName.includes("Jazzy-Drumset")) {
-    debugLog("Using hardcoded BPM for Jazz Drums file");
-    return {
-      bpm: 120,
-      confidence: 0.8,
-      original: 120
-    };
-  }
-  
+
   try {
     // Quick BPM estimation for immediate feedback
     const quickResult = await quickBPMDetect(audioBuffer, opts);
@@ -53,11 +43,11 @@ export async function detectBPM(audioBuffer, options = {}) {
     };
   } catch (error) {
     console.error('BPM detection failed:', error);
-    
-    // Fallback to a default BPM
+
+    // Return error instead of fake fallback
     return {
-      bpm: 120,
-      confidence: 0.5,
+      bpm: null,
+      confidence: 0,
       error: error.message
     };
   }
@@ -108,15 +98,24 @@ async function quickBPMDetect(audioBuffer, options) {
     prevEnergy = energy;
   }
   
-  // Find peaks with adaptive threshold
-  const peaks = findPeaks(energyChanges, 0.4); // Lower threshold
-  
-  // If too few peaks, use a fallback
+  // Try multiple thresholds to find peaks - start high and progressively lower
+  let peaks = findPeaks(energyChanges, 0.6);
+
+  // If too few peaks, try progressively lower thresholds
   if (peaks.length < 4) {
-    return {
-      bpm: 120,
-      confidence: 0.5
-    };
+    peaks = findPeaks(energyChanges, 0.4);
+  }
+  if (peaks.length < 4) {
+    peaks = findPeaks(energyChanges, 0.2);
+  }
+  if (peaks.length < 4) {
+    peaks = findPeaks(energyChanges, 0.1);
+  }
+
+  // Last resort: if still too few peaks after all attempts, throw error
+  if (peaks.length < 4) {
+    debugLog(`BPM detection: Only found ${peaks.length} peaks after trying multiple thresholds`);
+    throw new Error(`Unable to detect BPM - insufficient peaks found (${peaks.length}/4)`);
   }
   
   // Calculate intervals between peaks
@@ -131,10 +130,7 @@ async function quickBPMDetect(audioBuffer, options) {
   
   // Avoid division by zero
   if (medianInterval === 0) {
-    return {
-      bpm: 120,
-      confidence: 0.5
-    };
+    throw new Error('Unable to detect BPM - invalid interval data (median is 0)');
   }
   
   const bpm = 60 * frameRate / medianInterval;

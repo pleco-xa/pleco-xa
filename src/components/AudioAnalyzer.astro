@@ -877,7 +877,6 @@ function applyLoop() {}
 
         // Restore loop points
         const restoredLoop = previousState.loopPoints;
-        audioProcessor.setBuffer(previousState.buffer);
         audioProcessor.setLoopPoints(restoredLoop.start, restoredLoop.end);
 
         // Restore nudge state
@@ -914,7 +913,7 @@ function applyLoop() {}
       try {
         const currentLoop = audioProcessor.getLoopPoints();
 
-        // Check if currently playing
+        // Stop playback if playing
         const wasPlaying = isPlaying;
         if (isPlaying) {
           audioProcessor.stop();
@@ -931,7 +930,6 @@ function applyLoop() {}
 
         // Update loop end to the new shorter position
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
-        audioProcessor.setBuffer(result.buffer);
         audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
 
         // Disable nudge for double speed (no hidden half to reveal)
@@ -1006,13 +1004,12 @@ function applyLoop() {}
 
         // Update loop points with new positions
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
-        audioProcessor.setBuffer(result.buffer);
         audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
 
         updateLoopInfo(newLoop);
         drawWaveform(result.buffer, 'waveformCanvas', newLoop);
 
-        const gapMs = Math.round((result.gapSize / audioProcessor.audioBuffer.sampleRate) * 1000);
+        const gapMs = Math.round((result.gapSize / result.buffer.sampleRate) * 1000);
         enqueueToast(`✅ Gap closed left (${gapMs}ms removed)`);
       } catch (error) {
         console.error('Close gap left error:', error);
@@ -1038,13 +1035,12 @@ function applyLoop() {}
 
         // Update loop points with new positions
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
-        audioProcessor.setBuffer(result.buffer);
         audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
 
         updateLoopInfo(newLoop);
         drawWaveform(result.buffer, 'waveformCanvas', newLoop);
 
-        const gapMs = Math.round((result.gapSize / audioProcessor.audioBuffer.sampleRate) * 1000);
+        const gapMs = Math.round((result.gapSize / result.buffer.sampleRate) * 1000);
         enqueueToast(`✅ Gap closed right (${gapMs}ms removed)`);
       } catch (error) {
         console.error('Close gap right error:', error);
@@ -1838,8 +1834,9 @@ function applyLoop() {}
     const endSample = Math.floor(loopData.end * audioBuffer.length);
     const loopLength = endSample - startSample;
 
-    // Calculate the gap size (effectively half the loop length when doubled)
-    const gapSize = Math.floor(loopLength / 2);
+    // When we compress at 2x speed, the loop content fits into half the space
+    const compressedLoopLength = Math.floor(loopLength / 2);
+    const gapSize = loopLength - compressedLoopLength; // The gap created after compression
 
     // Create new buffer that's shorter by the gap size
     const newBufferLength = audioBuffer.length - gapSize;
@@ -1859,28 +1856,28 @@ function applyLoop() {}
         outputData[i] = inputData[i];
       }
 
-      // Compress double content into loop boundaries (double speed effect)
-      for (let i = 0; i < loopLength; i++) {
-        // Map output position to input position with 2x compression (double speed)
-        const compressedInputPos = i * 2.0; // Double speed = double position in source
+      // Compress the loop content at 2x speed (fits into half the space)
+      for (let i = 0; i < compressedLoopLength; i++) {
+        // Map output position to input position with 2x compression
+        const compressedInputPos = i * 2.0; // Read at double speed
         const srcIndex = startSample + compressedInputPos;
         const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, audioBuffer.length - 1);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
         const fraction = srcIndex - srcIndexFloor;
 
-        // Linear interpolation - reads 2x the content in same time window
-        if (srcIndexFloor < audioBuffer.length) {
+        // Linear interpolation - only from WITHIN the original loop region
+        if (srcIndexFloor < endSample) {
           const sample1 = inputData[srcIndexFloor] || 0;
           const sample2 = inputData[srcIndexCeil] || 0;
           outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
         } else {
-          outputData[startSample + i] = 0; // Silence if beyond source material
+          outputData[startSample + i] = 0;
         }
       }
 
-      // Copy data after the loop, shifted left to close the gap
+      // Copy data after the original loop end, shifted left to close the gap
       const afterStartInInput = endSample;
-      const afterStartInOutput = startSample + loopLength;
+      const afterStartInOutput = startSample + compressedLoopLength;
       for (let i = 0; i < audioBuffer.length - endSample; i++) {
         if (afterStartInOutput + i < newBufferLength) {
           outputData[afterStartInOutput + i] = inputData[afterStartInInput + i];
@@ -1888,8 +1885,8 @@ function applyLoop() {}
       }
     }
 
-    // Calculate new loop end position (as ratio of new buffer length)
-    const newLoopEnd = (startSample + loopLength) / newBufferLength;
+    // Calculate new loop end position (now at the compressed length)
+    const newLoopEnd = (startSample + compressedLoopLength) / newBufferLength;
 
     return { buffer: newBuffer, newLoopEnd: newLoopEnd };
   }

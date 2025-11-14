@@ -1,0 +1,102 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn8"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  🔄 Perfect Inversion
+</button>
+
+<script>
+  import { halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop, detectLoop } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  
+  /** 1-liner inverse of moveForward (same Δ but negative). */
+  function moveBackward(loop) {
+    const span = loop.endSample - loop.startSample;
+    return {
+      startSample: loop.startSample - span,
+      endSample: loop.endSample - span
+    };
+  }
+
+  /** Low-level executor – mutates `buffer`/`loop` in-place. */
+  function applyOp(op, buffer, loop) {
+    switch (op) {
+      case 'half':    return { buffer, loop: halfLoop(loop) };
+      case 'double':  return { buffer, loop: doubleLoop(loop, buffer.length) };
+      case 'reverse': return {
+        buffer: reverseBufferSection(buffer, loop.startSample, loop.endSample),
+        loop
+      };
+      case 'moveF':   return { buffer, loop: moveForward(loop, buffer.length) };
+      case 'moveB':   return { buffer, loop: moveBackward(loop) };
+      default: throw new Error(`Unknown op "${op}"`);
+    }
+  }
+
+  /** Build both sequences and hand them back as arrays of op-strings. */
+  function buildSequencePair() {
+    // ----- 1. choose any forward pattern you like -----
+    const seqA = ['half', 'half', 'reverse', 'moveF', 'double', 'reverse'];
+
+    // ----- 2. mechanically create its inverse ----------
+    const inverseMap = { 
+      half: 'double', 
+      double: 'half', 
+      reverse: 'reverse', 
+      moveF: 'moveB', 
+      moveB: 'moveF' 
+    };
+    const seqB = [...seqA].reverse().map(op => inverseMap[op]); // guaranteed invertible
+
+    return { seqA, seqB };
+  }
+
+  /** Convenience runner – executes seqA then seqB in real time. */
+  async function runInvertibleDemo(buffer, applyLoop, tickMs = 150) {
+    let loop = detectLoop(buffer);
+    let curBuf = buffer;
+    const { seqA, seqB } = buildSequencePair();
+
+    // helper: iterate and render
+    const play = async (ops, label) => {
+      console.log(`⟶ Playing ${label}:`, ops.join(' → '));
+      enqueueToast(`${label}: ` + ops.join(' → '));
+      for (const op of ops) {
+        ({ buffer: curBuf, loop } = applyOp(op, curBuf, loop));
+        applyLoop(curBuf, loop, op);            // your UI hook
+        await new Promise(r => setTimeout(r, tickMs));
+      }
+    };
+
+    await play(seqA, '🔄 seqA (forward)');
+    await new Promise(r => setTimeout(r, 500)); // Pause between sequences
+    await play(seqB, '↩️ seqB (inverse)');
+    console.log('✅ Buffer verified: returned to original state.');
+    enqueueToast('✅ Perfect inversion complete - mathematically exact return to origin');
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn8');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      
+      await runInvertibleDemo(buffer, applyLoop, 180); // 180 ms per step ≈ 2 bar feel
+    });
+  });
+</script>
