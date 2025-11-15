@@ -166,45 +166,88 @@ export function linspace(start, stop, num) {
 }
 
 /**
- * Compute Mel spectrogram
- * @param {Float32Array} y - Audio signal
+ * Compute Mel spectrogram (Librosa-compatible)
+ * @param {Float32Array} y - Audio signal (optional if S provided)
  * @param {number} sr - Sample rate
+ * @param {Array} S - Pre-computed power spectrogram [freq][time] (optional)
  * @param {number} n_fft - FFT size
  * @param {number} hop_length - Hop length
+ * @param {number} win_length - Window length
+ * @param {string} window - Window type
+ * @param {boolean} center - Center frames
+ * @param {string} pad_mode - Padding mode
+ * @param {number} power - Exponent for magnitude to power conversion (2.0 = power, 1.0 = magnitude)
  * @param {number} n_mels - Number of Mel filters
  * @param {number} fmin - Minimum frequency
  * @param {number|null} fmax - Maximum frequency
- * @returns {Array} Mel spectrogram (n_mels x n_frames)
+ * @param {string|number|null} norm - Mel filterbank normalization
+ * @param {boolean} htk - Use HTK formula for mel conversion
+ * @returns {Array} Mel spectrogram [n_mels][n_frames]
  */
 export function melspectrogram(
-  y,
+  y = null,
   sr = 22050,
+  S = null,
   n_fft = 2048,
   hop_length = 512,
+  win_length = null,
+  window = 'hann',
+  center = true,
+  pad_mode = 'constant',
+  power = 2.0,
   n_mels = 128,
   fmin = 0,
   fmax = null,
+  norm = 'slaney',
+  htk = false,
 ) {
-  // Compute power spectrogram
-  // stft() now returns [freq][time] format (Librosa-compatible)
-  const stft_matrix = stft(y, n_fft, hop_length)
+  let power_spec
 
-  const n_freq = stft_matrix.length
-  const n_frames = stft_matrix[0] ? stft_matrix[0].length : 0
-
-  // Convert to power spectrogram [freq][time]
-  const power_spec = Array(n_freq)
-  for (let f = 0; f < n_freq; f++) {
-    power_spec[f] = new Float32Array(n_frames)
-    for (let t = 0; t < n_frames; t++) {
-      const bin = stft_matrix[f][t]
-      const mag = Math.sqrt(bin.real * bin.real + bin.imag * bin.imag)
-      power_spec[f][t] = mag * mag // Power = magnitude^2
+  if (S !== null) {
+    // Use pre-computed spectrogram
+    // Assume S is already in the correct format [freq][time]
+    if (power !== 2.0 && power !== 1.0) {
+      // Need to adjust power if S is not in expected power format
+      console.warn(
+        `Pre-computed S with power=${power} may require manual conversion`,
+      )
     }
+    power_spec = S
+  } else if (y !== null) {
+    // Compute power spectrogram from audio
+    // stft() now returns [freq][time] format (Librosa-compatible)
+    const stft_matrix = stft(
+      y,
+      n_fft,
+      hop_length,
+      win_length,
+      window,
+      center,
+      pad_mode,
+    )
+
+    const n_freq = stft_matrix.length
+    const n_frames = stft_matrix[0] ? stft_matrix[0].length : 0
+
+    // Convert to power spectrogram [freq][time]
+    power_spec = Array(n_freq)
+    for (let f = 0; f < n_freq; f++) {
+      power_spec[f] = new Float32Array(n_frames)
+      for (let t = 0; t < n_frames; t++) {
+        const bin = stft_matrix[f][t]
+        const mag = Math.sqrt(bin.real * bin.real + bin.imag * bin.imag)
+        power_spec[f][t] = Math.pow(mag, power) // Apply power exponent
+      }
+    }
+  } else {
+    throw new Error('Either y or S must be provided')
   }
 
+  const n_freq = power_spec.length
+  const n_frames = power_spec[0] ? power_spec[0].length : 0
+
   // Get Mel filterbank [n_mels][n_freq]
-  const mel_fb = mel_filterbank(sr, n_fft, n_mels, fmin, fmax)
+  const mel_fb = mel_filterbank(sr, n_fft, n_mels, fmin, fmax, norm, htk)
 
   // Apply filterbank: mel_spec[m][t] = sum_f(mel_fb[m][f] * power_spec[f][t])
   // Output: [n_mels][n_frames] (Librosa format)
@@ -226,29 +269,79 @@ export function melspectrogram(
 }
 
 /**
- * Compute Mel-Frequency Cepstral Coefficients (MFCCs)
- * @param {Float32Array} y - Audio signal
+ * Compute Mel-Frequency Cepstral Coefficients (MFCCs) - Librosa-compatible
+ * @param {Float32Array} y - Audio signal (optional if S provided)
  * @param {number} sr - Sample rate
+ * @param {Array} S - Pre-computed mel spectrogram [n_mels][n_frames] (optional)
  * @param {number} n_mfcc - Number of MFCCs to return
+ * @param {number} dct_type - DCT type (1, 2, or 3)
+ * @param {string|null} norm - DCT normalization ('ortho' or null)
+ * @param {number} lifter - Liftering coefficient (0 = no liftering)
  * @param {number} n_fft - FFT size
  * @param {number} hop_length - Hop length
+ * @param {number} win_length - Window length
+ * @param {string} window - Window type
+ * @param {boolean} center - Center frames
+ * @param {string} pad_mode - Padding mode
+ * @param {number} power - Exponent for magnitude to power conversion
  * @param {number} n_mels - Number of Mel filters
  * @param {number} fmin - Minimum frequency
  * @param {number|null} fmax - Maximum frequency
+ * @param {string|number|null} mel_norm - Mel filterbank normalization
+ * @param {boolean} htk - Use HTK formula for mel conversion
  * @returns {Array} MFCC matrix (n_mfcc x n_frames)
  */
 export function mfcc(
-  y,
+  y = null,
   sr = 22050,
-  n_mfcc = 20,  // Fixed: was 13, Librosa default is 20
+  S = null,
+  n_mfcc = 20,
+  dct_type = 2,
+  norm = 'ortho',
+  lifter = 0,
   n_fft = 2048,
   hop_length = 512,
+  win_length = null,
+  window = 'hann',
+  center = true,
+  pad_mode = 'constant',
+  power = 2.0,
   n_mels = 128,
   fmin = 0,
   fmax = null,
+  mel_norm = 'slaney',
+  htk = false,
 ) {
-  // Compute Mel spectrogram
-  const mel_spec = melspectrogram(y, sr, n_fft, hop_length, n_mels, fmin, fmax)
+  let mel_spec
+
+  if (S !== null) {
+    // Use pre-computed mel spectrogram
+    mel_spec = S
+  } else if (y !== null) {
+    // Compute Mel spectrogram with all parameters
+    mel_spec = melspectrogram(
+      y,
+      sr,
+      null, // S
+      n_fft,
+      hop_length,
+      win_length,
+      window,
+      center,
+      pad_mode,
+      power,
+      n_mels,
+      fmin,
+      fmax,
+      mel_norm,
+      htk,
+    )
+  } else {
+    throw new Error('Either y or S must be provided')
+  }
+
+  const n_mel_bands = mel_spec.length
+  const n_frames = mel_spec[0] ? mel_spec[0].length : 0
 
   // Log compression
   const log_mel = mel_spec.map((mel_band) =>
@@ -256,7 +349,6 @@ export function mfcc(
   )
 
   // DCT (Discrete Cosine Transform)
-  const n_frames = log_mel[0].length
   const mfcc_matrix = Array(n_mfcc)
     .fill(null)
     .map(() => new Float32Array(n_frames))
@@ -265,8 +357,8 @@ export function mfcc(
     // Extract frame
     const frame = log_mel.map((band) => band[t])
 
-    // Apply DCT
-    const dct_coeffs = dct(frame)
+    // Apply DCT with specified type and normalization
+    const dct_coeffs = dct(frame, dct_type, norm)
 
     // Keep first n_mfcc coefficients
     for (let i = 0; i < n_mfcc && i < dct_coeffs.length; i++) {
@@ -274,49 +366,160 @@ export function mfcc(
     }
   }
 
+  // Apply liftering if requested
+  if (lifter > 0) {
+    const lifter_weights = new Array(n_mfcc)
+    for (let i = 0; i < n_mfcc; i++) {
+      lifter_weights[i] = 1 + (lifter / 2) * Math.sin((Math.PI * i) / lifter)
+    }
+
+    for (let i = 0; i < n_mfcc; i++) {
+      for (let t = 0; t < n_frames; t++) {
+        mfcc_matrix[i][t] *= lifter_weights[i]
+      }
+    }
+  }
+
   return mfcc_matrix
 }
 
 /**
- * Discrete Cosine Transform (Type II)
+ * Discrete Cosine Transform (Librosa-compatible)
  * @param {Array} signal - Input signal
+ * @param {number} type - DCT type (1, 2, or 3)
+ * @param {string|null} norm - Normalization ('ortho' or null)
  * @returns {Array} DCT coefficients
  */
-export function dct(signal) {
+export function dct(signal, type = 2, norm = 'ortho') {
   const N = signal.length
   const dct_coeffs = new Array(N)
 
-  for (let k = 0; k < N; k++) {
-    let sum = 0
-    for (let n = 0; n < N; n++) {
-      sum += signal[n] * Math.cos((Math.PI * k * (2 * n + 1)) / (2 * N))
-    }
+  if (type === 1) {
+    // DCT Type-I
+    for (let k = 0; k < N; k++) {
+      let sum = 0
+      for (let n = 0; n < N; n++) {
+        const factor = n === 0 || n === N - 1 ? 0.5 : 1.0
+        sum += factor * signal[n] * Math.cos((Math.PI * k * n) / (N - 1))
+      }
+      dct_coeffs[k] = sum
 
-    // Normalization
-    const norm = k === 0 ? Math.sqrt(1 / N) : Math.sqrt(2 / N)
-    dct_coeffs[k] = norm * sum
+      // Apply normalization
+      if (norm === 'ortho') {
+        const scale = k === 0 || k === N - 1 ? Math.sqrt(1 / (N - 1)) : Math.sqrt(2 / (N - 1))
+        dct_coeffs[k] *= scale
+      } else {
+        dct_coeffs[k] *= 2
+      }
+    }
+  } else if (type === 2) {
+    // DCT Type-II (most common, used by Librosa)
+    for (let k = 0; k < N; k++) {
+      let sum = 0
+      for (let n = 0; n < N; n++) {
+        sum += signal[n] * Math.cos((Math.PI * k * (2 * n + 1)) / (2 * N))
+      }
+      dct_coeffs[k] = sum
+
+      // Apply normalization
+      if (norm === 'ortho') {
+        const scale = k === 0 ? Math.sqrt(1 / N) : Math.sqrt(2 / N)
+        dct_coeffs[k] *= scale
+      }
+    }
+  } else if (type === 3) {
+    // DCT Type-III (inverse of Type-II)
+    for (let k = 0; k < N; k++) {
+      let sum = 0
+      for (let n = 0; n < N; n++) {
+        const factor = n === 0 ? 0.5 : 1.0
+        sum += factor * signal[n] * Math.cos((Math.PI * n * (2 * k + 1)) / (2 * N))
+      }
+      dct_coeffs[k] = sum
+
+      // Apply normalization
+      if (norm === 'ortho') {
+        dct_coeffs[k] *= Math.sqrt(2 / N)
+      } else {
+        dct_coeffs[k] *= 2
+      }
+    }
+  } else {
+    throw new Error(`Unsupported DCT type: ${type}. Supported types are 1, 2, and 3.`)
   }
 
   return dct_coeffs
 }
 
 /**
- * Inverse Discrete Cosine Transform
+ * Inverse Discrete Cosine Transform (Librosa-compatible)
  * @param {Array} dct_coeffs - DCT coefficients
+ * @param {number} type - DCT type (1, 2, or 3)
+ * @param {string|null} norm - Normalization ('ortho' or null)
  * @returns {Array} Reconstructed signal
  */
-export function idct(dct_coeffs) {
+export function idct(dct_coeffs, type = 2, norm = 'ortho') {
   const N = dct_coeffs.length
   const signal = new Array(N)
 
-  for (let n = 0; n < N; n++) {
-    let sum = 0
-    for (let k = 0; k < N; k++) {
-      const norm = k === 0 ? Math.sqrt(1 / N) : Math.sqrt(2 / N)
-      sum +=
-        norm * dct_coeffs[k] * Math.cos((Math.PI * k * (2 * n + 1)) / (2 * N))
+  if (type === 1) {
+    // IDCT Type-I (inverse of DCT-I)
+    for (let n = 0; n < N; n++) {
+      let sum = 0
+      for (let k = 0; k < N; k++) {
+        const k_factor = k === 0 || k === N - 1 ? 0.5 : 1.0
+        let coeff = dct_coeffs[k]
+
+        if (norm === 'ortho') {
+          const scale = k === 0 || k === N - 1 ? Math.sqrt(1 / (N - 1)) : Math.sqrt(2 / (N - 1))
+          coeff *= scale
+        } else {
+          coeff *= 2 / (N - 1)
+        }
+
+        sum += k_factor * coeff * Math.cos((Math.PI * k * n) / (N - 1))
+      }
+      signal[n] = sum
     }
-    signal[n] = sum
+  } else if (type === 2) {
+    // IDCT Type-II (inverse is DCT-III)
+    for (let n = 0; n < N; n++) {
+      let sum = 0
+      for (let k = 0; k < N; k++) {
+        const k_factor = k === 0 ? 0.5 : 1.0
+        let coeff = dct_coeffs[k]
+
+        if (norm === 'ortho') {
+          const scale = Math.sqrt(2 / N)
+          coeff *= scale
+        } else {
+          coeff *= 2 / N
+        }
+
+        sum += k_factor * coeff * Math.cos((Math.PI * k * (2 * n + 1)) / (2 * N))
+      }
+      signal[n] = sum
+    }
+  } else if (type === 3) {
+    // IDCT Type-III (inverse is DCT-II)
+    for (let n = 0; n < N; n++) {
+      let sum = 0
+      for (let k = 0; k < N; k++) {
+        let coeff = dct_coeffs[k]
+
+        if (norm === 'ortho') {
+          const scale = k === 0 ? Math.sqrt(1 / N) : Math.sqrt(2 / N)
+          coeff *= scale
+        } else {
+          coeff *= 1 / N
+        }
+
+        sum += coeff * Math.cos((Math.PI * n * (2 * k + 1)) / (2 * N))
+      }
+      signal[n] = sum
+    }
+  } else {
+    throw new Error(`Unsupported DCT type: ${type}. Supported types are 1, 2, and 3.`)
   }
 
   return signal
