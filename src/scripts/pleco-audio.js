@@ -133,8 +133,10 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~80%',
-  implementedFunctions: 136,
+  librosaParity: '~20%',
+  implementedFunctions: 102,
+  totalLibrosaFunctions: 512,
+  note: 'Focused on essential MIR tasks: beat tracking, pitch detection, spectral features, source separation',
   modules: [
     'Core (FFT, STFT)',
     'Mel-frequency (melspectrogram, MFCC)',
