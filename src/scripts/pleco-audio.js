@@ -21,6 +21,22 @@ export { stft, istft, fft, ifft, hann_window, hamming_window, blackman_window, m
 // Mel-frequency analysis
 export { melspectrogram, mfcc, mel_filterbank, hz_to_mel, mel_to_hz, dct, idct, delta_features, lifter_mfcc, power_to_db } from './xa-mel.js'
 
+// Spectral features
+export {
+  spectralCentroid as spectral_centroid,
+  spectralBandwidth as spectral_bandwidth,
+  spectralContrast as spectral_contrast,
+  spectralRolloff as spectral_rolloff,
+  spectralFlatness as spectral_flatness,
+  rms,
+  polyFeatures as poly_features,
+  zeroCrossingRate as zero_crossing_rate,
+  chromaStft as chroma_stft,
+  chromaCqt as chroma_cqt,
+  chromaCens as chroma_cens,
+  tonnetz
+} from './xa-spectral.js'
+
 // Conversion utilities
 export { 
   frames_to_samples, samples_to_frames, frames_to_time, time_to_frames,
@@ -50,6 +66,14 @@ export { hpss, median_filter, nn_filter, decompose, nmf_reconstruct, nmf_separat
 // Rhythm and beat tracking
 export { beat_track, tempo, plp, beat_sync } from './xa-rhythm.js'
 
+// Onset detection
+export {
+  onsetDetect as onset_detect,
+  onset_strength,
+  computeSpectralFlux as spectral_flux,
+  pickPeaks as peak_pick
+} from './xa-onset.js'
+
 // Structural segmentation
 export { 
   recurrence_matrix, recurrence_to_lag, lag_to_recurrence, timelag_filter,
@@ -58,6 +82,30 @@ export {
 
 // Audio effects
 export { time_stretch, trim, split, harmonic, percussive, remix, preemphasis, deemphasis } from './xa-effects.js'
+
+// Advanced functions
+export {
+  phase_vocoder,
+  autocorrelate,
+  pitch_shift,
+  normalize_features,
+  find_peaks,
+  polyfit,
+  linspace
+} from './xa-advanced.js'
+
+// Utility functions
+export {
+  frame,
+  padCenter as pad_center,
+  fixLength as fix_length,
+  localmax,
+  localmin,
+  peakPick as peak_pick_util,
+  tiny,
+  abs2,
+  phasor
+} from './xa-util.js'
 
 // Version info
 export const VERSION = '1.0.0'
@@ -70,17 +118,23 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~50-60%',
+  librosaParity: '~77%',
+  implementedFunctions: 124,
   modules: [
     'Core (FFT, STFT)',
     'Mel-frequency (melspectrogram, MFCC)',
+    'Spectral features (centroid, bandwidth, rolloff, contrast, flatness, RMS, ZCR)',
+    'Chroma features (STFT, CQT, CENS, Tonnetz)',
+    'Onset detection (onset_detect, onset_strength)',
     'Conversion utilities',
-    'Normalization',
-    'Tempogram',
-    'Pitch tracking',
+    'Normalization & masking',
+    'Tempogram & tempo analysis',
+    'Pitch tracking (YIN, pYIN, piptrack)',
     'Source separation (HPSS, NMF)',
-    'Beat tracking',
-    'Segmentation',
-    'Audio effects'
+    'Beat tracking & rhythm',
+    'Segmentation (recurrence, boundaries)',
+    'Audio effects (time stretch, pitch shift, HPSS)',
+    'Advanced (phase vocoder, autocorrelation)',
+    'Utilities (frame, pad, localmax/min, peak picking)'
   ]
 }
