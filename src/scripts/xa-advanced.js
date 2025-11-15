@@ -581,36 +581,16 @@ export function find_peaks(signal, min_distance = 1, threshold = 0) {
 // ============= SIMPLIFIED STFT PLACEHOLDERS =============
 
 /**
- * STFT wrapper with format conversion
- * xa-fft.js returns [time][freq], but phase_vocoder expects [freq][time]
+ * STFT wrapper (no longer needs transpose - xa-fft.js now returns [freq][time])
  * @private
  */
 function simple_stft(y, n_fft, hop_length) {
-  // Call proper windowed STFT from xa-fft.js
-  const frames = stftTransform(y, n_fft, hop_length, 'hann', true)
-
-  if (frames.length === 0) {
-    return []
-  }
-
-  // Transpose from [time][freq] to [freq][time] for phase_vocoder compatibility
-  const n_freq = frames[0].length
-  const n_time = frames.length
-  const D = Array(n_freq)
-
-  for (let f = 0; f < n_freq; f++) {
-    D[f] = Array(n_time)
-    for (let t = 0; t < n_time; t++) {
-      D[f][t] = frames[t][f]
-    }
-  }
-
-  return D
+  // xa-fft.js now returns [freq][time] format (Librosa-compatible)
+  return stftTransform(y, n_fft, hop_length, null, 'hann', true, 'constant')
 }
 
 /**
- * ISTFT wrapper with format conversion
- * phase_vocoder returns [freq][time], but xa-fft.js expects [time][freq]
+ * ISTFT wrapper (no longer needs transpose - xa-fft.js now expects [freq][time])
  * @private
  */
 function simple_istft(D, hop_length) {
@@ -618,20 +598,8 @@ function simple_istft(D, hop_length) {
     return new Float32Array(0)
   }
 
-  // Transpose from [freq][time] back to [time][freq] for xa-fft.js
-  const n_freq = D.length
-  const n_time = D[0].length
-  const frames = Array(n_time)
-
-  for (let t = 0; t < n_time; t++) {
-    frames[t] = Array(n_freq)
-    for (let f = 0; f < n_freq; f++) {
-      frames[t][f] = D[f][t]
-    }
-  }
-
-  // Call proper ISTFT from xa-fft.js
-  return istftTransform(frames, hop_length, 'hann', true)
+  // xa-fft.js now expects [freq][time] format (Librosa-compatible)
+  return istftTransform(D, hop_length, null, 'hann', true, null)
 }
 
 // Usage Example:

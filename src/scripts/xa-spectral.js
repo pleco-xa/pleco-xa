@@ -1167,10 +1167,13 @@ function stft(y, options) {
   const {
     n_fft = 2048,
     hop_length = 512,
+    win_length = null,
     window = 'hann',
     center = true,
+    pad_mode = 'constant',
   } = options
-  return fftStft(y, n_fft, hop_length, window, center)
+  // Updated for new Librosa-compatible signature
+  return fftStft(y, n_fft, hop_length, win_length, window, center, pad_mode)
 }
 
 function abs(x) {

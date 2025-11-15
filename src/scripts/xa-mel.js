@@ -186,26 +186,37 @@ export function melspectrogram(
   fmax = null,
 ) {
   // Compute power spectrogram
+  // stft() now returns [freq][time] format (Librosa-compatible)
   const stft_matrix = stft(y, n_fft, hop_length)
-  const power_spec = stft_matrix.map((frame) => {
-    const mag = magnitude(frame)
-    return mag.map((m) => m * m) // Power = magnitude^2
-  })
 
-  // Get Mel filterbank
+  const n_freq = stft_matrix.length
+  const n_frames = stft_matrix[0] ? stft_matrix[0].length : 0
+
+  // Convert to power spectrogram [freq][time]
+  const power_spec = Array(n_freq)
+  for (let f = 0; f < n_freq; f++) {
+    power_spec[f] = new Float32Array(n_frames)
+    for (let t = 0; t < n_frames; t++) {
+      const bin = stft_matrix[f][t]
+      const mag = Math.sqrt(bin.real * bin.real + bin.imag * bin.imag)
+      power_spec[f][t] = mag * mag // Power = magnitude^2
+    }
+  }
+
+  // Get Mel filterbank [n_mels][n_freq]
   const mel_fb = mel_filterbank(sr, n_fft, n_mels, fmin, fmax)
 
-  // Apply filterbank
-  const n_frames = power_spec.length
+  // Apply filterbank: mel_spec[m][t] = sum_f(mel_fb[m][f] * power_spec[f][t])
+  // Output: [n_mels][n_frames] (Librosa format)
   const mel_spec = Array(n_mels)
     .fill(null)
     .map(() => new Float32Array(n_frames))
 
-  for (let t = 0; t < n_frames; t++) {
-    for (let m = 0; m < n_mels; m++) {
+  for (let m = 0; m < n_mels; m++) {
+    for (let t = 0; t < n_frames; t++) {
       let energy = 0
-      for (let f = 0; f < power_spec[t].length; f++) {
-        energy += power_spec[t][f] * mel_fb[m][f]
+      for (let f = 0; f < n_freq; f++) {
+        energy += mel_fb[m][f] * power_spec[f][t]
       }
       mel_spec[m][t] = energy
     }
