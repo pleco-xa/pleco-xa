@@ -79,11 +79,11 @@
   - **Signature:** `(localscore, beats, trim, beats_trimmed)`
   - **Docstring:** *Remove spurious leading and trailing beats from the detection array*
 
-- [ ] `beat_track`
+- [x] `beat_track`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, onset_envelope: Optional[np.ndarray] = None, hop_length: int = 512, start_bpm: float = 120.0, tightness: float = 100, trim: bool = True, bpm: Optional[Union[_FloatLike_co, np.ndarray]] = None, prior: Optional[scipy.stats.rv_continuous] = None, units: str = 'frames', sparse: bool = True) -> Tuple[Union[_FloatLike_co, np.ndarray], np.ndarray]`
   - **Docstring:** *Dynamic programming beat tracker.*
 
-- [ ] `plp`
+- [x] `plp`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, onset_envelope: Optional[np.ndarray] = None, hop_length: int = 512, win_length: int = 384, tempo_min: Optional[float] = 30, tempo_max: Optional[float] = 300, prior: Optional[scipy.stats.rv_continuous] = None) -> np.ndarray`
   - **Docstring:** *Predominant local pulse (PLP) estimation. [#]_*
 
@@ -112,23 +112,23 @@
   - **Signature:** `(x: np.ndarray, threshold: float, zero_pos: bool, y: np.ndarray) -> None`
   - **Docstring:** *Vectorized wrapper for zero crossing stencil*
 
-- [ ] `autocorrelate`
+- [x] `autocorrelate`
   - **Signature:** `(y: np.ndarray, max_size: Optional[int] = None, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Bounded-lag auto-correlation*
 
-- [ ] `chirp`
+- [x] `chirp`
   - **Signature:** `(fmin: _FloatLike_co, fmax: _FloatLike_co, sr: float = 22050, length: Optional[int] = None, duration: Optional[float] = None, linear: bool = False, phi: Optional[float] = None) -> np.ndarray`
   - **Docstring:** *Construct a "chirp" or "sine-sweep" signal.*
 
-- [ ] `clicks`
+- [x] `clicks`
   - **Signature:** `(times: Optional[_SequenceLike[_FloatLike_co]] = None, frames: Optional[_SequenceLike[_IntLike_co]] = None, sr: float = 22050, hop_length: int = 512, click_freq: float = 1000.0, click_duration: float = 0.1, click: Optional[np.ndarray] = None, length: Optional[int] = None) -> np.ndarray`
   - **Docstring:** *Construct a "click track".*
 
-- [ ] `get_duration`
+- [x] `get_duration`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, center: bool = True, path: Optional[Union[str, os.PathLike[Any]]] = None, filename: Optional[Union[str, os.PathLike[Any], Deprecated]] = Deprecated()) -> float`
   - **Docstring:** *Compute the duration (in seconds) of an audio time series,*
 
-- [ ] `get_samplerate`
+- [x] `get_samplerate`
   - **Signature:** `(path: Union[str, int, sf.SoundFile, BinaryIO]) -> float`
   - **Docstring:** *Get the sampling rate for a given file.*
 
@@ -136,19 +136,19 @@
   - **Signature:** `(path: Union[str, int, os.PathLike[Any], sf.SoundFile, audioread.AudioFile, BinaryIO], sr: Optional[float] = 22050, mono: bool = True, offset: float = 0.0, duration: Optional[float] = None, dtype: DTypeLike = np.float32, res_type: str = 'soxr_hq') -> Tuple[np.ndarray, Union[int, float]]`
   - **Docstring:** *Load an audio file as a floating point time series.*
 
-- [ ] `lpc`
+- [x] `lpc`
   - **Signature:** `(y: np.ndarray, order: int, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Linear Prediction Coefficients via Burg's method*
 
-- [ ] `mu_compress`
+- [x] `mu_compress`
   - **Signature:** `(x: Union[np.ndarray, _FloatLike_co], mu: float = 255, quantize: bool = True) -> np.ndarray`
   - **Docstring:** *mu-law compression*
 
-- [ ] `mu_expand`
+- [x] `mu_expand`
   - **Signature:** `(x: Union[np.ndarray, _FloatLike_co], mu: float = 255.0, quantize: bool = True) -> np.ndarray`
   - **Docstring:** *mu-law expansion*
 
-- [ ] `resample`
+- [x] `resample`
   - **Signature:** `(y: np.ndarray, orig_sr: float, target_sr: float, res_type: str = 'soxr_hq', fix: bool = True, scale: bool = False, axis: int = -1, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Resample a time series from orig_sr to target_sr*
 
@@ -156,15 +156,15 @@
   - **Signature:** `(path: Union[str, int, sf.SoundFile, BinaryIO], block_length: int, frame_length: int, hop_length: int, mono: bool = True, offset: float = 0.0, duration: Optional[float] = None, fill_value: Optional[float] = None, dtype: DTypeLike = np.float32) -> Generator[np.ndarray, None, None]`
   - **Docstring:** *Stream audio in fixed-length buffers.*
 
-- [ ] `to_mono`
+- [x] `to_mono`
   - **Signature:** `(y: np.ndarray) -> np.ndarray`
   - **Docstring:** *Convert an audio signal to mono by averaging samples across channels.*
 
-- [ ] `tone`
+- [x] `tone`
   - **Signature:** `(frequency: _FloatLike_co, sr: float = 22050, length: Optional[int] = None, duration: Optional[float] = None, phi: Optional[float] = None) -> np.ndarray`
   - **Docstring:** *Construct a pure tone (cosine) signal at a given frequency.*
 
-- [ ] `zero_crossings`
+- [x] `zero_crossings`
   - **Signature:** `(y: np.ndarray, threshold: float = 1e-10, ref_magnitude: Optional[Union[float, Callable]] = None, pad: bool = True, zero_pos: bool = True, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Find the zero-crossings of a signal ``y``: indices ``i`` such that*
 
@@ -237,7 +237,7 @@
   - **Signature:** `(A4: _ScalarOrSequence[_FloatLike_co], bins_per_octave: int = 12) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert a reference pitch frequency (e.g., ``A4=435``) to a tuning*
 
-- [ ] `A_weighting`
+- [x] `A_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, min_db: Optional[float] = ...) -> np.floating[Any]`
 
 - [ ] `A_weighting`
@@ -250,7 +250,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = -80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the A-weighting of a set of frequencies.*
 
-- [ ] `B_weighting`
+- [x] `B_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, min_db: Optional[float] = ...) -> np.floating[Any]`
 
 - [ ] `B_weighting`
@@ -263,7 +263,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = -80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the B-weighting of a set of frequencies.*
 
-- [ ] `C_weighting`
+- [x] `C_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, min_db: Optional[float] = ...) -> np.floating[Any]`
 
 - [ ] `C_weighting`
@@ -276,7 +276,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = -80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the C-weighting of a set of frequencies.*
 
-- [ ] `D_weighting`
+- [x] `D_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, min_db: Optional[float] = ...) -> np.floating[Any]`
 
 - [ ] `D_weighting`
@@ -332,19 +332,19 @@
   - **Signature:** `(blocks: _ScalarOrSequence[_IntLike_co], block_length: int, hop_length: int, sr: float) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert block indices to time (in seconds)*
 
-- [ ] `cqt_frequencies`
+- [x] `cqt_frequencies`
   - **Signature:** `(n_bins: int, fmin: float, bins_per_octave: int = 12, tuning: float = 0.0) -> np.ndarray`
   - **Docstring:** *Compute the center frequencies of Constant-Q bins.*
 
-- [ ] `fft_frequencies`
+- [x] `fft_frequencies`
   - **Signature:** `(sr: float = 22050, n_fft: int = 2048) -> np.ndarray`
   - **Docstring:** *Alternative interface for `np.fft.rfftfreq`*
 
-- [ ] `fourier_tempo_frequencies`
+- [x] `fourier_tempo_frequencies`
   - **Signature:** `(sr: float = 22050, win_length: int = 384, hop_length: int = 512) -> np.ndarray`
   - **Docstring:** *Compute the frequencies (in beats per minute) corresponding*
 
-- [ ] `frames_to_samples`
+- [x] `frames_to_samples`
   - **Signature:** `(frames: _IntLike_co, hop_length: int = 512, n_fft: Optional[int] = None) -> np.integer[Any]`
 
 - [ ] `frames_to_samples`
@@ -354,7 +354,7 @@
   - **Signature:** `(frames: _ScalarOrSequence[_IntLike_co], hop_length: int = 512, n_fft: Optional[int] = None) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert frame indices to audio sample indices.*
 
-- [ ] `frames_to_time`
+- [x] `frames_to_time`
   - **Signature:** `(frames: _IntLike_co, sr: float = ..., hop_length: int = ..., n_fft: Optional[int] = ...) -> np.floating[Any]`
 
 - [ ] `frames_to_time`
@@ -390,7 +390,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], fmin: Optional[float] = None, unison: Optional[str] = None, unicode: bool = False) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert one or more frequencies (in Hz) from a just intonation*
 
-- [ ] `hz_to_mel`
+- [x] `hz_to_mel`
   - **Signature:** `(frequencies: _FloatLike_co, htk: bool = ...) -> np.floating[Any]`
 
 - [ ] `hz_to_mel`
@@ -403,7 +403,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], htk: bool = False) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert Hz to Mels*
 
-- [ ] `hz_to_midi`
+- [x] `hz_to_midi`
   - **Signature:** `(frequencies: _FloatLike_co) -> np.floating[Any]`
 
 - [ ] `hz_to_midi`
@@ -416,7 +416,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co]) -> Union[np.ndarray, np.floating[Any]]`
   - **Docstring:** *Get MIDI note number(s) for given frequencies*
 
-- [ ] `hz_to_note`
+- [x] `hz_to_note`
   - **Signature:** `(frequencies: _FloatLike_co, **kwargs: Any) -> str`
 
 - [ ] `hz_to_note`
@@ -429,7 +429,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], **kwargs: Any) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert one or more frequencies (in Hz) to the nearest note names.*
 
-- [ ] `hz_to_octs`
+- [x] `hz_to_octs`
   - **Signature:** `(frequencies: _FloatLike_co, tuning: float = ..., bins_per_octave: int = ...) -> np.floating[Any]`
 
 - [ ] `hz_to_octs`
@@ -472,7 +472,7 @@
   - **Signature:** `(n_mels: int = 128, fmin: float = 0.0, fmax: float = 11025.0, htk: bool = False) -> np.ndarray`
   - **Docstring:** *Compute an array of acoustic frequencies tuned to the mel scale.*
 
-- [ ] `mel_to_hz`
+- [x] `mel_to_hz`
   - **Signature:** `(mels: _FloatLike_co, htk: bool = ...) -> np.floating[Any]`
 
 - [ ] `mel_to_hz`
@@ -485,7 +485,7 @@
   - **Signature:** `(mels: _ScalarOrSequence[_FloatLike_co], htk: bool = False) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert mel bin numbers to frequencies*
 
-- [ ] `midi_to_hz`
+- [x] `midi_to_hz`
   - **Signature:** `(notes: _FloatLike_co) -> np.floating[Any]`
 
 - [ ] `midi_to_hz`
@@ -498,7 +498,7 @@
   - **Signature:** `(notes: _ScalarOrSequence[_FloatLike_co]) -> Union[np.ndarray, np.floating[Any]]`
   - **Docstring:** *Get the frequency (Hz) of MIDI note(s)*
 
-- [ ] `midi_to_note`
+- [x] `midi_to_note`
   - **Signature:** `(midi: _FloatLike_co, octave: bool = ..., cents: bool = ..., key: str = ..., unicode: bool = ...) -> str`
 
 - [ ] `midi_to_note`
@@ -541,7 +541,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], kinds: Iterable[str] = 'ZAC', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute multiple weightings of a set of frequencies.*
 
-- [ ] `note_to_hz`
+- [x] `note_to_hz`
   - **Signature:** `(note: str, **kwargs: Any) -> np.floating[Any]`
 
 - [ ] `note_to_hz`
@@ -554,7 +554,7 @@
   - **Signature:** `(note: Union[str, _IterableLike[str], Iterable[str]], **kwargs: Any) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert one or more note names to frequency (Hz)*
 
-- [ ] `note_to_midi`
+- [x] `note_to_midi`
   - **Signature:** `(note: str, round_midi: bool = ...) -> Union[float, int]`
 
 - [ ] `note_to_midi`
@@ -593,7 +593,7 @@
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert western notes to Hindustani svara*
 
-- [ ] `octs_to_hz`
+- [x] `octs_to_hz`
   - **Signature:** `(octs: _FloatLike_co, tuning: float = ..., bins_per_octave: int = ...) -> np.floating[Any]`
 
 - [ ] `octs_to_hz`
@@ -610,7 +610,7 @@
   - **Signature:** `(X: Union[np.ndarray, float], hop_length: int = 512, n_fft: Optional[int] = None, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Return an array of sample indices to match the time axis from a feature matrix.*
 
-- [ ] `samples_to_frames`
+- [x] `samples_to_frames`
   - **Signature:** `(samples: _IntLike_co, hop_length: int = ..., n_fft: Optional[int] = ...) -> np.integer[Any]`
 
 - [ ] `samples_to_frames`
@@ -623,7 +623,7 @@
   - **Signature:** `(samples: _ScalarOrSequence[_IntLike_co], hop_length: int = 512, n_fft: Optional[int] = None) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert sample indices into STFT frames.*
 
-- [ ] `samples_to_time`
+- [x] `samples_to_time`
   - **Signature:** `(samples: _IntLike_co, sr: float = ...) -> np.floating[Any]`
 
 - [ ] `samples_to_time`
@@ -640,7 +640,7 @@
   - **Signature:** `(n_bins: int, hop_length: int = 512, sr: float = 22050) -> np.ndarray`
   - **Docstring:** *Compute the frequencies (in beats per minute) corresponding*
 
-- [ ] `time_to_frames`
+- [x] `time_to_frames`
   - **Signature:** `(times: _FloatLike_co, sr: float = ..., hop_length: int = ..., n_fft: Optional[int] = ...) -> np.integer[Any]`
 
 - [ ] `time_to_frames`
@@ -653,7 +653,7 @@
   - **Signature:** `(times: _ScalarOrSequence[_FloatLike_co], sr: float = 22050, hop_length: int = 512, n_fft: Optional[int] = None) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert time stamps into STFT frames.*
 
-- [ ] `time_to_samples`
+- [x] `time_to_samples`
   - **Signature:** `(times: _FloatLike_co, sr: float = ...) -> np.integer[Any]`
 
 - [ ] `time_to_samples`
@@ -877,7 +877,7 @@
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: Optional[int] = 2048, resolution: float = 0.01, bins_per_octave: int = 12, **kwargs: Any) -> float`
   - **Docstring:** *Estimate the tuning of an audio time series or spectrogram input.*
 
-- [ ] `piptrack`
+- [x] `piptrack`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: Optional[int] = 2048, hop_length: Optional[int] = None, fmin: float = 150.0, fmax: float = 4000.0, threshold: float = 0.1, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', ref: Optional[Union[float, Callable]] = None) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Pitch tracking on thresholded parabolically-interpolated STFT.*
 
@@ -885,11 +885,11 @@
   - **Signature:** `(frequencies: ArrayLike, resolution: float = 0.01, bins_per_octave: int = 12) -> float`
   - **Docstring:** *Given a collection of pitches, estimate its tuning offset*
 
-- [ ] `pyin`
+- [x] `pyin`
   - **Signature:** `(y: np.ndarray, fmin: float, fmax: float, sr: float = 22050, frame_length: int = 2048, win_length: Optional[Union[int, Deprecated]] = Deprecated(), hop_length: Optional[int] = None, n_thresholds: int = 100, beta_parameters: Tuple[float, float] = (2, 18), boltzmann_parameter: float = 2, resolution: float = 0.1, max_transition_rate: float = 35.92, switch_prob: float = 0.01, no_trough_prob: float = 0.01, fill_na: Optional[float] = np.nan, center: bool = True, pad_mode: _PadMode = 'constant') -> Tuple[np.ndarray, np.ndarray, np.ndarray]`
   - **Docstring:** *Fundamental frequency (F0) estimation using probabilistic YIN (pYIN).*
 
-- [ ] `yin`
+- [x] `yin`
   - **Signature:** `(y: np.ndarray, fmin: float, fmax: float, sr: float = 22050, frame_length: int = 2048, win_length: Optional[Union[int, Deprecated]] = Deprecated(), hop_length: Optional[int] = None, trough_threshold: float = 0.1, center: bool = True, pad_mode: _PadMode = 'constant') -> np.ndarray`
   - **Docstring:** *Fundamental frequency (F0) estimation using the YIN algorithm.*
 
@@ -910,7 +910,7 @@
   - **Signature:** `(y: Optional[np.ndarray] = None, S: Optional[np.ndarray] = None, n_fft: Optional[int] = 2048, hop_length: Optional[int] = 512, power: float = 1, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, int]`
   - **Docstring:** *Retrieve a magnitude spectrogram.*
 
-- [ ] `amplitude_to_db`
+- [x] `amplitude_to_db`
   - **Signature:** `(S: _ComplexLike_co, ref: Union[float, Callable] = ..., amin: float = ..., top_db: Optional[float] = ...) -> np.floating[Any]`
 
 - [ ] `amplitude_to_db`
@@ -923,7 +923,7 @@
   - **Signature:** `(S: _ScalarOrSequence[_ComplexLike_co], ref: Union[float, Callable] = 1.0, amin: float = 1e-05, top_db: Optional[float] = 80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert an amplitude spectrogram to dB-scaled spectrogram.*
 
-- [ ] `db_to_amplitude`
+- [x] `db_to_amplitude`
   - **Signature:** `(S_db: _FloatLike_co, ref: float = ...) -> np.floating[Any]`
 
 - [ ] `db_to_amplitude`
@@ -936,7 +936,7 @@
   - **Signature:** `(S_db: Union[_FloatLike_co, np.ndarray], ref: float = 1.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert a dB-scaled spectrogram to an amplitude spectrogram.*
 
-- [ ] `db_to_power`
+- [x] `db_to_power`
   - **Signature:** `(S_db: _FloatLike_co, ref: float = ...) -> np.floating[Any]`
 
 - [ ] `db_to_power`
@@ -961,7 +961,7 @@
   - **Signature:** `(y: np.ndarray, sr: float = 22050, win_length: int = 2048, hop_length: Optional[int] = None, center: bool = True, tuning: float = 0.0, pad_mode: _PadMode = 'constant', flayout: str = 'sos', res_type: str = 'soxr_hq', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Time-frequency representation using IIR filters*
 
-- [ ] `istft`
+- [x] `istft`
   - **Signature:** `(stft_matrix: np.ndarray, hop_length: Optional[int] = None, win_length: Optional[int] = None, n_fft: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, length: Optional[int] = None, out: Optional[np.ndarray] = None) -> np.ndarray`
   - **Docstring:** *Inverse short-time Fourier transform (ISTFT).*
 
@@ -986,11 +986,11 @@
   - **Signature:** `(S: np.ndarray, frequencies: np.ndarray, kind: str = 'A', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Perceptual weighting of a power spectrogram::*
 
-- [ ] `phase_vocoder`
+- [x] `phase_vocoder`
   - **Signature:** `(D: np.ndarray, rate: float, hop_length: Optional[int] = None, n_fft: Optional[int] = None) -> np.ndarray`
   - **Docstring:** *Phase vocoder.  Given an STFT matrix D, speed up by a factor of ``rate``*
 
-- [ ] `power_to_db`
+- [x] `power_to_db`
   - **Signature:** `(S: _ComplexLike_co, ref: Union[float, Callable] = ..., amin: float = ..., top_db: Optional[float] = ...) -> np.floating[Any]`
 
 - [ ] `power_to_db`
@@ -1007,7 +1007,7 @@
   - **Signature:** `(y: np.ndarray, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, reassign_frequencies: bool = True, reassign_times: bool = True, ref_power: Union[float, Callable] = 1e-06, fill_nan: bool = False, clip: bool = True, dtype: Optional[DTypeLike] = None, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, np.ndarray, np.ndarray]`
   - **Docstring:** *Time-frequency reassigned spectrogram.*
 
-- [ ] `stft`
+- [x] `stft`
   - **Signature:** `(y: np.ndarray, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, pad_mode: _PadModeSTFT = 'constant', out: Optional[np.ndarray] = None) -> np.ndarray`
   - **Docstring:** *Short-time Fourier transform (STFT).*
 
@@ -1017,15 +1017,15 @@
   - **Signature:** `(R_data, R_indices, R_ptr, S: np.ndarray, aggregate: Callable) -> np.ndarray`
   - **Docstring:** *Nearest-neighbor filter helper function.*
 
-- [ ] `decompose`
+- [x] `decompose`
   - **Signature:** `(S: np.ndarray, n_components: Optional[int] = None, transformer: Optional[object] = None, sort: bool = False, fit: bool = True, **kwargs: Any) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Decompose a feature matrix.*
 
-- [ ] `hpss`
+- [x] `hpss`
   - **Signature:** `(S: np.ndarray, kernel_size: Union[_IntLike_co, Tuple[_IntLike_co, _IntLike_co], List[_IntLike_co]] = 31, power: float = 2.0, mask: bool = False, margin: Union[_FloatLike_co, Tuple[_FloatLike_co, _FloatLike_co], List[_FloatLike_co]] = 1.0) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Median-filtering harmonic percussive source separation (HPSS).*
 
-- [ ] `nn_filter`
+- [x] `nn_filter`
   - **Signature:** `(S: np.ndarray, rec: Optional[Union[scipy.sparse.spmatrix, np.ndarray]] = None, aggregate: Optional[Callable] = None, axis: int = -1, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Filter by nearest-neighbor aggregation.*
 
@@ -1190,58 +1190,58 @@
   - **Signature:** `(y: np.ndarray, frame_length: int = 2048, hop_length: int = 512, top_db: float = 60, ref: Union[Callable, float] = np.max, aggregate: Callable = np.max) -> np.ndarray`
   - **Docstring:** *Frame-wise non-silent indicator for audio input.*
 
-- [ ] `deemphasis`
+- [x] `deemphasis`
   - **Signature:** `(y: np.ndarray, coef: float = ..., zi: Optional[ArrayLike] = ..., return_zf: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `deemphasis`
+- [x] `deemphasis`
   - **Signature:** `(y: np.ndarray, coef: float = ..., zi: Optional[ArrayLike] = ..., return_zf: Literal[True]) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `deemphasis`
+- [x] `deemphasis`
   - **Signature:** `(y: np.ndarray, coef: float = 0.97, zi: Optional[ArrayLike] = None, return_zf: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *De-emphasize an audio signal with the inverse operation of preemphasis():*
 
-- [ ] `harmonic`
+- [x] `harmonic`
   - **Signature:** `(y: np.ndarray, kernel_size: Union[_IntLike_co, Tuple[_IntLike_co, _IntLike_co], List[_IntLike_co]] = 31, power: float = 2.0, mask: bool = False, margin: Union[_FloatLike_co, Tuple[_FloatLike_co, _FloatLike_co], List[_FloatLike_co]] = 1.0, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant') -> np.ndarray`
   - **Docstring:** *Extract harmonic elements from an audio time-series.*
 
-- [ ] `hpss`
+- [x] `hpss`
   - **Signature:** `(y: np.ndarray, kernel_size: Union[_IntLike_co, Tuple[_IntLike_co, _IntLike_co], List[_IntLike_co]] = 31, power: float = 2.0, mask: bool = False, margin: Union[_FloatLike_co, Tuple[_FloatLike_co, _FloatLike_co], List[_FloatLike_co]] = 1.0, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Decompose an audio time series into harmonic and percussive components.*
 
-- [ ] `percussive`
+- [x] `percussive`
   - **Signature:** `(y: np.ndarray, kernel_size: Union[_IntLike_co, Tuple[_IntLike_co, _IntLike_co], List[_IntLike_co]] = 31, power: float = 2.0, mask: bool = False, margin: Union[_FloatLike_co, Tuple[_FloatLike_co, _FloatLike_co], List[_FloatLike_co]] = 1.0, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant') -> np.ndarray`
   - **Docstring:** *Extract percussive elements from an audio time-series.*
 
-- [ ] `pitch_shift`
+- [x] `pitch_shift`
   - **Signature:** `(y: np.ndarray, sr: float, n_steps: float, bins_per_octave: int = 12, res_type: str = 'soxr_hq', scale: bool = False, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Shift the pitch of a waveform by ``n_steps`` steps.*
 
-- [ ] `preemphasis`
+- [x] `preemphasis`
   - **Signature:** `(y: np.ndarray, coef: float = ..., zi: Optional[ArrayLike] = ..., return_zf: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `preemphasis`
+- [x] `preemphasis`
   - **Signature:** `(y: np.ndarray, coef: float = ..., zi: Optional[ArrayLike] = ..., return_zf: Literal[True]) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `preemphasis`
+- [x] `preemphasis`
   - **Signature:** `(y: np.ndarray, coef: float = ..., zi: Optional[ArrayLike] = ..., return_zf: bool) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
 
-- [ ] `preemphasis`
+- [x] `preemphasis`
   - **Signature:** `(y: np.ndarray, coef: float = 0.97, zi: Optional[ArrayLike] = None, return_zf: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Pre-emphasize an audio signal with a first-order differencing filter:*
 
-- [ ] `remix`
+- [x] `remix`
   - **Signature:** `(y: np.ndarray, intervals: Iterable[Tuple[int, int]], align_zeros: bool = True) -> np.ndarray`
   - **Docstring:** *Remix an audio signal by re-ordering time intervals.*
 
-- [ ] `split`
+- [x] `split`
   - **Signature:** `(y: np.ndarray, top_db: float = 60, ref: Union[float, Callable] = np.max, frame_length: int = 2048, hop_length: int = 512, aggregate: Callable = np.max) -> np.ndarray`
   - **Docstring:** *Split an audio signal into non-silent intervals.*
 
-- [ ] `time_stretch`
+- [x] `time_stretch`
   - **Signature:** `(y: np.ndarray, rate: float, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Time-stretch an audio series by a fixed rate.*
 
-- [ ] `trim`
+- [x] `trim`
   - **Signature:** `(y: np.ndarray, top_db: float = 60, ref: Union[float, Callable] = np.max, frame_length: int = 2048, hop_length: int = 512, aggregate: Callable = np.max) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Trim leading and trailing silence from an audio signal.*
 
@@ -1269,33 +1269,33 @@
 
 ## `librosa/feature/rhythm.py`
 
-- [ ] `fourier_tempogram`
+- [x] `fourier_tempogram`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, onset_envelope: Optional[np.ndarray] = None, hop_length: int = 512, win_length: int = 384, center: bool = True, window: _WindowSpec = 'hann') -> np.ndarray`
   - **Docstring:** *Compute the Fourier tempogram: the short-time Fourier transform of the*
 
-- [ ] `tempo`
+- [x] `tempo`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, onset_envelope: Optional[np.ndarray] = None, tg: Optional[np.ndarray] = None, hop_length: int = 512, start_bpm: float = 120, std_bpm: float = 1.0, ac_size: float = 8.0, max_tempo: Optional[float] = 320.0, aggregate: Optional[Callable[..., Any]] = np.mean, prior: Optional[scipy.stats.rv_continuous] = None) -> np.ndarray`
   - **Docstring:** *Estimate the tempo (beats per minute)*
 
-- [ ] `tempogram`
+- [x] `tempogram`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, onset_envelope: Optional[np.ndarray] = None, hop_length: int = 512, win_length: int = 384, center: bool = True, window: _WindowSpec = 'hann', norm: Optional[float] = np.inf) -> np.ndarray`
   - **Docstring:** *Compute the tempogram: local autocorrelation of the onset strength envelope. [#]_*
 
-- [ ] `tempogram_ratio`
+- [x] `tempogram_ratio`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, onset_envelope: Optional[np.ndarray] = None, tg: Optional[np.ndarray] = None, bpm: Optional[np.ndarray] = None, hop_length: int = 512, win_length: int = 384, start_bpm: float = 120, std_bpm: float = 1.0, max_tempo: Optional[float] = 320.0, freqs: Optional[np.ndarray] = None, factors: Optional[np.ndarray] = None, aggregate: Optional[Callable[..., Any]] = None, prior: Optional[scipy.stats.rv_continuous] = None, center: bool = True, window: _WindowSpec = 'hann', kind: str = 'linear', fill_value: float = 0, norm: Optional[float] = np.inf) -> np.ndarray`
   - **Docstring:** *Tempogram ratio features, also known as spectral rhythm patterns. [1]_*
 
 ## `librosa/feature/spectral.py`
 
-- [ ] `chroma_cens`
+- [x] `chroma_cens`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, C: Optional[np.ndarray] = None, hop_length: int = 512, fmin: Optional[_FloatLike_co] = None, tuning: Optional[float] = None, n_chroma: int = 12, n_octaves: int = 7, bins_per_octave: int = 36, cqt_mode: str = 'full', window: Optional[np.ndarray] = None, norm: Optional[float] = 2, win_len_smooth: Optional[int] = 41, smoothing_window: _WindowSpec = 'hann') -> np.ndarray`
   - **Docstring:** *Compute the chroma variant "Chroma Energy Normalized" (CENS)*
 
-- [ ] `chroma_cqt`
+- [x] `chroma_cqt`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, C: Optional[np.ndarray] = None, hop_length: int = 512, fmin: Optional[_FloatLike_co] = None, norm: Optional[Union[int, float]] = np.inf, threshold: float = 0.0, tuning: Optional[float] = None, n_chroma: int = 12, n_octaves: int = 7, window: Optional[np.ndarray] = None, bins_per_octave: Optional[int] = 36, cqt_mode: str = 'full') -> np.ndarray`
   - **Docstring:** *Constant-Q chromagram*
 
-- [ ] `chroma_stft`
+- [x] `chroma_stft`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, norm: Optional[float] = np.inf, n_fft: int = 2048, hop_length: int = 512, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', tuning: Optional[float] = None, n_chroma: int = 12, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute a chromagram from a waveform or power spectrogram.*
 
@@ -1303,47 +1303,47 @@
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, V: Optional[np.ndarray] = None, hop_length: int = 512, fmin: Optional[float] = None, intervals: Union[str, Collection[float]], norm: Optional[float] = np.inf, threshold: float = 0.0, n_octaves: int = 7, bins_per_octave: int = 12, gamma: float = 0) -> np.ndarray`
   - **Docstring:** *Variable-Q chromagram*
 
-- [ ] `melspectrogram`
+- [x] `melspectrogram`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', power: float = 2.0, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute a mel-scaled spectrogram.*
 
-- [ ] `mfcc`
+- [x] `mfcc`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_mfcc: int = 20, dct_type: int = 2, norm: Optional[str] = 'ortho', lifter: float = 0, mel_norm: Optional[Union[Literal['slaney'], float]] = 'slaney', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Mel-frequency cepstral coefficients (MFCCs)*
 
-- [ ] `poly_features`
+- [x] `poly_features`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', order: int = 1, freq: Optional[np.ndarray] = None) -> np.ndarray`
   - **Docstring:** *Get coefficients of fitting an nth-order polynomial to the columns*
 
-- [ ] `rms`
+- [x] `rms`
   - **Signature:** `(y: Optional[np.ndarray] = None, S: Optional[np.ndarray] = None, frame_length: int = 2048, hop_length: int = 512, center: bool = True, pad_mode: _PadMode = 'constant', dtype: DTypeLike = np.float32) -> np.ndarray`
   - **Docstring:** *Compute root-mean-square (RMS) value for each frame, either from the*
 
-- [ ] `spectral_bandwidth`
+- [x] `spectral_bandwidth`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', freq: Optional[np.ndarray] = None, centroid: Optional[np.ndarray] = None, norm: bool = True, p: float = 2) -> np.ndarray`
   - **Docstring:** *Compute p'th-order spectral bandwidth.*
 
-- [ ] `spectral_centroid`
+- [x] `spectral_centroid`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, freq: Optional[np.ndarray] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant') -> np.ndarray`
   - **Docstring:** *Compute the spectral centroid.*
 
-- [ ] `spectral_contrast`
+- [x] `spectral_contrast`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', freq: Optional[np.ndarray] = None, fmin: float = 200.0, n_bands: int = 6, quantile: float = 0.02, linear: bool = False) -> np.ndarray`
   - **Docstring:** *Compute spectral contrast*
 
-- [ ] `spectral_flatness`
+- [x] `spectral_flatness`
   - **Signature:** `(y: Optional[np.ndarray] = None, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', amin: float = 1e-10, power: float = 2.0) -> np.ndarray`
   - **Docstring:** *Compute spectral flatness*
 
-- [ ] `spectral_rolloff`
+- [x] `spectral_rolloff`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', freq: Optional[np.ndarray] = None, roll_percent: float = 0.85) -> np.ndarray`
   - **Docstring:** *Compute roll-off frequency.*
 
-- [ ] `tonnetz`
+- [x] `tonnetz`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, chroma: Optional[np.ndarray] = None, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute the tonal centroid features (tonnetz)*
 
-- [ ] `zero_crossing_rate`
+- [x] `zero_crossing_rate`
   - **Signature:** `(y: np.ndarray, frame_length: int = 2048, hop_length: int = 512, center: bool = True, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute the zero-crossing rate of an audio time series.*
 
@@ -1353,7 +1353,7 @@
   - **Signature:** `(history, data, n_steps, delay)`
   - **Docstring:** *Memory-stacking helper function.*
 
-- [ ] `delta`
+- [x] `delta`
   - **Signature:** `(data: np.ndarray, width: int = 9, order: int = 1, axis: int = -1, mode: str = 'interp', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute delta features: local estimate of the derivative*
 
@@ -1441,11 +1441,11 @@
   - **Signature:** `(events: np.ndarray, energy: np.ndarray) -> np.ndarray`
   - **Docstring:** *Backtrack detected onset events to the nearest preceding local*
 
-- [ ] `onset_detect`
+- [x] `onset_detect`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, onset_envelope: Optional[np.ndarray] = None, hop_length: int = 512, backtrack: bool = False, energy: Optional[np.ndarray] = None, units: str = 'frames', normalize: bool = True, sparse: bool = True, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Locate note onset events by picking peaks in an onset strength envelope.*
 
-- [ ] `onset_strength`
+- [x] `onset_strength`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, lag: int = 1, max_size: int = 1, ref: Optional[np.ndarray] = None, detrend: bool = False, center: bool = True, feature: Optional[Callable] = None, aggregate: Optional[Union[Callable, bool]] = None, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute a spectral flux onset strength envelope.*
 
@@ -1462,7 +1462,7 @@
   - **Signature:** `(wrapped_f, *args, **kwargs)`
   - **Docstring:** *Wrap the filter with lag conversions*
 
-- [ ] `agglomerative`
+- [x] `agglomerative`
   - **Signature:** `(data: np.ndarray, k: int, clusterer: Optional[sklearn.cluster.AgglomerativeClustering] = None, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Bottom-up temporal segmentation.*
 
@@ -1476,7 +1476,7 @@
   - **Signature:** `(data: np.ndarray, data_ref: np.ndarray, k: Optional[int] = None, metric: str = 'euclidean', sparse: bool = False, mode: str = 'connectivity', bandwidth: Optional[Union[np.ndarray, _FloatLike_co, str]] = None, full: bool = False) -> Union[np.ndarray, scipy.sparse.csc_matrix]`
   - **Docstring:** *Compute cross-similarity from one data sequence to a reference sequence.*
 
-- [ ] `lag_to_recurrence`
+- [x] `lag_to_recurrence`
   - **Signature:** `(lag: _ArrayOrSparseMatrix, axis: int = -1) -> _ArrayOrSparseMatrix`
   - **Docstring:** *Convert a lag matrix into a recurrence matrix.*
 
@@ -1484,17 +1484,17 @@
   - **Signature:** `(R: np.ndarray, n: int, window: _WindowSpec = 'hann', max_ratio: float = 2.0, min_ratio: Optional[float] = None, n_filters: int = 7, zero_mean: bool = False, clip: bool = True, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Multi-angle path enhancement for self- and cross-similarity matrices.*
 
-- [ ] `recurrence_matrix`
+- [x] `recurrence_matrix`
   - **Signature:** `(data: np.ndarray, k: Optional[int] = ..., width: int = ..., metric: str = ..., sym: bool = ..., sparse: Literal[True] = ..., mode: str = ..., bandwidth: Optional[Union[np.ndarray, _FloatLike_co, str]] = ..., self: bool = ..., axis: int = ..., full: bool = False) -> scipy.sparse.csc_matrix`
 
-- [ ] `recurrence_matrix`
+- [x] `recurrence_matrix`
   - **Signature:** `(data: np.ndarray, k: Optional[int] = ..., width: int = ..., metric: str = ..., sym: bool = ..., sparse: Literal[False] = ..., mode: str = ..., bandwidth: Optional[Union[np.ndarray, _FloatLike_co, str]] = ..., self: bool = ..., axis: int = ..., full: bool = False) -> np.ndarray`
 
-- [ ] `recurrence_matrix`
+- [x] `recurrence_matrix`
   - **Signature:** `(data: np.ndarray, k: Optional[int] = None, width: int = 1, metric: str = 'euclidean', sym: bool = False, sparse: bool = False, mode: str = 'connectivity', bandwidth: Optional[Union[np.ndarray, _FloatLike_co, str]] = None, self: bool = False, axis: int = -1, full: bool = False) -> Union[np.ndarray, scipy.sparse.csc_matrix]`
   - **Docstring:** *Compute a recurrence matrix from a data matrix.*
 
-- [ ] `recurrence_to_lag`
+- [x] `recurrence_to_lag`
   - **Signature:** `(rec: _ArrayOrSparseMatrix, pad: bool = True, axis: int = -1) -> _ArrayOrSparseMatrix`
   - **Docstring:** *Convert a recurrence matrix into a lag matrix.*
 
@@ -1795,7 +1795,7 @@
 - [ ] `_phasor_angles`
   - **Signature:** `(x) -> np.complexfloating[Any, Any]`
 
-- [ ] `abs2`
+- [x] `abs2`
   - **Signature:** `(x: _NumberOrArray, dtype: Optional[DTypeLike] = None) -> _NumberOrArray`
   - **Docstring:** *Compute the squared magnitude of a real or complex array.*
 
@@ -1841,11 +1841,11 @@
   - **Signature:** `(frames: _SequenceLike[int], x_min: Optional[int] = 0, x_max: Optional[int] = None, pad: bool = True) -> np.ndarray`
   - **Docstring:** *Fix a list of frames to lie within [x_min, x_max]*
 
-- [ ] `fix_length`
+- [x] `fix_length`
   - **Signature:** `(data: np.ndarray, size: int, axis: int = -1, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Fix the length an array ``data`` to exactly ``size`` along a target axis.*
 
-- [ ] `frame`
+- [x] `frame`
   - **Signature:** `(x: np.ndarray, frame_length: int, hop_length: int, axis: int = -1, writeable: bool = False, subok: bool = False) -> np.ndarray`
   - **Docstring:** *Slice a data array into (overlapping) frames.*
 
@@ -1861,27 +1861,27 @@
   - **Signature:** `(data: np.ndarray, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Determine if the input array consists of all unique values*
 
-- [ ] `localmax`
+- [x] `localmax`
   - **Signature:** `(x: np.ndarray, axis: int = 0) -> np.ndarray`
   - **Docstring:** *Find local maxima in an array*
 
-- [ ] `localmin`
+- [x] `localmin`
   - **Signature:** `(x: np.ndarray, axis: int = 0) -> np.ndarray`
   - **Docstring:** *Find local minima in an array*
 
-- [ ] `normalize`
+- [x] `normalize`
   - **Signature:** `(S: np.ndarray, norm: Optional[float] = np.inf, axis: Optional[int] = 0, threshold: Optional[_FloatLike_co] = None, fill: Optional[bool] = None) -> np.ndarray`
   - **Docstring:** *Normalize an array along a chosen axis.*
 
-- [ ] `pad_center`
+- [x] `pad_center`
   - **Signature:** `(data: np.ndarray, size: int, axis: int = -1, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Pad an array to a target length along a target axis.*
 
-- [ ] `peak_pick`
+- [x] `peak_pick`
   - **Signature:** `(x: np.ndarray, pre_max: int, post_max: int, pre_avg: int, post_avg: int, delta: float, wait: int, sparse: bool = True, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Use a flexible heuristic to pick peaks in a signal.*
 
-- [ ] `phasor`
+- [x] `phasor`
   - **Signature:** `(angles: np.ndarray, mag: Optional[np.ndarray] = ...) -> np.ndarray`
 
 - [ ] `phasor`
@@ -1917,7 +1917,7 @@
   - **Signature:** `(data: np.ndarray, idx: Union[Sequence[int], Sequence[slice]], aggregate: Optional[Callable[..., Any]] = None, pad: bool = True, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Aggregate a multi-dimensional array between specified boundaries.*
 
-- [ ] `tiny`
+- [x] `tiny`
   - **Signature:** `(x: Union[float, np.ndarray]) -> _FloatLike_co`
   - **Docstring:** *Compute the tiny-value corresponding to an input's data type.*
 
