@@ -1,0 +1,62 @@
+{
+  "name": "pleco-audio",
+  "version": "1.0.0",
+  "description": "Librosa-compatible audio analysis library for JavaScript",
+  "main": "src/scripts/pleco-audio.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "audio",
+    "analysis",
+    "librosa",
+    "dsp",
+    "signal-processing",
+    "fft",
+    "stft",
+    "mfcc",
+    "mel",
+    "spectrogram",
+    "pitch",
+    "tempo",
+    "beat",
+    "rhythm",
+    "hpss",
+    "source-separation",
+    "music-information-retrieval",
+    "mir"
+  ],
+  "author": "Pleco-XA Project",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brookcs3/pleco-xa.git"
+  },
+  "bugs": {
+    "url": "https://github.com/brookcs3/pleco-xa/issues"
+  },
+  "homepage": "https://github.com/brookcs3/pleco-xa#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "exports": {
+    ".": "./src/scripts/pleco-audio.js",
+    "./core": "./src/scripts/xa-fft.js",
+    "./mel": "./src/scripts/xa-mel.js",
+    "./convert": "./src/scripts/xa-convert.js",
+    "./normalize": "./src/scripts/xa-normalize.js",
+    "./tempogram": "./src/scripts/xa-tempogram.js",
+    "./pitch": "./src/scripts/xa-pitch.js",
+    "./decompose": "./src/scripts/xa-decompose.js",
+    "./rhythm": "./src/scripts/xa-rhythm.js",
+    "./segment": "./src/scripts/xa-segment.js",
+    "./effects": "./src/scripts/xa-effects.js"
+  },
+  "files": [
+    "src/scripts/xa-*.js",
+    "src/scripts/pleco-audio.js",
+    "PLECO_AUDIO_README.md",
+    "LICENSE"
+  ]
+}
