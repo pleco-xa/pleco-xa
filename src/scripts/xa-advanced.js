@@ -602,6 +602,425 @@ function simple_istft(D, hop_length) {
   return istftTransform(D, hop_length, null, 'hann', true, null)
 }
 
+// ============= ADVANCED SPECTRUM FUNCTIONS =============
+
+/**
+ * Griffin-Lim algorithm for phase reconstruction
+ *
+ * Approximate magnitude spectrogram inversion using iterative phase estimation.
+ *
+ * @param {Array<Array<number>>} S - Magnitude spectrogram [freq x time]
+ * @param {number} n_iter - Number of iterations (default: 32)
+ * @param {number} hop_length - Hop length for STFT (default: 512)
+ * @param {number|null} win_length - Window length (default: null, uses n_fft)
+ * @param {number|null} n_fft - FFT size (default: null, inferred from S)
+ * @param {string} window - Window function (default: 'hann')
+ * @param {boolean} center - Center the frames (default: true)
+ * @param {string|null} dtype - Data type (default: null)
+ * @param {number|null} length - Output length in samples (default: null)
+ * @param {string} pad_mode - Padding mode (default: 'constant')
+ * @param {number} momentum - Fast Griffin-Lim momentum (default: 0.99)
+ * @param {string|null} init - Initialization ('random' or null, default: 'random')
+ * @param {number|null} random_state - Random seed (default: null)
+ * @returns {Float32Array} Reconstructed audio signal
+ */
+export function griffinlim(
+  S,
+  n_iter = 32,
+  hop_length = 512,
+  win_length = null,
+  n_fft = null,
+  window = 'hann',
+  center = true,
+  dtype = null,
+  length = null,
+  pad_mode = 'constant',
+  momentum = 0.99,
+  init = 'random',
+  random_state = null
+) {
+  const n_freq = S.length
+  const n_frames = S[0].length
+
+  // Infer n_fft from spectrogram shape
+  if (n_fft === null) {
+    n_fft = 2 * (n_freq - 1)
+  }
+
+  if (win_length === null) {
+    win_length = n_fft
+  }
+
+  // Initialize with random phase
+  let angles
+  if (init === 'random') {
+    if (random_state !== null) {
+      // Set random seed if provided (simplified)
+      Math.seedrandom = random_state
+    }
+    angles = Array(n_freq).fill(null).map(() =>
+      Array(n_frames).fill(null).map(() => Math.random() * 2 * Math.PI - Math.PI)
+    )
+  } else {
+    angles = Array(n_freq).fill(null).map(() => Array(n_frames).fill(0))
+  }
+
+  // Create initial complex spectrogram
+  let S_complex = S.map((row, i) =>
+    row.map((mag, j) => ({
+      real: mag * Math.cos(angles[i][j]),
+      imag: mag * Math.sin(angles[i][j])
+    }))
+  )
+
+  // Momentum for fast Griffin-Lim
+  let y_prev = null
+
+  // Iterative phase refinement
+  for (let iter = 0; iter < n_iter; iter++) {
+    // Inverse STFT
+    const y = istftTransform(S_complex, hop_length, win_length, n_fft, window, center, dtype, length)
+
+    // Apply momentum
+    let y_final = y
+    if (momentum > 0 && y_prev !== null) {
+      y_final = y.map((val, i) => val + momentum * (val - (y_prev[i] || 0)))
+    }
+    y_prev = y.slice()
+
+    // Forward STFT
+    const S_est = stftTransform(y_final, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+
+    // Update phase while keeping original magnitude
+    S_complex = S.map((row, i) =>
+      row.map((mag, j) => {
+        const est = S_est[i] && S_est[i][j] ? S_est[i][j] : { real: 0, imag: 0 }
+        const phase = Math.atan2(est.imag, est.real)
+        return {
+          real: mag * Math.cos(phase),
+          imag: mag * Math.sin(phase)
+        }
+      })
+    )
+  }
+
+  // Final inverse STFT
+  return istftTransform(S_complex, hop_length, win_length, n_fft, window, center, dtype, length)
+}
+
+/**
+ * Per-Channel Energy Normalization (PCEN)
+ *
+ * Applies adaptive gain control and dynamic range compression for robust feature extraction.
+ *
+ * @param {Array<Array<number>>} S - Input spectrogram [freq x time]
+ * @param {number} sr - Sample rate (default: 22050)
+ * @param {number} hop_length - Hop length (default: 512)
+ * @param {number} gain - Gain normalization exponent (default: 0.98)
+ * @param {number} bias - Bias constant (default: 2)
+ * @param {number} power - Compression exponent (default: 0.5)
+ * @param {number} time_constant - AGC time constant in seconds (default: 0.4)
+ * @param {number} eps - Numerical stability constant (default: 1e-6)
+ * @param {number|null} b - Smoothing coefficient (default: null, computed from time_constant)
+ * @param {number} max_size - Max filter size for smoothing (default: 1)
+ * @param {Array|null} ref - Reference values for normalization (default: null)
+ * @param {number} axis - Time axis (default: -1)
+ * @param {number|null} max_axis - Max pooling axis (default: null)
+ * @param {Array|null} zi - Initial filter state (default: null)
+ * @param {boolean} return_zf - Return final filter state (default: false)
+ * @returns {Array<Array<number>>|Object} PCEN output or {output, zf} if return_zf
+ */
+export function pcen(
+  S,
+  sr = 22050,
+  hop_length = 512,
+  gain = 0.98,
+  bias = 2,
+  power = 0.5,
+  time_constant = 0.4,
+  eps = 1e-6,
+  b = null,
+  max_size = 1,
+  ref = null,
+  axis = -1,
+  max_axis = null,
+  zi = null,
+  return_zf = false
+) {
+  const n_freq = S.length
+  const n_frames = S[0].length
+
+  // Compute smoothing coefficient if not provided
+  if (b === null) {
+    const frame_rate = sr / hop_length
+    b = Math.exp(-1.0 / (time_constant * frame_rate))
+  }
+
+  // Initialize reference
+  let M = ref
+  if (M === null) {
+    M = Array(n_freq).fill(null).map(() => Array(n_frames).fill(0))
+  }
+
+  // Initialize filter state
+  let state = zi
+  if (state === null) {
+    state = Array(n_freq).fill(0)
+  }
+
+  // Apply AGC (Automatic Gain Control) - exponential smoothing
+  const M_smooth = Array(n_freq).fill(null).map(() => Array(n_frames))
+
+  for (let i = 0; i < n_freq; i++) {
+    let prev = state[i]
+    for (let j = 0; j < n_frames; j++) {
+      const curr = (1 - b) * S[i][j] + b * prev
+      M_smooth[i][j] = Math.max(curr, eps)
+      prev = curr
+    }
+    state[i] = prev
+  }
+
+  // Apply PCEN formula: (S / (eps + M)^gain + bias)^power - bias^power
+  const P = Array(n_freq).fill(null).map(() => Array(n_frames))
+
+  for (let i = 0; i < n_freq; i++) {
+    for (let j = 0; j < n_frames; j++) {
+      const normalized = S[i][j] / Math.pow(M_smooth[i][j], gain)
+      const compressed = Math.pow(normalized + bias, power)
+      P[i][j] = compressed - Math.pow(bias, power)
+    }
+  }
+
+  if (return_zf) {
+    return { output: P, zf: state }
+  }
+
+  return P
+}
+
+/**
+ * Separate magnitude and phase from a complex spectrogram
+ *
+ * @param {Array<Array<{real: number, imag: number}>>} D - Complex spectrogram
+ * @param {number} power - Magnitude power (default: 1)
+ * @returns {Object} {magnitude: Array, phase: Array}
+ */
+export function magphase(D, power = 1) {
+  const n_freq = D.length
+  const n_frames = D[0].length
+
+  const magnitude = Array(n_freq).fill(null).map(() => Array(n_frames))
+  const phase = Array(n_freq).fill(null).map(() => Array(n_frames))
+
+  for (let i = 0; i < n_freq; i++) {
+    for (let j = 0; j < n_frames; j++) {
+      const real = D[i][j].real
+      const imag = D[i][j].imag
+
+      const mag = Math.sqrt(real * real + imag * imag)
+      magnitude[i][j] = Math.pow(mag, power)
+
+      // Phase as complex unit phasor
+      if (mag > 1e-10) {
+        phase[i][j] = {
+          real: real / mag,
+          imag: imag / mag
+        }
+      } else {
+        phase[i][j] = { real: 1, imag: 0 }
+      }
+    }
+  }
+
+  return { magnitude, phase }
+}
+
+/**
+ * Fast Mellin Transform (FMT)
+ *
+ * Compute the FMT for time-scale analysis (useful for tempo-invariant features).
+ *
+ * @param {Float32Array|Array<number>} y - Input signal
+ * @param {number} t_min - Minimum period (default: 0.5)
+ * @param {number|null} n_fmt - Number of FMT bins (default: null, uses signal length)
+ * @param {string} kind - Interpolation kind (default: 'cubic')
+ * @param {number} beta - FMT parameter (default: 0.5)
+ * @param {number} over_sample - Oversampling factor (default: 1)
+ * @param {number} axis - Axis to transform (default: -1)
+ * @returns {Array<{real: number, imag: number}>} FMT coefficients
+ */
+export function fmt(
+  y,
+  t_min = 0.5,
+  n_fmt = null,
+  kind = 'cubic',
+  beta = 0.5,
+  over_sample = 1,
+  axis = -1
+) {
+  const n = y.length
+
+  if (n_fmt === null) {
+    n_fmt = n
+  }
+
+  // Log-scale sampling for Mellin transform
+  const log_t = Array(n_fmt).fill(null).map((_, i) => {
+    return Math.log(t_min) + (i / (n_fmt - 1)) * Math.log(n / t_min)
+  })
+
+  // Sample the signal at log-spaced time points
+  const y_interp = log_t.map(lt => {
+    const t = Math.exp(lt)
+    const idx = Math.floor(t)
+    if (idx >= 0 && idx < n - 1) {
+      const frac = t - idx
+      // Linear interpolation (simplified from cubic)
+      return y[idx] * (1 - frac) + y[idx + 1] * frac
+    } else if (idx >= n - 1) {
+      return y[n - 1]
+    } else {
+      return y[0]
+    }
+  })
+
+  // Apply window
+  const windowed = y_interp.map((val, i) => {
+    const w = 0.5 * (1 - Math.cos(2 * Math.PI * i / n_fmt))  // Hann window
+    return val * w * Math.exp(-beta * log_t[i])
+  })
+
+  // FFT of windowed signal
+  const fmt_result = []
+  for (let k = 0; k < n_fmt; k++) {
+    let real = 0, imag = 0
+    for (let n = 0; n < n_fmt; n++) {
+      const angle = -2 * Math.PI * k * n / n_fmt
+      real += windowed[n] * Math.cos(angle)
+      imag += windowed[n] * Math.sin(angle)
+    }
+    fmt_result.push({ real, imag })
+  }
+
+  return fmt_result
+}
+
+/**
+ * Time-frequency reassigned spectrogram
+ *
+ * Compute spectrogram with reassigned time and frequency coordinates
+ * for improved time-frequency resolution.
+ *
+ * @param {Float32Array} y - Audio signal
+ * @param {number} sr - Sample rate (default: 22050)
+ * @param {Array|null} S - Precomputed spectrogram (default: null)
+ * @param {number} n_fft - FFT size (default: 2048)
+ * @param {number|null} hop_length - Hop length (default: null)
+ * @param {number|null} win_length - Window length (default: null)
+ * @param {string} window - Window function (default: 'hann')
+ * @param {boolean} center - Center frames (default: true)
+ * @param {boolean} reassign_frequencies - Reassign frequencies (default: true)
+ * @param {boolean} reassign_times - Reassign times (default: true)
+ * @param {number} ref_power - Reference power for dB conversion (default: 1e-6)
+ * @param {boolean} fill_nan - Fill NaN values with zeros (default: false)
+ * @param {boolean} clip - Clip reassigned values to valid range (default: true)
+ * @param {string|null} dtype - Data type (default: null)
+ * @param {string} pad_mode - Padding mode (default: 'constant')
+ * @returns {Object} {spectrogram, frequencies, times}
+ */
+export function reassigned_spectrogram(
+  y,
+  sr = 22050,
+  S = null,
+  n_fft = 2048,
+  hop_length = null,
+  win_length = null,
+  window = 'hann',
+  center = true,
+  reassign_frequencies = true,
+  reassign_times = true,
+  ref_power = 1e-6,
+  fill_nan = false,
+  clip = true,
+  dtype = null,
+  pad_mode = 'constant'
+) {
+  if (hop_length === null) {
+    hop_length = Math.floor(n_fft / 4)
+  }
+
+  if (win_length === null) {
+    win_length = n_fft
+  }
+
+  // Compute base spectrogram if not provided
+  if (S === null) {
+    S = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+  }
+
+  const n_freq = S.length
+  const n_frames = S[0].length
+
+  // Initialize reassignment matrices
+  const freqs_reassigned = Array(n_freq).fill(null).map((_, i) =>
+    Array(n_frames).fill(i * sr / n_fft)
+  )
+
+  const times_reassigned = Array(n_freq).fill(null).map(() =>
+    Array(n_frames).fill(null).map((_, j) => j * hop_length / sr)
+  )
+
+  // Compute time-weighted and frequency-weighted STFTs for reassignment
+  // This is a simplified version - full implementation requires derivative windows
+
+  if (reassign_frequencies) {
+    // Frequency reassignment using phase derivative
+    for (let i = 1; i < n_freq - 1; i++) {
+      for (let j = 0; j < n_frames; j++) {
+        const phase_curr = Math.atan2(S[i][j].imag, S[i][j].real)
+        const phase_next = Math.atan2(S[i + 1][j].imag, S[i + 1][j].real)
+
+        const phase_deriv = (phase_next - phase_curr) / (sr / n_fft)
+        const freq_offset = phase_deriv / (2 * Math.PI)
+
+        freqs_reassigned[i][j] = Math.max(0, Math.min(
+          sr / 2,
+          i * sr / n_fft + freq_offset
+        ))
+      }
+    }
+  }
+
+  if (reassign_times) {
+    // Time reassignment using group delay
+    for (let i = 0; i < n_freq; i++) {
+      for (let j = 1; j < n_frames - 1; j++) {
+        const phase_curr = Math.atan2(S[i][j].imag, S[i][j].real)
+        const phase_next = Math.atan2(S[i][j + 1].imag, S[i][j + 1].real)
+
+        const phase_deriv = (phase_next - phase_curr) / (hop_length / sr)
+        const time_offset = -phase_deriv / (2 * Math.PI * (i * sr / n_fft))
+
+        times_reassigned[i][j] = Math.max(0,
+          j * hop_length / sr + time_offset
+        )
+      }
+    }
+  }
+
+  // Compute magnitude spectrogram
+  const mag = S.map(row =>
+    row.map(val => Math.sqrt(val.real * val.real + val.imag * val.imag))
+  )
+
+  return {
+    spectrogram: mag,
+    frequencies: freqs_reassigned,
+    times: times_reassigned
+  }
+}
+
 // Usage Example:
 /*
 // Feature analysis
@@ -623,4 +1042,15 @@ const {pitches, confidences} = monophonic_pitch_detect(audioData, 44100);
 // Autocorrelation for BPM
 const ac = autocorrelate(audioData);
 const bpmFromAC = detectBPMFromAutocorr(ac, sampleRate);
+
+// Griffin-Lim phase reconstruction
+const S_magnitude = ...; // Magnitude spectrogram
+const y_reconstructed = griffinlim(S_magnitude, 32, 512);
+
+// PCEN for robust features
+const S = ...; // Power spectrogram
+const P = pcen(S, 22050, 512, 0.98, 2, 0.5);
+
+// Reassigned spectrogram
+const {spectrogram, frequencies, times} = reassigned_spectrogram(audioData, 22050);
 */

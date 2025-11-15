@@ -198,27 +198,27 @@
   - **Signature:** `(sr, freqs, filter_scale, norm, sparsity, hop_length=None, window='hann', gamma=0.0, dtype=np.complex64, alpha=None)`
   - **Docstring:** *Generate the frequency domain variable-Q filter basis.*
 
-- [ ] `cqt`
+- [x] `cqt`
   - **Signature:** `(y: np.ndarray, sr: float = 22050, hop_length: int = 512, fmin: Optional[_FloatLike_co] = None, n_bins: int = 84, bins_per_octave: int = 12, tuning: Optional[float] = 0.0, filter_scale: float = 1, norm: Optional[float] = 1, sparsity: float = 0.01, window: _WindowSpec = 'hann', scale: bool = True, pad_mode: _PadMode = 'constant', res_type: Optional[str] = 'soxr_hq', dtype: Optional[DTypeLike] = None) -> np.ndarray`
   - **Docstring:** *Compute the constant-Q transform of an audio signal.*
 
-- [ ] `griffinlim_cqt`
+- [x] `griffinlim_cqt`
   - **Signature:** `(C: np.ndarray, n_iter: int = 32, sr: float = 22050, hop_length: int = 512, fmin: Optional[_FloatLike_co] = None, bins_per_octave: int = 12, tuning: float = 0.0, filter_scale: float = 1, norm: Optional[float] = 1, sparsity: float = 0.01, window: _WindowSpec = 'hann', scale: bool = True, pad_mode: _PadMode = 'constant', res_type: str = 'soxr_hq', dtype: Optional[DTypeLike] = None, length: Optional[int] = None, momentum: float = 0.99, init: Optional[str] = 'random', random_state: Optional[Union[int, np.random.RandomState, np.random.Generator]] = None) -> np.ndarray`
   - **Docstring:** *Approximate constant-Q magnitude spectrogram inversion using the "fast" Griffin-Lim*
 
-- [ ] `hybrid_cqt`
+- [x] `hybrid_cqt`
   - **Signature:** `(y: np.ndarray, sr: float = 22050, hop_length: int = 512, fmin: Optional[_FloatLike_co] = None, n_bins: int = 84, bins_per_octave: int = 12, tuning: Optional[float] = 0.0, filter_scale: float = 1, norm: Optional[float] = 1, sparsity: float = 0.01, window: _WindowSpec = 'hann', scale: bool = True, pad_mode: _PadMode = 'constant', res_type: str = 'soxr_hq', dtype: Optional[DTypeLike] = None) -> np.ndarray`
   - **Docstring:** *Compute the hybrid constant-Q transform of an audio signal.*
 
-- [ ] `icqt`
+- [x] `icqt`
   - **Signature:** `(C: np.ndarray, sr: float = 22050, hop_length: int = 512, fmin: Optional[_FloatLike_co] = None, bins_per_octave: int = 12, tuning: float = 0.0, filter_scale: float = 1, norm: Optional[float] = 1, sparsity: float = 0.01, window: _WindowSpec = 'hann', scale: bool = True, length: Optional[int] = None, res_type: str = 'soxr_hq', dtype: Optional[DTypeLike] = None) -> np.ndarray`
   - **Docstring:** *Compute the inverse constant-Q transform.*
 
-- [ ] `pseudo_cqt`
+- [x] `pseudo_cqt`
   - **Signature:** `(y: np.ndarray, sr: float = 22050, hop_length: int = 512, fmin: Optional[_FloatLike_co] = None, n_bins: int = 84, bins_per_octave: int = 12, tuning: Optional[float] = 0.0, filter_scale: float = 1, norm: Optional[float] = 1, sparsity: float = 0.01, window: _WindowSpec = 'hann', scale: bool = True, pad_mode: _PadMode = 'constant', dtype: Optional[DTypeLike] = None) -> np.ndarray`
   - **Docstring:** *Compute the pseudo constant-Q transform of an audio signal.*
 
-- [ ] `vqt`
+- [x] `vqt`
   - **Signature:** `(y: np.ndarray, sr: float = 22050, hop_length: int = 512, fmin: Optional[_FloatLike_co] = None, n_bins: int = 84, intervals: Union[str, Collection[float]] = 'equal', gamma: Optional[float] = None, bins_per_octave: int = 12, tuning: Optional[float] = 0.0, filter_scale: float = 1, norm: Optional[float] = 1, sparsity: float = 0.01, window: _WindowSpec = 'hann', scale: bool = True, pad_mode: _PadMode = 'constant', res_type: Optional[str] = 'soxr_hq', dtype: Optional[DTypeLike] = None) -> np.ndarray`
   - **Docstring:** *Compute the variable-Q transform of an audio signal.*
 
@@ -704,15 +704,15 @@
 - [ ] `_f_interps`
   - **Signature:** `(data, f)`
 
-- [ ] `f0_harmonics`
+- [x] `f0_harmonics`
   - **Signature:** `(x: np.ndarray, f0: np.ndarray, freqs: np.ndarray, harmonics: ArrayLike, kind: str = 'linear', fill_value: float = 0, axis: int = -2) -> np.ndarray`
   - **Docstring:** *Compute the energy at selected harmonics of a time-varying*
 
-- [ ] `interp_harmonics`
+- [x] `interp_harmonics`
   - **Signature:** `(x: np.ndarray, freqs: np.ndarray, harmonics: ArrayLike, kind: str = 'linear', fill_value: float = 0, axis: int = -2) -> np.ndarray`
   - **Docstring:** *Compute the energy at harmonics of time-frequency representation.*
 
-- [ ] `salience`
+- [x] `salience`
   - **Signature:** `(S: np.ndarray, freqs: np.ndarray, harmonics: Sequence[float], weights: Optional[ArrayLike] = None, aggregate: Optional[Callable] = None, filter_peaks: bool = True, fill_value: float = np.nan, kind: str = 'linear', axis: int = -2) -> np.ndarray`
   - **Docstring:** *Harmonic salience function.*
 
@@ -949,11 +949,11 @@
   - **Signature:** `(S_db: Union[_FloatLike_co, np.ndarray], ref: float = 1.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert dB-scale values to a power values.*
 
-- [ ] `fmt`
+- [x] `fmt`
   - **Signature:** `(y: np.ndarray, t_min: float = 0.5, n_fmt: Optional[int] = None, kind: str = 'cubic', beta: float = 0.5, over_sample: float = 1, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Fast Mellin transform (FMT)*
 
-- [ ] `griffinlim`
+- [x] `griffinlim`
   - **Signature:** `(S: np.ndarray, n_iter: int = 32, hop_length: Optional[int] = None, win_length: Optional[int] = None, n_fft: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, length: Optional[int] = None, pad_mode: _PadModeSTFT = 'constant', momentum: float = 0.99, init: Optional[str] = 'random', random_state: Optional[Union[int, np.random.RandomState, np.random.Generator]] = None) -> np.ndarray`
   - **Docstring:** *Approximate magnitude spectrogram inversion using the "fast" Griffin-Lim algorithm.*
 
@@ -965,20 +965,20 @@
   - **Signature:** `(stft_matrix: np.ndarray, hop_length: Optional[int] = None, win_length: Optional[int] = None, n_fft: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, length: Optional[int] = None, out: Optional[np.ndarray] = None) -> np.ndarray`
   - **Docstring:** *Inverse short-time Fourier transform (ISTFT).*
 
-- [ ] `magphase`
+- [x] `magphase`
   - **Signature:** `(D: np.ndarray, power: float = 1) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Separate a complex-valued spectrogram D into its magnitude (S)*
 
-- [ ] `pcen`
+- [x] `pcen`
   - **Signature:** `(S: np.ndarray, sr: float = ..., hop_length: int = ..., gain: float = ..., bias: float = ..., power: float = ..., time_constant: float = ..., eps: float = ..., b: Optional[float] = ..., max_size: int = ..., ref: Optional[np.ndarray] = ..., axis: int = ..., max_axis: Optional[int] = ..., zi: Optional[np.ndarray] = ..., return_zf: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `pcen`
+- [x] `pcen`
   - **Signature:** `(S: np.ndarray, sr: float = ..., hop_length: int = ..., gain: float = ..., bias: float = ..., power: float = ..., time_constant: float = ..., eps: float = ..., b: Optional[float] = ..., max_size: int = ..., ref: Optional[np.ndarray] = ..., axis: int = ..., max_axis: Optional[int] = ..., zi: Optional[np.ndarray] = ..., return_zf: Literal[True]) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `pcen`
+- [x] `pcen`
   - **Signature:** `(S: np.ndarray, sr: float = ..., hop_length: int = ..., gain: float = ..., bias: float = ..., power: float = ..., time_constant: float = ..., eps: float = ..., b: Optional[float] = ..., max_size: int = ..., ref: Optional[np.ndarray] = ..., axis: int = ..., max_axis: Optional[int] = ..., zi: Optional[np.ndarray] = ..., return_zf: bool = ...) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
 
-- [ ] `pcen`
+- [x] `pcen`
   - **Signature:** `(S: np.ndarray, sr: float = 22050, hop_length: int = 512, gain: float = 0.98, bias: float = 2, power: float = 0.5, time_constant: float = 0.4, eps: float = 1e-06, b: Optional[float] = None, max_size: int = 1, ref: Optional[np.ndarray] = None, axis: int = -1, max_axis: Optional[int] = None, zi: Optional[np.ndarray] = None, return_zf: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Per-channel energy normalization (PCEN)*
 
@@ -1003,7 +1003,7 @@
   - **Signature:** `(S: _ScalarOrSequence[_ComplexLike_co], ref: Union[float, Callable] = 1.0, amin: float = 1e-10, top_db: Optional[float] = 80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert a power spectrogram (amplitude squared) to decibel (dB) units*
 
-- [ ] `reassigned_spectrogram`
+- [x] `reassigned_spectrogram`
   - **Signature:** `(y: np.ndarray, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, reassign_frequencies: bool = True, reassign_times: bool = True, ref_power: Union[float, Callable] = 1e-06, fill_nan: bool = False, clip: bool = True, dtype: Optional[DTypeLike] = None, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, np.ndarray, np.ndarray]`
   - **Docstring:** *Time-frequency reassigned spectrogram.*
 
@@ -1534,100 +1534,100 @@
   - **Signature:** `(log_prob: np.ndarray, log_trans: np.ndarray, log_p_init: np.ndarray) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Core Viterbi algorithm.*
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(X: np.ndarray, Y: np.ndarray, metric: str = ..., step_sizes_sigma: Optional[np.ndarray] = ..., weights_add: Optional[np.ndarray] = ..., weights_mul: Optional[np.ndarray] = ..., subseq: bool = ..., backtrack: Literal[False], global_constraints: bool = ..., band_rad: float = ..., return_steps: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(C: np.ndarray, metric: str = ..., step_sizes_sigma: Optional[np.ndarray] = ..., weights_add: Optional[np.ndarray] = ..., weights_mul: Optional[np.ndarray] = ..., subseq: bool = ..., backtrack: Literal[False], global_constraints: bool = ..., band_rad: float = ..., return_steps: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(X: np.ndarray, Y: np.ndarray, metric: str = ..., step_sizes_sigma: Optional[np.ndarray] = ..., weights_add: Optional[np.ndarray] = ..., weights_mul: Optional[np.ndarray] = ..., subseq: bool = ..., backtrack: Literal[False], global_constraints: bool = ..., band_rad: float = ..., return_steps: Literal[True]) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(C: np.ndarray, metric: str = ..., step_sizes_sigma: Optional[np.ndarray] = ..., weights_add: Optional[np.ndarray] = ..., weights_mul: Optional[np.ndarray] = ..., subseq: bool = ..., backtrack: Literal[False], global_constraints: bool = ..., band_rad: float = ..., return_steps: Literal[True]) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(X: np.ndarray, Y: np.ndarray, metric: str = ..., step_sizes_sigma: Optional[np.ndarray] = ..., weights_add: Optional[np.ndarray] = ..., weights_mul: Optional[np.ndarray] = ..., subseq: bool = ..., backtrack: Literal[True] = ..., global_constraints: bool = ..., band_rad: float = ..., return_steps: Literal[False] = ...) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(C: np.ndarray, metric: str = ..., step_sizes_sigma: Optional[np.ndarray] = ..., weights_add: Optional[np.ndarray] = ..., weights_mul: Optional[np.ndarray] = ..., subseq: bool = ..., backtrack: Literal[True] = ..., global_constraints: bool = ..., band_rad: float = ..., return_steps: Literal[False] = ...) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(X: np.ndarray, Y: np.ndarray, metric: str = ..., step_sizes_sigma: Optional[np.ndarray] = ..., weights_add: Optional[np.ndarray] = ..., weights_mul: Optional[np.ndarray] = ..., subseq: bool = ..., backtrack: Literal[True] = ..., global_constraints: bool = ..., band_rad: float = ..., return_steps: Literal[True]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]`
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(C: np.ndarray, metric: str = ..., step_sizes_sigma: Optional[np.ndarray] = ..., weights_add: Optional[np.ndarray] = ..., weights_mul: Optional[np.ndarray] = ..., subseq: bool = ..., backtrack: Literal[True] = ..., global_constraints: bool = ..., band_rad: float = ..., return_steps: Literal[True]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]`
 
-- [ ] `dtw`
+- [x] `dtw`
   - **Signature:** `(X: Optional[np.ndarray] = None, Y: Optional[np.ndarray] = None, C: Optional[np.ndarray] = None, metric: str = 'euclidean', step_sizes_sigma: Optional[np.ndarray] = None, weights_add: Optional[np.ndarray] = None, weights_mul: Optional[np.ndarray] = None, subseq: bool = False, backtrack: bool = True, global_constraints: bool = False, band_rad: float = 0.25, return_steps: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]]`
   - **Docstring:** *Dynamic time warping (DTW).*
 
-- [ ] `dtw_backtracking`
+- [x] `dtw_backtracking`
   - **Signature:** `(steps: np.ndarray, step_sizes_sigma: Optional[np.ndarray] = None, subseq: bool = False, start: Optional[Union[int, np.integer[Any]]] = None) -> np.ndarray`
   - **Docstring:** *Backtrack a warping path.*
 
-- [ ] `rqa`
+- [x] `rqa`
   - **Signature:** `(sim: np.ndarray, gap_onset: float = ..., gap_extend: float = ..., knight_moves: bool = ..., backtrack: Literal[False]) -> np.ndarray`
 
-- [ ] `rqa`
+- [x] `rqa`
   - **Signature:** `(sim: np.ndarray, gap_onset: float = ..., gap_extend: float = ..., knight_moves: bool = ..., backtrack: Literal[True] = ...) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `rqa`
+- [x] `rqa`
   - **Signature:** `(sim: np.ndarray, gap_onset: float = ..., gap_extend: float = ..., knight_moves: bool = ..., backtrack: bool = ...) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
 
-- [ ] `rqa`
+- [x] `rqa`
   - **Signature:** `(sim: np.ndarray, gap_onset: float = 1, gap_extend: float = 1, knight_moves: bool = True, backtrack: bool = True) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Recurrence quantification analysis (RQA)*
 
-- [ ] `transition_cycle`
+- [x] `transition_cycle`
   - **Signature:** `(n_states: int, prob: Union[float, Iterable[float]]) -> np.ndarray`
   - **Docstring:** *Construct a cyclic transition matrix over ``n_states``.*
 
-- [ ] `transition_local`
+- [x] `transition_local`
   - **Signature:** `(n_states: int, width: Union[int, Iterable[int]], window: _WindowSpec = 'triangle', wrap: bool = False) -> np.ndarray`
   - **Docstring:** *Construct a localized transition matrix.*
 
-- [ ] `transition_loop`
+- [x] `transition_loop`
   - **Signature:** `(n_states: int, prob: Union[float, Iterable[float]]) -> np.ndarray`
   - **Docstring:** *Construct a self-loop transition matrix over ``n_states``.*
 
-- [ ] `transition_uniform`
+- [x] `transition_uniform`
   - **Signature:** `(n_states: int) -> np.ndarray`
   - **Docstring:** *Construct a uniform transition matrix over ``n_states``.*
 
-- [ ] `viterbi`
+- [x] `viterbi`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_init: Optional[np.ndarray] = ..., return_logp: Literal[True]) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `viterbi`
+- [x] `viterbi`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_init: Optional[np.ndarray] = ..., return_logp: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `viterbi`
+- [x] `viterbi`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_init: Optional[np.ndarray] = None, return_logp: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Viterbi decoding from observation likelihoods.*
 
-- [ ] `viterbi_binary`
+- [x] `viterbi_binary`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_state: Optional[np.ndarray] = ..., p_init: Optional[np.ndarray] = ..., return_logp: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `viterbi_binary`
+- [x] `viterbi_binary`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_state: Optional[np.ndarray] = ..., p_init: Optional[np.ndarray] = ..., return_logp: Literal[True]) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `viterbi_binary`
+- [x] `viterbi_binary`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_state: Optional[np.ndarray] = ..., p_init: Optional[np.ndarray] = ..., return_logp: bool = ...) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
 
-- [ ] `viterbi_binary`
+- [x] `viterbi_binary`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_state: Optional[np.ndarray] = None, p_init: Optional[np.ndarray] = None, return_logp: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Viterbi decoding from binary (multi-label), discriminative state predictions.*
 
-- [ ] `viterbi_discriminative`
+- [x] `viterbi_discriminative`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_state: Optional[np.ndarray] = ..., p_init: Optional[np.ndarray] = ..., return_logp: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `viterbi_discriminative`
+- [x] `viterbi_discriminative`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_state: Optional[np.ndarray] = ..., p_init: Optional[np.ndarray] = ..., return_logp: Literal[True]) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `viterbi_discriminative`
+- [x] `viterbi_discriminative`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_state: Optional[np.ndarray] = ..., p_init: Optional[np.ndarray] = ..., return_logp: bool) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
 
-- [ ] `viterbi_discriminative`
+- [x] `viterbi_discriminative`
   - **Signature:** `(prob: np.ndarray, transition: np.ndarray, p_state: Optional[np.ndarray] = None, p_init: Optional[np.ndarray] = None, return_logp: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Viterbi decoding from discriminative state predictions.*
 

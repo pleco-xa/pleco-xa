@@ -18,6 +18,12 @@
 // Core: FFT and STFT
 export { stft, istft, fft, ifft, hann_window, hamming_window, blackman_window, magnitude, phase, power, fft_frequencies } from './xa-fft.js'
 
+// Constant-Q and Variable-Q transforms
+export { cqt, vqt, hybrid_cqt, icqt, pseudo_cqt, griffinlim_cqt } from './xa-constantq.js'
+
+// Harmonic analysis
+export { f0_harmonics, interp_harmonics, salience, harmonic_product_spectrum, harmonic_sum_spectrum } from './xa-harmonic.js'
+
 // Mel-frequency analysis
 export { melspectrogram, mfcc, mel_filterbank, hz_to_mel, mel_to_hz, dct, idct, delta_features, lifter_mfcc, power_to_db } from './xa-mel.js'
 
@@ -75,10 +81,18 @@ export {
 } from './xa-onset.js'
 
 // Structural segmentation
-export { 
+export {
   recurrence_matrix, recurrence_to_lag, lag_to_recurrence, timelag_filter,
   segment_boundaries, agglomerative_clustering, boundaries_to_segments
 } from './xa-segment.js'
+
+// Sequence analysis and alignment
+export {
+  dtw, dtw_backtracking,
+  viterbi, viterbi_discriminative, viterbi_binary,
+  rqa,
+  transition_uniform, transition_loop, transition_cycle, transition_local
+} from './xa-sequence.js'
 
 // Audio effects
 export { time_stretch, trim, split, harmonic, percussive, remix, preemphasis, deemphasis } from './xa-effects.js'
@@ -90,7 +104,12 @@ export {
   normalize_features,
   find_peaks,
   polyfit,
-  linspace
+  linspace,
+  griffinlim,
+  pcen,
+  magphase,
+  fmt,
+  reassigned_spectrogram
 } from './xa-advanced.js'
 
 // Audio I/O and utilities
@@ -133,12 +152,14 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~20%',
-  implementedFunctions: 102,
+  librosaParity: '~25%',
+  implementedFunctions: 128,
   totalLibrosaFunctions: 512,
-  note: 'Focused on essential MIR tasks: beat tracking, pitch detection, spectral features, source separation',
+  note: 'Expanding coverage: constant-Q transforms, sequence analysis, advanced spectrum',
   modules: [
     'Core (FFT, STFT)',
+    'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',
+    'Sequence analysis (DTW, Viterbi, RQA, transition matrices)',
     'Mel-frequency (melspectrogram, MFCC)',
     'Spectral features (centroid, bandwidth, rolloff, contrast, flatness, RMS, ZCR)',
     'Chroma features (STFT, CQT, CENS, Tonnetz)',
