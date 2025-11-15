@@ -726,33 +726,33 @@
   - **Signature:** `(a, b, logs)`
   - **Docstring:** *Given two tuples of prime powers, break ties.*
 
-- [ ] `interval_frequencies`
+- [x] `interval_frequencies`
   - **Signature:** `(n_bins: int, fmin: _FloatLike_co, intervals: Union[str, Collection[float]], bins_per_octave: int = 12, tuning: float = 0.0, sort: bool = True) -> np.ndarray`
   - **Docstring:** *Construct a set of frequencies from an interval set*
 
-- [ ] `plimit_intervals`
+- [x] `plimit_intervals`
   - **Signature:** `(primes: ArrayLike, bins_per_octave: int = ..., sort: bool = ..., return_factors: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `plimit_intervals`
+- [x] `plimit_intervals`
   - **Signature:** `(primes: ArrayLike, bins_per_octave: int = ..., sort: bool = ..., return_factors: Literal[True]) -> List[Dict[int, int]]`
 
-- [ ] `plimit_intervals`
+- [x] `plimit_intervals`
   - **Signature:** `(primes: ArrayLike, bins_per_octave: int = ..., sort: bool = ..., return_factors: bool = ...) -> Union[np.ndarray, List[Dict[int, int]]]`
 
-- [ ] `plimit_intervals`
+- [x] `plimit_intervals`
   - **Signature:** `(primes: ArrayLike, bins_per_octave: int = 12, sort: bool = True, return_factors: bool = False) -> Union[np.ndarray, List[Dict[int, int]]]`
   - **Docstring:** *Construct p-limit intervals for a given set of prime factors.*
 
-- [ ] `pythagorean_intervals`
+- [x] `pythagorean_intervals`
   - **Signature:** `(bins_per_octave: int = ..., sort: bool = ..., return_factors: Literal[False] = ...) -> np.ndarray`
 
-- [ ] `pythagorean_intervals`
+- [x] `pythagorean_intervals`
   - **Signature:** `(bins_per_octave: int = ..., sort: bool = ..., return_factors: Literal[True]) -> List[Dict[int, int]]`
 
-- [ ] `pythagorean_intervals`
+- [x] `pythagorean_intervals`
   - **Signature:** `(bins_per_octave: int = ..., sort: bool = ..., return_factors: bool = ...) -> Union[np.ndarray, List[Dict[int, int]]]`
 
-- [ ] `pythagorean_intervals`
+- [x] `pythagorean_intervals`
   - **Signature:** `(bins_per_octave: int = 12, sort: bool = True, return_factors: bool = False) -> Union[np.ndarray, List[Dict[int, int]]]`
   - **Docstring:** *Pythagorean intervals*
 
@@ -1383,11 +1383,11 @@
   - **Signature:** `(n, *args, **kwargs)`
   - **Docstring:** *Wrap the window*
 
-- [ ] `chroma`
+- [x] `chroma`
   - **Signature:** `(sr: float, n_fft: int, n_chroma: int = 12, tuning: float = 0.0, ctroct: float = 5.0, octwidth: Union[float, None] = 2, norm: Optional[float] = 2, base_c: bool = True, dtype: DTypeLike = np.float32) -> np.ndarray`
   - **Docstring:** *Create a chroma filter bank.*
 
-- [ ] `constant_q`
+- [x] `constant_q`
   - **Signature:** `(sr: float, fmin: Optional[_FloatLike_co] = None, n_bins: int = 84, bins_per_octave: int = 12, window: _WindowSpec = 'hann', filter_scale: float = 1, pad_fft: bool = True, norm: Optional[float] = 1, dtype: DTypeLike = np.complex64, gamma: float = 0, **kwargs: Any) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Construct a constant-Q basis.*
 
@@ -1399,15 +1399,15 @@
   - **Signature:** `(n_input: int, bins_per_octave: int = 12, n_chroma: int = 12, fmin: Optional[_FloatLike_co] = None, window: Optional[np.ndarray] = None, base_c: bool = True, dtype: DTypeLike = np.float32) -> np.ndarray`
   - **Docstring:** *Construct a linear transformation matrix to map Constant-Q bins*
 
-- [ ] `diagonal_filter`
+- [x] `diagonal_filter`
   - **Signature:** `(window: _WindowSpec, n: int, slope: float = 1.0, angle: Optional[float] = None, zero_mean: bool = False) -> np.ndarray`
   - **Docstring:** *Build a two-dimensional diagonal filter.*
 
-- [ ] `get_window`
+- [x] `get_window`
   - **Signature:** `(window: _WindowSpec, Nx: int, fftbins: Optional[bool] = True) -> np.ndarray`
   - **Docstring:** *Compute a window function.*
 
-- [ ] `mel`
+- [x] `mel`
   - **Signature:** `(sr: float, n_fft: int, n_mels: int = 128, fmin: float = 0.0, fmax: Optional[float] = None, htk: bool = False, norm: Optional[Union[Literal['slaney'], float]] = 'slaney', dtype: DTypeLike = np.float32) -> np.ndarray`
   - **Docstring:** *Create a Mel filter-bank.*
 
@@ -1419,7 +1419,7 @@
   - **Signature:** `(center_freqs: Optional[np.ndarray] = None, tuning: float = 0.0, sample_rates: Optional[np.ndarray] = None, flayout: str = 'ba', **kwargs: Any) -> Tuple[List[Any], np.ndarray]`
   - **Docstring:** *Construct a multi-rate bank of infinite-impulse response (IIR)*
 
-- [ ] `wavelet`
+- [x] `wavelet`
   - **Signature:** `(freqs: np.ndarray, sr: float = 22050, window: _WindowSpec = 'hann', filter_scale: float = 1, pad_fft: bool = True, norm: Optional[float] = 1, dtype: DTypeLike = np.complex64, gamma: float = 0, alpha: Optional[float] = None, **kwargs: Any) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Construct a wavelet basis using windowed complex sinusoids.*
 
@@ -1431,7 +1431,7 @@
   - **Signature:** `(window: _WindowSpec, n: int = 1000) -> float`
   - **Docstring:** *Get the equivalent noise bandwidth (ENBW) of a window function.*
 
-- [ ] `window_sumsquare`
+- [x] `window_sumsquare`
   - **Signature:** `(window: _WindowSpec, n_frames: int, hop_length: int = 512, win_length: Optional[int] = None, n_fft: int = 2048, dtype: DTypeLike = np.float32, norm: Optional[float] = None) -> np.ndarray`
   - **Docstring:** *Compute the sum-square envelope of a window function at a given hop length.*
 

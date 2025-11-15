@@ -199,3 +199,115 @@ export function onsetsToBeats(onsetTimes) {
 
   return { bpm, beatTimes, interval: medianInterval }
 }
+
+/**
+ * Backtrack detected onset events to the nearest preceding local minimum of energy
+ * @param {Array|Float32Array} events - Frame indices of detected onsets
+ * @param {Array|Float32Array} energy - Energy envelope (e.g., RMS, onset strength)
+ * @returns {Float32Array} Backtracked onset event frames
+ */
+export function onset_backtrack(events, energy) {
+  const backtracked = new Float32Array(events.length)
+
+  for (let i = 0; i < events.length; i++) {
+    const event_frame = Math.floor(events[i])
+
+    // Search backwards for local minimum
+    let min_frame = event_frame
+    let min_energy = energy[event_frame] || 0
+
+    for (let j = event_frame - 1; j >= 0 && j >= event_frame - 3; j--) {
+      if (energy[j] < min_energy) {
+        min_energy = energy[j]
+        min_frame = j
+      } else {
+        // Stop at first increase
+        break
+      }
+    }
+
+    backtracked[i] = min_frame
+  }
+
+  return backtracked
+}
+
+/**
+ * Compute a spectral flux onset strength envelope across multiple channels
+ * Useful for multi-channel or source-separated audio
+ * @param {Float32Array|null} y - Audio time series
+ * @param {number} sr - Sample rate
+ * @param {Array|null} S - Pre-computed spectrogram [channels x freq x time]
+ * @param {number} n_fft - FFT size
+ * @param {number} hop_length - Hop length
+ * @param {number} lag - Lag for onset detection
+ * @param {number} max_size - Max filter size
+ * @param {Array|null} ref - Reference power
+ * @param {boolean} detrend - Remove DC component
+ * @param {boolean} center - Center frames
+ * @param {Function|null} feature - Feature extraction function
+ * @param {Function|null} aggregate - Aggregation function across channels
+ * @param {Array|null} channels - List of channel slices
+ * @param {Object} kwargs - Additional arguments
+ * @returns {Array} Multi-channel onset strength [channels x time]
+ */
+export function onset_strength_multi(
+  y = null,
+  sr = 22050,
+  S = null,
+  n_fft = 2048,
+  hop_length = 512,
+  lag = 1,
+  max_size = 1,
+  ref = null,
+  detrend = false,
+  center = true,
+  feature = null,
+  aggregate = null,
+  channels = null,
+  kwargs = {}
+) {
+  // For now, compute onset strength for each channel separately
+  // This is a simplified version - full implementation would handle source separation
+
+  if (S === null && y === null) {
+    throw new Error('Either y or S must be provided')
+  }
+
+  // If S provided, assume it's [channels x freq x time]
+  if (S !== null) {
+    const n_channels = S.length
+    const results = []
+
+    for (let c = 0; c < n_channels; c++) {
+      const channel_strength = onset_strength(
+        {S: S[c]},
+        {
+          sr,
+          lag,
+          max_size,
+          detrend,
+          center,
+          ...kwargs
+        }
+      )
+      results.push(channel_strength)
+    }
+
+    return results
+  }
+
+  // If only y provided, compute single-channel onset strength
+  const single_channel = onset_strength(y, {
+    sr,
+    n_fft,
+    hop_length,
+    lag,
+    max_size,
+    detrend,
+    center,
+    ...kwargs
+  })
+
+  return [single_channel]
+}

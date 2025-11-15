@@ -594,3 +594,81 @@ export function compareTuningSystems(
 
   return comparison
 }
+
+// ============================================================================
+// Librosa-compatible standalone function exports
+// ============================================================================
+
+// Singleton instance for convenience
+const _intervalConstructor = new IntervalConstructor()
+
+/**
+ * Construct interval frequencies (librosa-compatible wrapper)
+ *
+ * @param {number} n_bins - Number of frequency bins
+ * @param {number} fmin - Minimum frequency in Hz
+ * @param {string|Array<number>} intervals - Interval specification
+ * @param {number} bins_per_octave - Bins per octave (default: 12)
+ * @param {number} tuning - Tuning offset (default: 0.0)
+ * @param {boolean} sort - Sort intervals (default: true)
+ * @returns {Float32Array} Frequency array
+ */
+export function interval_frequencies(
+  n_bins,
+  fmin,
+  intervals,
+  bins_per_octave = 12,
+  tuning = 0.0,
+  sort = true
+) {
+  return _intervalConstructor.intervalFrequencies(n_bins, {
+    fmin,
+    intervals,
+    binsPerOctave: bins_per_octave,
+    tuning,
+    sort
+  })
+}
+
+/**
+ * Construct p-limit intervals (librosa-compatible wrapper)
+ *
+ * @param {Array<number>} primes - Prime factors to use
+ * @param {number} bins_per_octave - Bins per octave (default: 12)
+ * @param {boolean} sort - Sort intervals (default: true)
+ * @param {boolean} return_factors - Return prime factorizations (default: false)
+ * @returns {Float32Array|Array<Object>} Interval ratios or factorizations
+ */
+export function plimit_intervals(
+  primes,
+  bins_per_octave = 12,
+  sort = true,
+  return_factors = false
+) {
+  return _intervalConstructor.plimitIntervals({
+    primes,
+    binsPerOctave: bins_per_octave,
+    sort,
+    returnFactors: return_factors
+  })
+}
+
+/**
+ * Construct Pythagorean intervals (librosa-compatible wrapper)
+ *
+ * @param {number} bins_per_octave - Bins per octave (default: 12)
+ * @param {boolean} sort - Sort intervals (default: true)
+ * @param {boolean} return_factors - Return prime factorizations (default: false)
+ * @returns {Float32Array|Array<Object>} Interval ratios or factorizations
+ */
+export function pythagorean_intervals(
+  bins_per_octave = 12,
+  sort = true,
+  return_factors = false
+) {
+  return _intervalConstructor.pythagoreanIntervals({
+    binsPerOctave: bins_per_octave,
+    sort,
+    returnFactors: return_factors
+  })
+}

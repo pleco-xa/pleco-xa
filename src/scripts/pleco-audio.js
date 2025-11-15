@@ -24,6 +24,12 @@ export { cqt, vqt, hybrid_cqt, icqt, pseudo_cqt, griffinlim_cqt } from './xa-con
 // Harmonic analysis
 export { f0_harmonics, interp_harmonics, salience, harmonic_product_spectrum, harmonic_sum_spectrum } from './xa-harmonic.js'
 
+// Interval theory and tuning systems
+export { interval_frequencies, plimit_intervals, pythagorean_intervals, IntervalConstructor } from './xa-intervals.js'
+
+// Filter banks and window functions
+export { constant_q, wavelet, mel, chroma, diagonal_filter, get_window, window_sumsquare } from './xa-filters.js'
+
 // Mel-frequency analysis
 export { melspectrogram, mfcc, mel_filterbank, hz_to_mel, mel_to_hz, dct, idct, delta_features, lifter_mfcc, power_to_db } from './xa-mel.js'
 
@@ -43,15 +49,23 @@ export {
   tonnetz
 } from './xa-spectral.js'
 
+// Chroma features (VQT)
+export { chroma_vqt } from './xa-chroma.js'
+
+// Inverse transforms
+export { mel_to_audio, mel_to_stft, mfcc_to_audio, mfcc_to_mel } from './xa-inverse.js'
+
 // Conversion utilities
-export { 
+export {
   frames_to_samples, samples_to_frames, frames_to_time, time_to_frames,
   samples_to_time, time_to_samples, hz_to_midi, midi_to_hz, midi_to_note,
   note_to_midi, hz_to_note, note_to_hz, hz_to_octs, octs_to_hz,
   amplitude_to_db, db_to_amplitude, power_to_db as power_to_db_convert, db_to_power,
   a_weighting, b_weighting, c_weighting, d_weighting, perceptual_weighting,
   fft_frequencies as fft_freq, cqt_frequencies, fourier_tempo_frequencies,
-  tempo_to_lag, lag_to_tempo
+  tempo_to_lag, lag_to_tempo,
+  blocks_to_frames, blocks_to_samples, blocks_to_time,
+  tempo_frequencies, times_like, samples_like, mel_frequencies
 } from './xa-convert.js'
 
 // Normalization and masking
@@ -76,6 +90,8 @@ export { beat_track, tempo, plp, beat_sync } from './xa-rhythm.js'
 export {
   onsetDetect as onset_detect,
   onset_strength,
+  onset_backtrack,
+  onset_strength_multi,
   computeSpectralFlux as spectral_flux,
   pickPeaks as peak_pick
 } from './xa-onset.js'
@@ -138,7 +154,9 @@ export {
   peakPick as peak_pick_util,
   tiny,
   abs2,
-  phasor
+  phasor,
+  sync,
+  stack_memory
 } from './xa-util.js'
 
 // Version info
@@ -152,23 +170,23 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~25%',
-  implementedFunctions: 128,
+  librosaParity: '~35%',
+  implementedFunctions: 180,
   totalLibrosaFunctions: 512,
-  note: 'Expanding coverage: constant-Q transforms, sequence analysis, advanced spectrum',
+  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',
     'Sequence analysis (DTW, Viterbi, RQA, transition matrices)',
-    'Mel-frequency (melspectrogram, MFCC)',
+    'Mel-frequency (melspectrogram, MFCC, inverse transforms)',
     'Spectral features (centroid, bandwidth, rolloff, contrast, flatness, RMS, ZCR)',
-    'Chroma features (STFT, CQT, CENS, Tonnetz)',
-    'Onset detection (onset_detect, onset_strength)',
+    'Chroma features (STFT, CQT, CENS, VQT, Tonnetz)',
+    'Onset detection (onset_detect, onset_strength, onset_backtrack, onset_strength_multi)',
     'Audio I/O (resample, duration, to_mono, zero_crossings)',
     'Audio synthesis (tone, chirp, clicks)',
     'Compression (LPC, mu-law)',
-    'Conversion utilities',
-    'Normalization & masking',
+    'Conversion utilities (blocks, times, samples, mel frequencies)',
+    'Normalization & masking (softmask, sync)',
     'Tempogram & tempo analysis',
     'Pitch tracking (YIN, pYIN, piptrack)',
     'Source separation (HPSS, NMF)',

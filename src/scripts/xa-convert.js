@@ -536,3 +536,141 @@ export function lag_to_tempo(lag, sr = 22050, hop_length = 512) {
   }
   return compute_tempo(lag)
 }
+
+/**
+ * Convert block indices to frame indices
+ * @param {number|Array} blocks - Block indices
+ * @param {number} block_length - Block length in frames
+ * @returns {number|Array} Frame indices
+ */
+export function blocks_to_frames(blocks, block_length) {
+  if (Array.isArray(blocks)) {
+    return blocks.map(b => b * block_length)
+  }
+  return blocks * block_length
+}
+
+/**
+ * Convert block indices to sample indices
+ * @param {number|Array} blocks - Block indices
+ * @param {number} block_length - Block length in frames
+ * @param {number} hop_length - Hop length
+ * @returns {number|Array} Sample indices
+ */
+export function blocks_to_samples(blocks, block_length, hop_length) {
+  const frames = blocks_to_frames(blocks, block_length)
+  return frames_to_samples(frames, hop_length)
+}
+
+/**
+ * Convert block indices to time (in seconds)
+ * @param {number|Array} blocks - Block indices
+ * @param {number} block_length - Block length in frames
+ * @param {number} hop_length - Hop length
+ * @param {number} sr - Sample rate
+ * @returns {number|Array} Time in seconds
+ */
+export function blocks_to_time(blocks, block_length, hop_length, sr) {
+  const frames = blocks_to_frames(blocks, block_length)
+  return frames_to_time(frames, sr, hop_length)
+}
+
+/**
+ * Compute the frequencies (in BPM) corresponding to tempogram bins
+ * @param {number} n_bins - Number of tempo bins
+ * @param {number} hop_length - Hop length
+ * @param {number} sr - Sample rate
+ * @returns {Float32Array} Tempo frequencies in BPM
+ */
+export function tempo_frequencies(n_bins, hop_length = 512, sr = 22050) {
+  const freqs = new Float32Array(n_bins)
+  const win_length = 2 * (n_bins - 1)
+
+  for (let i = 0; i < n_bins; i++) {
+    // Fourier frequency for this bin
+    const freq_hz = (sr * i) / (hop_length * win_length)
+    // Convert to BPM
+    freqs[i] = freq_hz * 60.0
+  }
+
+  return freqs
+}
+
+/**
+ * Return an array of time values to match the time axis from a feature matrix
+ * @param {Array|number} X - Feature matrix or number of frames
+ * @param {number} sr - Sample rate
+ * @param {number} hop_length - Hop length
+ * @param {number|null} n_fft - FFT size
+ * @param {number} axis - Time axis (default -1)
+ * @returns {Float32Array} Array of time values
+ */
+export function times_like(X, sr = 22050, hop_length = 512, n_fft = null, axis = -1) {
+  let n_frames
+
+  if (typeof X === 'number') {
+    n_frames = X
+  } else if (Array.isArray(X)) {
+    // Assume [freq x time] format (Librosa default)
+    n_frames = X[0] ? X[0].length : 0
+  } else {
+    throw new Error('X must be a number or array')
+  }
+
+  const frames = new Float32Array(n_frames)
+  for (let i = 0; i < n_frames; i++) {
+    frames[i] = i
+  }
+
+  return frames_to_time(frames, sr, hop_length, n_fft)
+}
+
+/**
+ * Return an array of sample indices to match the time axis from a feature matrix
+ * @param {Array|number} X - Feature matrix or number of frames
+ * @param {number} hop_length - Hop length
+ * @param {number|null} n_fft - FFT size
+ * @param {number} axis - Time axis (default -1)
+ * @returns {Int32Array} Array of sample indices
+ */
+export function samples_like(X, hop_length = 512, n_fft = null, axis = -1) {
+  let n_frames
+
+  if (typeof X === 'number') {
+    n_frames = X
+  } else if (Array.isArray(X)) {
+    n_frames = X[0] ? X[0].length : 0
+  } else {
+    throw new Error('X must be a number or array')
+  }
+
+  const frames = new Int32Array(n_frames)
+  for (let i = 0; i < n_frames; i++) {
+    frames[i] = i
+  }
+
+  return frames_to_samples(frames, hop_length, n_fft)
+}
+
+/**
+ * Compute the mel-scale frequencies
+ * @param {number} n_mels - Number of mel bins
+ * @param {number} fmin - Minimum frequency
+ * @param {number} fmax - Maximum frequency
+ * @param {boolean} htk - Use HTK formula
+ * @returns {Float32Array} Mel frequencies in Hz
+ */
+export function mel_frequencies(n_mels = 128, fmin = 0.0, fmax = 11025.0, htk = false) {
+  const mel_min = hz_to_mel(fmin, htk)
+  const mel_max = hz_to_mel(fmax, htk)
+
+  const mels = new Float32Array(n_mels)
+  const step = (mel_max - mel_min) / (n_mels - 1)
+
+  for (let i = 0; i < n_mels; i++) {
+    const mel = mel_min + i * step
+    mels[i] = mel_to_hz(mel, htk)
+  }
+
+  return mels
+}

@@ -715,3 +715,92 @@ export function warnIfNoMp3Support() {
   }
   return canPlay
 }
+
+/**
+ * Aggregate a multi-dimensional array between specified boundaries
+ * Synchronizes features to segment boundaries
+ * @param {Array} data - Feature matrix [d x t]
+ * @param {Array} idx - Segment boundaries (slices or indices)
+ * @param {Function|null} aggregate - Aggregation function (default: mean)
+ * @param {boolean} pad - Pad boundaries
+ * @param {number} axis - Time axis
+ * @returns {Array} Synchronized features [d x n_segments]
+ */
+export function sync(data, idx, aggregate = null, pad = true, axis = -1) {
+  if (!aggregate) {
+    aggregate = arr => arr.reduce((a, b) => a + b, 0) / arr.length // Mean
+  }
+
+  const n_features = data.length
+  const n_frames = data[0] ? data[0].length : 0
+
+  // Convert indices to slices if needed
+  const segments = []
+  for (let i = 0; i < idx.length - 1; i++) {
+    segments.push({start: idx[i], end: idx[i + 1]})
+  }
+
+  // Initialize output
+  const n_segments = segments.length
+  const synced = Array(n_features).fill(null).map(() => new Float32Array(n_segments))
+
+  // Aggregate each segment
+  for (let f = 0; f < n_features; f++) {
+    for (let s = 0; s < n_segments; s++) {
+      const {start, end} = segments[s]
+      const segment_data = []
+
+      for (let t = start; t < end && t < n_frames; t++) {
+        segment_data.push(data[f][t])
+      }
+
+      if (segment_data.length > 0) {
+        synced[f][s] = aggregate(segment_data)
+      } else {
+        synced[f][s] = 0
+      }
+    }
+  }
+
+  return synced
+}
+
+/**
+ * Short-term history embedding: vertically concatenate a data vector or matrix
+ * with delayed copies of itself
+ * @param {Array} data - Feature matrix [d x t]
+ * @param {number} n_steps - Number of history steps (delay taps)
+ * @param {number} delay - Delay between steps
+ * @param {Object} kwargs - Additional arguments
+ * @returns {Array} Stacked features [(n_steps * d) x t]
+ */
+export function stack_memory(data, n_steps = 2, delay = 1, kwargs = {}) {
+  const n_features = data.length
+  const n_frames = data[0] ? data[0].length : 0
+
+  // Initialize output with n_steps copies
+  const stacked_features = n_steps * n_features
+  const stacked = Array(stacked_features).fill(null).map(() => new Float32Array(n_frames))
+
+  // Stack delayed copies
+  for (let step = 0; step < n_steps; step++) {
+    const offset = step * delay
+
+    for (let f = 0; f < n_features; f++) {
+      const out_idx = step * n_features + f
+
+      for (let t = 0; t < n_frames; t++) {
+        const src_t = t - offset
+
+        if (src_t >= 0 && src_t < n_frames) {
+          stacked[out_idx][t] = data[f][src_t]
+        } else {
+          // Pad with zeros for out-of-range indices
+          stacked[out_idx][t] = 0
+        }
+      }
+    }
+  }
+
+  return stacked
+}
