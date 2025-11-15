@@ -3,6 +3,8 @@
  * Mel-scale frequency analysis for audio processing
  */
 
+import { stft, magnitude } from './xa-fft.js'
+
 /**
  * Create Mel filterbank matrix
  * @param {number} sr - Sample rate
@@ -76,19 +78,60 @@ export function mel_filterbank(
 /**
  * Convert Hz to Mel scale
  * @param {number} hz - Frequency in Hz
+ * @param {boolean} htk - Use HTK formula instead of Slaney (default: false)
  * @returns {number} Frequency in Mel scale
  */
-export function hz_to_mel(hz) {
-  return 2595 * Math.log10(1 + hz / 700)
+export function hz_to_mel(hz, htk = false) {
+  if (htk) {
+    // HTK formula
+    return 2595 * Math.log10(1 + hz / 700)
+  }
+
+  // Slaney formula (default in Librosa)
+  const f_min = 0.0
+  const f_sp = 200.0 / 3
+
+  // Linear part (below 1000 Hz)
+  let mel = (hz - f_min) / f_sp
+
+  // Log part (above 1000 Hz)
+  const min_log_hz = 1000.0
+  const min_log_mel = (min_log_hz - f_min) / f_sp
+  const logstep = Math.log(6.4) / 27.0
+
+  if (hz >= min_log_hz) {
+    mel = min_log_mel + Math.log(hz / min_log_hz) / logstep
+  }
+
+  return mel
 }
 
 /**
  * Convert Mel scale to Hz
  * @param {number} mel - Frequency in Mel scale
+ * @param {boolean} htk - Use HTK formula instead of Slaney (default: false)
  * @returns {number} Frequency in Hz
  */
-export function mel_to_hz(mel) {
-  return 700 * (Math.pow(10, mel / 2595) - 1)
+export function mel_to_hz(mel, htk = false) {
+  if (htk) {
+    // HTK formula
+    return 700 * (Math.pow(10, mel / 2595) - 1)
+  }
+
+  // Slaney formula (default in Librosa)
+  const f_min = 0.0
+  const f_sp = 200.0 / 3
+  const min_log_hz = 1000.0
+  const min_log_mel = (min_log_hz - f_min) / f_sp
+  const logstep = Math.log(6.4) / 27.0
+
+  if (mel < min_log_mel) {
+    // Linear part
+    return f_min + f_sp * mel
+  } else {
+    // Log part
+    return min_log_hz * Math.exp(logstep * (mel - min_log_mel))
+  }
 }
 
 /**
@@ -114,7 +157,7 @@ export function linspace(start, stop, num) {
  * @param {number|null} fmax - Maximum frequency
  * @returns {Array} Mel spectrogram (n_mels x n_frames)
  */
-export async function melspectrogram(
+export function melspectrogram(
   y,
   sr = 22050,
   n_fft = 2048,
@@ -123,9 +166,6 @@ export async function melspectrogram(
   fmin = 0,
   fmax = null,
 ) {
-  // Import STFT from librosa-fft
-  const { stft, magnitude } = await import('./librosa-fft.js')
-
   // Compute power spectrogram
   const stft_matrix = stft(y, n_fft, hop_length)
   const power_spec = stft_matrix.map((frame) => {

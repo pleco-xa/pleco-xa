@@ -3,68 +3,23 @@
  * High-performance implementation for real-time audio analysis
  */
 
+import { fft as fftTransform, hann_window } from './xa-fft.js'
+
 /**
- * Fast FFT implementation using Cooley-Tukey algorithm
- * Much faster than the O(N²) DFT we were using
+ * FFT wrapper to convert from xa-fft complex object format to flat array format
+ * @param {Float32Array} signal - Input signal
+ * @returns {Float32Array} FFT result as flat array [real, imag, real, imag, ...]
  */
-export function fft(signal) {
-  const N = signal.length
-  if (N <= 1) return signal
+function fft(signal) {
+  const complexResult = fftTransform(signal)
+  const flatResult = new Float32Array(complexResult.length * 2)
 
-  // Make sure N is power of 2
-  const nextPow2 = Math.pow(2, Math.ceil(Math.log2(N)))
-  if (N !== nextPow2) {
-    const padded = new Float32Array(nextPow2)
-    padded.set(signal)
-    return fft(padded)
+  for (let i = 0; i < complexResult.length; i++) {
+    flatResult[i * 2] = complexResult[i].real
+    flatResult[i * 2 + 1] = complexResult[i].imag
   }
 
-  // Bit-reversal permutation
-  const reversed = new Float32Array(N * 2) // Complex: [real, imag, real, imag, ...]
-  for (let i = 0; i < N; i++) {
-    const j = reverseBits(i, Math.log2(N))
-    reversed[j * 2] = signal[i]
-    reversed[j * 2 + 1] = 0
-  }
-
-  // Cooley-Tukey FFT
-  for (let len = 2; len <= N; len <<= 1) {
-    const angle = (-2 * Math.PI) / len
-    const wlen = [Math.cos(angle), Math.sin(angle)]
-
-    for (let i = 0; i < N; i += len) {
-      const w = [1, 0]
-      for (let j = 0; j < len / 2; j++) {
-        const u = [reversed[(i + j) * 2], reversed[(i + j) * 2 + 1]]
-        const v = [
-          reversed[(i + j + len / 2) * 2] * w[0] -
-            reversed[(i + j + len / 2) * 2 + 1] * w[1],
-          reversed[(i + j + len / 2) * 2] * w[1] +
-            reversed[(i + j + len / 2) * 2 + 1] * w[0],
-        ]
-
-        reversed[(i + j) * 2] = u[0] + v[0]
-        reversed[(i + j) * 2 + 1] = u[1] + v[1]
-        reversed[(i + j + len / 2) * 2] = u[0] - v[0]
-        reversed[(i + j + len / 2) * 2 + 1] = u[1] - v[1]
-
-        const temp = w[0] * wlen[0] - w[1] * wlen[1]
-        w[1] = w[0] * wlen[1] + w[1] * wlen[0]
-        w[0] = temp
-      }
-    }
-  }
-
-  return reversed
-}
-
-function reverseBits(num, bits) {
-  let result = 0
-  for (let i = 0; i < bits; i++) {
-    result = (result << 1) | (num & 1)
-    num >>= 1
-  }
-  return result
+  return flatResult
 }
 
 /**
@@ -109,10 +64,7 @@ export function computeSTFT(audioData, frameLength = 2048, hopLength = 512) {
   const stft = []
 
   // Pre-compute Hann window
-  const window = new Float32Array(frameLength)
-  for (let i = 0; i < frameLength; i++) {
-    window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (frameLength - 1)))
-  }
+  const window = hann_window(frameLength)
 
   for (let i = 0; i < numFrames; i++) {
     const start = i * hopLength
