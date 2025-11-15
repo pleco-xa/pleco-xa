@@ -86,13 +86,28 @@ export { time_stretch, trim, split, harmonic, percussive, remix, preemphasis, de
 // Advanced functions
 export {
   phase_vocoder,
-  autocorrelate,
   pitch_shift,
   normalize_features,
   find_peaks,
   polyfit,
   linspace
 } from './xa-advanced.js'
+
+// Audio I/O and utilities
+export {
+  toMono as to_mono,
+  resample,
+  zeroCrossings as zero_crossings,
+  autocorrelate,
+  lpc,
+  tone,
+  chirp,
+  clicks,
+  muCompress as mu_compress,
+  muExpand as mu_expand,
+  getDuration as get_duration,
+  getSamplerate as get_samplerate
+} from './xa-audioio.js'
 
 // Utility functions
 export {
@@ -118,14 +133,17 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~77%',
-  implementedFunctions: 124,
+  librosaParity: '~80%',
+  implementedFunctions: 136,
   modules: [
     'Core (FFT, STFT)',
     'Mel-frequency (melspectrogram, MFCC)',
     'Spectral features (centroid, bandwidth, rolloff, contrast, flatness, RMS, ZCR)',
     'Chroma features (STFT, CQT, CENS, Tonnetz)',
     'Onset detection (onset_detect, onset_strength)',
+    'Audio I/O (resample, duration, to_mono, zero_crossings)',
+    'Audio synthesis (tone, chirp, clicks)',
+    'Compression (LPC, mu-law)',
     'Conversion utilities',
     'Normalization & masking',
     'Tempogram & tempo analysis',
