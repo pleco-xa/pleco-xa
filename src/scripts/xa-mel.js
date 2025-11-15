@@ -12,7 +12,8 @@ import { stft, magnitude } from './xa-fft.js'
  * @param {number} n_mels - Number of Mel filters
  * @param {number} fmin - Minimum frequency
  * @param {number|null} fmax - Maximum frequency (sr/2 if null)
- * @param {boolean} norm - Whether to normalize filters
+ * @param {string|number|null} norm - Normalization type ('slaney', number, or null)
+ * @param {boolean} htk - Use HTK formula for mel conversion
  * @returns {Array} Mel filterbank matrix (n_mels x n_freq_bins)
  */
 export function mel_filterbank(
@@ -21,17 +22,18 @@ export function mel_filterbank(
   n_mels = 128,
   fmin = 0,
   fmax = null,
-  norm = true,
+  norm = 'slaney',  // Fixed: was boolean, now matches Librosa (default 'slaney')
+  htk = false,
 ) {
   if (fmax === null) {
     fmax = sr / 2
   }
 
-  // Compute mel frequencies
-  const mel_min = hz_to_mel(fmin)
-  const mel_max = hz_to_mel(fmax)
+  // Compute mel frequencies (use htk parameter)
+  const mel_min = hz_to_mel(fmin, htk)
+  const mel_max = hz_to_mel(fmax, htk)
   const mel_points = linspace(mel_min, mel_max, n_mels + 2)
-  const hz_points = mel_points.map((mel) => mel_to_hz(mel))
+  const hz_points = mel_points.map((mel) => mel_to_hz(mel, htk))
 
   // Convert to FFT bin numbers
   const bin_points = hz_points.map((hz) => Math.floor(((n_fft + 1) * hz) / sr))
@@ -61,15 +63,32 @@ export function mel_filterbank(
       }
     }
 
-    // Normalize filter
-    if (norm) {
+    // Apply normalization
+    // 'slaney': area normalization (default) - each filter integrates to 1
+    // number: L-norm normalization
+    // null: no normalization
+    if (norm === 'slaney' || norm === true) {  // Support old boolean for compatibility
+      // Area normalization - sum to 1
       const sum = filterbank[i].reduce((a, b) => a + b, 0)
       if (sum > 0) {
         for (let j = 0; j < n_freq_bins; j++) {
           filterbank[i][j] /= sum
         }
       }
+    } else if (typeof norm === 'number' && norm !== null) {
+      // L-norm normalization
+      let norm_sum = 0
+      for (let j = 0; j < n_freq_bins; j++) {
+        norm_sum += Math.pow(Math.abs(filterbank[i][j]), norm)
+      }
+      const norm_factor = Math.pow(norm_sum, 1 / norm)
+      if (norm_factor > 0) {
+        for (let j = 0; j < n_freq_bins; j++) {
+          filterbank[i][j] /= norm_factor
+        }
+      }
     }
+    // If norm === null, no normalization
   }
 
   return filterbank
@@ -210,7 +229,7 @@ export function melspectrogram(
 export function mfcc(
   y,
   sr = 22050,
-  n_mfcc = 13,
+  n_mfcc = 20,  // Fixed: was 13, Librosa default is 20
   n_fft = 2048,
   hop_length = 512,
   n_mels = 128,

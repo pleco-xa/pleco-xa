@@ -14,6 +14,8 @@
  * @version 1.0.0
  */
 
+import { stft as stftTransform, istft as istftTransform } from './xa-fft.js'
+
 /**
  * Custom error class for parameter validation
  */
@@ -579,19 +581,27 @@ export function find_peaks(signal, min_distance = 1, threshold = 0) {
 // ============= SIMPLIFIED STFT PLACEHOLDERS =============
 
 /**
- * Simplified STFT placeholder
+ * STFT wrapper with format conversion
+ * xa-fft.js returns [time][freq], but phase_vocoder expects [freq][time]
  * @private
  */
 function simple_stft(y, n_fft, hop_length) {
-  // This would normally use the full STFT implementation
-  const n_frames = Math.floor((y.length - n_fft) / hop_length) + 1
-  const n_freq = Math.floor(n_fft / 2) + 1
+  // Call proper windowed STFT from xa-fft.js
+  const frames = stftTransform(y, n_fft, hop_length, 'hann', true)
 
+  if (frames.length === 0) {
+    return []
+  }
+
+  // Transpose from [time][freq] to [freq][time] for phase_vocoder compatibility
+  const n_freq = frames[0].length
+  const n_time = frames.length
   const D = Array(n_freq)
-  for (let i = 0; i < n_freq; i++) {
-    D[i] = Array(n_frames)
-    for (let j = 0; j < n_frames; j++) {
-      D[i][j] = { real: 0, imag: 0 }
+
+  for (let f = 0; f < n_freq; f++) {
+    D[f] = Array(n_time)
+    for (let t = 0; t < n_time; t++) {
+      D[f][t] = frames[t][f]
     }
   }
 
@@ -599,13 +609,29 @@ function simple_stft(y, n_fft, hop_length) {
 }
 
 /**
- * Simplified ISTFT placeholder
+ * ISTFT wrapper with format conversion
+ * phase_vocoder returns [freq][time], but xa-fft.js expects [time][freq]
  * @private
  */
 function simple_istft(D, hop_length) {
-  // This would normally use the full ISTFT implementation
-  const length = (D[0].length - 1) * hop_length + 2048
-  return new Float32Array(length)
+  if (D.length === 0 || !D[0]) {
+    return new Float32Array(0)
+  }
+
+  // Transpose from [freq][time] back to [time][freq] for xa-fft.js
+  const n_freq = D.length
+  const n_time = D[0].length
+  const frames = Array(n_time)
+
+  for (let t = 0; t < n_time; t++) {
+    frames[t] = Array(n_freq)
+    for (let f = 0; f < n_freq; f++) {
+      frames[t][f] = D[f][t]
+    }
+  }
+
+  // Call proper ISTFT from xa-fft.js
+  return istftTransform(frames, hop_length, 'hann', true)
 }
 
 // Usage Example:
