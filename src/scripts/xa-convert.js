@@ -122,68 +122,84 @@ export function midi_to_hz(notes) {
 
 /**
  * Convert MIDI note number to note name
- * @param {number} midi - MIDI note number
+ * @param {number|Array} midi - MIDI note number(s)
  * @param {boolean} octave - Include octave number (default: true)
  * @param {boolean} cents - Include cent deviation (default: false)
- * @returns {string} Note name (e.g., 'A4', 'C#5')
+ * @returns {string|Array} Note name(s) (e.g., 'A4', 'C#5')
  */
 export function midi_to_note(midi, octave = true, cents = false) {
   const note_names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
-  const note_int = Math.round(midi)
-  const note_name = note_names[note_int % 12]
-  const octave_num = Math.floor(note_int / 12) - 1
+  const convertSingle = (m) => {
+    const note_int = Math.round(m)
+    const note_name = note_names[note_int % 12]
+    const octave_num = Math.floor(note_int / 12) - 1
 
-  let result = note_name
-  if (octave) {
-    result += octave_num
-  }
-
-  if (cents) {
-    const cent_deviation = Math.round((midi - note_int) * 100)
-    if (cent_deviation !== 0) {
-      result += ` ${cent_deviation > 0 ? '+' : ''}${cent_deviation} cents`
+    let result = note_name
+    if (octave) {
+      result += octave_num
     }
+
+    if (cents) {
+      const cent_deviation = Math.round((m - note_int) * 100)
+      if (cent_deviation !== 0) {
+        result += ` ${cent_deviation > 0 ? '+' : ''}${cent_deviation} cents`
+      }
+    }
+
+    return result
   }
 
-  return result
+  if (Array.isArray(midi)) {
+    return midi.map(convertSingle)
+  }
+  return convertSingle(midi)
 }
 
 /**
  * Convert note name to MIDI note number
- * @param {string} note - Note name (e.g., 'A4', 'C#5')
- * @returns {number} MIDI note number
+ * @param {string|Array} note - Note name(s) (e.g., 'A4', 'C#5')
+ * @param {boolean} round_midi - Round to integer MIDI values (default: true)
+ * @returns {number|Array} MIDI note number(s)
  */
-export function note_to_midi(note) {
+export function note_to_midi(note, round_midi = true) {
   const note_pattern = /^([A-G])(#|b)?(-?\d+)$/
-  const match = note.match(note_pattern)
 
-  if (!match) {
-    throw new Error(`Invalid note format: ${note}`)
+  const convertSingle = (n) => {
+    const match = n.match(note_pattern)
+
+    if (!match) {
+      throw new Error(`Invalid note format: ${n}`)
+    }
+
+    const note_names = {
+      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11
+    }
+
+    const [, letter, accidental, octave] = match
+    let midi = note_names[letter] + (parseInt(octave) + 1) * 12
+
+    if (accidental === '#') {
+      midi += 1
+    } else if (accidental === 'b') {
+      midi -= 1
+    }
+
+    return round_midi ? Math.round(midi) : midi
   }
 
-  const note_names = {
-    'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11
+  if (Array.isArray(note)) {
+    return note.map(convertSingle)
   }
-
-  const [, letter, accidental, octave] = match
-  let midi = note_names[letter] + (parseInt(octave) + 1) * 12
-
-  if (accidental === '#') {
-    midi += 1
-  } else if (accidental === 'b') {
-    midi -= 1
-  }
-
-  return midi
+  return convertSingle(note)
 }
 
 /**
  * Convert Hz to note name
- * @param {number} hz - Frequency in Hz
+ * @param {number|Array} hz - Frequency in Hz
  * @param {boolean} octave - Include octave number (default: true)
  * @param {boolean} cents - Include cent deviation (default: false)
- * @returns {string} Note name
+ * @returns {string|Array} Note name(s)
  */
 export function hz_to_note(hz, octave = true, cents = false) {
   const midi = hz_to_midi(hz)
@@ -192,8 +208,8 @@ export function hz_to_note(hz, octave = true, cents = false) {
 
 /**
  * Convert note name to Hz
- * @param {string} note - Note name (e.g., 'A4', 'C#5')
- * @returns {number} Frequency in Hz
+ * @param {string|Array} note - Note name(s) (e.g., 'A4', 'C#5')
+ * @returns {number|Array} Frequency in Hz
  */
 export function note_to_hz(note) {
   const midi = note_to_midi(note)

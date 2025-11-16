@@ -240,52 +240,52 @@
 - [x] `A_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, min_db: Optional[float] = ...) -> np.floating[Any]`
 
-- [ ] `A_weighting`
+- [x] `A_weighting`
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], min_db: Optional[float] = ...) -> np.ndarray`
 
-- [ ] `A_weighting`
+- [x] `A_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `A_weighting`
+- [x] `A_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = -80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the A-weighting of a set of frequencies.*
 
 - [x] `B_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, min_db: Optional[float] = ...) -> np.floating[Any]`
 
-- [ ] `B_weighting`
+- [x] `B_weighting`
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], min_db: Optional[float] = ...) -> np.ndarray`
 
-- [ ] `B_weighting`
+- [x] `B_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `B_weighting`
+- [x] `B_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = -80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the B-weighting of a set of frequencies.*
 
 - [x] `C_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, min_db: Optional[float] = ...) -> np.floating[Any]`
 
-- [ ] `C_weighting`
+- [x] `C_weighting`
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], min_db: Optional[float] = ...) -> np.ndarray`
 
-- [ ] `C_weighting`
+- [x] `C_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `C_weighting`
+- [x] `C_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = -80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the C-weighting of a set of frequencies.*
 
 - [x] `D_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, min_db: Optional[float] = ...) -> np.floating[Any]`
 
-- [ ] `D_weighting`
+- [x] `D_weighting`
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], min_db: Optional[float] = ...) -> np.ndarray`
 
-- [ ] `D_weighting`
+- [x] `D_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `D_weighting`
+- [x] `D_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = -80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the D-weighting of a set of frequencies.*
 
@@ -293,42 +293,42 @@
   - **Signature:** `(frequencies: Sized, min_db: Optional[float] = None) -> np.ndarray`
   - **Docstring:** *Apply no weighting curve (aka Z-weighting).*
 
-- [ ] `blocks_to_frames`
+- [x] `blocks_to_frames`
   - **Signature:** `(blocks: _IntLike_co, block_length: int) -> np.integer[Any]`
 
-- [ ] `blocks_to_frames`
+- [x] `blocks_to_frames`
   - **Signature:** `(blocks: _SequenceLike[_IntLike_co], block_length: int) -> np.ndarray`
 
-- [ ] `blocks_to_frames`
+- [x] `blocks_to_frames`
   - **Signature:** `(blocks: _ScalarOrSequence[_IntLike_co], block_length: int) -> Union[np.integer[Any], np.ndarray]`
 
-- [ ] `blocks_to_frames`
+- [x] `blocks_to_frames`
   - **Signature:** `(blocks: _ScalarOrSequence[_IntLike_co], block_length: int) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert block indices to frame indices*
 
-- [ ] `blocks_to_samples`
+- [x] `blocks_to_samples`
   - **Signature:** `(blocks: _IntLike_co, block_length: int, hop_length: int) -> np.integer[Any]`
 
-- [ ] `blocks_to_samples`
+- [x] `blocks_to_samples`
   - **Signature:** `(blocks: _SequenceLike[_IntLike_co], block_length: int, hop_length: int) -> np.ndarray`
 
-- [ ] `blocks_to_samples`
+- [x] `blocks_to_samples`
   - **Signature:** `(blocks: _ScalarOrSequence[_IntLike_co], block_length: int, hop_length: int) -> Union[np.integer[Any], np.ndarray]`
 
-- [ ] `blocks_to_samples`
+- [x] `blocks_to_samples`
   - **Signature:** `(blocks: _ScalarOrSequence[_IntLike_co], block_length: int, hop_length: int) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert block indices to sample indices*
 
-- [ ] `blocks_to_time`
+- [x] `blocks_to_time`
   - **Signature:** `(blocks: _IntLike_co, block_length: int, hop_length: int, sr: float) -> np.floating[Any]`
 
-- [ ] `blocks_to_time`
+- [x] `blocks_to_time`
   - **Signature:** `(blocks: _SequenceLike[_IntLike_co], block_length: int, hop_length: int, sr: float) -> np.ndarray`
 
-- [ ] `blocks_to_time`
+- [x] `blocks_to_time`
   - **Signature:** `(blocks: _ScalarOrSequence[_IntLike_co], block_length: int, hop_length: int, sr: float) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `blocks_to_time`
+- [x] `blocks_to_time`
   - **Signature:** `(blocks: _ScalarOrSequence[_IntLike_co], block_length: int, hop_length: int, sr: float) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert block indices to time (in seconds)*
 
@@ -347,23 +347,23 @@
 - [x] `frames_to_samples`
   - **Signature:** `(frames: _IntLike_co, hop_length: int = 512, n_fft: Optional[int] = None) -> np.integer[Any]`
 
-- [ ] `frames_to_samples`
+- [x] `frames_to_samples`
   - **Signature:** `(frames: _SequenceLike[_IntLike_co], hop_length: int = 512, n_fft: Optional[int] = None) -> np.ndarray`
 
-- [ ] `frames_to_samples`
+- [x] `frames_to_samples`
   - **Signature:** `(frames: _ScalarOrSequence[_IntLike_co], hop_length: int = 512, n_fft: Optional[int] = None) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert frame indices to audio sample indices.*
 
 - [x] `frames_to_time`
   - **Signature:** `(frames: _IntLike_co, sr: float = ..., hop_length: int = ..., n_fft: Optional[int] = ...) -> np.floating[Any]`
 
-- [ ] `frames_to_time`
+- [x] `frames_to_time`
   - **Signature:** `(frames: _SequenceLike[_IntLike_co], sr: float = ..., hop_length: int = ..., n_fft: Optional[int] = ...) -> np.ndarray`
 
-- [ ] `frames_to_time`
+- [x] `frames_to_time`
   - **Signature:** `(frames: _ScalarOrSequence[_IntLike_co], sr: float = ..., hop_length: int = ..., n_fft: Optional[int] = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `frames_to_time`
+- [x] `frames_to_time`
   - **Signature:** `(frames: _ScalarOrSequence[_IntLike_co], sr: float = 22050, hop_length: int = 512, n_fft: Optional[int] = None) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert frame counts to time (seconds).*
 
@@ -406,26 +406,26 @@
 - [x] `hz_to_midi`
   - **Signature:** `(frequencies: _FloatLike_co) -> np.floating[Any]`
 
-- [ ] `hz_to_midi`
+- [x] `hz_to_midi`
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co]) -> np.ndarray`
 
-- [ ] `hz_to_midi`
+- [x] `hz_to_midi`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co]) -> Union[np.ndarray, np.floating[Any]]`
 
-- [ ] `hz_to_midi`
+- [x] `hz_to_midi`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co]) -> Union[np.ndarray, np.floating[Any]]`
   - **Docstring:** *Get MIDI note number(s) for given frequencies*
 
 - [x] `hz_to_note`
   - **Signature:** `(frequencies: _FloatLike_co, **kwargs: Any) -> str`
 
-- [ ] `hz_to_note`
+- [x] `hz_to_note`
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], **kwargs: Any) -> np.ndarray`
 
-- [ ] `hz_to_note`
+- [x] `hz_to_note`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], **kwargs: Any) -> Union[str, np.ndarray]`
 
-- [ ] `hz_to_note`
+- [x] `hz_to_note`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], **kwargs: Any) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert one or more frequencies (in Hz) to the nearest note names.*
 
@@ -488,26 +488,26 @@
 - [x] `midi_to_hz`
   - **Signature:** `(notes: _FloatLike_co) -> np.floating[Any]`
 
-- [ ] `midi_to_hz`
+- [x] `midi_to_hz`
   - **Signature:** `(notes: _SequenceLike[_FloatLike_co]) -> np.ndarray`
 
-- [ ] `midi_to_hz`
+- [x] `midi_to_hz`
   - **Signature:** `(notes: _ScalarOrSequence[_FloatLike_co]) -> Union[np.ndarray, np.floating[Any]]`
 
-- [ ] `midi_to_hz`
+- [x] `midi_to_hz`
   - **Signature:** `(notes: _ScalarOrSequence[_FloatLike_co]) -> Union[np.ndarray, np.floating[Any]]`
   - **Docstring:** *Get the frequency (Hz) of MIDI note(s)*
 
 - [x] `midi_to_note`
   - **Signature:** `(midi: _FloatLike_co, octave: bool = ..., cents: bool = ..., key: str = ..., unicode: bool = ...) -> str`
 
-- [ ] `midi_to_note`
+- [x] `midi_to_note`
   - **Signature:** `(midi: _SequenceLike[_FloatLike_co], octave: bool = ..., cents: bool = ..., key: str = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `midi_to_note`
+- [x] `midi_to_note`
   - **Signature:** `(midi: _ScalarOrSequence[_FloatLike_co], octave: bool = ..., cents: bool = ..., key: str = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `midi_to_note`
+- [x] `midi_to_note`
   - **Signature:** `(midi: _ScalarOrSequence[_FloatLike_co], octave: bool = True, cents: bool = False, key: str = 'C:maj', unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert one or more MIDI numbers to note strings.*
 
@@ -544,26 +544,26 @@
 - [x] `note_to_hz`
   - **Signature:** `(note: str, **kwargs: Any) -> np.floating[Any]`
 
-- [ ] `note_to_hz`
+- [x] `note_to_hz`
   - **Signature:** `(note: _IterableLike[str], **kwargs: Any) -> np.ndarray`
 
-- [ ] `note_to_hz`
+- [x] `note_to_hz`
   - **Signature:** `(note: Union[str, _IterableLike[str], Iterable[str]], **kwargs: Any) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `note_to_hz`
+- [x] `note_to_hz`
   - **Signature:** `(note: Union[str, _IterableLike[str], Iterable[str]], **kwargs: Any) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert one or more note names to frequency (Hz)*
 
 - [x] `note_to_midi`
   - **Signature:** `(note: str, round_midi: bool = ...) -> Union[float, int]`
 
-- [ ] `note_to_midi`
+- [x] `note_to_midi`
   - **Signature:** `(note: _IterableLike[str], round_midi: bool = ...) -> np.ndarray`
 
-- [ ] `note_to_midi`
+- [x] `note_to_midi`
   - **Signature:** `(note: Union[str, _IterableLike[str], Iterable[str]], round_midi: bool = ...) -> Union[float, int, np.ndarray]`
 
-- [ ] `note_to_midi`
+- [x] `note_to_midi`
   - **Signature:** `(note: Union[str, _IterableLike[str], Iterable[str]], round_midi: bool = True) -> Union[float, np.ndarray]`
   - **Docstring:** *Convert one or more spelled notes to MIDI number(s).*
 
@@ -913,39 +913,39 @@
 - [x] `amplitude_to_db`
   - **Signature:** `(S: _ComplexLike_co, ref: Union[float, Callable] = ..., amin: float = ..., top_db: Optional[float] = ...) -> np.floating[Any]`
 
-- [ ] `amplitude_to_db`
+- [x] `amplitude_to_db`
   - **Signature:** `(S: _SequenceLike[_ComplexLike_co], ref: Union[float, Callable] = ..., amin: float = ..., top_db: Optional[float] = ...) -> np.ndarray`
 
-- [ ] `amplitude_to_db`
+- [x] `amplitude_to_db`
   - **Signature:** `(S: _ScalarOrSequence[_ComplexLike_co], ref: Union[float, Callable] = ..., amin: float = ..., top_db: Optional[float] = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `amplitude_to_db`
+- [x] `amplitude_to_db`
   - **Signature:** `(S: _ScalarOrSequence[_ComplexLike_co], ref: Union[float, Callable] = 1.0, amin: float = 1e-05, top_db: Optional[float] = 80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert an amplitude spectrogram to dB-scaled spectrogram.*
 
 - [x] `db_to_amplitude`
   - **Signature:** `(S_db: _FloatLike_co, ref: float = ...) -> np.floating[Any]`
 
-- [ ] `db_to_amplitude`
+- [x] `db_to_amplitude`
   - **Signature:** `(S_db: np.ndarray, ref: float = ...) -> np.ndarray`
 
-- [ ] `db_to_amplitude`
+- [x] `db_to_amplitude`
   - **Signature:** `(S_db: Union[_FloatLike_co, np.ndarray], ref: float = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `db_to_amplitude`
+- [x] `db_to_amplitude`
   - **Signature:** `(S_db: Union[_FloatLike_co, np.ndarray], ref: float = 1.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert a dB-scaled spectrogram to an amplitude spectrogram.*
 
 - [x] `db_to_power`
   - **Signature:** `(S_db: _FloatLike_co, ref: float = ...) -> np.floating[Any]`
 
-- [ ] `db_to_power`
+- [x] `db_to_power`
   - **Signature:** `(S_db: np.ndarray, ref: float = ...) -> np.ndarray`
 
-- [ ] `db_to_power`
+- [x] `db_to_power`
   - **Signature:** `(S_db: Union[_FloatLike_co, np.ndarray], ref: float = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `db_to_power`
+- [x] `db_to_power`
   - **Signature:** `(S_db: Union[_FloatLike_co, np.ndarray], ref: float = 1.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert dB-scale values to a power values.*
 
@@ -993,13 +993,13 @@
 - [x] `power_to_db`
   - **Signature:** `(S: _ComplexLike_co, ref: Union[float, Callable] = ..., amin: float = ..., top_db: Optional[float] = ...) -> np.floating[Any]`
 
-- [ ] `power_to_db`
+- [x] `power_to_db`
   - **Signature:** `(S: _SequenceLike[_ComplexLike_co], ref: Union[float, Callable] = ..., amin: float = ..., top_db: Optional[float] = ...) -> np.ndarray`
 
-- [ ] `power_to_db`
+- [x] `power_to_db`
   - **Signature:** `(S: _ScalarOrSequence[_ComplexLike_co], ref: Union[float, Callable] = ..., amin: float = ..., top_db: Optional[float] = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `power_to_db`
+- [x] `power_to_db`
   - **Signature:** `(S: _ScalarOrSequence[_ComplexLike_co], ref: Union[float, Callable] = 1.0, amin: float = 1e-10, top_db: Optional[float] = 80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert a power spectrogram (amplitude squared) to decibel (dB) units*
 
