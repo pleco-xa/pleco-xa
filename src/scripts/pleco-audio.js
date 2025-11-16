@@ -61,11 +61,14 @@ export {
   samples_to_time, time_to_samples, hz_to_midi, midi_to_hz, midi_to_note,
   note_to_midi, hz_to_note, note_to_hz, hz_to_octs, octs_to_hz,
   amplitude_to_db, db_to_amplitude, power_to_db as power_to_db_convert, db_to_power,
-  a_weighting, b_weighting, c_weighting, d_weighting, perceptual_weighting,
+  a_weighting, b_weighting, c_weighting, d_weighting, z_weighting,
+  frequency_weighting, multi_frequency_weighting, perceptual_weighting,
   fft_frequencies as fft_freq, cqt_frequencies, fourier_tempo_frequencies,
   tempo_to_lag, lag_to_tempo,
   blocks_to_frames, blocks_to_samples, blocks_to_time,
-  tempo_frequencies, times_like, samples_like, mel_frequencies
+  tempo_frequencies, times_like, samples_like,
+  hz_to_mel, mel_to_hz, mel_frequencies,
+  A4_to_tuning, tuning_to_A4
 } from './xa-convert.js'
 
 // Normalization and masking
@@ -159,6 +162,17 @@ export {
   stack_memory
 } from './xa-util.js'
 
+// Music notation and theory
+export {
+  key_to_degrees,
+  key_to_notes,
+  list_mela,
+  list_thaat,
+  mela_to_degrees,
+  mela_to_svara,
+  thaat_to_degrees
+} from './xa-notation.js'
+
 // Version info
 export const VERSION = '1.0.0'
 export const LIBROSA_COMPAT_VERSION = '0.10.x'
@@ -170,10 +184,10 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~35%',
-  implementedFunctions: 180,
+  librosaParity: '~41%',
+  implementedFunctions: 210,
   totalLibrosaFunctions: 512,
-  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection',
+  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',
@@ -194,6 +208,7 @@ export const info = {
     'Segmentation (recurrence, boundaries)',
     'Audio effects (time stretch, pitch shift, HPSS)',
     'Advanced (phase vocoder, autocorrelation)',
+    'Music notation & theory (keys, scales, ragas, thaats)',
     'Utilities (frame, pad, localmax/min, peak picking)'
   ]
 }

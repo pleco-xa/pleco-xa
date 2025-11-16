@@ -224,16 +224,16 @@
 
 ## `librosa/core/convert.py`
 
-- [ ] `A4_to_tuning`
+- [x] `A4_to_tuning`
   - **Signature:** `(A4: _FloatLike_co, bins_per_octave: int = ...) -> np.floating[Any]`
 
-- [ ] `A4_to_tuning`
+- [x] `A4_to_tuning`
   - **Signature:** `(A4: _SequenceLike[_FloatLike_co], bins_per_octave: int = ...) -> np.ndarray`
 
-- [ ] `A4_to_tuning`
+- [x] `A4_to_tuning`
   - **Signature:** `(A4: _ScalarOrSequence[_FloatLike_co], bins_per_octave: int = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `A4_to_tuning`
+- [x] `A4_to_tuning`
   - **Signature:** `(A4: _ScalarOrSequence[_FloatLike_co], bins_per_octave: int = 12) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert a reference pitch frequency (e.g., ``A4=435``) to a tuning*
 
@@ -289,7 +289,7 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], min_db: Optional[float] = -80.0) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the D-weighting of a set of frequencies.*
 
-- [ ] `Z_weighting`
+- [x] `Z_weighting`
   - **Signature:** `(frequencies: Sized, min_db: Optional[float] = None) -> np.ndarray`
   - **Docstring:** *Apply no weighting curve (aka Z-weighting).*
 
@@ -367,16 +367,16 @@
   - **Signature:** `(frames: _ScalarOrSequence[_IntLike_co], sr: float = 22050, hop_length: int = 512, n_fft: Optional[int] = None) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert frame counts to time (seconds).*
 
-- [ ] `frequency_weighting`
+- [x] `frequency_weighting`
   - **Signature:** `(frequencies: _FloatLike_co, kind: str = ..., **kwargs: Any) -> np.floating[Any]`
 
-- [ ] `frequency_weighting`
+- [x] `frequency_weighting`
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], kind: str = ..., **kwargs: Any) -> np.ndarray`
 
-- [ ] `frequency_weighting`
+- [x] `frequency_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], kind: str = ..., **kwargs: Any) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `frequency_weighting`
+- [x] `frequency_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], kind: str = 'A', **kwargs: Any) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the weighting of a set of frequencies.*
 
@@ -393,13 +393,13 @@
 - [x] `hz_to_mel`
   - **Signature:** `(frequencies: _FloatLike_co, htk: bool = ...) -> np.floating[Any]`
 
-- [ ] `hz_to_mel`
+- [x] `hz_to_mel`
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], htk: bool = ...) -> np.ndarray`
 
-- [ ] `hz_to_mel`
+- [x] `hz_to_mel`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], htk: bool = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `hz_to_mel`
+- [x] `hz_to_mel`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], htk: bool = False) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert Hz to Mels*
 
@@ -468,20 +468,20 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], Sa: _FloatLike_co, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert frequencies (in Hz) to Hindustani svara*
 
-- [ ] `mel_frequencies`
+- [x] `mel_frequencies`
   - **Signature:** `(n_mels: int = 128, fmin: float = 0.0, fmax: float = 11025.0, htk: bool = False) -> np.ndarray`
   - **Docstring:** *Compute an array of acoustic frequencies tuned to the mel scale.*
 
 - [x] `mel_to_hz`
   - **Signature:** `(mels: _FloatLike_co, htk: bool = ...) -> np.floating[Any]`
 
-- [ ] `mel_to_hz`
+- [x] `mel_to_hz`
   - **Signature:** `(mels: _SequenceLike[_FloatLike_co], htk: bool = ...) -> np.ndarray`
 
-- [ ] `mel_to_hz`
+- [x] `mel_to_hz`
   - **Signature:** `(mels: _ScalarOrSequence[_FloatLike_co], htk: bool = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `mel_to_hz`
+- [x] `mel_to_hz`
   - **Signature:** `(mels: _ScalarOrSequence[_FloatLike_co], htk: bool = False) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert mel bin numbers to frequencies*
 
@@ -537,7 +537,7 @@
   - **Signature:** `(midi: Union[_FloatLike_co, np.ndarray], Sa: _FloatLike_co, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert MIDI numbers to Hindustani svara*
 
-- [ ] `multi_frequency_weighting`
+- [x] `multi_frequency_weighting`
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], kinds: Iterable[str] = 'ZAC', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute multiple weightings of a set of frequencies.*
 
@@ -670,16 +670,16 @@
   - **Signature:** `(X: Union[np.ndarray, float], sr: float = 22050, hop_length: int = 512, n_fft: Optional[int] = None, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Return an array of time values to match the time axis from a feature matrix.*
 
-- [ ] `tuning_to_A4`
+- [x] `tuning_to_A4`
   - **Signature:** `(tuning: _FloatLike_co, bins_per_octave: int = ...) -> np.floating[Any]`
 
-- [ ] `tuning_to_A4`
+- [x] `tuning_to_A4`
   - **Signature:** `(tuning: _SequenceLike[_FloatLike_co], bins_per_octave: int = ...) -> np.ndarray`
 
-- [ ] `tuning_to_A4`
+- [x] `tuning_to_A4`
   - **Signature:** `(tuning: _ScalarOrSequence[_FloatLike_co], bins_per_octave: int = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `tuning_to_A4`
+- [x] `tuning_to_A4`
   - **Signature:** `(tuning: _ScalarOrSequence[_FloatLike_co], bins_per_octave: int = 12) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert a tuning deviation (from 0) in fractions of a bin per*
 
@@ -817,31 +817,31 @@
   - **Signature:** `(interval: _ScalarOrSequence[_FloatLike_co], unison: str = 'C', tolerance: float = 65.0 / 63, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert an interval to Functional Just System (FJS) notation.*
 
-- [ ] `key_to_degrees`
+- [x] `key_to_degrees`
   - **Signature:** `(key: str) -> np.ndarray`
   - **Docstring:** *Construct the diatonic scale degrees for a given key.*
 
-- [ ] `key_to_notes`
+- [x] `key_to_notes`
   - **Signature:** `(key: str, unicode: bool = True, natural: bool = False) -> List[str]`
   - **Docstring:** *List all 12 note names in the chromatic scale, as spelled according to*
 
-- [ ] `list_mela`
+- [x] `list_mela`
   - **Signature:** `() -> Dict[str, int]`
   - **Docstring:** *List melakarta ragas by name and index.*
 
-- [ ] `list_thaat`
+- [x] `list_thaat`
   - **Signature:** `() -> List[str]`
   - **Docstring:** *List supported thaats by name.*
 
-- [ ] `mela_to_degrees`
+- [x] `mela_to_degrees`
   - **Signature:** `(mela: Union[str, int]) -> np.ndarray`
   - **Docstring:** *Construct the svara indices (degrees) for a given melakarta raga*
 
-- [ ] `mela_to_svara`
+- [x] `mela_to_svara`
   - **Signature:** `(mela: Union[str, int], abbr: bool = True, unicode: bool = True) -> List[str]`
   - **Docstring:** *Spell the Carnatic svara names for a given melakarta raga*
 
-- [ ] `thaat_to_degrees`
+- [x] `thaat_to_degrees`
   - **Signature:** `(thaat: str) -> np.ndarray`
   - **Docstring:** *Construct the svara indices (degrees) for a given thaat*
 

@@ -674,3 +674,152 @@ export function mel_frequencies(n_mels = 128, fmin = 0.0, fmax = 11025.0, htk = 
 
   return mels
 }
+
+/**
+ * Convert Hz to Mel scale
+ * @param {number|Array} frequencies - Frequencies in Hz (scalar or array)
+ * @param {boolean} htk - Use HTK formula instead of Slaney
+ * @returns {number|Array} Frequencies in Mel scale
+ */
+export function hz_to_mel(frequencies, htk = false) {
+  if (Array.isArray(frequencies)) {
+    return frequencies.map(f => hz_to_mel(f, htk));
+  }
+
+  if (htk) {
+    // HTK formula
+    return 2595.0 * Math.log10(1.0 + frequencies / 700.0);
+  }
+
+  // Slaney formula
+  const f_min = 0.0;
+  const f_sp = 200.0 / 3;
+  const min_log_hz = 1000.0;
+  const min_log_mel = (min_log_hz - f_min) / f_sp;
+  const logstep = Math.log(6.4) / 27.0;
+
+  if (frequencies >= min_log_hz) {
+    return min_log_mel + Math.log(frequencies / min_log_hz) / logstep;
+  } else {
+    return (frequencies - f_min) / f_sp;
+  }
+}
+
+/**
+ * Convert Mel scale to Hz
+ * @param {number|Array} mels - Frequencies in Mel scale (scalar or array)
+ * @param {boolean} htk - Use HTK formula instead of Slaney
+ * @returns {number|Array} Frequencies in Hz
+ */
+export function mel_to_hz(mels, htk = false) {
+  if (Array.isArray(mels)) {
+    return mels.map(m => mel_to_hz(m, htk));
+  }
+
+  if (htk) {
+    // HTK formula
+    return 700.0 * (Math.pow(10, mels / 2595.0) - 1.0);
+  }
+
+  // Slaney formula
+  const f_min = 0.0;
+  const f_sp = 200.0 / 3;
+  const min_log_hz = 1000.0;
+  const min_log_mel = (min_log_hz - f_min) / f_sp;
+  const logstep = Math.log(6.4) / 27.0;
+
+  if (mels >= min_log_mel) {
+    return min_log_hz * Math.exp(logstep * (mels - min_log_mel));
+  } else {
+    return f_min + f_sp * mels;
+  }
+}
+
+/**
+ * Z-weighting (flat/no weighting) for frequency analysis
+ * @param {number|Array} frequencies - Frequencies in Hz (scalar or array)
+ * @param {number} min_db - Minimum dB value (not used for Z-weighting, included for API compatibility)
+ * @returns {number|Array} Weighting values (all zeros for Z-weighting)
+ */
+export function z_weighting(frequencies, min_db = null) {
+  if (Array.isArray(frequencies)) {
+    return new Array(frequencies.length).fill(0);
+  }
+  return 0;
+}
+
+/**
+ * Convert reference pitch A4 frequency to tuning deviation
+ * @param {number|Array} A4 - Reference frequency for A4 in Hz (scalar or array)
+ * @param {number} bins_per_octave - Number of bins per octave
+ * @returns {number|Array} Tuning deviation in fractional bins
+ */
+export function A4_to_tuning(A4, bins_per_octave = 12) {
+  if (Array.isArray(A4)) {
+    return A4.map(a4 => A4_to_tuning(a4, bins_per_octave));
+  }
+
+  const ref_a4 = 440.0;
+  return bins_per_octave * Math.log2(A4 / ref_a4);
+}
+
+/**
+ * Convert tuning deviation to A4 reference frequency
+ * @param {number|Array} tuning - Tuning deviation in fractional bins (scalar or array)
+ * @param {number} bins_per_octave - Number of bins per octave
+ * @returns {number|Array} Reference frequency for A4 in Hz
+ */
+export function tuning_to_A4(tuning, bins_per_octave = 12) {
+  if (Array.isArray(tuning)) {
+    return tuning.map(t => tuning_to_A4(t, bins_per_octave));
+  }
+
+  const ref_a4 = 440.0;
+  return ref_a4 * Math.pow(2, tuning / bins_per_octave);
+}
+
+/**
+ * General frequency weighting function (wrapper for A/B/C/D/Z weightings)
+ * @param {number|Array} frequencies - Frequencies in Hz (scalar or array)
+ * @param {string} kind - Weighting type: 'A', 'B', 'C', 'D', or 'Z'
+ * @param {number} min_db - Minimum dB value
+ * @returns {number|Array} Weighting values in dB
+ */
+export function frequency_weighting(frequencies, kind = 'A', min_db = -80.0) {
+  const kindUpper = kind.toUpperCase();
+
+  switch (kindUpper) {
+    case 'A':
+      return a_weighting(frequencies, min_db);
+    case 'B':
+      return b_weighting(frequencies, min_db);
+    case 'C':
+      return c_weighting(frequencies, min_db);
+    case 'D':
+      return d_weighting(frequencies, min_db);
+    case 'Z':
+      return z_weighting(frequencies, min_db);
+    default:
+      throw new Error(`Unknown weighting kind: ${kind}. Use 'A', 'B', 'C', 'D', or 'Z'`);
+  }
+}
+
+/**
+ * Compute multiple frequency weightings at once
+ * @param {number|Array} frequencies - Frequencies in Hz (scalar or array)
+ * @param {Array<string>} kinds - Array of weighting types, e.g., ['Z', 'A', 'C']
+ * @param {number} min_db - Minimum dB value
+ * @returns {Array} Array of weighting arrays, one per kind
+ *
+ * @example
+ * multi_frequency_weighting([100, 1000, 10000], ['Z', 'A', 'C'])
+ * // Returns [[0, 0, 0], [-19.1, 0, 0], [-0.2, 0, -0.2]]
+ */
+export function multi_frequency_weighting(frequencies, kinds = ['Z', 'A', 'C'], min_db = -80.0) {
+  const freqArray = Array.isArray(frequencies) ? frequencies : [frequencies];
+
+  return kinds.map(kind => {
+    const weights = frequency_weighting(freqArray, kind, min_db);
+    return Array.isArray(frequencies) ? weights : weights;
+  });
+}
