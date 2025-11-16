@@ -680,3 +680,278 @@ export function note_to_svara_h(notes, Sa, abbr = true, octave = true, unicode =
 
   return result;
 }
+
+// ============================================================================
+// Notation Helper Functions (Librosa-compatible)
+// ============================================================================
+
+/**
+ * Compute the octave-folded interval
+ * Equivalent to librosa's __o_fold helper
+ *
+ * Maps intervals to the range [1, 2) by removing octave multiples.
+ * This is part of the FJS (Functional Just System) notation converter.
+ * Equivalent to the 'red' function in FJS documentation.
+ *
+ * @private
+ * @param {number} d - Interval ratio
+ * @returns {number} Octave-folded interval in range [1, 2)
+ */
+export function __o_fold(d) {
+  return d * Math.pow(2.0, -Math.floor(Math.log2(d)))
+}
+
+/**
+ * Compute the balanced, octave-folded interval
+ * Equivalent to librosa's __bo_fold helper
+ *
+ * Maps intervals to the range [sqrt(2)/2, sqrt(2)) using balanced octave folding.
+ * This is part of the FJS notation converter.
+ * Equivalent to the 'reb' function in FJS documentation.
+ *
+ * @private
+ * @param {number} d - Interval ratio
+ * @returns {number} Balanced octave-folded interval in range [sqrt(2)/2, sqrt(2))
+ */
+export function __bo_fold(d) {
+  return d * Math.pow(2.0, -Math.round(Math.log2(d)))
+}
+
+/**
+ * Accelerated helper for finding number of fifths
+ * Equivalent to librosa's __fifth_search helper
+ *
+ * Finds the number of perfect fifths (3/2 ratio) needed to approximate
+ * a given interval within a specified tolerance.
+ * Used in FJS notation conversion.
+ *
+ * @private
+ * @param {number} interval - Target interval ratio
+ * @param {number} tolerance - Tolerance for approximation
+ * @returns {number} Number of fifths (positive or negative)
+ */
+export function __fifth_search(interval, tolerance) {
+  const log_tolerance = Math.abs(Math.log2(tolerance))
+
+  for (let power = 0; power < 32; power++) {
+    for (const sign of [1, -1]) {
+      const test_interval = interval / Math.pow(3.0, power * sign)
+      const folded = __bo_fold(test_interval)
+
+      if (Math.abs(Math.log2(folded)) <= log_tolerance) {
+        return power * sign
+      }
+    }
+  }
+
+  return 32  // Give up after 32 fifths
+}
+
+/**
+ * Translate a mode into its equivalent major key
+ * Equivalent to librosa's __mode_to_key helper
+ *
+ * @private
+ * @param {string} signature - Mode signature (e.g., 'D:dorian')
+ * @param {boolean} unicode - Return accidentals as unicode (default: true)
+ * @returns {string} Equivalent major key
+ */
+export function __mode_to_key(signature, unicode = true) {
+  // Parse mode signature
+  const parts = signature.split(':')
+  if (parts.length !== 2) {
+    throw new Error(`Invalid mode signature: ${signature}`)
+  }
+
+  const [note, mode] = parts
+
+  // Mode to degree mapping (relative to major scale)
+  const mode_degrees = {
+    'ionian': 0,      // Major
+    'dorian': -2,
+    'phrygian': -4,
+    'lydian': 1,
+    'mixolydian': -1,
+    'aeolian': -3,    // Minor
+    'locrian': -5
+  }
+
+  const degree_shift = mode_degrees[mode.toLowerCase()]
+  if (degree_shift === undefined) {
+    throw new Error(`Unknown mode: ${mode}`)
+  }
+
+  // Convert note to MIDI number
+  const midi = note_to_midi(note + '4')  // Arbitrary octave
+
+  // Shift to major key
+  const major_midi = midi + degree_shift
+  const major_note = midi_to_note(major_midi, octave = false, cents = false, unicode = unicode)
+
+  return major_note
+}
+
+/**
+ * Convert note name to scale degree
+ * Equivalent to librosa's __note_to_degree helper
+ *
+ * Takes a note name and returns the chromatic degree (C=0, C#=1, ..., B=11).
+ * Handles accidentals including sharps, flats, and combinations.
+ *
+ * @private
+ * @param {string|Array<string>} key - Note name(s)
+ * @returns {number|Array<number>} Scale degree(s) [0-11]
+ */
+export function __note_to_degree(key) {
+  const isScalar = typeof key === 'string'
+  const keys = isScalar ? [key] : key
+
+  const degrees = keys.map(k => {
+    // Base note mapping
+    const note_map = {
+      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11
+    }
+
+    // Extract base note (first character)
+    const base = k[0].toUpperCase()
+    let degree = note_map[base]
+
+    if (degree === undefined) {
+      throw new Error(`Invalid note name: ${k}`)
+    }
+
+    // Process accidentals (rest of the string)
+    for (let i = 1; i < k.length; i++) {
+      const acc = k[i]
+      if (acc === '#' || acc === '♯') {
+        degree += 1
+      } else if (acc === 'b' || acc === '♭') {
+        degree -= 1
+      }
+    }
+
+    // Normalize to [0, 11]
+    return ((degree % 12) + 12) % 12
+  })
+
+  return isScalar ? degrees[0] : degrees
+}
+
+/**
+ * Simplify note name by canceling accidentals
+ * Equivalent to librosa's __simplify_note helper
+ *
+ * Takes a note name and simplifies by canceling sharp-flat pairs
+ * and compressing multiple accidentals (e.g., 'C♭♯' -> 'C', 'C##' -> 'D').
+ *
+ * @private
+ * @param {string|Array<string>} key - Note name(s)
+ * @param {string} additional_acc - Additional accidentals to add (default: '')
+ * @param {boolean} unicode - Use unicode symbols for output (default: true)
+ * @returns {string|Array<string>} Simplified note name(s)
+ */
+export function __simplify_note(key, additional_acc = '', unicode = true) {
+  const isScalar = typeof key === 'string'
+  const keys = isScalar ? [key] : key
+
+  const simplified = keys.map(k => {
+    // Extract base note
+    const base = k[0].toUpperCase()
+
+    // Count net accidentals (sharp = +1, flat = -1)
+    let net_acc = 0
+
+    for (let i = 1; i < k.length; i++) {
+      const acc = k[i]
+      if (acc === '#' || acc === '♯') {
+        net_acc += 1
+      } else if (acc === 'b' || acc === '♭') {
+        net_acc -= 1
+      }
+    }
+
+    // Add additional accidentals
+    for (const acc of additional_acc) {
+      if (acc === '#' || acc === '♯') {
+        net_acc += 1
+      } else if (acc === 'b' || acc === '♭') {
+        net_acc -= 1
+      }
+    }
+
+    // Build simplified note
+    let result = base
+
+    if (net_acc > 0) {
+      const symbol = unicode ? '♯' : '#'
+      result += symbol.repeat(net_acc)
+    } else if (net_acc < 0) {
+      const symbol = unicode ? '♭' : 'b'
+      result += symbol.repeat(Math.abs(net_acc))
+    }
+
+    return result
+  })
+
+  return isScalar ? simplified[0] : simplified
+}
+
+/**
+ * Calculate the note name for a given number of perfect fifths
+ * Port of librosa.fifths_to_note
+ *
+ * Starting from a given unison note, computes the note name that is
+ * `fifths` perfect fifths away.
+ *
+ * @param {string} unison - The starting note (e.g., 'C')
+ * @param {number} fifths - Number of fifths (positive for up, negative for down)
+ * @param {boolean} unicode - Use unicode symbols (default: true)
+ * @returns {string} The resulting note name
+ *
+ * @example
+ * fifths_to_note('C', 1)  // 'G'   (up one fifth)
+ * fifths_to_note('C', -1) // 'F'   (down one fifth)
+ * fifths_to_note('C', 7)  // 'B'   (circle of fifths)
+ */
+export function fifths_to_note(unison, fifths, unicode = true) {
+  // Circle of fifths: C, G, D, A, E, B, F#/Gb, C#/Db, G#/Ab, D#/Eb, A#/Bb, F
+  const notes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const unison_upper = unison[0].toUpperCase();
+
+  // Find the starting note index
+  let start_idx = notes.indexOf(unison_upper);
+  if (start_idx === -1) {
+    throw new Error(`Invalid unison note: ${unison}`);
+  }
+
+  // Each fifth moves us 7 semitones up (or 5 down)
+  // In terms of note names, it cycles through the circle of fifths
+  // C -> G -> D -> A -> E -> B -> F# -> C# -> G# -> D# -> A# -> F -> C
+
+  // Simplified approach: use the fifth_search helper
+  const interval = Math.pow(1.5, fifths); // (3/2)^fifths
+  const tolerance = 65.0 / 63.0;
+
+  const computed_fifths = __fifth_search(interval, tolerance);
+
+  // Build note name from fifths
+  // Pattern: each +1 fifth = +7 semitones = +4 note letters (mod 7)
+  const letter_offset = (fifths * 4) % 7;
+  const octave_offset = Math.floor((fifths * 4) / 7);
+
+  const new_letter_idx = (start_idx + letter_offset + 7) % 7;
+  let note_name = notes[new_letter_idx];
+
+  // Calculate accidentals: each 7 fifths = +1 sharp (or -1 flat if negative)
+  const accidentals = Math.floor((fifths + 1) / 7);
+
+  if (accidentals > 0) {
+    const symbol = unicode ? '♯' : '#';
+    note_name += symbol.repeat(accidentals);
+  } else if (accidentals < 0) {
+    const symbol = unicode ? '♭' : 'b';
+    note_name += symbol.repeat(Math.abs(accidentals));
+  }
+
+  return __simplify_note(note_name, '', unicode);
+}

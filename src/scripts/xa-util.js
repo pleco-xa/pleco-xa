@@ -1639,6 +1639,550 @@ export function set_fftlib(lib = null) {
   return get_fftlib();
 }
 
+// ============================================================================
+// PRIVATE HELPER FUNCTIONS (Librosa Internal Implementations)
+// ============================================================================
+
+/**
+ * Jaccard similarity between two intervals
+ * Private helper from librosa.util.matching.__jaccard
+ *
+ * Computes the Jaccard index (intersection over union) between two intervals.
+ *
+ * @private
+ * @param {Array} int_a - First interval [start, end]
+ * @param {Array} int_b - Second interval [start, end]
+ * @returns {number} Jaccard similarity [0, 1]
+ */
+export function __jaccard(int_a, int_b) {
+  const [a_start, a_end] = int_a;
+  const [b_start, b_end] = int_b;
+
+  // Calculate intersection
+  const intersection_start = Math.max(a_start, b_start);
+  const intersection_end = Math.min(a_end, b_end);
+  const intersection = Math.max(0, intersection_end - intersection_start);
+
+  // Calculate union
+  const union_start = Math.min(a_start, b_start);
+  const union_end = Math.max(a_end, b_end);
+  const union = union_end - union_start;
+
+  // Return Jaccard index
+  return union > 0 ? intersection / union : 0;
+}
+
+/**
+ * Event matching core algorithm
+ * Private helper from librosa.util.matching.__match_events_helper
+ *
+ * Matches events from one sequence to another using nearest neighbor search.
+ *
+ * @private
+ * @param {Array|Float32Array} output - Output array to fill with matches
+ * @param {Array|Float32Array} events_from - Source events
+ * @param {Array|Float32Array} events_to - Target events to match against
+ * @param {boolean} left - Include left boundary (default: true)
+ * @param {boolean} right - Include right boundary (default: true)
+ */
+export function __match_events_helper(output, events_from, events_to, left = true, right = true) {
+  for (let i = 0; i < events_from.length; i++) {
+    const event = events_from[i];
+    let best_match = -1;
+    let best_distance = Infinity;
+
+    for (let j = 0; j < events_to.length; j++) {
+      const target = events_to[j];
+
+      // Check boundary conditions
+      if (!left && target < event) continue;
+      if (!right && target > event) continue;
+
+      const distance = Math.abs(event - target);
+      if (distance < best_distance) {
+        best_distance = distance;
+        best_match = j;
+      }
+    }
+
+    output[i] = best_match;
+  }
+}
+
+/**
+ * Find best Jaccard match from query to candidates
+ * Private helper from librosa.util.matching.__match_interval_overlaps
+ *
+ * @private
+ * @param {Array} query - Query interval [start, end]
+ * @param {Array} intervals_to - Array of candidate intervals
+ * @param {Array} candidates - Array of candidate indices to check
+ * @returns {number} Index of best matching interval, or -1 if no match
+ */
+export function __match_interval_overlaps(query, intervals_to, candidates) {
+  let best_score = 0;
+  let best_match = -1;
+
+  for (const idx of candidates) {
+    const score = __jaccard(query, intervals_to[idx]);
+    if (score > best_score) {
+      best_score = score;
+      best_match = idx;
+    }
+  }
+
+  return best_match;
+}
+
+/**
+ * Interval matching algorithm (Numba-accelerated in Python)
+ * Private helper from librosa.util.matching.__match_intervals
+ *
+ * Matches intervals from one set to another using Jaccard similarity.
+ *
+ * @private
+ * @param {Array} intervals_from - Source intervals [[start, end], ...]
+ * @param {Array} intervals_to - Target intervals to match against
+ * @param {boolean} strict - If true, only match if Jaccard > 0 (default: true)
+ * @returns {Array} Array of matched indices
+ */
+export function __match_intervals(intervals_from, intervals_to, strict = true) {
+  const matches = new Array(intervals_from.length).fill(-1);
+
+  // Build spatial index for efficiency
+  const sorted_to = intervals_to.map((interval, idx) => ({ interval, idx }))
+    .sort((a, b) => a.interval[0] - b.interval[0]);
+
+  for (let i = 0; i < intervals_from.length; i++) {
+    const query = intervals_from[i];
+    const [q_start, q_end] = query;
+
+    // Find candidate intervals that could overlap
+    const candidates = [];
+    for (let j = 0; j < sorted_to.length; j++) {
+      const target = sorted_to[j].interval;
+      const [t_start, t_end] = target;
+
+      // Skip if target ends before query starts
+      if (t_end < q_start) continue;
+
+      // Stop if target starts after query ends
+      if (t_start > q_end) break;
+
+      // This interval could overlap
+      candidates.push(sorted_to[j].idx);
+    }
+
+    if (candidates.length > 0) {
+      const best_match = __match_interval_overlaps(query, intervals_to, candidates);
+
+      if (strict) {
+        // Only accept if there's actual overlap (Jaccard > 0)
+        if (best_match >= 0 && __jaccard(query, intervals_to[best_match]) > 0) {
+          matches[i] = best_match;
+        }
+      } else {
+        matches[i] = best_match;
+      }
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * Shear a dense array
+ * Private helper from librosa.util.utils.__shear_dense
+ *
+ * Applies shearing transformation to a dense array.
+ * Shearing shifts each row/column by a factor proportional to its index.
+ *
+ * @private
+ * @param {Array} X - Input 2D array
+ * @param {number} factor - Shearing factor (+1 or -1, default: +1)
+ * @param {number} axis - Axis to shear along (-1 for columns, 0 for rows, default: -1)
+ * @returns {Array} Sheared array
+ */
+export function __shear_dense(X, factor = 1, axis = -1) {
+  const n_rows = X.length;
+  if (n_rows === 0) return X;
+  const n_cols = X[0].length;
+
+  // Normalize axis
+  if (axis === -1) axis = 1;
+
+  const result = Array.from({ length: n_rows }, () => new Array(n_cols).fill(0));
+
+  if (axis === 1) {
+    // Shear columns (shift each row)
+    for (let i = 0; i < n_rows; i++) {
+      const shift = i * factor;
+      for (let j = 0; j < n_cols; j++) {
+        const new_j = j + shift;
+        if (new_j >= 0 && new_j < n_cols) {
+          result[i][new_j] = X[i][j];
+        }
+      }
+    }
+  } else if (axis === 0) {
+    // Shear rows (shift each column)
+    for (let j = 0; j < n_cols; j++) {
+      const shift = j * factor;
+      for (let i = 0; i < n_rows; i++) {
+        const new_i = i + shift;
+        if (new_i >= 0 && new_i < n_rows) {
+          result[new_i][j] = X[i][j];
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Shear a sparse matrix
+ * Private helper from librosa.util.utils.__shear_sparse
+ *
+ * Fast shearing for sparse matrices represented as coordinate lists.
+ *
+ * @private
+ * @param {Object} X - Sparse matrix {rows: [], cols: [], data: [], shape: [m, n]}
+ * @param {number} factor - Shearing factor (+1 or -1, default: +1)
+ * @param {number} axis - Axis to shear along (-1 for columns, 0 for rows, default: -1)
+ * @returns {Object} Sheared sparse matrix
+ */
+export function __shear_sparse(X, factor = 1, axis = -1) {
+  // Normalize axis
+  if (axis === -1) axis = 1;
+
+  const rows = [...X.rows];
+  const cols = [...X.cols];
+  const data = [...X.data];
+  const shape = [...X.shape];
+
+  const new_rows = [];
+  const new_cols = [];
+  const new_data = [];
+
+  for (let k = 0; k < data.length; k++) {
+    let new_row = rows[k];
+    let new_col = cols[k];
+
+    if (axis === 1) {
+      // Shear columns
+      new_col = cols[k] + rows[k] * factor;
+    } else if (axis === 0) {
+      // Shear rows
+      new_row = rows[k] + cols[k] * factor;
+    }
+
+    // Only keep values within bounds
+    if (new_row >= 0 && new_row < shape[0] && new_col >= 0 && new_col < shape[1]) {
+      new_rows.push(new_row);
+      new_cols.push(new_col);
+      new_data.push(data[k]);
+    }
+  }
+
+  return {
+    rows: new_rows,
+    cols: new_cols,
+    data: new_data,
+    shape: shape
+  };
+}
+
+/**
+ * Stencil for local maxima computation
+ * Private helper from librosa.util.utils.__localmax_sten
+ *
+ * Numba stencil operation in Python, simplified for JavaScript.
+ * Checks if the center value is a local maximum.
+ *
+ * @private
+ * @param {Array} x - 3-element window [left, center, right]
+ * @returns {boolean} True if center is local maximum
+ */
+export function __localmax_sten(x) {
+  if (x.length !== 3) {
+    throw new Error('Stencil requires exactly 3 points');
+  }
+  const [left, center, right] = x;
+  return center > left && center > right;
+}
+
+/**
+ * Vectorized wrapper for local maxima stencil
+ * Private helper from librosa.util.utils._localmax
+ *
+ * @private
+ * @param {Array|Float32Array} x - Input array
+ * @param {Array|Float32Array} y - Output array (boolean/0-1 values)
+ */
+export function _localmax(x, y) {
+  const n = x.length;
+
+  if (y.length !== n) {
+    throw new Error('Output array must have same length as input');
+  }
+
+  // Edges are never local maxima
+  y[0] = 0;
+  if (n > 1) y[n - 1] = 0;
+
+  // Check interior points
+  for (let i = 1; i < n - 1; i++) {
+    const window = [x[i - 1], x[i], x[i + 1]];
+    y[i] = __localmax_sten(window) ? 1 : 0;
+  }
+}
+
+/**
+ * Stencil for local minima computation
+ * Private helper from librosa.util.utils.__localmin_sten
+ *
+ * @private
+ * @param {Array} x - 3-element window [left, center, right]
+ * @returns {boolean} True if center is local minimum
+ */
+export function __localmin_sten(x) {
+  if (x.length !== 3) {
+    throw new Error('Stencil requires exactly 3 points');
+  }
+  const [left, center, right] = x;
+  return center < left && center < right;
+}
+
+/**
+ * Vectorized wrapper for local minima stencil
+ * Private helper from librosa.util.utils._localmin
+ *
+ * @private
+ * @param {Array|Float32Array} x - Input array
+ * @param {Array|Float32Array} y - Output array (boolean/0-1 values)
+ */
+export function _localmin(x, y) {
+  const n = x.length;
+
+  if (y.length !== n) {
+    throw new Error('Output array must have same length as input');
+  }
+
+  // Edges are never local minima
+  y[0] = 0;
+  if (n > 1) y[n - 1] = 0;
+
+  // Check interior points
+  for (let i = 1; i < n - 1; i++) {
+    const window = [x[i - 1], x[i], x[i + 1]];
+    y[i] = __localmin_sten(window) ? 1 : 0;
+  }
+}
+
+/**
+ * Count unique values in an array
+ * Private helper from librosa.util.utils.__count_unique
+ *
+ * @private
+ * @param {Array|Float32Array} x - Input array
+ * @returns {number} Number of unique values
+ */
+export function __count_unique(x) {
+  const unique = new Set(x);
+  return unique.size;
+}
+
+/**
+ * Determine if array has all unique values
+ * Private helper from librosa.util.utils.__is_unique
+ *
+ * @private
+ * @param {Array|Float32Array} x - Input array
+ * @returns {boolean} True if all values are unique
+ */
+export function __is_unique(x) {
+  return new Set(x).size === x.length;
+}
+
+/**
+ * Vectorized wrapper for peak-picking algorithm
+ * Private helper from librosa.util.utils.__peak_pick
+ *
+ * Identifies peaks in a signal based on local maxima and thresholds.
+ *
+ * @private
+ * @param {Array|Float32Array} x - Input signal
+ * @param {number} pre_max - Number of samples before current for local maximum
+ * @param {number} post_max - Number of samples after current for local maximum
+ * @param {number} pre_avg - Number of samples before current for moving average
+ * @param {number} post_avg - Number of samples after current for moving average
+ * @param {number} delta - Threshold offset for peak detection
+ * @param {number} wait - Minimum gap between peaks
+ * @param {Array|Float32Array} peaks - Output array to fill with peak indices
+ * @returns {number} Number of peaks found
+ */
+export function __peak_pick(x, pre_max, post_max, pre_avg, post_avg, delta, wait, peaks) {
+  const n = x.length;
+  let peak_count = 0;
+  let last_peak = -wait - 1;
+
+  for (let i = 0; i < n; i++) {
+    // Check if we're past the wait period
+    if (i - last_peak <= wait) {
+      continue;
+    }
+
+    // Check local maximum
+    const max_start = Math.max(0, i - pre_max);
+    const max_end = Math.min(n, i + post_max + 1);
+    let is_max = true;
+
+    for (let j = max_start; j < max_end; j++) {
+      if (j !== i && x[j] >= x[i]) {
+        is_max = false;
+        break;
+      }
+    }
+
+    if (!is_max) continue;
+
+    // Check threshold condition
+    const avg_start = Math.max(0, i - pre_avg);
+    const avg_end = Math.min(n, i + post_avg + 1);
+    let avg_sum = 0;
+    let avg_count = 0;
+
+    for (let j = avg_start; j < avg_end; j++) {
+      avg_sum += x[j];
+      avg_count++;
+    }
+
+    const avg = avg_count > 0 ? avg_sum / avg_count : 0;
+
+    if (x[i] >= avg + delta) {
+      peaks[peak_count] = i;
+      peak_count++;
+      last_peak = i;
+    }
+  }
+
+  return peak_count;
+}
+
+/**
+ * Efficiently compute abs2 on complex inputs
+ * Private helper from librosa.util.utils._cabs2
+ *
+ * For complex number a + bi, returns a^2 + b^2 (magnitude squared).
+ *
+ * @private
+ * @param {number|Object} x - Real number or complex {re, im} object
+ * @returns {number} Squared magnitude
+ */
+export function _cabs2(x) {
+  if (typeof x === 'number') {
+    return x * x;
+  } else if (x && typeof x === 'object' && 're' in x && 'im' in x) {
+    return x.re * x.re + x.im * x.im;
+  } else {
+    throw new Error('Input must be a number or complex object {re, im}');
+  }
+}
+
+/**
+ * Phasor angle computation helper
+ * Private helper from librosa.util.utils._phasor_angles
+ *
+ * Computes the complex phasor (unit magnitude complex number) for given angles.
+ *
+ * @private
+ * @param {Array|Float32Array} x - Array of angles in radians
+ * @returns {Array} Array of complex phasors [{re, im}, ...]
+ */
+export function _phasor_angles(x) {
+  const result = new Array(x.length);
+  for (let i = 0; i < x.length; i++) {
+    result[i] = {
+      re: Math.cos(x[i]),
+      im: Math.sin(x[i])
+    };
+  }
+  return result;
+}
+
+/**
+ * Ensure array is contiguous (JavaScript equivalent)
+ * Private helper from librosa.core.spectrum.__ascontiguousarray
+ *
+ * In JavaScript, typed arrays are always contiguous.
+ * This is a no-op that ensures compatibility.
+ *
+ * @private
+ * @param {Array|TypedArray} x - Input array
+ * @returns {TypedArray} Contiguous array (Float32Array)
+ */
+export function __ascontiguousarray(x) {
+  if (x instanceof Float32Array || x instanceof Float64Array) {
+    return x;
+  }
+  return new Float32Array(x);
+}
+
+/**
+ * Memory-stacking helper function
+ * Private helper from librosa.feature.utils.__stack
+ *
+ * Stacks features with a time-delay embedding.
+ * Creates a lagged representation of features for temporal modeling.
+ *
+ * @private
+ * @param {Array} history - Historical feature matrix buffer
+ * @param {Array} data - New data to add
+ * @param {number} n_steps - Number of time steps to stack
+ * @param {number} delay - Delay between steps
+ * @returns {Array} Stacked feature matrix
+ */
+export function __stack(history, data, n_steps, delay) {
+  const n_features = data.length;
+  const n_frames = data[0] ? data[0].length : 0;
+
+  // Initialize output with zeros
+  const output = Array.from({ length: n_features * n_steps }, () =>
+    new Float32Array(n_frames)
+  );
+
+  // Stack delayed versions
+  for (let step = 0; step < n_steps; step++) {
+    const offset = step * delay;
+
+    for (let f = 0; f < n_features; f++) {
+      const out_idx = step * n_features + f;
+
+      for (let t = 0; t < n_frames; t++) {
+        const hist_idx = t - offset;
+
+        if (hist_idx >= 0 && hist_idx < n_frames) {
+          output[out_idx][t] = data[f][hist_idx];
+        } else if (history && hist_idx < 0) {
+          // Use history buffer if available
+          const hist_t = history[0] ? history[0].length + hist_idx : -1;
+          if (hist_t >= 0 && history[f]) {
+            output[out_idx][t] = history[f][hist_t];
+          }
+        }
+        // else: leave as zero (default initialization)
+      }
+    }
+  }
+
+  return output;
+}
+
+// ============================================================================
+// PUBLIC API FUNCTIONS
+// ============================================================================
+
 /**
  * Return the version information for pleco-audio and its dependencies
  *

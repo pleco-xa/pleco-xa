@@ -619,3 +619,62 @@ function euclidean_distance(a, b) {
   }
   return Math.sqrt(sum)
 }
+
+/**
+ * Calculate bandwidth for affinity/recurrence matrices
+ * Private helper from librosa.segment.__affinity_bandwidth
+ *
+ * Computes the bandwidth parameter for recurrence matrix construction.
+ *
+ * @private
+ * @param {Object} rec - Sparse recurrence matrix {rows, cols, data, shape}
+ * @param {number|string|Array} bw_mode - Bandwidth mode ('std', 'mean', number, or array)
+ * @param {number} k - Number of neighbors
+ * @returns {number|Array} Computed bandwidth value(s)
+ */
+export function __affinity_bandwidth(rec, bw_mode, k) {
+  if (typeof bw_mode === 'number') {
+    return bw_mode;
+  }
+
+  // Extract distances from sparse matrix
+  const distances = rec.data || [];
+
+  if (bw_mode === 'std') {
+    // Standard deviation
+    const mean = distances.reduce((a, b) => a + b, 0) / distances.length;
+    const variance = distances.reduce((acc, val) => acc + (val - mean) ** 2, 0) / distances.length;
+    return Math.sqrt(variance);
+  } else if (bw_mode === 'mean') {
+    // Mean distance
+    return distances.reduce((a, b) => a + b, 0) / distances.length;
+  } else if (Array.isArray(bw_mode)) {
+    // Per-frame bandwidth
+    return bw_mode;
+  }
+
+  // Default: use k-th neighbor distance
+  return Math.sqrt(k);
+}
+
+/**
+ * Filter wrapper for lag domain operations
+ * Private helper from librosa.segment.__my_filter
+ *
+ * Wraps scipy.ndimage.median_filter for lag-domain filtering.
+ *
+ * @private
+ * @param {Function} wrapped_f - Filter function to wrap
+ * @param {...any} args - Arguments to pass to filter
+ * @param {Object} kwargs - Keyword arguments
+ * @returns {any} Filtered result
+ */
+export function __my_filter(wrapped_f, ...args) {
+  // Extract kwargs from last argument if it's an object
+  const kwargs = args.length > 0 && typeof args[args.length - 1] === 'object' && !Array.isArray(args[args.length - 1])
+    ? args.pop()
+    : {};
+
+  // Apply the wrapped filter function
+  return wrapped_f(...args, kwargs);
+}

@@ -526,3 +526,47 @@ export function nmf_separate(S, n_sources = 2, max_iter = 200) {
 
   return sources
 }
+
+/**
+ * Nearest-neighbor filter helper function
+ * Private helper from librosa.decompose.__nn_filter_helper
+ *
+ * Internal implementation for sparse nearest-neighbor filtering.
+ * Uses sparse matrix representation for efficient filtering.
+ *
+ * @private
+ * @param {Array} R_data - Non-zero values from sparse recurrence matrix
+ * @param {Array} R_indices - Column indices for non-zero values
+ * @param {Array} R_ptr - Row pointer array for CSR format
+ * @param {Array} S - Input spectrogram or feature matrix
+ * @param {Function} aggregate - Aggregation function (e.g., Math.max, values => values.reduce((a,b) => a+b)/values.length)
+ * @returns {Array} Filtered output
+ */
+export function __nn_filter_helper(R_data, R_indices, R_ptr, S, aggregate) {
+  const n_frames = S.length
+  const n_features = S[0] ? S[0].length : 0
+  const output = Array.from({ length: n_frames }, () => new Float32Array(n_features))
+
+  // Iterate over each frame
+  for (let i = 0; i < n_frames; i++) {
+    const row_start = R_ptr[i]
+    const row_end = R_ptr[i + 1]
+
+    // Collect neighbor frames
+    const neighbors = []
+    for (let j = row_start; j < row_end; j++) {
+      const neighbor_idx = R_indices[j]
+      neighbors.push(S[neighbor_idx])
+    }
+
+    // Aggregate over neighbors for each feature
+    if (neighbors.length > 0) {
+      for (let f = 0; f < n_features; f++) {
+        const values = neighbors.map(n => n[f])
+        output[i][f] = aggregate(values)
+      }
+    }
+  }
+
+  return output
+}

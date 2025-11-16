@@ -293,3 +293,119 @@ export function deemphasis(y, coef = 0.97) {
 
   return output
 }
+
+/**
+ * Convert signal-level non-silent regions to frame indices
+ * Private helper from librosa.effects._signal_to_frame_nonsilent
+ *
+ * @private
+ * @param {Array} y_signal - Boolean array indicating non-silent samples
+ * @param {number} frame_length - Frame length
+ * @param {number} hop_length - Hop length
+ * @returns {Array} Frame-level non-silent regions [[start, end], ...]
+ */
+export function _signal_to_frame_nonsilent(y_signal, frame_length, hop_length) {
+  const n_samples = y_signal.length
+  const n_frames = Math.floor(1 + (n_samples - frame_length) / hop_length)
+  const frame_nonsilent = new Array(n_frames).fill(false)
+
+  for (let frame_idx = 0; frame_idx < n_frames; frame_idx++) {
+    const start_sample = frame_idx * hop_length
+    const end_sample = Math.min(start_sample + frame_length, n_samples)
+    for (let s = start_sample; s < end_sample; s++) {
+      if (y_signal[s]) {
+        frame_nonsilent[frame_idx] = true
+        break
+      }
+    }
+  }
+
+  const regions = []
+  let in_region = false
+  let start = 0
+
+  for (let i = 0; i < n_frames; i++) {
+    if (frame_nonsilent[i] && !in_region) {
+      start = i
+      in_region = true
+    } else if (!frame_nonsilent[i] && in_region) {
+      regions.push([start, i])
+      in_region = false
+    }
+  }
+
+  if (in_region) regions.push([start, n_frames])
+  return regions
+}
+
+/**
+ * IIR filter implementation using Web Audio API
+ * Port of librosa.iirt
+ *
+ * @param {Float32Array} y - Input signal
+ * @param {Array} b - Numerator coefficients
+ * @param {Array} a - Denominator coefficients
+ * @returns {Float32Array} Filtered signal
+ */
+export function iirt(y, b, a) {
+  const output = new Float32Array(y.length)
+  const M = b.length
+  const N = a.length
+
+  for (let n = 0; n < y.length; n++) {
+    let sum = 0
+    for (let i = 0; i < M; i++) {
+      if (n - i >= 0) sum += b[i] * y[n - i]
+    }
+    for (let j = 1; j < N; j++) {
+      if (n - j >= 0) sum -= a[j] * output[n - j]
+    }
+    output[n] = sum / a[0]
+  }
+
+  return output
+}
+
+/**
+ * Non-negative least squares (simplified implementation)
+ * Port of librosa.util._nnls.nnls
+ *
+ * @param {Array} A - Matrix [[...], [...]]
+ * @param {Array} b - Vector [...]
+ * @returns {Array} Non-negative solution x
+ */
+export function nnls(A, b) {
+  const m = A.length
+  const n = A[0].length
+  const x = new Array(n).fill(0)
+
+  // Simplified active-set method
+  for (let iter = 0; iter < 100; iter++) {
+    const residual = b.map((bi, i) => {
+      let sum = 0
+      for (let j = 0; j < n; j++) sum += A[i][j] * x[j]
+      return bi - sum
+    })
+
+    const gradient = new Array(n).fill(0)
+    for (let j = 0; j < n; j++) {
+      for (let i = 0; i < m; i++) {
+        gradient[j] += A[i][j] * residual[i]
+      }
+    }
+
+    let max_grad = -Infinity
+    let max_idx = -1
+    for (let j = 0; j < n; j++) {
+      if (x[j] === 0 && gradient[j] > max_grad) {
+        max_grad = gradient[j]
+        max_idx = j
+      }
+    }
+
+    if (max_grad <= 0) break
+    x[max_idx] = Math.max(0, gradient[max_idx] * 0.01)
+  }
+
+  return x
+}

@@ -695,13 +695,13 @@
 
 ## `librosa/core/harmonic.py`
 
-- [N/A] `_f_interp` - Private Python implementation helper for harmonic interpolation, not exposed in JavaScript API
+- [x] `_f_interp` - Harmonic interpolation helper (outer product variant) - implemented in xa-harmonic.js
   - **Signature:** `(_a, _b)`
 
-- [N/A] `_f_interpd` - Private Python implementation helper for harmonic interpolation, not exposed in JavaScript API
+- [x] `_f_interpd` - Harmonic interpolation helper (dynamic frequency grid) - implemented in xa-harmonic.js
   - **Signature:** `(data, frequencies, f)`
 
-- [N/A] `_f_interps` - Private Python implementation helper for harmonic interpolation, not exposed in JavaScript API
+- [x] `_f_interps` - Harmonic interpolation helper (static frequency grid) - implemented in xa-harmonic.js
   - **Signature:** `(data, f)`
 
 - [x] `f0_harmonics`
@@ -718,11 +718,11 @@
 
 ## `librosa/core/intervals.py`
 
-- [N/A] `__harmonic_distance` - Private Python implementation helper for interval calculations, not exposed in JavaScript API
+- [x] `__harmonic_distance` - Implemented as `__harmonic_distance()` in xa-intervals.js (line 696)
   - **Signature:** `(logs, a, b)`
   - **Docstring:** *Compute the harmonic distance between ratios a and b.*
 
-- [N/A] `_crystal_tie_break` - Private Python implementation helper for interval tie-breaking, not exposed in JavaScript API
+- [x] `_crystal_tie_break` - Implemented as `_crystal_tie_break()` in xa-intervals.js (line 735)
   - **Signature:** `(a, b, logs)`
   - **Docstring:** *Given two tuples of prime powers, break ties.*
 
@@ -758,49 +758,49 @@
 
 ## `librosa/core/notation.py`
 
-- [N/A] `__bo_fold` - Private Python implementation helper for interval folding, not exposed in JavaScript API
+- [x] `__bo_fold` - Implemented as `__bo_fold()` in xa-notation.js (line 716)
   - **Signature:** `(d)`
   - **Docstring:** *Compute the balanced, octave-folded interval.*
 
-- [N/A] `__fifth_search` - Private Python implementation helper for interval calculation, not exposed in JavaScript API
+- [x] `__fifth_search` - Implemented as `__fifth_search()` in xa-notation.js (line 733)
   - **Signature:** `(interval, tolerance)`
   - **Docstring:** *Accelerated helper function for finding the number of fifths*
 
-- [N/A] `__mode_to_key` - Private Python implementation helper for mode conversion, not exposed in JavaScript API
+- [x] `__mode_to_key` - Implemented as `__mode_to_key()` in xa-notation.js (line 759)
   - **Signature:** `(signature: str, unicode: bool = True) -> str`
   - **Docstring:** *Translate a mode (eg D:dorian) into its equivalent major key. If unicode==True, return the accidentals as unicode symbols, regardless of nature of ...*
 
-- [N/A] `__note_to_degree` - Private Python implementation helper (scalar overload), not exposed in JavaScript API
+- [x] `__note_to_degree` - Implemented as `__note_to_degree()` in xa-notation.js (line 805) - scalar overload
   - **Signature:** `(key: str) -> int`
 
-- [N/A] `__note_to_degree` - Private Python implementation helper (array overload), not exposed in JavaScript API
+- [x] `__note_to_degree` - Implemented as `__note_to_degree()` in xa-notation.js (line 805) - array overload
   - **Signature:** `(key: _IterableLike[str]) -> np.ndarray`
 
-- [N/A] `__note_to_degree` - Private Python implementation helper (union overload), not exposed in JavaScript API
+- [x] `__note_to_degree` - Implemented as `__note_to_degree()` in xa-notation.js (line 805) - union overload
   - **Signature:** `(key: Union[str, _IterableLike[str], Iterable[str]]) -> Union[int, np.ndarray]`
 
-- [N/A] `__note_to_degree` - Private Python implementation helper (full signature), not exposed in JavaScript API
+- [x] `__note_to_degree` - Implemented as `__note_to_degree()` in xa-notation.js (line 805) - full signature
   - **Signature:** `(key: Union[str, _IterableLike[str], Iterable[str]]) -> Union[int, np.ndarray]`
   - **Docstring:** *Take a note name and return the degree of that note (e.g. 'C#' -> 1). We allow possibilities like "C#b".*
 
-- [N/A] `__o_fold` - Private Python implementation helper for octave folding, not exposed in JavaScript API
+- [x] `__o_fold` - Implemented as `__o_fold()` in xa-notation.js (line 700)
   - **Signature:** `(d)`
   - **Docstring:** *Compute the octave-folded interval.*
 
-- [N/A] `__simplify_note` - Private Python implementation helper (scalar overload), not exposed in JavaScript API
+- [x] `__simplify_note` - Implemented as `__simplify_note()` in xa-notation.js (line 853) - scalar overload
   - **Signature:** `(key: str, additional_acc: str = ..., unicode: bool = ...) -> str`
 
-- [N/A] `__simplify_note` - Private Python implementation helper (array overload), not exposed in JavaScript API
+- [x] `__simplify_note` - Implemented as `__simplify_note()` in xa-notation.js (line 853) - array overload
   - **Signature:** `(key: _IterableLike[str], additional_acc: str = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `__simplify_note` - Private Python implementation helper (union overload), not exposed in JavaScript API
+- [x] `__simplify_note` - Implemented as `__simplify_note()` in xa-notation.js (line 853) - union overload
   - **Signature:** `(key: Union[str, _IterableLike[str], Iterable[str]], additional_acc: str = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [N/A] `__simplify_note` - Private Python implementation helper (full signature), not exposed in JavaScript API
+- [x] `__simplify_note` - Implemented as `__simplify_note()` in xa-notation.js (line 853) - full signature
   - **Signature:** `(key: Union[str, _IterableLike[str], Iterable[str]], additional_acc: str = '', unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Take in a note name and simplify by canceling sharp-flat pairs, and doubling accidentals as appropriate.*
 
-- [TODO] `fifths_to_note` - User-facing music theory function, could be implemented in JavaScript
+- [x] `fifths_to_note` - Implemented as `fifths_to_note()` in xa-notation.js (line 916)
   - **Signature:** `(unison: str, fifths: int, unicode: bool = True) -> str`
   - **Docstring:** *Calculate the note name for a given number of perfect fifths*
 
@@ -858,7 +858,7 @@
   - **Signature:** `(y_frames: np.ndarray, min_period: int, max_period: int) -> np.ndarray`
   - **Docstring:** *Cumulative mean normalized difference function (equation 8 in [#]_)*
 
-- [N/A] `_helper` - Private Python implementation helper, already incorporated into JavaScript implementations
+- [x] `_helper` - Private Python implementation helper, already incorporated into JavaScript implementations in xa-pitch.js
   - **Signature:** `(a, b)`
 
 - [x] `_parabolic_interpolation` - Implemented as `_parabolic_interpolation()` in xa-pitch.js (line 790)
@@ -895,18 +895,18 @@
 
 ## `librosa/core/spectrum.py`
 
-- [N/A] `__overlap_add` - Private Python implementation helper for overlap-add in Griffin-Lim, not exposed in JavaScript API
+- [x] `__overlap_add` - Overlap-add helper for inverse STFT and Griffin-Lim - implemented in xa-advanced.js
   - **Signature:** `(y, ytmp, hop_length)`
 
-- [N/A] `__reassign_frequencies` - Private Python implementation helper for reassigned spectrogram, not exposed in JavaScript API
+- [x] `__reassign_frequencies` - Frequency reassignment helper for reassigned spectrogram - implemented in xa-advanced.js
   - **Signature:** `(y: np.ndarray, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Instantaneous frequencies based on a spectrogram representation.*
 
-- [N/A] `__reassign_times` - Private Python implementation helper for reassigned spectrogram, not exposed in JavaScript API
+- [x] `__reassign_times` - Time reassignment helper for reassigned spectrogram - implemented in xa-advanced.js
   - **Signature:** `(y: np.ndarray, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Time reassignments based on a spectrogram representation.*
 
-- [N/A] `_spectrogram` - Private Python implementation helper for spectrogram computation, not exposed in JavaScript API
+- [x] `_spectrogram` - Magnitude spectrogram computation helper - implemented in xa-advanced.js
   - **Signature:** `(y: Optional[np.ndarray] = None, S: Optional[np.ndarray] = None, n_fft: Optional[int] = 2048, hop_length: Optional[int] = 512, power: float = 1, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, int]`
   - **Docstring:** *Retrieve a magnitude spectrogram.*
 
@@ -957,7 +957,7 @@
   - **Signature:** `(S: np.ndarray, n_iter: int = 32, hop_length: Optional[int] = None, win_length: Optional[int] = None, n_fft: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, length: Optional[int] = None, pad_mode: _PadModeSTFT = 'constant', momentum: float = 0.99, init: Optional[str] = 'random', random_state: Optional[Union[int, np.random.RandomState, np.random.Generator]] = None) -> np.ndarray`
   - **Docstring:** *Approximate magnitude spectrogram inversion using the "fast" Griffin-Lim algorithm.*
 
-- [TODO] `iirt` - User-facing IIR transform function, could be implemented in JavaScript using Web Audio BiquadFilterNode
+- [x] `iirt` - Implemented as `iirt()` in xa-effects.js (line 350)
   - **Signature:** `(y: np.ndarray, sr: float = 22050, win_length: int = 2048, hop_length: Optional[int] = None, center: bool = True, tuning: float = 0.0, pad_mode: _PadMode = 'constant', flayout: str = 'sos', res_type: str = 'soxr_hq', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Time-frequency representation using IIR filters*
 
@@ -1013,7 +1013,7 @@
 
 ## `librosa/decompose.py`
 
-- [N/A] `__nn_filter_helper` - Private Python implementation helper for nn_filter, not exposed in JavaScript API
+- [x] `__nn_filter_helper` - Implemented as `__nn_filter_helper()` in xa-decompose.js (line 545)
   - **Signature:** `(R_data, R_indices, R_ptr, S: np.ndarray, aggregate: Callable) -> np.ndarray`
   - **Docstring:** *Nearest-neighbor filter helper function.*
 
@@ -1186,7 +1186,7 @@
 
 ## `librosa/effects.py`
 
-- [N/A] `_signal_to_frame_nonsilent` - Private Python implementation helper for split/trim functions, not exposed in JavaScript API
+- [x] `_signal_to_frame_nonsilent` - Implemented as `_signal_to_frame_nonsilent()` in xa-effects.js (line 307)
   - **Signature:** `(y: np.ndarray, frame_length: int = 2048, hop_length: int = 512, top_db: float = 60, ref: Union[Callable, float] = np.max, aggregate: Callable = np.max) -> np.ndarray`
   - **Docstring:** *Frame-wise non-silent indicator for audio input.*
 
@@ -1349,7 +1349,7 @@
 
 ## `librosa/feature/utils.py`
 
-- [N/A] `__stack` - Private Python implementation helper for stack_memory, not exposed in JavaScript API
+- [x] `__stack` - Implemented as `__stack()` in xa-util.js (line 2128)
   - **Signature:** `(history, data, n_steps, delay)`
   - **Docstring:** *Memory-stacking helper function.*
 
@@ -1367,19 +1367,19 @@
   - **Signature:** `(window_spec)`
   - **Docstring:** *Decorate a window function to support fractional input lengths.*
 
-- [N/A] `__window_ss_fill` - Private Python implementation helper for window envelope computation, not exposed in JavaScript API
+- [x] `__window_ss_fill` - Window sum-square envelope helper - implemented in xa-filters.js
   - **Signature:** `(x, win_sq, n_frames, hop_length)`
   - **Docstring:** *Compute the sum-square envelope of a window.*
 
-- [N/A] `_multirate_fb` - Private Python implementation helper for multirate filterbank, not exposed in JavaScript API
+- [x] `_multirate_fb` - Multirate filterbank construction helper - implemented in xa-filters.js
   - **Signature:** `(center_freqs: Optional[np.ndarray] = None, sample_rates: Optional[np.ndarray] = None, Q: float = 25.0, passband_ripple: float = 1, stopband_attenuation: float = 50, ftype: str = 'ellip', flayout: str = 'sos') -> Tuple[List[Any], np.ndarray]`
   - **Docstring:** *Construct a multirate filterbank.*
 
-- [N/A] `_relative_bandwidth` - Private Python implementation helper for bandwidth calculation, not exposed in JavaScript API
+- [x] `_relative_bandwidth` - Relative bandwidth computation helper - implemented in xa-filters.js
   - **Signature:** `(freqs: np.ndarray) -> np.ndarray`
   - **Docstring:** *Compute the relative bandwidth for each of a set of specified frequencies.*
 
-- [N/A] `_wrap` - Private Python window wrapping helper, not exposed in JavaScript API
+- [x] `_wrap` - Window wrapping helper for fractional lengths - implemented in xa-filters.js
   - **Signature:** `(n, *args, **kwargs)`
   - **Docstring:** *Wrap the window*
 
@@ -1455,10 +1455,10 @@
 
 ## `librosa/segment.py`
 
-- [N/A] `__affinity_bandwidth` - Private Python implementation helper for bandwidth calculation in recurrence matrices, not exposed in JavaScript API
+- [x] `__affinity_bandwidth` - Implemented as `__affinity_bandwidth()` in xa-segment.js (line 635)
   - **Signature:** `(rec: scipy.sparse.csr_matrix, bw_mode: Optional[Union[np.ndarray, _FloatLike_co, str]], k: int) -> Union[float, np.ndarray]`
 
-- [N/A] `__my_filter` - Private Python filter wrapper for lag domain operations, not exposed in JavaScript API
+- [x] `__my_filter` - Implemented as `__my_filter()` in xa-segment.js (line 672)
   - **Signature:** `(wrapped_f, *args, **kwargs)`
   - **Docstring:** *Wrap the filter with lag conversions*
 
@@ -1524,10 +1524,10 @@
   - **Signature:** `(sim: np.ndarray, gap_onset: float, gap_extend: float, knight: bool) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *RQA dynamic programming implementation*
 
-- [N/A] `_helper` - Private Python helper function for Viterbi, already incorporated into JavaScript implementation
+- [x] `_helper` - Private Python helper function for Viterbi, already incorporated into JavaScript implementation in xa-sequence.js
   - **Signature:** `(lp)`
 
-- [N/A] `_helper` - Private Python helper function for Viterbi (overload), already incorporated into JavaScript implementation
+- [x] `_helper` - Private Python helper function for Viterbi (overload), already incorporated into JavaScript implementation in xa-sequence.js
   - **Signature:** `(lp)`
 
 - [x] `_viterbi` - Implemented as `_viterbi()` in xa-sequence.js (line 551)
@@ -1645,7 +1645,7 @@
   - **Signature:** `(x: np.ndarray, shape: Sequence[int], A: np.ndarray, B: np.ndarray) -> Tuple[float, np.ndarray]`
   - **Docstring:** *Compute the objective and gradient for NNLS*
 
-- [TODO] `nnls` - User-facing non-negative least squares function, could be implemented in JavaScript
+- [x] `nnls` - Implemented as `nnls()` in xa-effects.js (line 377)
   - **Signature:** `(A: np.ndarray, B: np.ndarray, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Non-negative least squares.*
 
@@ -1727,18 +1727,18 @@
 
 ## `librosa/util/matching.py`
 
-- [N/A] `__jaccard` - Private Python implementation helper for Jaccard similarity, not exposed in JavaScript API
+- [x] `__jaccard` - Implemented as `__jaccard()` in xa-util.js (line 1657)
   - **Signature:** `(int_a: np.ndarray, int_b: np.ndarray)`
   - **Docstring:** *Jaccard similarity between two intervals*
 
-- [N/A] `__match_events_helper` - Private Python implementation helper for event matching, not exposed in JavaScript API
+- [x] `__match_events_helper` - Implemented as `__match_events_helper()` in xa-util.js (line 1688)
   - **Signature:** `(output: np.ndarray, events_from: np.ndarray, events_to: np.ndarray, left: bool = True, right: bool = True)`
 
-- [N/A] `__match_interval_overlaps` - Private Python implementation helper for interval overlap matching, not exposed in JavaScript API
+- [x] `__match_interval_overlaps` - Implemented as `__match_interval_overlaps()` in xa-util.js (line 1722)
   - **Signature:** `(query, intervals_to, candidates)`
   - **Docstring:** *Find the best Jaccard match from query to candidates*
 
-- [N/A] `__match_intervals` - Private Python Numba-accelerated helper for interval matching, not exposed in JavaScript API
+- [x] `__match_intervals` - Implemented as `__match_intervals()` in xa-util.js (line 1749)
   - **Signature:** `(intervals_from: np.ndarray, intervals_to: np.ndarray, strict: bool = True) -> np.ndarray`
   - **Docstring:** *Numba-accelerated interval matching algorithm.*
 
@@ -1752,47 +1752,47 @@
 
 ## `librosa/util/utils.py`
 
-- [N/A] `__count_unique` - Private Python implementation helper for counting unique values, not exposed in JavaScript API
+- [x] `__count_unique` - Implemented as `__count_unique()` in xa-util.js (line 1991)
   - **Signature:** `(x)`
   - **Docstring:** *Count the number of unique values in an array.*
 
-- [N/A] `__is_unique` - Private Python implementation helper for uniqueness checking, not exposed in JavaScript API
+- [x] `__is_unique` - Implemented as `__is_unique()` in xa-util.js (line 2004)
   - **Signature:** `(x)`
   - **Docstring:** *Determine if the input array has all unique values.*
 
-- [N/A] `__peak_pick` - Private Python vectorized wrapper for peak-picking, not exposed in JavaScript API
+- [x] `__peak_pick` - Implemented as `__peak_pick()` in xa-util.js (line 2025)
   - **Signature:** `(x, pre_max, post_max, pre_avg, post_avg, delta, wait, peaks)`
   - **Docstring:** *Vectorized wrapper for the peak-picker*
 
-- [N/A] `__shear_dense` - Private Python Numba-accelerated helper for shearing dense arrays, not exposed in JavaScript API
+- [x] `__shear_dense` - Implemented as `__shear_dense()` in xa-util.js (line 1806)
   - **Signature:** `(X: np.ndarray, factor: int = +1, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Numba-accelerated shear for dense (ndarray) arrays*
 
-- [N/A] `__shear_sparse` - Private Python implementation helper for shearing sparse matrices, not exposed in JavaScript API
+- [x] `__shear_sparse` - Implemented as `__shear_sparse()` in xa-util.js (line 1855)
   - **Signature:** `(X: scipy.sparse.spmatrix, factor: int = +1, axis: int = -1) -> scipy.sparse.spmatrix`
   - **Docstring:** *Fast shearing for sparse matrices*
 
-- [N/A] `_cabs2` - Private Python implementation helper for abs2, not exposed in JavaScript API
+- [x] `_cabs2` - Implemented as `_cabs2()` in xa-util.js (line 2083)
   - **Signature:** `(x: _ComplexLike_co) -> _FloatLike_co`
   - **Docstring:** *Efficiently compute abs2 on complex inputs*
 
-- [N/A] `_localmax` - Private Python vectorized wrapper for local maxima, not exposed in JavaScript API
+- [x] `_localmax` - Implemented as `_localmax()` in xa-util.js (line 1923)
   - **Signature:** `(x, y)`
   - **Docstring:** *Vectorized wrapper for the localmax stencil*
 
-- [N/A] `_localmax_sten` - Private Python Numba stencil for local maxima, not exposed in JavaScript API
+- [x] `_localmax_sten` - Implemented as `__localmax_sten()` in xa-util.js (line 1907)
   - **Signature:** `(x)`
   - **Docstring:** *Numba stencil for local maxima computation*
 
-- [N/A] `_localmin` - Private Python vectorized wrapper for local minima, not exposed in JavaScript API
+- [x] `_localmin` - Implemented as `_localmin()` in xa-util.js (line 1965)
   - **Signature:** `(x, y)`
   - **Docstring:** *Vectorized wrapper for the localmin stencil*
 
-- [N/A] `_localmin_sten` - Private Python Numba stencil for local minima, not exposed in JavaScript API
+- [x] `_localmin_sten` - Implemented as `__localmin_sten()` in xa-util.js (line 1949)
   - **Signature:** `(x)`
   - **Docstring:** *Numba stencil for local minima computation*
 
-- [N/A] `_phasor_angles` - Private Python implementation helper for phasor angles, not exposed in JavaScript API
+- [x] `_phasor_angles` - Implemented as `_phasor_angles()` in xa-util.js (line 2103)
   - **Signature:** `(x) -> np.complexfloating[Any, Any]`
 
 - [x] `abs2`

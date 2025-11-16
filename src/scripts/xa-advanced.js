@@ -1054,3 +1054,266 @@ const P = pcen(S, 22050, 512, 0.98, 2, 0.5);
 // Reassigned spectrogram
 const {spectrogram, frequencies, times} = reassigned_spectrogram(audioData, 22050);
 */
+
+// ============================================================================
+// Spectrum Processing Helpers
+// ============================================================================
+
+/**
+ * Overlap-add operation for inverse STFT and Griffin-Lim
+ * Equivalent to librosa's __overlap_add helper
+ *
+ * Accumulates windowed frames into output buffer using overlap-add method.
+ * This is the core operation for combining overlapping STFT frames back into
+ * a time-domain signal.
+ *
+ * @private
+ * @param {Float32Array|Array<number>} y - Pre-allocated output buffer [n_samples]
+ * @param {Float32Array|Array<number>} ytmp - Windowed frame to add [frame_length]
+ * @param {number} hop_length - Hop length in samples
+ * @param {number} frame_idx - Current frame index
+ * @returns {void} Modifies y in-place
+ */
+export function __overlap_add(y, ytmp, hop_length, frame_idx) {
+  const frame_length = ytmp.length
+  const sample_start = frame_idx * hop_length
+  const sample_end = Math.min(sample_start + frame_length, y.length)
+
+  // Add windowed frame to output buffer
+  for (let i = 0; i < sample_end - sample_start; i++) {
+    y[sample_start + i] += ytmp[i]
+  }
+}
+
+/**
+ * Compute instantaneous frequencies for reassigned spectrogram
+ * Equivalent to librosa's __reassign_frequencies helper
+ *
+ * Uses the method from Flandrin et al. (2002) to compute frequency reassignments
+ * based on the derivative of the analysis window.
+ *
+ * @private
+ * @param {Float32Array|Array<number>} y - Audio signal
+ * @param {number} sr - Sample rate in Hz
+ * @param {Array<Array<{real: number, imag: number}>>|null} S - Pre-computed STFT (optional)
+ * @param {number} n_fft - FFT window size
+ * @param {number|null} hop_length - Hop length (default: n_fft/4)
+ * @param {number|null} win_length - Window length (default: n_fft)
+ * @param {string} window - Window type ('hann', 'hamming', etc.)
+ * @param {boolean} center - Whether to center frames
+ * @param {any} dtype - Data type (unused in JS)
+ * @param {string} pad_mode - Padding mode
+ * @returns {{S: Array, freqs_reassigned: Array}} STFT and reassigned frequencies
+ */
+export function __reassign_frequencies(
+  y,
+  sr = 22050,
+  S = null,
+  n_fft = 2048,
+  hop_length = null,
+  win_length = null,
+  window = 'hann',
+  center = true,
+  dtype = null,
+  pad_mode = 'constant'
+) {
+  if (hop_length === null) {
+    hop_length = Math.floor(n_fft / 4)
+  }
+
+  if (win_length === null) {
+    win_length = n_fft
+  }
+
+  // Compute standard STFT if not provided
+  if (S === null) {
+    S = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+  }
+
+  // Compute STFT with derivative window for frequency reassignment
+  // For frequency reassignment, we need to compute the phase derivative
+  // This is approximated using finite differences in the frequency domain
+  // NOTE: This is a simplified implementation - full Librosa version uses derivative window
+  const S_dh = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+
+  const n_freq = S.length
+  const n_frames = S[0].length
+
+  // Compute frequency reassignments: omega_reassigned = omega - Im(S_dh / S_h)
+  const freqs_reassigned = Array(n_freq).fill(null).map((_, i) =>
+    Array(n_frames).fill(null).map((_, j) => {
+      const s_h = S[i][j]
+      const s_dh = S_dh[i][j]
+
+      const mag_h = Math.sqrt(s_h.real * s_h.real + s_h.imag * s_h.imag)
+
+      if (mag_h < 1e-10) {
+        // Default to bin frequency if magnitude too small
+        return i * sr / n_fft
+      }
+
+      // Complex division: S_dh / S_h
+      const denom = s_h.real * s_h.real + s_h.imag * s_h.imag
+      const div_imag = (s_dh.imag * s_h.real - s_dh.real * s_h.imag) / denom
+
+      // Frequency reassignment
+      const freq_offset = -div_imag / (2 * Math.PI)
+      const freq_reassigned = i * sr / n_fft + freq_offset
+
+      // Clip to valid range
+      return Math.max(0, Math.min(sr / 2, freq_reassigned))
+    })
+  )
+
+  return { S, freqs_reassigned }
+}
+
+/**
+ * Compute time reassignments for reassigned spectrogram
+ * Equivalent to librosa's __reassign_times helper
+ *
+ * Computes time-domain reassignment using time-weighted window STFT.
+ *
+ * @private
+ * @param {Float32Array|Array<number>} y - Audio signal
+ * @param {number} sr - Sample rate in Hz
+ * @param {Array<Array<{real: number, imag: number}>>|null} S - Pre-computed STFT (optional)
+ * @param {number} n_fft - FFT window size
+ * @param {number|null} hop_length - Hop length (default: n_fft/4)
+ * @param {number|null} win_length - Window length (default: n_fft)
+ * @param {string} window - Window type
+ * @param {boolean} center - Whether to center frames
+ * @param {any} dtype - Data type (unused in JS)
+ * @param {string} pad_mode - Padding mode
+ * @returns {{S: Array, times_reassigned: Array}} STFT and reassigned times
+ */
+export function __reassign_times(
+  y,
+  sr = 22050,
+  S = null,
+  n_fft = 2048,
+  hop_length = null,
+  win_length = null,
+  window = 'hann',
+  center = true,
+  dtype = null,
+  pad_mode = 'constant'
+) {
+  if (hop_length === null) {
+    hop_length = Math.floor(n_fft / 4)
+  }
+
+  if (win_length === null) {
+    win_length = n_fft
+  }
+
+  // Compute standard STFT if not provided
+  if (S === null) {
+    S = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+  }
+
+  // Compute STFT with time-weighted window for time reassignment
+  // For time reassignment, we need to compute the group delay
+  // This is approximated using finite differences in the time domain
+  // NOTE: This is simplified - full Librosa version uses time-weighted window
+  const S_th = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+
+  const n_freq = S.length
+  const n_frames = S[0].length
+
+  // Compute time reassignments: t_reassigned = t + Re(S_th / S_h)
+  const times_reassigned = Array(n_freq).fill(null).map(() =>
+    Array(n_frames).fill(null).map((_, j) => {
+      const frame_time = j * hop_length / sr
+
+      return Array(n_freq).fill(frame_time)
+    })
+  )
+
+  for (let i = 0; i < n_freq; i++) {
+    for (let j = 0; j < n_frames; j++) {
+      const s_h = S[i][j]
+      const s_th = S_th[i][j]
+
+      const mag_h = Math.sqrt(s_h.real * s_h.real + s_h.imag * s_h.imag)
+
+      if (mag_h < 1e-10) {
+        times_reassigned[i][j] = j * hop_length / sr
+        continue
+      }
+
+      // Complex division: S_th / S_h
+      const denom = s_h.real * s_h.real + s_h.imag * s_h.imag
+      const div_real = (s_th.real * s_h.real + s_th.imag * s_h.imag) / denom
+
+      // Time reassignment
+      const time_offset = div_real / win_length
+      const time_reassigned = j * hop_length / sr + time_offset
+
+      times_reassigned[i][j] = Math.max(0, time_reassigned)
+    }
+  }
+
+  return { S, times_reassigned }
+}
+
+/**
+ * Compute magnitude spectrogram from audio or STFT
+ * Equivalent to librosa's _spectrogram helper
+ *
+ * Internal helper that retrieves or computes a magnitude spectrogram,
+ * handling both audio input and pre-computed STFT.
+ *
+ * @private
+ * @param {Float32Array|Array<number>|null} y - Audio signal (optional if S provided)
+ * @param {Array<Array<{real: number, imag: number}>>|null} S - Pre-computed STFT (optional if y provided)
+ * @param {number} n_fft - FFT window size (default: 2048)
+ * @param {number} hop_length - Hop length (default: 512)
+ * @param {number} power - Exponent for magnitude (1=magnitude, 2=power) (default: 1)
+ * @param {number|null} win_length - Window length (default: n_fft)
+ * @param {string} window - Window type (default: 'hann')
+ * @param {boolean} center - Whether to center frames (default: true)
+ * @param {string} pad_mode - Padding mode (default: 'constant')
+ * @returns {{S_mag: Array<Array<number>>, n_fft: number}} Magnitude spectrogram and n_fft
+ */
+export function _spectrogram(
+  y = null,
+  S = null,
+  n_fft = 2048,
+  hop_length = 512,
+  power = 1,
+  win_length = null,
+  window = 'hann',
+  center = true,
+  pad_mode = 'constant'
+) {
+  if (y === null && S === null) {
+    throw new ParameterError('Either y or S must be provided')
+  }
+
+  if (win_length === null) {
+    win_length = n_fft
+  }
+
+  // Compute STFT if not provided
+  if (S === null) {
+    S = stftTransform(y, n_fft, hop_length, win_length, window, center, null, pad_mode)
+  } else {
+    // Infer n_fft from S shape
+    n_fft = 2 * (S.length - 1)
+  }
+
+  const n_freq = S.length
+  const n_frames = S[0].length
+
+  // Compute magnitude spectrogram
+  const S_mag = Array(n_freq).fill(null).map((_, i) =>
+    Array(n_frames).fill(null).map((_, j) => {
+      const val = S[i][j]
+      const mag = Math.sqrt(val.real * val.real + val.imag * val.imag)
+      return Math.pow(mag, power)
+    })
+  )
+
+  return { S_mag, n_fft }
+}

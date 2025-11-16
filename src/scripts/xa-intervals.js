@@ -672,3 +672,74 @@ export function pythagorean_intervals(
     returnFactors: return_factors
   })
 }
+
+// ============================================================================
+// Interval Helper Functions (Librosa-compatible)
+// ============================================================================
+
+/**
+ * Compute the harmonic distance between two intervals
+ * Equivalent to librosa's __harmonic_distance helper
+ *
+ * Harmonic distance is defined as log2(a * b) - 2*log2(gcd(a, b))
+ * based on Tenney's crystal growth algorithm.
+ *
+ * Reference: Tenney, James. "On 'Crystal Growth' in harmonic space (1993-1998)."
+ * Contemporary Music Review 27.1 (2008): 47-56.
+ *
+ * @private
+ * @param {Array<number>} logs - Log2 of prime basis [n_primes]
+ * @param {Array<number>} a - First interval as prime exponents [n_primes]
+ * @param {Array<number>} b - Second interval as prime exponents [n_primes]
+ * @returns {number} Harmonic distance between intervals
+ */
+export function __harmonic_distance(logs, a, b) {
+  const a_arr = Array.isArray(a) ? a : [a]
+  const b_arr = Array.isArray(b) ? b : [b]
+
+  // Numerator = positive exponents
+  const a_num = a_arr.map(x => Math.max(x, 0))
+  // Denominator = negative exponents
+  const a_den = a_num.map((x, i) => x - a_arr[i])
+
+  const b_num = b_arr.map(x => Math.max(x, 0))
+  const b_den = b_num.map((x, i) => x - b_arr[i])
+
+  // gcd(a,b) for rationals: gcd(a_num, b_num) / lcm(a_den, b_den)
+  // gcd = minimum(a_num, b_num) and lcm = maximum(a_den, b_den)
+  const gcd = a_num.map((x, i) => Math.min(x, b_num[i]) - Math.max(a_den[i], b_den[i]))
+
+  // log2(ab / gcd(a,b)^2) = log(a) + log(b) - 2 * log(gcd(a,b))
+  let distance = 0
+  for (let i = 0; i < logs.length; i++) {
+    distance += logs[i] * (a_arr[i] + b_arr[i] - 2 * gcd[i])
+  }
+
+  // Round to 6 decimals to avoid floating point issues
+  return Math.round(distance * 1e6) / 1e6
+}
+
+/**
+ * Tie-breaking function for crystal growth algorithm
+ * Equivalent to librosa's _crystal_tie_break helper
+ *
+ * Given two tuples of prime powers with equal harmonic distance,
+ * prefer the one with smaller Tenney height (sum of absolute log values).
+ *
+ * @private
+ * @param {Array<number>} a - First interval as prime exponents [n_primes]
+ * @param {Array<number>} b - Second interval as prime exponents [n_primes]
+ * @param {Array<number>} logs - Log2 of prime basis [n_primes]
+ * @returns {boolean} True if a should be preferred over b
+ */
+export function _crystal_tie_break(a, b, logs) {
+  let height_a = 0
+  let height_b = 0
+
+  for (let i = 0; i < logs.length; i++) {
+    height_a += logs[i] * Math.abs(a[i])
+    height_b += logs[i] * Math.abs(b[i])
+  }
+
+  return height_a < height_b
+}

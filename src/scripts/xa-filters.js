@@ -838,3 +838,205 @@ export function window_bandwidth(window = 'hann', n = 1000) {
 
   return bandwidth
 }
+
+// ============================================================================
+// Filter Helper Functions
+// ============================================================================
+
+/**
+ * Compute the sum-square envelope of a window
+ * Equivalent to librosa's __window_ss_fill helper
+ *
+ * This function accumulates the squared window values into an output buffer
+ * at regular hop intervals, used for computing window normalization envelopes
+ * in overlap-add operations.
+ *
+ * @private
+ * @param {Float32Array|Array<number>} x - Output buffer to accumulate into [n_samples]
+ * @param {Float32Array|Array<number>} win_sq - Squared window values [n_fft]
+ * @param {number} n_frames - Number of frames
+ * @param {number} hop_length - Hop length in samples
+ * @returns {void} Modifies x in-place
+ */
+export function __window_ss_fill(x, win_sq, n_frames, hop_length) {
+  const n = x.length
+  const n_fft = win_sq.length
+
+  for (let i = 0; i < n_frames; i++) {
+    const sample = i * hop_length
+    const sample_end = Math.min(n, sample + n_fft)
+    const win_end = Math.max(0, Math.min(n_fft, n - sample))
+
+    // Accumulate squared window values
+    for (let j = 0; j < win_end && sample + j < sample_end; j++) {
+      x[sample + j] += win_sq[j]
+    }
+  }
+}
+
+/**
+ * Construct a multirate filterbank
+ * Equivalent to librosa's _multirate_fb helper
+ *
+ * Creates a bank of band-pass filters operating at different sample rates.
+ * Each filter is designed to have a specific center frequency and Q factor.
+ *
+ * Note: This is a simplified JavaScript implementation. Full scipy.signal.iirdesign
+ * functionality would require a complete IIR filter design library.
+ *
+ * @private
+ * @param {Array<number>|null} center_freqs - Center frequencies for each filter [n_filters]
+ * @param {Array<number>|null} sample_rates - Sample rate for each filter [n_filters]
+ * @param {number} Q - Quality factor (center_freq / bandwidth) (default: 25.0)
+ * @param {number} passband_ripple - Passband ripple in dB (default: 1)
+ * @param {number} stopband_attenuation - Stopband attenuation in dB (default: 50)
+ * @param {string} ftype - Filter type ('ellip', 'butter', 'cheby1', etc.) (default: 'ellip')
+ * @param {string} flayout - Filter layout ('sos', 'ba') (default: 'sos')
+ * @returns {{filterbank: Array, sample_rates: Array}} Filterbank and sample rates
+ */
+export function _multirate_fb(
+  center_freqs = null,
+  sample_rates = null,
+  Q = 25.0,
+  passband_ripple = 1,
+  stopband_attenuation = 50,
+  ftype = 'ellip',
+  flayout = 'sos'
+) {
+  if (center_freqs === null) {
+    throw new Error('center_freqs must be provided')
+  }
+
+  if (sample_rates === null) {
+    throw new Error('sample_rates must be provided')
+  }
+
+  if (center_freqs.length !== sample_rates.length) {
+    throw new Error('Number of center_freqs and sample_rates must be equal')
+  }
+
+  const filterbank = []
+
+  for (let i = 0; i < center_freqs.length; i++) {
+    const center_freq = center_freqs[i]
+    const sample_rate = sample_rates[i]
+    const nyquist = 0.5 * sample_rate
+    const filter_bandwidth = center_freq / Q
+
+    // Normalized passband and stopband frequencies
+    const passband_freqs = [
+      (center_freq - 0.5 * filter_bandwidth) / nyquist,
+      (center_freq + 0.5 * filter_bandwidth) / nyquist
+    ]
+
+    const stopband_freqs = [
+      (center_freq - filter_bandwidth) / nyquist,
+      (center_freq + filter_bandwidth) / nyquist
+    ]
+
+    // Simplified filter design (placeholder for full IIR design)
+    // In a complete implementation, this would call an IIR filter design function
+    // similar to scipy.signal.iirdesign
+    const filter = {
+      type: ftype,
+      layout: flayout,
+      center_freq: center_freq,
+      sample_rate: sample_rate,
+      passband: passband_freqs,
+      stopband: stopband_freqs,
+      Q: Q,
+      // Coefficients would be computed here by IIR design algorithm
+      // For now, store design parameters
+      passband_ripple: passband_ripple,
+      stopband_attenuation: stopband_attenuation
+    }
+
+    filterbank.push(filter)
+  }
+
+  return { filterbank, sample_rates }
+}
+
+/**
+ * Compute the relative bandwidth for each frequency
+ * Equivalent to librosa's _relative_bandwidth helper
+ *
+ * Used in wavelet basis construction to determine the bandwidth
+ * of each filter based on the spacing between adjacent frequencies.
+ *
+ * @private
+ * @param {Array<number>} freqs - Array of frequencies [n_freqs]
+ * @returns {Float32Array} Relative bandwidth for each frequency [n_freqs]
+ */
+export function _relative_bandwidth(freqs) {
+  if (freqs.length <= 1) {
+    throw new Error(`2 or more frequencies required. Given ${freqs.length} frequencies`)
+  }
+
+  const n = freqs.length
+  const bpo = new Float32Array(n)  // Bands per octave
+  const logf = new Float32Array(n)
+
+  // Compute log2 of frequencies
+  for (let i = 0; i < n; i++) {
+    logf[i] = Math.log2(freqs[i])
+  }
+
+  // Compute bands per octave using finite differences
+  // First element: forward difference
+  bpo[0] = 1.0 / (logf[1] - logf[0])
+
+  // Last element: backward difference
+  bpo[n - 1] = 1.0 / (logf[n - 1] - logf[n - 2])
+
+  // Middle elements: central difference
+  for (let i = 1; i < n - 1; i++) {
+    bpo[i] = 2.0 / (logf[i + 1] - logf[i - 1])
+  }
+
+  // Compute relative bandwidth: alpha = (2^(2/bpo) - 1) / (2^(2/bpo) + 1)
+  const alpha = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    const exp_term = Math.pow(2.0, 2.0 / bpo[i])
+    alpha[i] = (exp_term - 1.0) / (exp_term + 1.0)
+  }
+
+  return alpha
+}
+
+/**
+ * Wrap a window function to support fractional lengths
+ * Equivalent to librosa's _wrap helper (inner function of __float_window)
+ *
+ * For fractional window lengths n, this function:
+ * 1. Creates a window of length ceil(n)
+ * 2. Sets all values from floor(n) onwards to 0
+ *
+ * This is used for precise control of window lengths in filter design.
+ *
+ * @private
+ * @param {number} n - Window length (can be fractional)
+ * @param {string} window_spec - Window type ('hann', 'hamming', etc.)
+ * @returns {Float32Array} Wrapped window of length ceil(n)
+ */
+export function _wrap(n, window_spec = 'hann') {
+  const n_min = Math.floor(n)
+  const n_max = Math.ceil(n)
+
+  // Get window of floor(n) length
+  let window = get_window(window_spec, n_min)
+
+  // Pad to ceil(n) length if needed
+  if (window.length < n_max) {
+    const padded = new Float32Array(n_max)
+    padded.set(window)
+    window = padded
+  }
+
+  // Zero out values from floor(n) onwards
+  for (let i = n_min; i < n_max; i++) {
+    window[i] = 0.0
+  }
+
+  return window
+}

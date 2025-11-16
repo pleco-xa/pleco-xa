@@ -214,6 +214,230 @@ export function salience(
 // ============================================================================
 
 /**
+ * Core interpolation function for harmonic analysis
+ * Implements scipy.interpolate.interp1d equivalent for JavaScript
+ *
+ * @private
+ * @param {Array<number>} x_data - Input x coordinates (must be sorted)
+ * @param {Array<number>} y_data - Input y values
+ * @param {Array<number>} x_targets - Target x coordinates to interpolate
+ * @param {string} kind - Interpolation type ('linear', 'nearest', 'cubic')
+ * @param {number} fill_value - Value for out-of-bounds points
+ * @param {boolean} assume_sorted - Whether x_data is pre-sorted
+ * @returns {Array<number>} Interpolated values at x_targets
+ */
+function _f_interp_core(x_data, y_data, x_targets, kind = 'linear', fill_value = 0, assume_sorted = false) {
+  if (x_data.length !== y_data.length) {
+    throw new Error('x_data and y_data must have the same length')
+  }
+
+  const n = x_data.length
+  if (n === 0) {
+    return x_targets.map(() => fill_value)
+  }
+
+  // Sort if needed
+  let x_sorted = x_data
+  let y_sorted = y_data
+
+  if (!assume_sorted) {
+    const indices = Array.from({ length: n }, (_, i) => i)
+    indices.sort((a, b) => x_data[a] - x_data[b])
+    x_sorted = indices.map(i => x_data[i])
+    y_sorted = indices.map(i => y_data[i])
+  }
+
+  // Interpolate each target
+  const results = new Array(x_targets.length)
+
+  for (let t = 0; t < x_targets.length; t++) {
+    const target = x_targets[t]
+
+    // Out of bounds - use fill_value
+    if (target < x_sorted[0] || target > x_sorted[n - 1]) {
+      if (kind === 'nearest') {
+        results[t] = target < x_sorted[0] ? y_sorted[0] : y_sorted[n - 1]
+      } else {
+        results[t] = fill_value
+      }
+      continue
+    }
+
+    // Find bracketing indices
+    let lower_idx = 0
+    let upper_idx = n - 1
+
+    for (let i = 0; i < n - 1; i++) {
+      if (x_sorted[i] <= target && x_sorted[i + 1] >= target) {
+        lower_idx = i
+        upper_idx = i + 1
+        break
+      }
+    }
+
+    // Exact match
+    if (x_sorted[lower_idx] === target) {
+      results[t] = y_sorted[lower_idx]
+      continue
+    }
+
+    // Interpolate based on kind
+    if (kind === 'nearest') {
+      const dist_lower = Math.abs(target - x_sorted[lower_idx])
+      const dist_upper = Math.abs(target - x_sorted[upper_idx])
+      results[t] = dist_lower < dist_upper ? y_sorted[lower_idx] : y_sorted[upper_idx]
+    } else if (kind === 'linear') {
+      const t_norm = (target - x_sorted[lower_idx]) / (x_sorted[upper_idx] - x_sorted[lower_idx])
+      results[t] = (1 - t_norm) * y_sorted[lower_idx] + t_norm * y_sorted[upper_idx]
+    } else if (kind === 'cubic') {
+      // Catmull-Rom cubic interpolation
+      const p0_idx = Math.max(0, lower_idx - 1)
+      const p1_idx = lower_idx
+      const p2_idx = upper_idx
+      const p3_idx = Math.min(n - 1, upper_idx + 1)
+
+      const p0 = y_sorted[p0_idx]
+      const p1 = y_sorted[p1_idx]
+      const p2 = y_sorted[p2_idx]
+      const p3 = y_sorted[p3_idx]
+
+      const t_norm = (target - x_sorted[lower_idx]) / (x_sorted[upper_idx] - x_sorted[lower_idx])
+      const t2 = t_norm * t_norm
+      const t3 = t2 * t_norm
+
+      results[t] = 0.5 * (
+        (2 * p1) +
+        (-p0 + p2) * t_norm +
+        (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+        (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+      )
+    } else {
+      results[t] = fill_value
+    }
+  }
+
+  return results
+}
+
+/**
+ * Harmonic interpolation helper - static frequency grid
+ * Equivalent to librosa's _f_interps nested function
+ *
+ * Interpolates data at target frequencies, filtering out non-finite frequencies
+ *
+ * @private
+ * @param {Array<number>} data - Data values to interpolate [n_freqs]
+ * @param {Array<number>} freqs - Frequency grid [n_freqs]
+ * @param {Array<number>} target_freqs - Target frequencies to interpolate at
+ * @param {string} kind - Interpolation type ('linear', 'nearest', 'cubic')
+ * @param {number} fill_value - Fill value for out-of-bounds
+ * @returns {Array<number>} Interpolated values at target frequencies
+ */
+export function _f_interps(data, freqs, target_freqs, kind = 'linear', fill_value = 0) {
+  // Filter finite frequencies and corresponding data
+  const finite_indices = []
+  for (let i = 0; i < freqs.length; i++) {
+    if (isFinite(freqs[i]) && isFinite(data[i])) {
+      finite_indices.push(i)
+    }
+  }
+
+  if (finite_indices.length === 0) {
+    return target_freqs.map(() => fill_value)
+  }
+
+  const filtered_freqs = finite_indices.map(i => freqs[i])
+  const filtered_data = finite_indices.map(i => data[i])
+
+  return _f_interp_core(filtered_freqs, filtered_data, target_freqs, kind, fill_value, false)
+}
+
+/**
+ * Harmonic interpolation helper - dynamic frequency grid
+ * Equivalent to librosa's _f_interpd nested function
+ *
+ * Interpolates data at target frequencies using a dynamic (per-frame) frequency grid
+ *
+ * @private
+ * @param {Array<number>} data - Data values to interpolate [n_points]
+ * @param {Array<number>} frequencies - Frequency grid (can vary per frame) [n_points]
+ * @param {Array<number>} target_freqs - Target frequencies to interpolate at
+ * @param {string} kind - Interpolation type ('linear', 'nearest', 'cubic')
+ * @param {number} fill_value - Fill value for out-of-bounds
+ * @returns {Array<number>} Interpolated values at target frequencies
+ */
+export function _f_interpd(data, frequencies, target_freqs, kind = 'linear', fill_value = 0) {
+  // Filter finite frequency-data pairs
+  const finite_indices = []
+  for (let i = 0; i < frequencies.length; i++) {
+    if (isFinite(frequencies[i]) && isFinite(data[i])) {
+      finite_indices.push(i)
+    }
+  }
+
+  if (finite_indices.length === 0) {
+    return target_freqs.map(() => fill_value)
+  }
+
+  const filtered_frequencies = finite_indices.map(i => frequencies[i])
+  const filtered_data = finite_indices.map(i => data[i])
+
+  return _f_interp_core(filtered_frequencies, filtered_data, target_freqs, kind, fill_value, false)
+}
+
+/**
+ * Harmonic interpolation - outer product variant
+ * Equivalent to librosa's _f_interp nested function
+ *
+ * Interpolates using outer product of frequencies with harmonics
+ * Used in interp_harmonics for computing harmonic energy across frequency grid
+ *
+ * @private
+ * @param {Array<number>} freqs - Base frequency grid [n_freqs]
+ * @param {Array<number>} data - Data values [n_freqs]
+ * @param {Array<number>} harmonics - Harmonic multipliers (e.g., [0.5, 1, 2, 3])
+ * @param {string} kind - Interpolation type ('linear', 'nearest', 'cubic')
+ * @param {number} fill_value - Fill value for out-of-bounds
+ * @returns {Array<Array<number>>} Interpolated harmonic data [n_freqs x n_harmonics]
+ */
+export function _f_interp(freqs, data, harmonics, kind = 'linear', fill_value = 0) {
+  const n_freqs = freqs.length
+  const n_harmonics = harmonics.length
+
+  // Filter finite frequencies
+  const finite_indices = []
+  for (let i = 0; i < n_freqs; i++) {
+    if (isFinite(freqs[i]) && isFinite(data[i])) {
+      finite_indices.push(i)
+    }
+  }
+
+  if (finite_indices.length === 0) {
+    return Array(n_freqs).fill(null).map(() => Array(n_harmonics).fill(fill_value))
+  }
+
+  const filtered_freqs = finite_indices.map(i => freqs[i])
+  const filtered_data = finite_indices.map(i => data[i])
+
+  // Compute outer product: freqs[i] * harmonics[h]
+  const result = Array(n_freqs).fill(null).map(() => Array(n_harmonics).fill(fill_value))
+
+  for (let i = 0; i < n_freqs; i++) {
+    const base_freq = freqs[i]
+    if (!isFinite(base_freq)) continue
+
+    const target_freqs = harmonics.map(h => base_freq * h)
+    const interpolated = _f_interp_core(filtered_freqs, filtered_data, target_freqs, kind, fill_value, false)
+
+    for (let h = 0; h < n_harmonics; h++) {
+      result[i][h] = interpolated[h]
+    }
+  }
+
+  return result
+}
+
+/**
  * Interpolate energy at a specific frequency for a given time frame
  *
  * @private
