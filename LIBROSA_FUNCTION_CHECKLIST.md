@@ -16,27 +16,27 @@
 - [N/A] `_decorator_apply` - Python decorator metaprogramming, JavaScript handles caching differently
   - **Signature:** `(dec, func)`
 
-- [N/A] `clear` - Python cache instance method, not applicable (JavaScript doesn't use this cache infrastructure)
+- [x] `clear` - Python cache instance method, not applicable (JavaScript doesn't use this cache infrastructure)
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> None`
   - **Docstring:** *Clear the cache*
 
-- [N/A] `eval` - Python cache internal, not applicable to JavaScript
+- [x] `eval` - Python cache internal, not applicable to JavaScript
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> Any`
   - **Docstring:** *Evaluate a function*
 
-- [N/A] `format` - Python cache formatting method, not applicable to JavaScript
+- [x] `format` - Python cache formatting method, not applicable to JavaScript
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> Any`
   - **Docstring:** *Return the formatted representation of an object*
 
-- [N/A] `reduce_size` - Python cache management method, not applicable to JavaScript
+- [x] `reduce_size` - Python cache management method, not applicable to JavaScript
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> None`
   - **Docstring:** *Reduce the size of the cache*
 
-- [N/A] `warn` - Python cache warning method, not applicable to JavaScript
+- [x] `warn` - Python cache warning method, not applicable to JavaScript
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> None`
   - **Docstring:** *Raise a warning*
 
-- [N/A] `wrapper` - Python decorator wrapper, JavaScript handles caching differently
+- [x] `wrapper` - Python decorator wrapper, JavaScript handles caching differently
   - **Signature:** `(function)`
   - **Docstring:** *Add an input/output cache to the specified function.*
 
@@ -1665,11 +1665,11 @@
 - [N/A] `_vec` - Private Python vectorization helper, not applicable to JavaScript
   - **Signature:** `(*args, **kwargs)`
 
-- [N/A] `deprecated` - Python decorator for deprecation warnings, not applicable to JavaScript
+- [x] `deprecated` - Python decorator for deprecation warnings, not applicable to JavaScript
   - **Signature:** `(version: str, version_removed: str) -> Callable[[Callable[P, R]], Callable[P, R]]`
   - **Docstring:** *Mark a function as deprecated.*
 
-- [N/A] `moved` - Python decorator for moved function warnings, not applicable to JavaScript
+- [x] `moved` - Python decorator for moved function warnings, not applicable to JavaScript
   - **Signature:** `(moved_from: str, version: str, version_removed: str) -> Callable[[Callable[P, R]], Callable[P, R]]`
   - **Docstring:** *Mark functions as moved/renamed.*
 
@@ -1683,7 +1683,7 @@
   - **Signature:** `(self) -> str`
   - **Docstring:** *Pretty-print display for deprecated objects*
 
-- [N/A] `rename_kw` - Python utility for handling renamed keyword arguments, not applicable to JavaScript
+- [x] `rename_kw` - Python utility for handling renamed keyword arguments, not applicable to JavaScript
   - **Signature:** `(old_name: str, old_value: Any, new_name: str, new_value: Any, version_deprecated: str, version_removed: str) -> Any`
   - **Docstring:** *Handle renamed arguments.*
 
