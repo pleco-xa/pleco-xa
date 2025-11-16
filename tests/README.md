@@ -1,315 +1,275 @@
 # Pleco-Audio Test Suite
 
-Comprehensive test suite for all 459 Librosa-equivalent functions in the pleco-audio library.
+**Real algorithmic validation tests based on Librosa's test patterns**
 
-## Overview
+This test suite validates the correctness of pleco-audio's DSP algorithms by testing against known mathematical properties and synthetic test data, following patterns from the Librosa test suite.
 
-This test suite provides complete coverage for the JavaScript implementation of Librosa functions, ensuring parity with the original Python library.
+## Testing Philosophy
 
-### Test Statistics
+**NO MORE "toBeDefined" PLACEHOLDERS** - Every test validates CORRECTNESS, not just existence.
 
-- **Total Functions**: 459 implemented functions
-- **Test Files**: 46 module test files
-- **Test Framework**: Vitest
-- **HTML Demo Pages**: 18 interactive demo pages
+### What Makes a REAL Test?
 
-## Test Structure
+Based on Librosa's test suite patterns:
 
+1. **Synthetic data with known outputs**
+   - Example: Create click track at 120 BPM → detect tempo → validate within 5% tolerance
+   - Example: FFT of impulse → all magnitude bins should equal 1
+
+2. **Mathematical correctness validation**
+   - Example: `ifft(fft(signal))` should reconstruct original
+   - Example: Mel filterbank coefficients should sum correctly
+
+3. **Parametrized testing** (multiple scenarios)
+   - Different sample rates, hop lengths, window sizes
+   - Edge cases: DC, Nyquist, silence, single sample
+
+4. **Actual comparison to expected values**
+   - Use `almostEqual(actual, expected, tolerance)`
+   - Not just "is it defined?" or "is length > 0?"
+
+## Test Fixtures (`tests/fixtures/test-data.js`)
+
+### Synthetic Audio Generators
+
+Following Librosa patterns from `test_beat.py`, `test_features.py`, etc.
+
+#### `generateClickTrack(tempo, sr, duration)`
+Creates impulses at regular intervals for tempo testing.
+
+**Librosa equivalent** (test_beat.py lines 56-61):
+```python
+y = np.zeros(20 * sr)
+delay = librosa.time_to_samples(60.0 / tempo, sr=sr).item()
+y[::delay] = 1
 ```
-tests/
-├── fixtures/
-│   └── test-data.js          # Test data generators and utilities
-├── librosa/
-│   ├── index.test.js         # Master test suite index
-│   ├── xa-fft.test.js        # FFT module tests (comprehensive)
-│   ├── xa-convert.test.js    # Conversion module tests (comprehensive)
-│   ├── xa-mel.test.js        # Mel scale tests
-│   ├── xa-beat.test.js       # Beat tracking tests
-│   └── ... (42 more modules)
-├── demos/
-│   ├── demo-spectral.html    # Spectral analysis demos
-│   ├── demo-beat.html        # Beat/tempo demos
-│   └── ... (16 more demos)
-└── README.md                 # This file
+
+**JavaScript usage**:
+```javascript
+const clickTrack = generateClickTrack(120, 22050, 20);
+const detectedTempo = tempo(clickTrack, 22050);
+expect(withinPercent(detectedTempo, 120, 0.05)).toBe(true); // 5% tolerance
+```
+
+#### `generateSingleBinSpectrum(nBins, nFrames, peakBin)`
+Creates idealized spectrum with all energy in one bin.
+
+**Librosa equivalent** (test_features.py lines 134-138):
+```python
+S = np.zeros((513, 3))
+S[5, :] = 1.0  # All energy in bin 5
+```
+
+**JavaScript usage**:
+```javascript
+const S = generateSingleBinSpectrum(513, 3, 5);
+const centroid = spectral_centroid(S);
+// Centroid should equal frequency of bin 5
+expect(centroid).toBeCloseTo(fft_frequencies(sr, nfft)[5]);
+```
+
+#### Other Generators
+
+- **`generateTestAudio(duration, sr, freq)`** - Sine wave at specific frequency
+- **`generateWhiteNoise(duration, sr, amplitude)`** - Random noise
+- **`generateImpulse(length, position)`** - Dirac delta function
+- **`generateDCSignal(length, value)`** - Constant value signal
+- **`generateSilence(length)`** - All zeros
+- **`generateAlternatingSignal(sr, period)`** - For zero-crossing rate tests
+- **`generateChirp(duration, sr, f0, f1)`** - Frequency sweep
+
+### Tolerance Comparison Helpers
+
+#### `almostEqual(a, b, tolerance)`
+Simple absolute tolerance comparison.
+
+```javascript
+expect(almostEqual(440.0, 440.1, 0.2)).toBe(true);
+```
+
+#### `withinPercent(actual, expected, percent)`
+Percentage-based tolerance (for tempo testing).
+
+**Librosa equivalent** (test_beat.py line 76):
+```python
+assert np.abs(tempo_est - tempo) <= 0.05 * tempo  # 5% tolerance
+```
+
+**JavaScript usage**:
+```javascript
+expect(withinPercent(detectedTempo, 120, 0.05)).toBe(true); // Within 5%
+```
+
+#### `allclose(a, b, {rtol, atol})`
+NumPy `allclose` equivalent for arrays.
+
+**Librosa equivalent**:
+```python
+assert np.allclose(reconstructed, original, rtol=1e-5, atol=1e-8)
+```
+
+**JavaScript usage**:
+```javascript
+expect(allclose(reconstructed, original, {rtol: 1e-5, atol: 1e-8})).toBe(true);
+```
+
+### Known Test Vectors (`knownTestVectors`)
+
+Comprehensive test data based on Librosa's known values:
+
+- **MIDI conversions**: `[33, 45, 57, 69] → [55, 110, 220, 440] Hz`
+- **Time/sample conversions**: `[0, 1, 2] s → [0, sr, 2*sr] samples`
+- **FFT frequencies**: DC=0, Nyquist=sr/2, linearly spaced
+- **Tempo tests**: 60, 80, 110, 120, 160 BPM with 5% tolerance
+- **Spectral features**: Single-bin tests, zero-crossing rates
+
+## Test Patterns by Module
+
+### xa-convert.test.js - Conversion Functions
+
+**Pattern**: Known input → conversion → known output
+
+```javascript
+// Test with Librosa's known test vectors (test_convert.py line 277)
+knownTestVectors.midi.midiToHz.forEach(({ midi, hz }) => {
+  const result = midi_to_hz(midi);
+  expect(almostEqual(result, hz, 0.5)).toBe(true);
+});
+
+// Test reversibility
+const midi = hz_to_midi(440);
+const reconstructed = midi_to_hz(midi);
+expect(almostEqual(440, reconstructed, 0.01)).toBe(true);
+```
+
+### xa-beat.test.js - Tempo Detection
+
+**Pattern**: Click track at known BPM → detect tempo → validate within 5% tolerance
+
+Based on **Librosa test_beat.py lines 50-77**:
+
+```javascript
+it('should detect 120 BPM from click track within 5% tolerance', () => {
+  const expectedTempo = 120;
+  const clickTrack = generateClickTrack(expectedTempo, 22050, 20);
+  const detectedTempo = tempo(clickTrack, 22050);
+
+  // Librosa pattern: assert np.abs(tempo_est - tempo) <= 0.05 * tempo
+  expect(withinPercent(detectedTempo, expectedTempo, 0.05)).toBe(true);
+});
+```
+
+**Edge cases** (test_tempo_no_onsets):
+- Silence → should return 0 or default BPM
+- Constant signal → should handle gracefully
+
+### xa-fft.test.js - FFT Correctness
+
+**Pattern**: Known input properties → FFT → validate mathematical correctness
+
+#### Test 1: FFT of Impulse
+```javascript
+const impulse = generateImpulse(8, 0);  // [1, 0, 0, 0, 0, 0, 0, 0]
+const result = fft(impulse);
+
+// All magnitude bins should equal 1
+for (const mag of magnitudes) {
+  expect(almostEqual(mag, 1.0, 0.01)).toBe(true);
+}
+```
+
+#### Test 2: FFT of DC Signal
+```javascript
+const dcSignal = generateDCSignal(8, 1.0);  // [1, 1, 1, 1, 1, 1, 1, 1]
+const result = fft(dcSignal);
+
+// DC bin (index 0) should be N (length), all others ~0
+expect(almostEqual(magnitudes[0], 8.0, 0.1)).toBe(true);
+for (let i = 1; i < magnitudes.length; i++) {
+  expect(almostEqual(magnitudes[i], 0, 0.1)).toBe(true);
+}
+```
+
+#### Test 3: IFFT Reconstruction
+```javascript
+const signal = generateTestAudio(0.05, 22050, 440);
+const fftResult = fft(signal);
+const reconstructed = ifft(fftResult);
+
+// ifft(fft(x)) ≈ x
+expect(allclose(reconstructed, signal, {rtol: 1e-3, atol: 1e-3})).toBe(true);
 ```
 
 ## Running Tests
 
-### Run All Tests
-
+### Run all tests
 ```bash
 npm test
 ```
 
-### Run Specific Test File
-
+### Run specific module
 ```bash
+npm test xa-beat
 npm test xa-fft
 npm test xa-convert
 ```
 
-### Run Tests in Watch Mode
-
+### Run with coverage
 ```bash
-npm test -- --watch
+npm run test:coverage
 ```
 
-### Run Tests with Coverage
-
+### Watch mode (for development)
 ```bash
-npm test -- --coverage
+npm run test:watch
 ```
 
-## Test Categories
+## Adding New Tests
 
-### Core Audio Processing
-
-- **xa-fft.test.js** - FFT, STFT, windowing functions
-- **xa-spectral.test.js** - Spectral features and transforms
-- **xa-mel.test.js** - Mel scale operations
-- **xa-chroma.test.js** - Chroma features
-
-### Beat & Tempo
-
-- **xa-beat.test.js** - Beat tracking
-- **xa-tempo.test.js** - Tempo estimation
-- **xa-bpm-detection.test.js** - BPM detection
-- **xa-downbeat.test.js** - Downbeat detection
-
-### Pitch & Harmony
-
-- **xa-pitch.test.js** - Pitch detection (piptrack, YIN, PYIN)
-- **xa-harmonic.test.js** - Harmonic analysis
-- **xa-intervals.test.js** - Musical intervals
-- **xa-notation.test.js** - Music notation utilities
-
-### Transforms
-
-- **xa-constantq.test.js** - Constant-Q transform
-- **xa-inverse.test.js** - Inverse transforms
-- **xa-decompose.test.js** - HPSS, NMF
-
-### Effects & Processing
-
-- **xa-effects.test.js** - Time stretch, pitch shift
-- **xa-processing.test.js** - Audio processing utilities
-- **xa-filters.test.js** - Filter banks
-
-### Analysis
-
-- **xa-onset.test.js** - Onset detection
-- **xa-segment.test.js** - Segmentation
-- **xa-sequence.test.js** - Sequence analysis (DTW, Viterbi)
-- **xa-recurrence.test.js** - Recurrence analysis
-
-### Utilities
-
-- **xa-convert.test.js** - MIDI, frequency, time conversions
-- **xa-util.test.js** - Array operations, normalization
-- **xa-normalize.test.js** - Normalization functions
-
-## HTML Demo Pages
-
-Interactive browser demos are available in `tests/demos/`:
-
-### Viewing Demos
-
-Simply open any HTML file in a browser:
-
-```bash
-# Example: open spectral analysis demo
-open tests/demos/demo-spectral.html
-```
-
-### Available Demos
-
-1. **demo-spectral.html** - STFT, FFT, spectrograms
-2. **demo-beat.html** - Beat tracking and tempo estimation
-3. **demo-pitch.html** - Pitch detection and analysis
-4. **demo-chroma.html** - Chroma features
-5. **demo-mel.html** - Mel spectrograms
-6. **demo-constantq.html** - Constant-Q transform
-7. **demo-effects.html** - Time stretch, pitch shift
-8. **demo-onset.html** - Onset detection
-9. **demo-segment.html** - Audio segmentation
-10. **demo-sequence.html** - DTW and sequence alignment
-11. **demo-filters.html** - Filter bank visualization
-12. **demo-features.html** - Feature extraction
-13. **demo-decompose.html** - HPSS demos
-14. **demo-rhythm.html** - Rhythm analysis
-15. **demo-convert.html** - Conversion utilities
-16. **demo-util.html** - Utility functions
-17. **demo-display.html** - Visualization functions
-18. **demo-processing.html** - Audio processing
-
-Each demo provides:
-- File upload for testing with your audio
-- Interactive controls
-- Visual output
-- Real-time console logging
-
-## Test Data Fixtures
-
-The `tests/fixtures/test-data.js` module provides utilities for generating test data:
-
-### Audio Generators
+When adding tests for a new function, follow this template:
 
 ```javascript
-import { generateTestAudio, generateWhiteNoise, generateChirp } from '../fixtures/test-data.js';
+describe('functionName', () => {
+  it('should validate correctness with known input/output', () => {
+    // 1. Create synthetic test data with known properties
+    const input = generateClickTrack(120, 22050, 20);
 
-// Generate sine wave
-const audio = generateTestAudio(1.0, 22050, 440); // 1s, 22050 Hz, 440 Hz
+    // 2. Run algorithm
+    const result = functionName(input, 22050);
 
-// Generate white noise
-const noise = generateWhiteNoise(1.0, 22050);
+    // 3. VALIDATE CORRECTNESS against known output
+    expect(withinPercent(result, 120, 0.05)).toBe(true);
+  });
 
-// Generate frequency sweep
-const chirp = generateChirp(1.0, 22050, 100, 1000);
-```
+  it('should handle edge cases', () => {
+    // Test with: silence, DC, Nyquist, single sample, etc.
+  });
 
-### Validation Helpers
-
-```javascript
-import { almostEqual, isFiniteArray } from '../fixtures/test-data.js';
-
-// Compare floating point values
-expect(almostEqual(3.14159, Math.PI, 0.01)).toBe(true);
-
-// Validate array contents
-expect(isFiniteArray([1, 2, 3, 4])).toBe(true);
-```
-
-### Mock Audio Buffers
-
-```javascript
-import { createMockAudioBuffer } from '../fixtures/test-data.js';
-
-const audioData = generateTestAudio(1.0, 22050, 440);
-const mockBuffer = createMockAudioBuffer(audioData, 22050);
-```
-
-## Writing New Tests
-
-### Test Template
-
-```javascript
-import { describe, it, expect } from 'vitest';
-import * as module from '../../src/scripts/xa-module.js';
-import { generateTestAudio, almostEqual } from '../fixtures/test-data.js';
-
-describe('xa-module', () => {
-  describe('functionName', () => {
-    it('should be defined and exported', () => {
-      expect(module.functionName).toBeDefined();
-      expect(typeof module.functionName).toBe('function');
-    });
-
-    it('should handle valid inputs', () => {
-      const input = generateTestAudio(1.0, 22050, 440);
-      const result = module.functionName(input);
-      expect(result).toBeDefined();
-    });
-
-    it('should match expected output', () => {
-      // Test with known input/output
-      const result = module.functionName(knownInput);
-      expect(almostEqual(result, expectedOutput, 0.01)).toBe(true);
-    });
-
-    it('should throw on invalid inputs', () => {
-      expect(() => module.functionName(null)).toThrow();
-      expect(() => module.functionName(undefined)).toThrow();
-    });
+  it('should throw on invalid inputs', () => {
+    expect(() => functionName(null, sr)).toThrow();
   });
 });
 ```
 
-### Best Practices
+## References
 
-1. **Test Existence**: Always verify function exists and is correct type
-2. **Test Valid Inputs**: Test with realistic audio data
-3. **Test Edge Cases**: Empty arrays, boundary values, extreme parameters
-4. **Test Invalid Inputs**: Null, undefined, wrong types
-5. **Test Output**: Verify output shape, type, and values
-6. **Test Parity**: Compare with known Librosa outputs when possible
+- **Librosa test suite**: `/tmp/librosa/tests/`
+  - `test_beat.py` - Tempo detection patterns
+  - `test_features.py` - Spectral feature validation
+  - `test_convert.py` - Conversion function tests
+  - `test_onset.py` - Onset detection patterns
+
+- **NumPy testing patterns**:
+  - `np.allclose()` for array comparison
+  - `np.testing.assert_almost_equal()`
 
 ## Test Coverage Goals
 
-### Current Status (As of November 2025)
+- **100% function coverage**: Every exported function has tests
+- **Algorithmic correctness**: Every test validates BEHAVIOR, not just existence
+- **Edge case coverage**: Silence, DC, Nyquist, boundary conditions
+- **Librosa parity**: Tests match Librosa's validation patterns where applicable
 
-- FFT Module: 100% coverage (14/14 functions)
-- Convert Module: 100% coverage (20+/20+ functions)
-- Remaining Modules: Infrastructure complete, tests in progress
+---
 
-### Target Coverage
-
-- All 459 functions have at least basic existence tests
-- Core modules (FFT, spectral, mel, beat, tempo) have comprehensive tests
-- All functions tested for valid inputs, edge cases, and errors
-- Integration tests for common workflows
-
-## Continuous Integration
-
-Tests are designed to run in CI/CD pipelines:
-
-```yaml
-# Example GitHub Actions workflow
-- name: Run tests
-  run: npm test
-
-- name: Generate coverage
-  run: npm test -- --coverage
-
-- name: Upload coverage
-  uses: codecov/codecov-action@v3
-```
-
-## Troubleshooting
-
-### Tests Failing on Import
-
-Ensure module paths use correct relative paths:
-```javascript
-import * as module from '../../src/scripts/xa-module.js';
-```
-
-### JSDOM Errors
-
-Some tests require JSDOM environment for Web Audio API:
-```javascript
-// vitest.config.js
-export default defineConfig({
-  test: {
-    environment: 'jsdom'
-  }
-});
-```
-
-### Timeout Issues
-
-For long-running tests, increase timeout:
-```javascript
-it('should process large audio file', () => {
-  // ... test code
-}, 10000); // 10 second timeout
-```
-
-## Contributing
-
-When adding new Librosa functions:
-
-1. Update the function in appropriate `xa-*.js` file
-2. Add tests to corresponding `tests/librosa/xa-*.test.js`
-3. Update HTML demo if applicable
-4. Run tests to verify: `npm test`
-5. Commit both implementation and tests together
-
-## Resources
-
-- [Vitest Documentation](https://vitest.dev)
-- [Librosa Documentation](https://librosa.org/doc/latest/index.html)
-- [Pleco-Audio Main README](/home/user/pleco-xa/README.md)
-
-## License
-
-Same as pleco-audio main project.
+**Remember**: No more placeholders. Every test validates that the algorithm works correctly.

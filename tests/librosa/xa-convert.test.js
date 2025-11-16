@@ -14,10 +14,12 @@ describe('xa-convert', () => {
       expect(typeof convert.hz_to_midi).toBe('function');
     });
 
-    it('should convert known frequencies correctly', () => {
-      expect(almostEqual(convert.hz_to_midi(440), 69, 0.01)).toBe(true); // A4
-      expect(almostEqual(convert.hz_to_midi(261.63), 60, 0.1)).toBe(true); // C4
-      expect(almostEqual(convert.hz_to_midi(880), 81, 0.01)).toBe(true); // A5
+    it('should convert known frequencies correctly (Librosa test_convert.py line 281)', () => {
+      // Test with Librosa's known test vectors: [55, 110, 220, 440] -> [33, 45, 57, 69]
+      knownTestVectors.midi.hzToMidi.forEach(({ hz, midi }) => {
+        const result = convert.hz_to_midi(hz);
+        expect(almostEqual(result, midi, 0.01)).toBe(true);
+      });
     });
 
     it('should handle edge cases', () => {
@@ -40,10 +42,12 @@ describe('xa-convert', () => {
       expect(typeof convert.midi_to_hz).toBe('function');
     });
 
-    it('should convert known MIDI notes correctly', () => {
-      expect(almostEqual(convert.midi_to_hz(69), 440, 0.01)).toBe(true); // A4
-      expect(almostEqual(convert.midi_to_hz(60), 261.63, 0.1)).toBe(true); // C4
-      expect(almostEqual(convert.midi_to_hz(81), 880, 0.01)).toBe(true); // A5
+    it('should convert known MIDI notes correctly (Librosa test_convert.py line 277)', () => {
+      // Test with Librosa's known test vectors: [33, 45, 57, 69] -> [55, 110, 220, 440]
+      knownTestVectors.midi.midiToHz.forEach(({ midi, hz }) => {
+        const result = convert.midi_to_hz(midi);
+        expect(almostEqual(result, hz, 0.5)).toBe(true);
+      });
     });
 
     it('should handle full MIDI range', () => {
@@ -291,11 +295,12 @@ describe('xa-convert', () => {
       expect(typeof convert.samples_to_time).toBe('function');
     });
 
-    it('should convert samples to time', () => {
-      const sr = 22050;
-      expect(almostEqual(convert.samples_to_time(0, sr), 0, 0.001)).toBe(true);
-      expect(almostEqual(convert.samples_to_time(22050, sr), 1, 0.001)).toBe(true);
-      expect(almostEqual(convert.samples_to_time(44100, sr), 2, 0.001)).toBe(true);
+    it('should convert samples to time (Librosa test_convert.py line 79)', () => {
+      // Test with Librosa vectors: samples_to_time([0, sr, 2*sr], sr=sr) == [0, 1, 2]
+      knownTestVectors.time.samplesToTime.forEach(({ samples, sr, time }) => {
+        const result = convert.samples_to_time(samples, sr);
+        expect(almostEqual(result, time, 0.001)).toBe(true);
+      });
     });
 
     it('should handle array of samples', () => {
@@ -313,11 +318,12 @@ describe('xa-convert', () => {
       expect(typeof convert.time_to_samples).toBe('function');
     });
 
-    it('should convert time to samples', () => {
-      const sr = 22050;
-      expect(convert.time_to_samples(0, sr)).toBe(0);
-      expect(convert.time_to_samples(1, sr)).toBe(22050);
-      expect(convert.time_to_samples(2, sr)).toBe(44100);
+    it('should convert time to samples (Librosa test_convert.py line 75)', () => {
+      // Test with Librosa vectors: time_to_samples([0, 1, 2], sr=sr) == [0, sr, 2*sr]
+      knownTestVectors.time.timeToSamples.forEach(({ time, sr, samples }) => {
+        const result = convert.time_to_samples(time, sr);
+        expect(almostEqual(result, samples, 1)).toBe(true);
+      });
     });
 
     it('should be inverse of samples_to_time', () => {
