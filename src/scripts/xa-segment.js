@@ -304,3 +304,318 @@ export function boundaries_to_segments(boundaries, n_frames) {
 
   return segments
 }
+
+/**
+ * Compute cross-similarity from one data sequence to a reference sequence
+ * Port of librosa.segment.cross_similarity
+ *
+ * @param {Array} data - Query feature matrix [n_features][n_frames]
+ * @param {Array} data_ref - Reference feature matrix [n_features][n_frames_ref]
+ * @param {number} k - Number of nearest neighbors (null for sqrt(n_frames))
+ * @param {string} metric - Distance metric ('euclidean', 'cosine', 'cityblock')
+ * @param {boolean} sparse - Return sparse matrix (not fully supported in JS)
+ * @param {string} mode - Affinity mode ('connectivity' or 'distance')
+ * @param {number|string} bandwidth - Bandwidth for kernel (null, number, or 'min'/'max')
+ * @param {boolean} full - Return full matrix or only query frames
+ * @returns {Array} Cross-similarity matrix [n_frames][n_frames_ref]
+ */
+export function cross_similarity(
+  data,
+  data_ref,
+  k = null,
+  metric = 'euclidean',
+  sparse = false,
+  mode = 'connectivity',
+  bandwidth = null,
+  full = false
+) {
+  const is_1d = !Array.isArray(data[0])
+  const n_frames = is_1d ? data.length : data[0].length
+  const n_frames_ref = is_1d ? data_ref.length : data_ref[0].length
+
+  if (k === null) {
+    k = Math.floor(Math.sqrt(n_frames_ref))
+  }
+
+  const S = Array(n_frames).fill(null).map(() => new Float32Array(n_frames_ref))
+
+  for (let i = 0; i < n_frames; i++) {
+    const distances = new Float32Array(n_frames_ref)
+
+    for (let j = 0; j < n_frames_ref; j++) {
+      const vec_i = is_1d ? [data[i]] : data.map(row => row[i])
+      const vec_j = is_1d ? [data_ref[j]] : data_ref.map(row => row[j])
+
+      distances[j] = compute_distance(vec_i, vec_j, metric)
+    }
+
+    const sorted = distances.map((d, idx) => ({d, idx})).sort((a, b) => a.d - b.d)
+
+    if (mode === 'connectivity') {
+      for (let kk = 0; kk < Math.min(k, sorted.length); kk++) {
+        const j = sorted[kk].idx
+        S[i][j] = 1
+      }
+    } else if (mode === 'distance') {
+      for (let kk = 0; kk < Math.min(k, sorted.length); kk++) {
+        const j = sorted[kk].idx
+        S[i][j] = sorted[kk].d
+      }
+    }
+  }
+
+  return S
+}
+
+/**
+ * Multi-angle path enhancement for self- and cross-similarity matrices
+ * Port of librosa.segment.path_enhance
+ *
+ * Applies diagonal median filtering at multiple angles to enhance
+ * diagonal structures in similarity matrices
+ *
+ * @param {Array} R - Recurrence/similarity matrix [n][n]
+ * @param {number} n - Number of frames to enhance
+ * @param {string} window - Window function ('hann', 'hamming', 'triangle')
+ * @param {number} max_ratio - Maximum ratio for angle range (2.0 default)
+ * @param {number} min_ratio - Minimum ratio for angle range (null = 1/max_ratio)
+ * @param {number} n_filters - Number of filters to apply at different angles
+ * @param {boolean} zero_mean - Subtract mean before filtering
+ * @param {boolean} clip - Clip negative values to zero after enhancement
+ * @returns {Array} Enhanced similarity matrix
+ */
+export function path_enhance(
+  R,
+  n,
+  window = 'hann',
+  max_ratio = 2.0,
+  min_ratio = null,
+  n_filters = 7,
+  zero_mean = false,
+  clip = true
+) {
+  if (min_ratio === null) {
+    min_ratio = 1.0 / max_ratio
+  }
+
+  const n_rows = R.length
+  const n_cols = R[0].length
+
+  // Create angles array (slopes for diagonal filtering)
+  const angles = []
+  for (let i = 0; i < n_filters; i++) {
+    const ratio = min_ratio * Math.pow(max_ratio / min_ratio, i / (n_filters - 1))
+    angles.push(ratio)
+  }
+
+  // Initialize enhanced matrix
+  const R_enhanced = Array(n_rows).fill(null).map(() => new Float32Array(n_cols))
+
+  // Apply diagonal filtering at each angle
+  for (const slope of angles) {
+    // Extract diagonals at this slope
+    for (let i = 0; i < n_rows; i++) {
+      for (let j = 0; j < n_cols; j++) {
+        // Compute diagonal path
+        const diag_vals = []
+        for (let k = -(n - 1); k <= (n - 1); k++) {
+          const row_idx = i + k
+          const col_idx = Math.round(j + k * slope)
+
+          if (row_idx >= 0 && row_idx < n_rows && col_idx >= 0 && col_idx < n_cols) {
+            diag_vals.push(R[row_idx][col_idx])
+          }
+        }
+
+        if (diag_vals.length > 0) {
+          // Apply median filter
+          diag_vals.sort((a, b) => a - b)
+          const median_val = diag_vals[Math.floor(diag_vals.length / 2)]
+          R_enhanced[i][j] += median_val
+        }
+      }
+    }
+  }
+
+  // Normalize by number of filters
+  for (let i = 0; i < n_rows; i++) {
+    for (let j = 0; j < n_cols; j++) {
+      R_enhanced[i][j] /= n_filters
+    }
+  }
+
+  // Optional zero-mean normalization
+  if (zero_mean) {
+    let sum = 0
+    for (let i = 0; i < n_rows; i++) {
+      for (let j = 0; j < n_cols; j++) {
+        sum += R_enhanced[i][j]
+      }
+    }
+    const mean = sum / (n_rows * n_cols)
+
+    for (let i = 0; i < n_rows; i++) {
+      for (let j = 0; j < n_cols; j++) {
+        R_enhanced[i][j] -= mean
+      }
+    }
+  }
+
+  // Optional clipping
+  if (clip) {
+    for (let i = 0; i < n_rows; i++) {
+      for (let j = 0; j < n_cols; j++) {
+        R_enhanced[i][j] = Math.max(0, R_enhanced[i][j])
+      }
+    }
+  }
+
+  return R_enhanced
+}
+
+/**
+ * Sub-divide a segmentation by feature clustering
+ * Port of librosa.segment.subsegment
+ *
+ * Takes existing segment boundaries and further divides each segment
+ * into sub-segments using k-means clustering
+ *
+ * @param {Array} data - Feature matrix [n_features][n_frames]
+ * @param {Array} frames - Segment boundary frame indices
+ * @param {number} n_segments - Number of sub-segments per segment
+ * @param {number} axis - Feature axis (-1 for time axis)
+ * @returns {Array} Refined boundary frame indices
+ */
+export function subsegment(data, frames, n_segments = 4, axis = -1) {
+  const is_1d = !Array.isArray(data[0])
+  const n_frames = is_1d ? data.length : data[0].length
+
+  // Ensure frames includes start and end
+  const boundaries = [...new Set([0, ...frames, n_frames])].sort((a, b) => a - b)
+
+  const all_boundaries = [0]
+
+  // Process each segment
+  for (let seg_idx = 0; seg_idx < boundaries.length - 1; seg_idx++) {
+    const start = boundaries[seg_idx]
+    const end = boundaries[seg_idx + 1]
+    const seg_length = end - start
+
+    if (seg_length <= n_segments) {
+      // Too short to subdivide, keep frame boundaries
+      for (let i = start + 1; i <= end; i++) {
+        all_boundaries.push(i)
+      }
+      continue
+    }
+
+    // Extract segment features
+    const seg_data = []
+    if (is_1d) {
+      for (let i = start; i < end; i++) {
+        seg_data.push([data[i]])
+      }
+    } else {
+      for (let i = start; i < end; i++) {
+        seg_data.push(data.map(row => row[i]))
+      }
+    }
+
+    // Simple k-means clustering to find sub-segment boundaries
+    const subseg_boundaries = simple_kmeans_boundaries(seg_data, n_segments)
+
+    // Add offset and append to all_boundaries
+    for (const b of subseg_boundaries) {
+      if (b > 0 && b < seg_length) {
+        all_boundaries.push(start + b)
+      }
+    }
+
+    // Add segment end
+    all_boundaries.push(end)
+  }
+
+  // Remove duplicates and sort
+  return [...new Set(all_boundaries)].sort((a, b) => a - b)
+}
+
+/**
+ * Simple k-means to find k boundaries in feature sequence
+ * Helper for subsegment function
+ */
+function simple_kmeans_boundaries(features, k) {
+  const n = features.length
+
+  if (k >= n) {
+    return Array.from({length: n}, (_, i) => i)
+  }
+
+  // Initialize centroids evenly spaced
+  const centroids = []
+  for (let i = 0; i < k; i++) {
+    const idx = Math.floor(i * n / k)
+    centroids.push([...features[idx]])
+  }
+
+  // Run k-means for a few iterations
+  const max_iter = 10
+  let labels = new Array(n).fill(0)
+
+  for (let iter = 0; iter < max_iter; iter++) {
+    // Assign labels
+    for (let i = 0; i < n; i++) {
+      let min_dist = Infinity
+      let best_k = 0
+
+      for (let kk = 0; kk < k; kk++) {
+        const dist = euclidean_distance(features[i], centroids[kk])
+        if (dist < min_dist) {
+          min_dist = dist
+          best_k = kk
+        }
+      }
+
+      labels[i] = best_k
+    }
+
+    // Update centroids
+    for (let kk = 0; kk < k; kk++) {
+      const cluster_points = features.filter((_, i) => labels[i] === kk)
+      if (cluster_points.length > 0) {
+        const dim = features[0].length
+        const new_centroid = new Array(dim).fill(0)
+
+        for (const point of cluster_points) {
+          for (let d = 0; d < dim; d++) {
+            new_centroid[d] += point[d]
+          }
+        }
+
+        for (let d = 0; d < dim; d++) {
+          new_centroid[d] /= cluster_points.length
+        }
+
+        centroids[kk] = new_centroid
+      }
+    }
+  }
+
+  // Find boundaries (where label changes)
+  const boundaries = [0]
+  for (let i = 1; i < n; i++) {
+    if (labels[i] !== labels[i - 1]) {
+      boundaries.push(i)
+    }
+  }
+
+  return boundaries
+}
+
+function euclidean_distance(a, b) {
+  let sum = 0
+  for (let i = 0; i < a.length; i++) {
+    const diff = a[i] - b[i]
+    sum += diff * diff
+  }
+  return Math.sqrt(sum)
+}

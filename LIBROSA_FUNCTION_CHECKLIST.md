@@ -1466,13 +1466,13 @@
   - **Signature:** `(data: np.ndarray, k: int, clusterer: Optional[sklearn.cluster.AgglomerativeClustering] = None, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Bottom-up temporal segmentation.*
 
-- [ ] `cross_similarity`
+- [x] `cross_similarity`
   - **Signature:** `(data: np.ndarray, data_ref: np.ndarray, k: Optional[int] = ..., metric: str = ..., sparse: Literal[False] = ..., mode: str = ..., bandwidth: Optional[Union[np.ndarray, _FloatLike_co, str]] = None, full: bool = False) -> np.ndarray`
 
-- [ ] `cross_similarity`
+- [x] `cross_similarity`
   - **Signature:** `(data: np.ndarray, data_ref: np.ndarray, k: Optional[int] = ..., metric: str = ..., sparse: Literal[True] = ..., mode: str = ..., bandwidth: Optional[Union[np.ndarray, _FloatLike_co, str]] = None, full: bool = False) -> scipy.sparse.csc_matrix`
 
-- [ ] `cross_similarity`
+- [x] `cross_similarity`
   - **Signature:** `(data: np.ndarray, data_ref: np.ndarray, k: Optional[int] = None, metric: str = 'euclidean', sparse: bool = False, mode: str = 'connectivity', bandwidth: Optional[Union[np.ndarray, _FloatLike_co, str]] = None, full: bool = False) -> Union[np.ndarray, scipy.sparse.csc_matrix]`
   - **Docstring:** *Compute cross-similarity from one data sequence to a reference sequence.*
 
@@ -1480,7 +1480,7 @@
   - **Signature:** `(lag: _ArrayOrSparseMatrix, axis: int = -1) -> _ArrayOrSparseMatrix`
   - **Docstring:** *Convert a lag matrix into a recurrence matrix.*
 
-- [ ] `path_enhance`
+- [x] `path_enhance`
   - **Signature:** `(R: np.ndarray, n: int, window: _WindowSpec = 'hann', max_ratio: float = 2.0, min_ratio: Optional[float] = None, n_filters: int = 7, zero_mean: bool = False, clip: bool = True, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Multi-angle path enhancement for self- and cross-similarity matrices.*
 
@@ -1498,7 +1498,7 @@
   - **Signature:** `(rec: _ArrayOrSparseMatrix, pad: bool = True, axis: int = -1) -> _ArrayOrSparseMatrix`
   - **Docstring:** *Convert a recurrence matrix into a lag matrix.*
 
-- [ ] `subsegment`
+- [x] `subsegment`
   - **Signature:** `(data: np.ndarray, frames: np.ndarray, n_segments: int = 4, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Sub-divide a segmentation by feature clustering.*
 

@@ -102,7 +102,8 @@ export {
 // Structural segmentation
 export {
   recurrence_matrix, recurrence_to_lag, lag_to_recurrence, timelag_filter,
-  segment_boundaries, agglomerative_clustering, boundaries_to_segments
+  segment_boundaries, agglomerative_clustering, boundaries_to_segments,
+  cross_similarity, path_enhance, subsegment
 } from './xa-segment.js'
 
 // Sequence analysis and alignment
@@ -184,10 +185,10 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~41%',
-  implementedFunctions: 210,
+  librosaParity: '~42%',
+  implementedFunctions: 215,
   totalLibrosaFunctions: 512,
-  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions',
+  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',
