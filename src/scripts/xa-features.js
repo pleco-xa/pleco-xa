@@ -496,3 +496,56 @@ export function extract_comprehensive_features(y, sr = 22050) {
     sample_rate: sr,
   }
 }
+
+/**
+ * Stencil to compute zero crossings
+ *
+ * Computes whether a zero crossing occurs in a local window.
+ *
+ * @param {Float32Array} x - 2-element array [x_{i-1}, x_i]
+ * @param {number} threshold - Threshold for zero crossing detection
+ * @param {boolean} zero_pos - Count zeros as positive
+ * @returns {number} 1 if zero crossing, 0 otherwise
+ */
+function _zc_stencil(x, threshold, zero_pos) {
+  if (x.length !== 2) {
+    throw new Error('Stencil requires exactly 2 points')
+  }
+
+  const x_prev = x[0]
+  const x_curr = x[1]
+
+  // Check for sign change
+  if (zero_pos) {
+    // Count zero crossings including zero as positive
+    return ((x_prev < -threshold && x_curr >= threshold) ||
+            (x_prev > threshold && x_curr <= -threshold)) ? 1 : 0
+  } else {
+    // Strict sign change
+    return ((x_prev < -threshold && x_curr > threshold) ||
+            (x_prev > threshold && x_curr < -threshold)) ? 1 : 0
+  }
+}
+
+/**
+ * Vectorized wrapper for zero crossing stencil
+ *
+ * Applies zero crossing detection across an entire array.
+ *
+ * @param {Float32Array} x - Input array
+ * @param {number} threshold - Threshold for zero crossing detection
+ * @param {boolean} zero_pos - Count zeros as positive
+ * @param {Float32Array} y - Output array (modified in-place)
+ */
+function _zc_wrapper(x, threshold, zero_pos, y) {
+  const n = x.length
+
+  if (y.length !== n - 1) {
+    throw new Error('Output array must have length n-1')
+  }
+
+  for (let i = 0; i < n - 1; i++) {
+    const stencil = new Float32Array([x[i], x[i + 1]])
+    y[i] = _zc_stencil(stencil, threshold, zero_pos)
+  }
+}

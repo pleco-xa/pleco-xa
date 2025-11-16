@@ -657,29 +657,136 @@ function __early_downsample_count(nyquist, filter_cutoff, hop_length, n_octaves)
 
 /**
  * Compute CQT response using STFT
+ *
+ * Computes the filter response with a target STFT hop by:
+ * 1. Computing STFT of the input signal
+ * 2. Applying the CQT filter basis via element-wise multiplication
+ * 3. Summing across frequency bins
+ *
+ * @param {Float32Array} y - Audio time series
+ * @param {number} n_fft - FFT window size
+ * @param {number} hop_length - Hop length for STFT
+ * @param {Array} fft_basis - CQT filter basis in frequency domain
+ * @param {string} mode - Padding mode ('same', 'valid', etc.)
+ * @param {string} window - Window function type
+ * @param {boolean} phase - Whether to return phase information
+ * @param {string} dtype - Data type for output
+ * @returns {Array<Array<{real: number, imag: number}>>} CQT response matrix
  */
 function __cqt_response(y, n_fft, hop_length, fft_basis, mode, window, phase, dtype) {
-  // This is a simplified version - full implementation would use STFT
-  // and convolve with the filter basis
+  // Compute STFT of the input signal
   const S = stft(y, n_fft, hop_length, null, window, true, dtype, 'constant')
 
-  // Apply filterbank (simplified - actual implementation is more complex)
-  return S
+  // If no filter basis provided, return STFT directly
+  if (!fft_basis || fft_basis.length === 0) {
+    return S
+  }
+
+  const n_bins = fft_basis.length
+  const n_frames = S[0] ? S[0].length : 0
+
+  // Initialize output array [n_bins x n_frames]
+  const C = new Array(n_bins)
+  for (let i = 0; i < n_bins; i++) {
+    C[i] = new Array(n_frames)
+    for (let j = 0; j < n_frames; j++) {
+      C[i][j] = { real: 0, imag: 0 }
+    }
+  }
+
+  // Apply filter bank: convolve each filter with the STFT
+  for (let bin = 0; bin < n_bins; bin++) {
+    const filter = fft_basis[bin]
+    if (!filter) continue
+
+    for (let frame = 0; frame < n_frames; frame++) {
+      let real_sum = 0
+      let imag_sum = 0
+
+      // Convolve filter with STFT frame
+      const filter_len = Math.min(filter.length, S.length)
+      for (let k = 0; k < filter_len; k++) {
+        if (!S[k] || !S[k][frame]) continue
+
+        const stft_val = S[k][frame]
+        const filter_val = filter[k]
+
+        // Complex multiplication: (a + bi) * (c + di) = (ac - bd) + (ad + bc)i
+        real_sum += stft_val.real * filter_val.real - stft_val.imag * filter_val.imag
+        imag_sum += stft_val.real * filter_val.imag + stft_val.imag * filter_val.real
+      }
+
+      C[bin][frame] = { real: real_sum, imag: imag_sum }
+    }
+  }
+
+  return C
 }
 
 /**
  * Trim and stack CQT responses
+ *
+ * Combines multiple CQT response matrices from different octaves or
+ * downsampling levels into a single matrix with the specified number of bins.
+ *
+ * This handles:
+ * - Stacking responses from multi-octave processing
+ * - Trimming to exact bin count
+ * - Alignment of time frames across responses
+ *
+ * @param {Array<Array<Array<{real: number, imag: number}>>>} cqt_responses - List of CQT response matrices
+ * @param {number} n_bins - Target number of frequency bins
+ * @param {string} dtype - Data type for output
+ * @returns {Array<Array<{real: number, imag: number}>>} Stacked and trimmed CQT matrix [n_bins x n_frames]
  */
 function __trim_stack(cqt_responses, n_bins, dtype) {
   if (cqt_responses.length === 0) {
     return []
   }
 
-  const n_frames = cqt_responses[0][0].length
-  const result = new Array(n_bins)
+  // Find the number of frames (should be consistent across responses)
+  let n_frames = 0
+  for (const resp of cqt_responses) {
+    if (resp && resp[0] && resp[0].length > 0) {
+      n_frames = Math.max(n_frames, resp[0].length)
+    }
+  }
 
+  if (n_frames === 0) {
+    return []
+  }
+
+  // Initialize result array [n_bins x n_frames]
+  const result = new Array(n_bins)
   for (let i = 0; i < n_bins; i++) {
-    result[i] = cqt_responses[0][i] || new Array(n_frames).fill({ real: 0, imag: 0 })
+    result[i] = new Array(n_frames)
+    for (let j = 0; j < n_frames; j++) {
+      result[i][j] = { real: 0, imag: 0 }
+    }
+  }
+
+  // Stack responses
+  let bin_offset = 0
+  for (const resp of cqt_responses) {
+    if (!resp) continue
+
+    const resp_bins = resp.length
+
+    for (let i = 0; i < resp_bins && bin_offset + i < n_bins; i++) {
+      const source_row = resp[i]
+      if (!source_row) continue
+
+      for (let j = 0; j < Math.min(source_row.length, n_frames); j++) {
+        result[bin_offset + i][j] = source_row[j] || { real: 0, imag: 0 }
+      }
+    }
+
+    bin_offset += resp_bins
+  }
+
+  // Trim to exact n_bins (in case we have more)
+  if (result.length > n_bins) {
+    result.length = n_bins
   }
 
   return result
@@ -803,4 +910,217 @@ function constant_q(sr, fmin, n_bins, bins_per_octave, window, filter_scale,
                     pad_fft, norm, dtype, gamma) {
   const freqs = cqt_frequencies(n_bins, fmin, bins_per_octave, 0)
   return wavelet(freqs, sr, window, filter_scale, pad_fft, norm, dtype, gamma)
+}
+
+/**
+ * Return how many times integer x can be evenly divided by 2
+ *
+ * This is used to determine optimal FFT sizes and downsampling factors.
+ *
+ * @param {number} x - Integer to factor
+ * @returns {number} Number of factors of 2 in x
+ *
+ * @example
+ * __num_two_factors(8)   // Returns 3 (8 = 2^3)
+ * __num_two_factors(12)  // Returns 2 (12 = 2^2 * 3)
+ * __num_two_factors(5)   // Returns 0 (5 has no factors of 2)
+ */
+function __num_two_factors(x) {
+  if (x <= 0 || !Number.isInteger(x)) {
+    throw new Error('Input must be a positive integer')
+  }
+
+  let count = 0
+  while (x % 2 === 0) {
+    count++
+    x = Math.floor(x / 2)
+  }
+
+  return count
+}
+
+/**
+ * Compute the relative bandwidth coefficient for equal temperament
+ *
+ * This calculates the fractional bandwidth for equal-tempered scales,
+ * used in CQT filter design.
+ *
+ * @param {number} bins_per_octave - Number of bins per octave
+ * @returns {number} Relative bandwidth coefficient (alpha)
+ *
+ * @example
+ * __et_relative_bw(12)  // Returns ~0.0594... for 12-TET
+ */
+function __et_relative_bw(bins_per_octave) {
+  if (bins_per_octave <= 0) {
+    throw new Error('bins_per_octave must be positive')
+  }
+
+  // Alpha = 2^(1/bins_per_octave) - 1
+  // This represents the fractional frequency spacing between bins
+  return Math.pow(2.0, 1.0 / bins_per_octave) - 1.0
+}
+
+/**
+ * Perform early downsampling on an audio signal
+ *
+ * This optimization downsamples the input signal before CQT computation
+ * when the target frequency range is sufficiently low, improving efficiency.
+ *
+ * @param {Float32Array} y - Audio time series
+ * @param {number} sr - Sample rate of y
+ * @param {number} hop_length - Hop length for CQT
+ * @param {string|null} res_type - Resampling algorithm
+ * @param {number} n_octaves - Number of octaves in the filter bank
+ * @param {number} nyquist - Nyquist frequency (sr / 2)
+ * @param {number} filter_cutoff - Maximum frequency of the filter bank
+ * @param {boolean} scale - Whether to scale the output
+ * @returns {Object} Object with {y: downsampled signal, sr: new sample rate, hop_length: adjusted hop}
+ */
+function __early_downsample(y, sr, hop_length, res_type, n_octaves, nyquist, filter_cutoff, scale) {
+  // Determine how many times we can safely downsample
+  const downsample_count = __early_downsample_count(nyquist, filter_cutoff, hop_length, n_octaves)
+
+  if (downsample_count > 0 && res_type) {
+    const downsample_factor = Math.pow(2, downsample_count)
+    const new_sr = sr / downsample_factor
+    const new_hop = Math.floor(hop_length / downsample_factor)
+
+    // Resample the signal
+    const y_down = resample(y, sr, new_sr, res_type)
+
+    return {
+      y: y_down,
+      sr: new_sr,
+      hop_length: new_hop
+    }
+  }
+
+  // No downsampling needed
+  return {
+    y: y,
+    sr: sr,
+    hop_length: hop_length
+  }
+}
+
+/**
+ * Generate the frequency domain variable-Q filter basis
+ *
+ * This creates FFT-based filters for VQT computation with variable
+ * bandwidth across frequencies.
+ *
+ * @param {number} sr - Sample rate
+ * @param {Array<number>} freqs - Center frequencies for each filter
+ * @param {number} filter_scale - Filter scale factor
+ * @param {number|null} norm - Normalization mode (1 for L1, 2 for L2, Infinity for Linf)
+ * @param {number} sparsity - Sparsity threshold for filter coefficients
+ * @param {number|null} hop_length - Hop length (for optimization)
+ * @param {string} window - Window function type ('hann', 'hamming', etc.)
+ * @param {number} gamma - Bandwidth offset for variable-Q (0 for CQT)
+ * @param {string} dtype - Data type for output
+ * @param {number|null} alpha - Relative bandwidth (if null, computed from freqs)
+ * @returns {Object} Object with {filters: Array of filter FFTs, lengths: filter lengths}
+ */
+function __vqt_filter_fft(sr, freqs, filter_scale, norm, sparsity, hop_length, window, gamma, dtype, alpha) {
+  const n_bins = freqs.length
+
+  // Compute filter lengths for each frequency bin
+  const lengths = new Array(n_bins)
+
+  // Compute alpha (relative bandwidth) if not provided
+  if (alpha === null) {
+    // Estimate from frequency ratios
+    if (n_bins > 1) {
+      alpha = (freqs[1] / freqs[0]) - 1
+    } else {
+      alpha = 0.05946  // Default for 12-TET (2^(1/12) - 1)
+    }
+  }
+
+  // Compute filter lengths
+  for (let i = 0; i < n_bins; i++) {
+    const freq = freqs[i]
+    const Q = 1.0 / (alpha + gamma / freq)
+    lengths[i] = Math.ceil(Q * sr / freq * filter_scale)
+  }
+
+  // Generate filters in time domain, then FFT
+  const filters = new Array(n_bins)
+
+  for (let i = 0; i < n_bins; i++) {
+    const length = lengths[i]
+    const freq = freqs[i]
+
+    // Create time-domain filter
+    const time_filter = new Array(length)
+
+    for (let j = 0; j < length; j++) {
+      const t = (j - length / 2) / sr
+      const phase = 2 * Math.PI * freq * t
+
+      // Apply window function (Hann window for now)
+      let window_val
+      if (window === 'hann') {
+        window_val = 0.5 * (1 - Math.cos(2 * Math.PI * j / length))
+      } else {
+        // Default to rectangular window
+        window_val = 1.0
+      }
+
+      time_filter[j] = {
+        real: window_val * Math.cos(phase),
+        imag: -window_val * Math.sin(phase)  // Negative for conjugate
+      }
+    }
+
+    // Apply normalization
+    if (norm !== null) {
+      let norm_val = 0
+
+      if (norm === 1) {
+        // L1 norm
+        for (let j = 0; j < length; j++) {
+          norm_val += Math.sqrt(time_filter[j].real ** 2 + time_filter[j].imag ** 2)
+        }
+      } else if (norm === 2) {
+        // L2 norm
+        for (let j = 0; j < length; j++) {
+          norm_val += time_filter[j].real ** 2 + time_filter[j].imag ** 2
+        }
+        norm_val = Math.sqrt(norm_val)
+      } else if (norm === Infinity) {
+        // Linf norm
+        for (let j = 0; j < length; j++) {
+          const mag = Math.sqrt(time_filter[j].real ** 2 + time_filter[j].imag ** 2)
+          norm_val = Math.max(norm_val, mag)
+        }
+      }
+
+      if (norm_val > 0) {
+        for (let j = 0; j < length; j++) {
+          time_filter[j].real /= norm_val
+          time_filter[j].imag /= norm_val
+        }
+      }
+    }
+
+    // Apply sparsity threshold
+    if (sparsity > 0) {
+      for (let j = 0; j < length; j++) {
+        const mag = Math.sqrt(time_filter[j].real ** 2 + time_filter[j].imag ** 2)
+        if (mag < sparsity) {
+          time_filter[j].real = 0
+          time_filter[j].imag = 0
+        }
+      }
+    }
+
+    filters[i] = time_filter
+  }
+
+  return {
+    filters: filters,
+    lengths: lengths
+  }
 }

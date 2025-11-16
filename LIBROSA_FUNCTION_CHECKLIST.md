@@ -67,7 +67,7 @@
   - **Signature:** `(cumscore)`
   - **Docstring:** *Identify the position of the last detected beat*
 
-- [N/A] `__last_beat_selector` - Private Python vectorized helper for beat detection, not exposed in JavaScript API
+- [x] `__last_beat_selector` - Implemented as `__last_beat_selector()` in xa-beat-tracker.js (line 1050)
   - **Signature:** `(cumscore, mask, threshold, out)`
   - **Docstring:** *Vectorized helper to identify the last valid beat position:*
 
@@ -97,18 +97,18 @@
   - **Signature:** `(path, offset, duration, dtype: DTypeLike)`
   - **Docstring:** *Load an audio buffer using audioread.*
 
-- [N/A] `__lpc` - Private Python implementation helper for lpc() function, not exposed in JavaScript API
+- [x] `__lpc` - Implemented as `__lpc()` in xa-audioio.js (line 188)
   - **Signature:** `(y: np.ndarray, order: int, ar_coeffs: np.ndarray, ar_coeffs_prev: np.ndarray, reflect_coeff: np.ndarray, den: np.ndarray, epsilon: float) -> np.ndarray`
 
 - [N/A] `__soundfile_load` - Private Python loader using soundfile library, not applicable to JavaScript (browser uses Web Audio API/File API)
   - **Signature:** `(path, offset, duration, dtype)`
   - **Docstring:** *Load an audio buffer using soundfile.*
 
-- [N/A] `_zc_stencil` - Private Python stencil implementation for zero crossings, not exposed in JavaScript API
+- [x] `_zc_stencil` - Implemented as `_zc_stencil()` in xa-features.js (line 510)
   - **Signature:** `(x: np.ndarray, threshold: float, zero_pos: bool) -> np.ndarray`
   - **Docstring:** *Stencil to compute zero crossings*
 
-- [N/A] `_zc_wrapper` - Private Python vectorized wrapper for zero crossings, not exposed in JavaScript API
+- [x] `_zc_wrapper` - Implemented as `_zc_wrapper()` in xa-features.js (line 540)
   - **Signature:** `(x: np.ndarray, threshold: float, zero_pos: bool, y: np.ndarray) -> None`
   - **Docstring:** *Vectorized wrapper for zero crossing stencil*
 
@@ -170,31 +170,31 @@
 
 ## `librosa/core/constantq.py`
 
-- [N/A] `__cqt_response` - Private Python implementation helper for CQT computation, not exposed in JavaScript API
+- [x] `__cqt_response` - Implemented as `__cqt_response()` in xa-constantq.js (line 676)
   - **Signature:** `(y, n_fft, hop_length, fft_basis, mode, window='ones', phase=True, dtype=None)`
   - **Docstring:** *Compute the filter response with a target STFT hop.*
 
-- [N/A] `__early_downsample` - Private Python implementation helper for early downsampling in CQT, not exposed in JavaScript API
+- [x] `__early_downsample` - Implemented as `__early_downsample()` in xa-constantq.js (line 873)
   - **Signature:** `(y, sr, hop_length, res_type, n_octaves, nyquist, filter_cutoff, scale)`
   - **Docstring:** *Perform early downsampling on an audio signal, if it applies.*
 
-- [N/A] `__early_downsample_count` - Private Python implementation helper for downsampling count calculation, not exposed in JavaScript API
+- [x] `__early_downsample_count` - Implemented as `__early_downsample_count()` in xa-constantq.js (line 646)
   - **Signature:** `(nyquist, filter_cutoff, hop_length, n_octaves)`
   - **Docstring:** *Compute the number of early downsampling operations*
 
-- [N/A] `__et_relative_bw` - Private Python implementation helper for equal-tempered relative bandwidth, not exposed in JavaScript API
+- [x] `__et_relative_bw` - Implemented as `__et_relative_bw()` in xa-constantq.js (line 847)
   - **Signature:** `(bins_per_octave: int) -> np.ndarray`
   - **Docstring:** *Compute the relative bandwidth coefficient for equal*
 
-- [N/A] `__num_two_factors` - Private Python utility helper for counting factors of 2, not exposed in JavaScript API
+- [x] `__num_two_factors` - Implemented as `__num_two_factors()` in xa-constantq.js (line 821)
   - **Signature:** `(x)`
   - **Docstring:** *Return how many times integer x can be evenly divided by 2.*
 
-- [N/A] `__trim_stack` - Private Python implementation helper for trimming and stacking CQT responses, not exposed in JavaScript API
+- [x] `__trim_stack` - Implemented as `__trim_stack()` in xa-constantq.js (line 742)
   - **Signature:** `(cqt_resp: List[np.ndarray], n_bins: int, dtype: DTypeLike) -> np.ndarray`
   - **Docstring:** *Trim and stack a collection of CQT responses*
 
-- [N/A] `__vqt_filter_fft` - Private Python implementation helper for VQT filter generation, not exposed in JavaScript API
+- [x] `__vqt_filter_fft` - Implemented as `__vqt_filter_fft()` in xa-constantq.js (line 918)
   - **Signature:** `(sr, freqs, filter_scale, norm, sparsity, hop_length=None, window='hann', gamma=0.0, dtype=np.complex64, alpha=None)`
   - **Docstring:** *Generate the frequency domain variable-Q filter basis.*
 
@@ -847,29 +847,29 @@
 
 ## `librosa/core/pitch.py`
 
-- [N/A] `__check_yin_params` - Private Python validation helper for YIN parameters, not exposed in JavaScript API
+- [x] `__check_yin_params` - Implemented as `__check_yin_params()` in xa-pitch.js (line 710)
   - **Signature:** `(sr: float, fmax: float, fmin: float, frame_length: int)`
   - **Docstring:** *Check the feasibility of yin/pyin parameters against*
 
-- [N/A] `__pyin_helper` - Private Python implementation helper for pYIN algorithm, not exposed in JavaScript API
+- [x] `__pyin_helper` - Implemented as `__pyin_helper()` in xa-pitch.js (line 895)
   - **Signature:** `(yin_frames, parabolic_shifts, sr, thresholds, boltzmann_parameter, beta_probs, no_trough_prob, min_period, fmin, n_pitch_bins, n_bins_per_semitone)`
 
-- [N/A] `_cumulative_mean_normalized_difference` - Private Python implementation helper for YIN algorithm, not exposed in JavaScript API
+- [x] `_cumulative_mean_normalized_difference` - Implemented as `_cumulative_mean_normalized_difference()` in xa-pitch.js (line 741)
   - **Signature:** `(y_frames: np.ndarray, min_period: int, max_period: int) -> np.ndarray`
   - **Docstring:** *Cumulative mean normalized difference function (equation 8 in [#]_)*
 
-- [N/A] `_helper` - Private Python implementation helper, not exposed in JavaScript API
+- [N/A] `_helper` - Private Python implementation helper, already incorporated into JavaScript implementations
   - **Signature:** `(a, b)`
 
-- [N/A] `_parabolic_interpolation` - Private Python implementation helper for parabolic interpolation, not exposed in JavaScript API
+- [x] `_parabolic_interpolation` - Implemented as `_parabolic_interpolation()` in xa-pitch.js (line 790)
   - **Signature:** `(x: np.ndarray, axis: int = -2) -> np.ndarray`
   - **Docstring:** *Piecewise parabolic interpolation for yin and pyin.*
 
-- [N/A] `_pi_stencil` - Private Python stencil helper for parabolic interpolation, not exposed in JavaScript API
+- [x] `_pi_stencil` - Implemented as `_pi_stencil()` in xa-pitch.js (line 839)
   - **Signature:** `(x: np.ndarray) -> np.ndarray`
   - **Docstring:** *Stencil to compute local parabolic interpolation*
 
-- [N/A] `_pi_wrapper` - Private Python vectorized wrapper for parabolic interpolation, not exposed in JavaScript API
+- [x] `_pi_wrapper` - Implemented as `_pi_wrapper()` in xa-pitch.js (line 864)
   - **Signature:** `(x: np.ndarray, y: np.ndarray) -> None`
   - **Docstring:** *Vectorized wrapper for the parabolic interpolation stencil*
 
@@ -1508,29 +1508,29 @@
 
 ## `librosa/sequence.py`
 
-- [N/A] `__dtw_backtracking` - Private Python implementation helper for DTW backtracking, not exposed in JavaScript API
+- [x] `__dtw_backtracking` - Implemented as `__dtw_backtracking()` in xa-sequence.js (line 505)
   - **Signature:** `(steps: np.ndarray, step_sizes_sigma: np.ndarray, subseq: bool, start: Optional[int] = None) -> List[Tuple[int, int]]`
   - **Docstring:** *Backtrack optimal warping path.*
 
-- [N/A] `__dtw_calc_accu_cost` - Private Python implementation helper for DTW cost calculation, not exposed in JavaScript API
+- [x] `__dtw_calc_accu_cost` - Implemented as `__dtw_calc_accu_cost()` in xa-sequence.js (line 446)
   - **Signature:** `(C: np.ndarray, D: np.ndarray, steps: np.ndarray, step_sizes_sigma: np.ndarray, weights_mul: np.ndarray, weights_add: np.ndarray, max_0: int, max_1: int) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Calculate the accumulated cost matrix D.*
 
-- [N/A] `__rqa_backtrack` - Private Python implementation helper for RQA backtracking, not exposed in JavaScript API
+- [x] `__rqa_backtrack` - Implemented as `__rqa_backtrack()` in xa-sequence.js (line 686)
   - **Signature:** `(score, pointers)`
   - **Docstring:** *RQA path backtracking*
 
-- [N/A] `__rqa_dp` - Private Python implementation helper for RQA dynamic programming, not exposed in JavaScript API
+- [x] `__rqa_dp` - Implemented as `__rqa_dp()` in xa-sequence.js (line 607)
   - **Signature:** `(sim: np.ndarray, gap_onset: float, gap_extend: float, knight: bool) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *RQA dynamic programming implementation*
 
-- [N/A] `_helper` - Private Python helper function for Viterbi, not exposed in JavaScript API
+- [N/A] `_helper` - Private Python helper function for Viterbi, already incorporated into JavaScript implementation
   - **Signature:** `(lp)`
 
-- [N/A] `_helper` - Private Python helper function for Viterbi (overload), not exposed in JavaScript API
+- [N/A] `_helper` - Private Python helper function for Viterbi (overload), already incorporated into JavaScript implementation
   - **Signature:** `(lp)`
 
-- [N/A] `_viterbi` - Private Python implementation helper for Viterbi algorithm, not exposed in JavaScript API
+- [x] `_viterbi` - Implemented as `_viterbi()` in xa-sequence.js (line 551)
   - **Signature:** `(log_prob: np.ndarray, log_trans: np.ndarray, log_p_init: np.ndarray) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Core Viterbi algorithm.*
 

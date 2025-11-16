@@ -695,3 +695,270 @@ export function estimate_tuning(
   // Estimate tuning from collected frequencies
   return pitch_tuning(frequencies, resolution, bins_per_octave)
 }
+
+/**
+ * Check the feasibility of YIN/pYIN parameters
+ *
+ * Validates that the parameters are physically and algorithmically sound.
+ *
+ * @param {number} sr - Sample rate
+ * @param {number} fmax - Maximum frequency
+ * @param {number} fmin - Minimum frequency
+ * @param {number} frame_length - Frame length in samples
+ * @throws {Error} If parameters are invalid
+ */
+function __check_yin_params(sr, fmax, fmin, frame_length) {
+  if (fmin <= 0) {
+    throw new Error('fmin must be positive')
+  }
+
+  if (fmax <= fmin) {
+    throw new Error('fmax must be greater than fmin')
+  }
+
+  if (fmax >= sr / 2) {
+    throw new Error(`fmax=${fmax} exceeds Nyquist frequency ${sr/2}`)
+  }
+
+  const max_period = Math.floor(sr / fmin)
+  if (max_period >= frame_length) {
+    throw new Error(
+      `frame_length=${frame_length} is too short for fmin=${fmin} (requires ${max_period + 1})`
+    )
+  }
+}
+
+/**
+ * Cumulative mean normalized difference function for YIN algorithm
+ *
+ * Implements equation 8 from the YIN paper (de Cheveigné & Kawahara, 2002).
+ *
+ * @param {Array<Float32Array>} y_frames - Framed audio data [n_frames x frame_length]
+ * @param {number} min_period - Minimum period (samples)
+ * @param {number} max_period - Maximum period (samples)
+ * @returns {Array<Float32Array>} CMND values [n_frames x n_lags]
+ */
+function _cumulative_mean_normalized_difference(y_frames, min_period, max_period) {
+  const n_frames = y_frames.length
+  const frame_length = y_frames[0].length
+  const n_lags = max_period - min_period + 1
+
+  const cmnd = Array(n_frames).fill(null).map(() => new Float32Array(n_lags))
+
+  for (let f = 0; f < n_frames; f++) {
+    const frame = y_frames[f]
+
+    // Compute difference function
+    const diff = new Float32Array(n_lags)
+    for (let tau_idx = 0; tau_idx < n_lags; tau_idx++) {
+      const tau = min_period + tau_idx
+      let sum = 0
+
+      for (let j = 0; j < frame_length - tau; j++) {
+        const delta = frame[j] - frame[j + tau]
+        sum += delta * delta
+      }
+
+      diff[tau_idx] = sum
+    }
+
+    // Compute cumulative mean normalization
+    cmnd[f][0] = 1.0  // By definition
+
+    let cumsum = diff[0]
+    for (let tau_idx = 1; tau_idx < n_lags; tau_idx++) {
+      cumsum += diff[tau_idx]
+
+      // CMND: d'(tau) = d(tau) / [(1/tau) * sum_{j=1}^{tau} d(j)]
+      const mean = cumsum / (tau_idx + 1)
+      cmnd[f][tau_idx] = mean > 0 ? diff[tau_idx] / mean : 0
+    }
+  }
+
+  return cmnd
+}
+
+/**
+ * Piecewise parabolic interpolation for YIN and pYIN
+ *
+ * Refines local minima using parabolic interpolation for sub-sample accuracy.
+ *
+ * @param {Array<Float32Array>|Float32Array} x - Input array (1D or 2D)
+ * @param {number} axis - Axis along which to interpolate (default: -2)
+ * @returns {Array<Float32Array>|Float32Array} Interpolated shifts
+ */
+function _parabolic_interpolation(x, axis = -2) {
+  // Handle 1D case
+  if (x instanceof Float32Array || (Array.isArray(x) && typeof x[0] === 'number')) {
+    const n = x.length
+    const shifts = new Float32Array(n)
+
+    for (let i = 1; i < n - 1; i++) {
+      const alpha = x[i - 1]
+      const beta = x[i]
+      const gamma = x[i + 1]
+
+      const denom = alpha - 2 * beta + gamma
+      if (Math.abs(denom) > 1e-10) {
+        shifts[i] = 0.5 * (alpha - gamma) / denom
+      }
+    }
+
+    return shifts
+  }
+
+  // Handle 2D case
+  const n_frames = x.length
+  const n_bins = x[0].length
+  const shifts = Array(n_frames).fill(null).map(() => new Float32Array(n_bins))
+
+  for (let f = 0; f < n_frames; f++) {
+    for (let i = 1; i < n_bins - 1; i++) {
+      const alpha = x[f][i - 1]
+      const beta = x[f][i]
+      const gamma = x[f][i + 1]
+
+      const denom = alpha - 2 * beta + gamma
+      if (Math.abs(denom) > 1e-10) {
+        shifts[f][i] = 0.5 * (alpha - gamma) / denom
+      }
+    }
+  }
+
+  return shifts
+}
+
+/**
+ * Stencil to compute local parabolic interpolation
+ *
+ * Computes parabolic interpolation coefficients from a local 3-point stencil.
+ *
+ * @param {Float32Array} x - 3-element array [x_{i-1}, x_i, x_{i+1}]
+ * @returns {number} Parabolic shift
+ */
+function _pi_stencil(x) {
+  if (x.length !== 3) {
+    throw new Error('Stencil requires exactly 3 points')
+  }
+
+  const alpha = x[0]
+  const beta = x[1]
+  const gamma = x[2]
+
+  const denom = alpha - 2 * beta + gamma
+  if (Math.abs(denom) < 1e-10) {
+    return 0
+  }
+
+  return 0.5 * (alpha - gamma) / denom
+}
+
+/**
+ * Vectorized wrapper for the parabolic interpolation stencil
+ *
+ * Applies parabolic interpolation stencil across an array.
+ *
+ * @param {Float32Array} x - Input array
+ * @param {Float32Array} y - Output array (modified in-place)
+ */
+function _pi_wrapper(x, y) {
+  const n = x.length
+
+  if (y.length !== n) {
+    throw new Error('Input and output arrays must have same length')
+  }
+
+  for (let i = 1; i < n - 1; i++) {
+    const stencil = new Float32Array([x[i - 1], x[i], x[i + 1]])
+    y[i] = _pi_stencil(stencil)
+  }
+}
+
+/**
+ * Helper function for pYIN algorithm
+ *
+ * Processes YIN frames to extract pitch probabilities for pYIN.
+ *
+ * @param {Array<Float32Array>} yin_frames - YIN CMND frames
+ * @param {Array<Float32Array>} parabolic_shifts - Parabolic interpolation shifts
+ * @param {number} sr - Sample rate
+ * @param {Array<number>} thresholds - Threshold values for pYIN
+ * @param {number} boltzmann_parameter - Boltzmann parameter for probability calculation
+ * @param {Array<Array<number>>} beta_probs - Beta probability distribution
+ * @param {number} no_trough_prob - Probability for no trough case
+ * @param {number} min_period - Minimum period
+ * @param {number} fmin - Minimum frequency
+ * @param {number} n_pitch_bins - Number of pitch bins
+ * @param {number} n_bins_per_semitone - Bins per semitone
+ * @returns {Array<Float32Array>} Pitch probabilities [n_frames x n_pitch_bins]
+ */
+function __pyin_helper(
+  yin_frames,
+  parabolic_shifts,
+  sr,
+  thresholds,
+  boltzmann_parameter,
+  beta_probs,
+  no_trough_prob,
+  min_period,
+  fmin,
+  n_pitch_bins,
+  n_bins_per_semitone
+) {
+  const n_frames = yin_frames.length
+  const probs = Array(n_frames).fill(null).map(() => new Float32Array(n_pitch_bins))
+
+  for (let f = 0; f < n_frames; f++) {
+    const frame = yin_frames[f]
+    const shifts = parabolic_shifts[f]
+
+    // Find troughs (local minima) below thresholds
+    const troughs = []
+    for (let i = 1; i < frame.length - 1; i++) {
+      if (frame[i] < frame[i - 1] && frame[i] < frame[i + 1]) {
+        // Check if below any threshold
+        for (const thresh of thresholds) {
+          if (frame[i] < thresh) {
+            const period = min_period + i + shifts[i]
+            const freq = sr / period
+
+            if (freq >= fmin) {
+              troughs.push({
+                period: period,
+                freq: freq,
+                value: frame[i],
+                threshold_idx: thresholds.indexOf(thresh)
+              })
+            }
+            break
+          }
+        }
+      }
+    }
+
+    // Distribute probability mass
+    if (troughs.length === 0) {
+      // No trough case - uniform distribution with low probability
+      probs[f].fill(no_trough_prob / n_pitch_bins)
+    } else {
+      // Compute probabilities using Boltzmann distribution
+      const weights = troughs.map(t => Math.exp(-t.value / boltzmann_parameter))
+      const weight_sum = weights.reduce((a, b) => a + b, 0)
+
+      for (let i = 0; i < troughs.length; i++) {
+        const prob = weights[i] / weight_sum
+        const freq = troughs[i].freq
+
+        // Map frequency to pitch bin
+        const midi = 12 * Math.log2(freq / 440) + 69
+        const pitch_bin = Math.floor((midi - 12 * Math.log2(fmin / 440) - 69) * n_bins_per_semitone)
+
+        if (pitch_bin >= 0 && pitch_bin < n_pitch_bins) {
+          probs[f][pitch_bin] += prob
+        }
+      }
+    }
+  }
+
+  return probs
+}

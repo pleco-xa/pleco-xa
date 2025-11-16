@@ -170,6 +170,70 @@ export function autocorrelate(y, maxSize = y.length) {
   return out
 }
 
+/**
+ * Private helper for LPC computation using Levinson-Durbin recursion
+ *
+ * Computes Linear Predictive Coding coefficients from autocorrelation.
+ * This is an alternative implementation helper for the main lpc() function.
+ *
+ * @param {Float32Array|Float64Array} y - Input signal
+ * @param {number} order - LPC order
+ * @param {Float64Array} ar_coeffs - Output buffer for AR coefficients
+ * @param {Float64Array} ar_coeffs_prev - Previous AR coefficients (work buffer)
+ * @param {Float64Array} reflect_coeff - Reflection coefficients output
+ * @param {Float64Array} den - Denominator buffer
+ * @param {number} epsilon - Small value to prevent division by zero
+ * @returns {Float64Array} AR coefficients
+ */
+function __lpc(y, order, ar_coeffs, ar_coeffs_prev, reflect_coeff, den, epsilon) {
+  const n = y.length
+
+  // Compute autocorrelation
+  const r = new Float64Array(order + 1)
+  for (let lag = 0; lag <= order; lag++) {
+    let sum = 0
+    for (let i = 0; i < n - lag; i++) {
+      sum += y[i] * y[i + lag]
+    }
+    r[lag] = sum
+  }
+
+  // Levinson-Durbin recursion
+  let error = r[0]
+
+  for (let i = 0; i < order; i++) {
+    // Compute reflection coefficient
+    let acc = 0
+    for (let j = 0; j < i; j++) {
+      acc += ar_coeffs[j] * r[i - j]
+    }
+
+    const k = (r[i + 1] - acc) / (error + epsilon)
+    reflect_coeff[i] = k
+
+    // Update AR coefficients
+    for (let j = 0; j < i; j++) {
+      ar_coeffs_prev[j] = ar_coeffs[j]
+    }
+
+    for (let j = 0; j < i; j++) {
+      ar_coeffs[j] = ar_coeffs_prev[j] - k * ar_coeffs_prev[i - 1 - j]
+    }
+    ar_coeffs[i] = k
+
+    // Update error
+    error *= (1 - k * k)
+  }
+
+  // Set up denominator polynomial [1, -a1, -a2, ..., -ap]
+  den[0] = 1
+  for (let i = 0; i < order; i++) {
+    den[i + 1] = -ar_coeffs[i]
+  }
+
+  return ar_coeffs
+}
+
 /** Burg LPC (real‑valued) — returns LPC denominator polynomial a[0..p], a[0] == 1  */
 export function lpc(signal, order) {
   if (order < 1 || order >= signal.length)
