@@ -27,7 +27,7 @@ export function time_stretch(y, rate = 1.0, n_fft = 2048, hop_length = null) {
 
   const D_stretch = phase_vocoder(D, rate, hop_length)
 
-  return istft(D_stretch, hop_length, null, 'hann', true, y.length * rate)
+  return istft(D_stretch, hop_length, null, 'hann', true, Math.round(y.length / rate))
 }
 
 /**
