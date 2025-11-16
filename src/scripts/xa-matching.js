@@ -578,3 +578,148 @@ export function matchBeatsToOnsets(beats, onsets, tolerance = 0.1) {
     return { mapping: [], accuracy: null, validMatches: [], matchRate: 0 }
   }
 }
+
+/**
+ * Match one set of events to another
+ * Port of librosa.util.match.match_events
+ *
+ * Matches events from `events_from` to the closest events in `events_to`
+ * using nearest-neighbor search with boundary conditions
+ *
+ * @param {Array<number>} events_from - Source event times
+ * @param {Array<number>} events_to - Target event times to match against
+ * @param {boolean} left - Include left boundary (events before first target)
+ * @param {boolean} right - Include right boundary (events after last target)
+ * @returns {Array<number>} Indices into events_to for each event in events_from
+ *
+ * @example
+ * match_events([0.5, 1.5, 2.5], [0, 1, 2, 3])  // [0, 1, 2]
+ */
+export function match_events(events_from, events_to, left = true, right = true) {
+  if (!Array.isArray(events_from) || !Array.isArray(events_to)) {
+    throw new TypeError('events_from and events_to must be arrays')
+  }
+
+  const n_from = events_from.length
+  const n_to = events_to.length
+
+  if (n_to === 0) {
+    throw new Error('events_to cannot be empty')
+  }
+
+  const matches = new Array(n_from)
+
+  for (let i = 0; i < n_from; i++) {
+    const event = events_from[i]
+    let best_idx = 0
+    let min_dist = Infinity
+
+    // Find closest event in events_to
+    for (let j = 0; j < n_to; j++) {
+      const dist = Math.abs(event - events_to[j])
+      if (dist < min_dist) {
+        min_dist = dist
+        best_idx = j
+      }
+    }
+
+    // Handle boundary conditions
+    if (!left && event < events_to[0]) {
+      // Event before first target and left boundary not allowed
+      matches[i] = -1
+    } else if (!right && event > events_to[n_to - 1]) {
+      // Event after last target and right boundary not allowed
+      matches[i] = -1
+    } else {
+      matches[i] = best_idx
+    }
+  }
+
+  return matches
+}
+
+/**
+ * Match one set of time intervals to another
+ * Port of librosa.util.match.match_intervals
+ *
+ * Matches intervals using Jaccard similarity (intersection over union)
+ * Each interval in `intervals_from` is matched to the best-overlapping
+ * interval in `intervals_to`, or -1 if no overlap meets the threshold
+ *
+ * @param {Array<Array<number>>} intervals_from - Source intervals [[start, end], ...]
+ * @param {Array<Array<number>>} intervals_to - Target intervals to match against
+ * @param {boolean} strict - If true, require at least some overlap (Jaccard > 0)
+ * @returns {Array<number>} Indices into intervals_to for each interval in intervals_from
+ *
+ * @example
+ * match_intervals([[0, 1], [1, 2]], [[0, 0.5], [0.5, 1.5], [2, 3]])
+ * // Returns [1, 1] - first interval matches best with second target
+ */
+export function match_intervals(intervals_from, intervals_to, strict = true) {
+  if (!Array.isArray(intervals_from) || !Array.isArray(intervals_to)) {
+    throw new TypeError('intervals_from and intervals_to must be arrays')
+  }
+
+  const n_from = intervals_from.length
+  const n_to = intervals_to.length
+
+  if (n_to === 0) {
+    throw new Error('intervals_to cannot be empty')
+  }
+
+  // Validate intervals
+  for (const interval of intervals_from) {
+    if (!Array.isArray(interval) || interval.length !== 2) {
+      throw new Error('Each interval must be [start, end]')
+    }
+    if (interval[0] > interval[1]) {
+      throw new Error('Interval start must be <= end')
+    }
+  }
+
+  for (const interval of intervals_to) {
+    if (!Array.isArray(interval) || interval.length !== 2) {
+      throw new Error('Each interval must be [start, end]')
+    }
+    if (interval[0] > interval[1]) {
+      throw new Error('Interval start must be <= end')
+    }
+  }
+
+  const matches = new Array(n_from)
+
+  for (let i = 0; i < n_from; i++) {
+    const [from_start, from_end] = intervals_from[i]
+    let best_idx = -1
+    let max_jaccard = 0
+
+    for (let j = 0; j < n_to; j++) {
+      const [to_start, to_end] = intervals_to[j]
+
+      // Compute Jaccard similarity (intersection over union)
+      const intersection_start = Math.max(from_start, to_start)
+      const intersection_end = Math.min(from_end, to_end)
+      const intersection = Math.max(0, intersection_end - intersection_start)
+
+      const union_start = Math.min(from_start, to_start)
+      const union_end = Math.max(from_end, to_end)
+      const union = union_end - union_start
+
+      const jaccard = union > 0 ? intersection / union : 0
+
+      if (jaccard > max_jaccard) {
+        max_jaccard = jaccard
+        best_idx = j
+      }
+    }
+
+    // Apply strict condition if requested
+    if (strict && max_jaccard === 0) {
+      matches[i] = -1
+    } else {
+      matches[i] = best_idx
+    }
+  }
+
+  return matches
+}

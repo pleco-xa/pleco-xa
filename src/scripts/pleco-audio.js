@@ -174,6 +174,9 @@ export {
   thaat_to_degrees
 } from './xa-notation.js'
 
+// Matching utilities
+export { match_events, match_intervals } from './xa-matching.js'
+
 // Version info
 export const VERSION = '1.0.0'
 export const LIBROSA_COMPAT_VERSION = '0.10.x'
@@ -185,10 +188,10 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~42%',
-  implementedFunctions: 215,
+  librosaParity: '~42.4%',
+  implementedFunctions: 217,
   totalLibrosaFunctions: 512,
-  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation',
+  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation, matching',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',

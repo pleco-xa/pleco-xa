@@ -1742,11 +1742,11 @@
   - **Signature:** `(intervals_from: np.ndarray, intervals_to: np.ndarray, strict: bool = True) -> np.ndarray`
   - **Docstring:** *Numba-accelerated interval matching algorithm.*
 
-- [ ] `match_events`
+- [x] `match_events`
   - **Signature:** `(events_from: _SequenceLike, events_to: _SequenceLike, left: bool = True, right: bool = True) -> np.ndarray`
   - **Docstring:** *Match one set of events to another.*
 
-- [ ] `match_intervals`
+- [x] `match_intervals`
   - **Signature:** `(intervals_from: np.ndarray, intervals_to: np.ndarray, strict: bool = True) -> np.ndarray`
   - **Docstring:** *Match one set of time intervals to another.*
 
