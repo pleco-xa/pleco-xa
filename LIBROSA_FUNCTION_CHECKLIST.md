@@ -6,76 +6,76 @@
 
 ## `librosa/_cache.py`
 
-- [ ] `__call__`
+- [N/A] `__call__` - Python magic method for cache decorator, not applicable to JavaScript
   - **Signature:** `(self, level: int) -> Callable[[_F], _F]`
   - **Docstring:** *Cache with an explicitly defined level.*
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for cache class, not applicable to JavaScript ES6 classes
   - **Signature:** `(self, *args: Any, **kwargs: Any)`
 
-- [ ] `_decorator_apply`
+- [N/A] `_decorator_apply` - Python decorator metaprogramming, JavaScript handles caching differently
   - **Signature:** `(dec, func)`
 
-- [ ] `clear`
+- [N/A] `clear` - Python cache instance method, not applicable (JavaScript doesn't use this cache infrastructure)
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> None`
   - **Docstring:** *Clear the cache*
 
-- [ ] `eval`
+- [N/A] `eval` - Python cache internal, not applicable to JavaScript
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> Any`
   - **Docstring:** *Evaluate a function*
 
-- [ ] `format`
+- [N/A] `format` - Python cache formatting method, not applicable to JavaScript
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> Any`
   - **Docstring:** *Return the formatted representation of an object*
 
-- [ ] `reduce_size`
+- [N/A] `reduce_size` - Python cache management method, not applicable to JavaScript
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> None`
   - **Docstring:** *Reduce the size of the cache*
 
-- [ ] `warn`
+- [N/A] `warn` - Python cache warning method, not applicable to JavaScript
   - **Signature:** `(self, *args: Any, **kwargs: Any) -> None`
   - **Docstring:** *Raise a warning*
 
-- [ ] `wrapper`
+- [N/A] `wrapper` - Python decorator wrapper, JavaScript handles caching differently
   - **Signature:** `(function)`
   - **Docstring:** *Add an input/output cache to the specified function.*
 
 ## `librosa/_typing.py`
 
-- [ ] `_ensure_not_reachable`
+- [N/A] `_ensure_not_reachable` - Python type checking helper for unreachable code paths, not applicable to JavaScript
   - **Signature:** `(__arg: Never)`
   - **Docstring:** *Ensure that a code path is not reachable, like typing_extension.assert_never.*
 
 ## `librosa/beat.py`
 
-- [ ] `__beat_local_score`
+- [N/A] `__beat_local_score` - Private Python implementation helper for beat_track, not exposed in JavaScript API
   - **Signature:** `(onset_envelope, frames_per_beat, localscore)`
 
-- [ ] `__beat_track_dp`
+- [N/A] `__beat_track_dp` - Private Python implementation helper for beat tracking DP algorithm, not exposed in JavaScript API
   - **Signature:** `(localscore, frames_per_beat, tightness, backlink, cumscore)`
   - **Docstring:** *Core dynamic program for beat tracking*
 
-- [ ] `__beat_tracker`
+- [N/A] `__beat_tracker` - Private Python implementation helper for beat tracking, not exposed in JavaScript API
   - **Signature:** `(onset_envelope: np.ndarray, bpm: np.ndarray, frame_rate: float, tightness: float, trim: bool) -> np.ndarray`
   - **Docstring:** *Tracks beats in an onset strength envelope.*
 
-- [ ] `__dp_backtrack`
+- [N/A] `__dp_backtrack` - Private Python implementation helper for DP backtracking, not exposed in JavaScript API
   - **Signature:** `(backlinks, tail, beats)`
   - **Docstring:** *Populate the beat indicator array from a sequence of backlinks*
 
-- [ ] `__last_beat`
+- [N/A] `__last_beat` - Private Python implementation helper for beat detection, not exposed in JavaScript API
   - **Signature:** `(cumscore)`
   - **Docstring:** *Identify the position of the last detected beat*
 
-- [ ] `__last_beat_selector`
+- [N/A] `__last_beat_selector` - Private Python vectorized helper for beat detection, not exposed in JavaScript API
   - **Signature:** `(cumscore, mask, threshold, out)`
   - **Docstring:** *Vectorized helper to identify the last valid beat position:*
 
-- [ ] `__normalize_onsets`
+- [N/A] `__normalize_onsets` - Private Python implementation helper for onset normalization, not exposed in JavaScript API
   - **Signature:** `(onsets)`
   - **Docstring:** *Normalize onset strength by its standard deviation*
 
-- [ ] `__trim_beats`
+- [N/A] `__trim_beats` - Private Python implementation helper for beat trimming, not exposed in JavaScript API
   - **Signature:** `(localscore, beats, trim, beats_trimmed)`
   - **Docstring:** *Remove spurious leading and trailing beats from the detection array*
 
@@ -93,22 +93,22 @@
 
 ## `librosa/core/audio.py`
 
-- [ ] `__audioread_load`
+- [N/A] `__audioread_load` - Private Python loader using audioread library, not applicable to JavaScript (browser uses Web Audio API/File API)
   - **Signature:** `(path, offset, duration, dtype: DTypeLike)`
   - **Docstring:** *Load an audio buffer using audioread.*
 
-- [ ] `__lpc`
+- [N/A] `__lpc` - Private Python implementation helper for lpc() function, not exposed in JavaScript API
   - **Signature:** `(y: np.ndarray, order: int, ar_coeffs: np.ndarray, ar_coeffs_prev: np.ndarray, reflect_coeff: np.ndarray, den: np.ndarray, epsilon: float) -> np.ndarray`
 
-- [ ] `__soundfile_load`
+- [N/A] `__soundfile_load` - Private Python loader using soundfile library, not applicable to JavaScript (browser uses Web Audio API/File API)
   - **Signature:** `(path, offset, duration, dtype)`
   - **Docstring:** *Load an audio buffer using soundfile.*
 
-- [ ] `_zc_stencil`
+- [N/A] `_zc_stencil` - Private Python stencil implementation for zero crossings, not exposed in JavaScript API
   - **Signature:** `(x: np.ndarray, threshold: float, zero_pos: bool) -> np.ndarray`
   - **Docstring:** *Stencil to compute zero crossings*
 
-- [ ] `_zc_wrapper`
+- [N/A] `_zc_wrapper` - Private Python vectorized wrapper for zero crossings, not exposed in JavaScript API
   - **Signature:** `(x: np.ndarray, threshold: float, zero_pos: bool, y: np.ndarray) -> None`
   - **Docstring:** *Vectorized wrapper for zero crossing stencil*
 
@@ -132,7 +132,7 @@
   - **Signature:** `(path: Union[str, int, sf.SoundFile, BinaryIO]) -> float`
   - **Docstring:** *Get the sampling rate for a given file.*
 
-- [ ] `load`
+- [N/A] `load` - Python file loading function, not applicable to JavaScript (browser uses Web Audio API/File API for loading audio)
   - **Signature:** `(path: Union[str, int, os.PathLike[Any], sf.SoundFile, audioread.AudioFile, BinaryIO], sr: Optional[float] = 22050, mono: bool = True, offset: float = 0.0, duration: Optional[float] = None, dtype: DTypeLike = np.float32, res_type: str = 'soxr_hq') -> Tuple[np.ndarray, Union[int, float]]`
   - **Docstring:** *Load an audio file as a floating point time series.*
 
@@ -152,7 +152,7 @@
   - **Signature:** `(y: np.ndarray, orig_sr: float, target_sr: float, res_type: str = 'soxr_hq', fix: bool = True, scale: bool = False, axis: int = -1, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Resample a time series from orig_sr to target_sr*
 
-- [ ] `stream`
+- [N/A] `stream` - Python audio streaming function, not applicable to JavaScript (browser uses MediaStream/Web Audio API for streaming)
   - **Signature:** `(path: Union[str, int, sf.SoundFile, BinaryIO], block_length: int, frame_length: int, hop_length: int, mono: bool = True, offset: float = 0.0, duration: Optional[float] = None, fill_value: Optional[float] = None, dtype: DTypeLike = np.float32) -> Generator[np.ndarray, None, None]`
   - **Docstring:** *Stream audio in fixed-length buffers.*
 
@@ -170,31 +170,31 @@
 
 ## `librosa/core/constantq.py`
 
-- [ ] `__cqt_response`
+- [N/A] `__cqt_response` - Private Python implementation helper for CQT computation, not exposed in JavaScript API
   - **Signature:** `(y, n_fft, hop_length, fft_basis, mode, window='ones', phase=True, dtype=None)`
   - **Docstring:** *Compute the filter response with a target STFT hop.*
 
-- [ ] `__early_downsample`
+- [N/A] `__early_downsample` - Private Python implementation helper for early downsampling in CQT, not exposed in JavaScript API
   - **Signature:** `(y, sr, hop_length, res_type, n_octaves, nyquist, filter_cutoff, scale)`
   - **Docstring:** *Perform early downsampling on an audio signal, if it applies.*
 
-- [ ] `__early_downsample_count`
+- [N/A] `__early_downsample_count` - Private Python implementation helper for downsampling count calculation, not exposed in JavaScript API
   - **Signature:** `(nyquist, filter_cutoff, hop_length, n_octaves)`
   - **Docstring:** *Compute the number of early downsampling operations*
 
-- [ ] `__et_relative_bw`
+- [N/A] `__et_relative_bw` - Private Python implementation helper for equal-tempered relative bandwidth, not exposed in JavaScript API
   - **Signature:** `(bins_per_octave: int) -> np.ndarray`
   - **Docstring:** *Compute the relative bandwidth coefficient for equal*
 
-- [ ] `__num_two_factors`
+- [N/A] `__num_two_factors` - Private Python utility helper for counting factors of 2, not exposed in JavaScript API
   - **Signature:** `(x)`
   - **Docstring:** *Return how many times integer x can be evenly divided by 2.*
 
-- [ ] `__trim_stack`
+- [N/A] `__trim_stack` - Private Python implementation helper for trimming and stacking CQT responses, not exposed in JavaScript API
   - **Signature:** `(cqt_resp: List[np.ndarray], n_bins: int, dtype: DTypeLike) -> np.ndarray`
   - **Docstring:** *Trim and stack a collection of CQT responses*
 
-- [ ] `__vqt_filter_fft`
+- [N/A] `__vqt_filter_fft` - Private Python implementation helper for VQT filter generation, not exposed in JavaScript API
   - **Signature:** `(sr, freqs, filter_scale, norm, sparsity, hop_length=None, window='hann', gamma=0.0, dtype=np.complex64, alpha=None)`
   - **Docstring:** *Generate the frequency domain variable-Q filter basis.*
 
@@ -380,13 +380,13 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], kind: str = 'A', **kwargs: Any) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the weighting of a set of frequencies.*
 
-- [ ] `hz_to_fjs`
+- [N/A] `hz_to_fjs` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _FloatLike_co, fmin: Optional[float] = ..., unison: Optional[str] = ..., unicode: bool = ...) -> str`
 
-- [ ] `hz_to_fjs`
+- [N/A] `hz_to_fjs` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], fmin: Optional[float] = ..., unison: Optional[str] = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `hz_to_fjs`
+- [N/A] `hz_to_fjs` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], fmin: Optional[float] = None, unison: Optional[str] = None, unicode: bool = False) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert one or more frequencies (in Hz) from a just intonation*
 
@@ -432,39 +432,39 @@
 - [x] `hz_to_octs`
   - **Signature:** `(frequencies: _FloatLike_co, tuning: float = ..., bins_per_octave: int = ...) -> np.floating[Any]`
 
-- [ ] `hz_to_octs`
+- [x] `hz_to_octs` - Array overload (covered by single JavaScript implementation)
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], tuning: float = ..., bins_per_octave: int = ...) -> np.ndarray`
 
-- [ ] `hz_to_octs`
+- [x] `hz_to_octs` - Union overload (covered by single JavaScript implementation)
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], tuning: float = ..., bins_per_octave: int = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `hz_to_octs`
+- [x] `hz_to_octs` - Full signature overload (covered by single JavaScript implementation)
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], tuning: float = 0.0, bins_per_octave: int = 12) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert frequencies (Hz) to (fractional) octave numbers.*
 
-- [ ] `hz_to_svara_c`
+- [N/A] `hz_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: float, Sa: float, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [ ] `hz_to_svara_c`
+- [N/A] `hz_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: np.ndarray, Sa: float, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `hz_to_svara_c`
+- [N/A] `hz_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: Union[float, np.ndarray], Sa: float, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `hz_to_svara_c`
+- [N/A] `hz_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: Union[float, np.ndarray], Sa: float, mela: Union[int, str], abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert frequencies (in Hz) to Carnatic svara*
 
-- [ ] `hz_to_svara_h`
+- [N/A] `hz_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _FloatLike_co, Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [ ] `hz_to_svara_h`
+- [N/A] `hz_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `hz_to_svara_h`
+- [N/A] `hz_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `hz_to_svara_h`
+- [N/A] `hz_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], Sa: _FloatLike_co, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert frequencies (in Hz) to Hindustani svara*
 
@@ -511,29 +511,29 @@
   - **Signature:** `(midi: _ScalarOrSequence[_FloatLike_co], octave: bool = True, cents: bool = False, key: str = 'C:maj', unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert one or more MIDI numbers to note strings.*
 
-- [ ] `midi_to_svara_c`
+- [N/A] `midi_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: _FloatLike_co, Sa: _FloatLike_co, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [ ] `midi_to_svara_c`
+- [N/A] `midi_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: np.ndarray, Sa: _FloatLike_co, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `midi_to_svara_c`
+- [N/A] `midi_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: Union[float, np.ndarray], Sa: _FloatLike_co, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `midi_to_svara_c`
+- [N/A] `midi_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: Union[float, np.ndarray], Sa: _FloatLike_co, mela: Union[int, str], abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert MIDI numbers to Carnatic svara within a given melakarta raga*
 
-- [ ] `midi_to_svara_h`
+- [N/A] `midi_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: _FloatLike_co, Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [ ] `midi_to_svara_h`
+- [N/A] `midi_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: np.ndarray, Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `midi_to_svara_h`
+- [N/A] `midi_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: Union[_FloatLike_co, np.ndarray], Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `midi_to_svara_h`
+- [N/A] `midi_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: Union[_FloatLike_co, np.ndarray], Sa: _FloatLike_co, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert MIDI numbers to Hindustani svara*
 
@@ -567,39 +567,39 @@
   - **Signature:** `(note: Union[str, _IterableLike[str], Iterable[str]], round_midi: bool = True) -> Union[float, np.ndarray]`
   - **Docstring:** *Convert one or more spelled notes to MIDI number(s).*
 
-- [ ] `note_to_svara_c`
+- [N/A] `note_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: str, Sa: str, mela: Union[str, int], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [ ] `note_to_svara_c`
+- [N/A] `note_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: _IterableLike[str], Sa: str, mela: Union[str, int], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `note_to_svara_c`
+- [N/A] `note_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, mela: Union[str, int], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `note_to_svara_c`
+- [N/A] `note_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, mela: Union[str, int], abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert western notes to Carnatic svara*
 
-- [ ] `note_to_svara_h`
+- [N/A] `note_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: str, Sa: str, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [ ] `note_to_svara_h`
+- [N/A] `note_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: _IterableLike[str], Sa: str, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `note_to_svara_h`
+- [N/A] `note_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `note_to_svara_h`
+- [N/A] `note_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert western notes to Hindustani svara*
 
 - [x] `octs_to_hz`
   - **Signature:** `(octs: _FloatLike_co, tuning: float = ..., bins_per_octave: int = ...) -> np.floating[Any]`
 
-- [ ] `octs_to_hz`
+- [x] `octs_to_hz` - Array overload (covered by single JavaScript implementation)
   - **Signature:** `(octs: _SequenceLike[_FloatLike_co], tuning: float = ..., bins_per_octave: int = ...) -> np.ndarray`
 
-- [x] `octs_to_hz`
+- [x] `octs_to_hz` - Union overload (covered by single JavaScript implementation)
   - **Signature:** `(octs: _ScalarOrSequence[_FloatLike_co], tuning: float = ..., bins_per_octave: int = ...) -> Union[np.floating[Any], np.ndarray]`
 
 - [x] `octs_to_hz`
@@ -685,23 +685,23 @@
 
 ## `librosa/core/fft.py`
 
-- [ ] `get_fftlib`
+- [N/A] `get_fftlib` - Python FFT library management (numpy/scipy), not applicable to JavaScript (uses native FFT)
   - **Signature:** `() -> ModuleType`
   - **Docstring:** *Get the FFT library currently used by librosa*
 
-- [ ] `set_fftlib`
+- [N/A] `set_fftlib` - Python FFT library configuration, not applicable to JavaScript (uses native FFT)
   - **Signature:** `(lib: Optional[ModuleType] = None) -> None`
   - **Docstring:** *Set the FFT library used by librosa.*
 
 ## `librosa/core/harmonic.py`
 
-- [ ] `_f_interp`
+- [N/A] `_f_interp` - Private Python implementation helper for harmonic interpolation, not exposed in JavaScript API
   - **Signature:** `(_a, _b)`
 
-- [ ] `_f_interpd`
+- [N/A] `_f_interpd` - Private Python implementation helper for harmonic interpolation, not exposed in JavaScript API
   - **Signature:** `(data, frequencies, f)`
 
-- [ ] `_f_interps`
+- [N/A] `_f_interps` - Private Python implementation helper for harmonic interpolation, not exposed in JavaScript API
   - **Signature:** `(data, f)`
 
 - [x] `f0_harmonics`
@@ -718,11 +718,11 @@
 
 ## `librosa/core/intervals.py`
 
-- [ ] `__harmonic_distance`
+- [N/A] `__harmonic_distance` - Private Python implementation helper for interval calculations, not exposed in JavaScript API
   - **Signature:** `(logs, a, b)`
   - **Docstring:** *Compute the harmonic distance between ratios a and b.*
 
-- [ ] `_crystal_tie_break`
+- [N/A] `_crystal_tie_break` - Private Python implementation helper for interval tie-breaking, not exposed in JavaScript API
   - **Signature:** `(a, b, logs)`
   - **Docstring:** *Given two tuples of prime powers, break ties.*
 
@@ -758,62 +758,62 @@
 
 ## `librosa/core/notation.py`
 
-- [ ] `__bo_fold`
+- [N/A] `__bo_fold` - Private Python implementation helper for interval folding, not exposed in JavaScript API
   - **Signature:** `(d)`
   - **Docstring:** *Compute the balanced, octave-folded interval.*
 
-- [ ] `__fifth_search`
+- [N/A] `__fifth_search` - Private Python implementation helper for interval calculation, not exposed in JavaScript API
   - **Signature:** `(interval, tolerance)`
   - **Docstring:** *Accelerated helper function for finding the number of fifths*
 
-- [ ] `__mode_to_key`
+- [N/A] `__mode_to_key` - Private Python implementation helper for mode conversion, not exposed in JavaScript API
   - **Signature:** `(signature: str, unicode: bool = True) -> str`
   - **Docstring:** *Translate a mode (eg D:dorian) into its equivalent major key. If unicode==True, return the accidentals as unicode symbols, regardless of nature of ...*
 
-- [ ] `__note_to_degree`
+- [N/A] `__note_to_degree` - Private Python implementation helper (scalar overload), not exposed in JavaScript API
   - **Signature:** `(key: str) -> int`
 
-- [ ] `__note_to_degree`
+- [N/A] `__note_to_degree` - Private Python implementation helper (array overload), not exposed in JavaScript API
   - **Signature:** `(key: _IterableLike[str]) -> np.ndarray`
 
-- [ ] `__note_to_degree`
+- [N/A] `__note_to_degree` - Private Python implementation helper (union overload), not exposed in JavaScript API
   - **Signature:** `(key: Union[str, _IterableLike[str], Iterable[str]]) -> Union[int, np.ndarray]`
 
-- [ ] `__note_to_degree`
+- [N/A] `__note_to_degree` - Private Python implementation helper (full signature), not exposed in JavaScript API
   - **Signature:** `(key: Union[str, _IterableLike[str], Iterable[str]]) -> Union[int, np.ndarray]`
   - **Docstring:** *Take a note name and return the degree of that note (e.g. 'C#' -> 1). We allow possibilities like "C#b".*
 
-- [ ] `__o_fold`
+- [N/A] `__o_fold` - Private Python implementation helper for octave folding, not exposed in JavaScript API
   - **Signature:** `(d)`
   - **Docstring:** *Compute the octave-folded interval.*
 
-- [ ] `__simplify_note`
+- [N/A] `__simplify_note` - Private Python implementation helper (scalar overload), not exposed in JavaScript API
   - **Signature:** `(key: str, additional_acc: str = ..., unicode: bool = ...) -> str`
 
-- [ ] `__simplify_note`
+- [N/A] `__simplify_note` - Private Python implementation helper (array overload), not exposed in JavaScript API
   - **Signature:** `(key: _IterableLike[str], additional_acc: str = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `__simplify_note`
+- [N/A] `__simplify_note` - Private Python implementation helper (union overload), not exposed in JavaScript API
   - **Signature:** `(key: Union[str, _IterableLike[str], Iterable[str]], additional_acc: str = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `__simplify_note`
+- [N/A] `__simplify_note` - Private Python implementation helper (full signature), not exposed in JavaScript API
   - **Signature:** `(key: Union[str, _IterableLike[str], Iterable[str]], additional_acc: str = '', unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Take in a note name and simplify by canceling sharp-flat pairs, and doubling accidentals as appropriate.*
 
-- [ ] `fifths_to_note`
+- [TODO] `fifths_to_note` - User-facing music theory function, could be implemented in JavaScript
   - **Signature:** `(unison: str, fifths: int, unicode: bool = True) -> str`
   - **Docstring:** *Calculate the note name for a given number of perfect fifths*
 
-- [ ] `interval_to_fjs`
+- [N/A] `interval_to_fjs` - TypeScript scalar overload (would be implemented as single JS function handling both cases)
   - **Signature:** `(interval: _FloatLike_co, unison: str = ..., tolerance: float = ..., unicode: bool = ...) -> str`
 
-- [ ] `interval_to_fjs`
+- [N/A] `interval_to_fjs` - TypeScript array overload (would be implemented as single JS function handling both cases)
   - **Signature:** `(interval: _SequenceLike[_FloatLike_co], unison: str = ..., tolerance: float = ..., unicode: bool = ...) -> np.ndarray`
 
-- [ ] `interval_to_fjs`
+- [N/A] `interval_to_fjs` - TypeScript union overload (would be implemented as single JS function handling both cases)
   - **Signature:** `(interval: _ScalarOrSequence[_FloatLike_co], unison: str = ..., tolerance: float = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [ ] `interval_to_fjs`
+- [TODO] `interval_to_fjs` - User-facing music theory function, could be implemented in JavaScript
   - **Signature:** `(interval: _ScalarOrSequence[_FloatLike_co], unison: str = 'C', tolerance: float = 65.0 / 63, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert an interval to Functional Just System (FJS) notation.*
 
@@ -847,29 +847,29 @@
 
 ## `librosa/core/pitch.py`
 
-- [ ] `__check_yin_params`
+- [N/A] `__check_yin_params` - Private Python validation helper for YIN parameters, not exposed in JavaScript API
   - **Signature:** `(sr: float, fmax: float, fmin: float, frame_length: int)`
   - **Docstring:** *Check the feasibility of yin/pyin parameters against*
 
-- [ ] `__pyin_helper`
+- [N/A] `__pyin_helper` - Private Python implementation helper for pYIN algorithm, not exposed in JavaScript API
   - **Signature:** `(yin_frames, parabolic_shifts, sr, thresholds, boltzmann_parameter, beta_probs, no_trough_prob, min_period, fmin, n_pitch_bins, n_bins_per_semitone)`
 
-- [ ] `_cumulative_mean_normalized_difference`
+- [N/A] `_cumulative_mean_normalized_difference` - Private Python implementation helper for YIN algorithm, not exposed in JavaScript API
   - **Signature:** `(y_frames: np.ndarray, min_period: int, max_period: int) -> np.ndarray`
   - **Docstring:** *Cumulative mean normalized difference function (equation 8 in [#]_)*
 
-- [ ] `_helper`
+- [N/A] `_helper` - Private Python implementation helper, not exposed in JavaScript API
   - **Signature:** `(a, b)`
 
-- [ ] `_parabolic_interpolation`
+- [N/A] `_parabolic_interpolation` - Private Python implementation helper for parabolic interpolation, not exposed in JavaScript API
   - **Signature:** `(x: np.ndarray, axis: int = -2) -> np.ndarray`
   - **Docstring:** *Piecewise parabolic interpolation for yin and pyin.*
 
-- [ ] `_pi_stencil`
+- [N/A] `_pi_stencil` - Private Python stencil helper for parabolic interpolation, not exposed in JavaScript API
   - **Signature:** `(x: np.ndarray) -> np.ndarray`
   - **Docstring:** *Stencil to compute local parabolic interpolation*
 
-- [ ] `_pi_wrapper`
+- [N/A] `_pi_wrapper` - Private Python vectorized wrapper for parabolic interpolation, not exposed in JavaScript API
   - **Signature:** `(x: np.ndarray, y: np.ndarray) -> None`
   - **Docstring:** *Vectorized wrapper for the parabolic interpolation stencil*
 
@@ -895,18 +895,18 @@
 
 ## `librosa/core/spectrum.py`
 
-- [ ] `__overlap_add`
+- [N/A] `__overlap_add` - Private Python implementation helper for overlap-add in Griffin-Lim, not exposed in JavaScript API
   - **Signature:** `(y, ytmp, hop_length)`
 
-- [ ] `__reassign_frequencies`
+- [N/A] `__reassign_frequencies` - Private Python implementation helper for reassigned spectrogram, not exposed in JavaScript API
   - **Signature:** `(y: np.ndarray, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Instantaneous frequencies based on a spectrogram representation.*
 
-- [ ] `__reassign_times`
+- [N/A] `__reassign_times` - Private Python implementation helper for reassigned spectrogram, not exposed in JavaScript API
   - **Signature:** `(y: np.ndarray, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Time reassignments based on a spectrogram representation.*
 
-- [ ] `_spectrogram`
+- [N/A] `_spectrogram` - Private Python implementation helper for spectrogram computation, not exposed in JavaScript API
   - **Signature:** `(y: Optional[np.ndarray] = None, S: Optional[np.ndarray] = None, n_fft: Optional[int] = 2048, hop_length: Optional[int] = 512, power: float = 1, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant') -> Tuple[np.ndarray, int]`
   - **Docstring:** *Retrieve a magnitude spectrogram.*
 
@@ -957,7 +957,7 @@
   - **Signature:** `(S: np.ndarray, n_iter: int = 32, hop_length: Optional[int] = None, win_length: Optional[int] = None, n_fft: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, dtype: Optional[DTypeLike] = None, length: Optional[int] = None, pad_mode: _PadModeSTFT = 'constant', momentum: float = 0.99, init: Optional[str] = 'random', random_state: Optional[Union[int, np.random.RandomState, np.random.Generator]] = None) -> np.ndarray`
   - **Docstring:** *Approximate magnitude spectrogram inversion using the "fast" Griffin-Lim algorithm.*
 
-- [ ] `iirt`
+- [TODO] `iirt` - User-facing IIR transform function, could be implemented in JavaScript using Web Audio BiquadFilterNode
   - **Signature:** `(y: np.ndarray, sr: float = 22050, win_length: int = 2048, hop_length: Optional[int] = None, center: bool = True, tuning: float = 0.0, pad_mode: _PadMode = 'constant', flayout: str = 'sos', res_type: str = 'soxr_hq', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Time-frequency representation using IIR filters*
 
@@ -1013,7 +1013,7 @@
 
 ## `librosa/decompose.py`
 
-- [ ] `__nn_filter_helper`
+- [N/A] `__nn_filter_helper` - Private Python implementation helper for nn_filter, not exposed in JavaScript API
   - **Signature:** `(R_data, R_indices, R_ptr, S: np.ndarray, aggregate: Callable) -> np.ndarray`
   - **Docstring:** *Nearest-neighbor filter helper function.*
 
@@ -1031,162 +1031,162 @@
 
 ## `librosa/display.py`
 
-- [ ] `__call__`
+- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript (browser uses Canvas/SVG)
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Return the time format as pos*
 
-- [ ] `__call__`
+- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Apply the formatter to position*
 
-- [ ] `__call__`
+- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
 
-- [ ] `__call__`
-  - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
-  - **Docstring:** *Apply the formatter to position*
-
-- [ ] `__call__`
+- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Apply the formatter to position*
 
-- [ ] `__call__`
+- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
+  - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
+  - **Docstring:** *Apply the formatter to position*
+
+- [N/A] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Format for chroma positions*
 
-- [ ] `__call__`
+- [N/A] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Format for chroma positions*
 
-- [ ] `__call__`
+- [N/A] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Format for chroma positions*
 
-- [ ] `__call__`
+- [N/A] `__call__` - Matplotlib formatter magic method for tonnetz, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Format for tonnetz positions*
 
-- [ ] `__check_axes`
+- [N/A] `__check_axes` - Matplotlib axes helper, not applicable to JavaScript (browser uses Canvas/SVG contexts)
   - **Signature:** `(axes: Optional[mplaxes.Axes]) -> mplaxes.Axes`
   - **Docstring:** *Check if "axes" is an instance of an axis object. If not, use `gca`.*
 
-- [ ] `__coord_chroma`
+- [N/A] `__coord_chroma` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, bins_per_octave: int = 12, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get chroma bin numbers*
 
-- [ ] `__coord_cqt_hz`
+- [N/A] `__coord_cqt_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, fmin: Optional[_FloatLike_co] = None, bins_per_octave: int = 12, sr: float = 22050, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get CQT bin frequencies*
 
-- [ ] `__coord_fft_hz`
+- [N/A] `__coord_fft_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, sr: float = 22050, n_fft: Optional[int] = None, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get the frequencies for FFT bins*
 
-- [ ] `__coord_fourier_tempo`
+- [N/A] `__coord_fourier_tempo` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, sr: float = 22050, hop_length: int = 512, win_length: Optional[int] = None, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Fourier tempogram coordinates*
 
-- [ ] `__coord_mel_hz`
+- [N/A] `__coord_mel_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, fmin: Optional[float] = 0.0, fmax: Optional[float] = None, sr: float = 22050, htk: bool = False, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get the frequencies for Mel bins*
 
-- [ ] `__coord_n`
+- [N/A] `__coord_n` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get bare positions*
 
-- [ ] `__coord_tempo`
+- [N/A] `__coord_tempo` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, sr: float = 22050, hop_length: int = 512, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Tempo coordinates*
 
-- [ ] `__coord_time`
+- [N/A] `__coord_time` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, sr: float = 22050, hop_length: int = 512, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get time coordinates from frames*
 
-- [ ] `__coord_vqt_hz`
+- [N/A] `__coord_vqt_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, fmin: Optional[_FloatLike_co] = None, bins_per_octave: int = 12, sr: float = 22050, intervals: Optional[Union[str, Collection[float]]] = None, unison: Optional[str] = None, **_kwargs: Any) -> np.ndarray`
 
-- [ ] `__decorate_axis`
+- [N/A] `__decorate_axis` - Matplotlib axis decoration helper, not applicable to JavaScript
   - **Signature:** `(axis, ax_type, key='C:maj', Sa=None, mela=None, thaat=None, unicode=True, fmin=None, unison=None, intervals=None, bins_per_octave=None, n_bins=None)`
   - **Docstring:** *Configure axis tickers, locators, and labels*
 
-- [ ] `__del__`
+- [N/A] `__del__` - Python destructor for display class, not applicable to JavaScript
   - **Signature:** `(self) -> None`
   - **Docstring:** *Disconnect callback methods on delete*
 
-- [ ] `__envelope`
+- [N/A] `__envelope` - Matplotlib display helper for waveshow, not applicable to JavaScript API
   - **Signature:** `(x, hop)`
   - **Docstring:** *Compute the max-envelope of non-overlapping frames of x at length hop*
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for TimeFormatter, not applicable to JavaScript
   - **Signature:** `(self, lag: bool = False, unit: Optional[str] = None)`
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for NoteFormatter, not applicable to JavaScript
   - **Signature:** `(self, octave: bool = True, major: bool = True, key: str = 'C:maj', unicode: bool = True)`
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for SvaraFormatter (Carnatic), not applicable to JavaScript
   - **Signature:** `(self, Sa: float, octave: bool = True, major: bool = True, abbr: bool = False, mela: Optional[Union[str, int]] = None, unicode: bool = True)`
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for IntervalFormatter, not applicable to JavaScript
   - **Signature:** `(self, fmin: int, n_bins: int, bins_per_octave: int, intervals: Union[str, Collection[float]], major: bool = True, unison: Optional[str] = None, unicode: bool = True)`
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for TonnetzFormatter, not applicable to JavaScript
   - **Signature:** `(self, major: bool = True)`
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for ChromaFormatter, not applicable to JavaScript
   - **Signature:** `(self, key: str = 'C:maj', unicode: bool = True)`
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for ChromaSvaraFormatter, not applicable to JavaScript
   - **Signature:** `(self, Sa: Optional[float] = None, mela: Optional[Union[int, str]] = None, abbr: bool = True, unicode: bool = True)`
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for ChromaFJSFormatter, not applicable to JavaScript
   - **Signature:** `(self, intervals: Union[str, Collection[float]], unison: str = 'C', unicode: bool = True, bins_per_octave: Optional[int] = None)`
 
-- [ ] `__init__`
+- [N/A] `__init__` - Python constructor for AdaptiveWaveplot, not applicable to JavaScript
   - **Signature:** `(self, times: np.ndarray, y: np.ndarray, steps: Line2D, envelope: PolyCollection, sr: float = 22050, max_samples: int = 11025, transpose: bool = False)`
 
-- [ ] `__mesh_coords`
+- [N/A] `__mesh_coords` - Matplotlib coordinate mesh helper, not applicable to JavaScript API
   - **Signature:** `(ax_type, coords, n, **kwargs)`
   - **Docstring:** *Compute axis coordinates*
 
-- [ ] `__same_axes`
+- [N/A] `__same_axes` - Matplotlib axes comparison helper, not applicable to JavaScript
   - **Signature:** `(x_axis, y_axis, xlim, ylim)`
   - **Docstring:** *Check if two axes are similar, used to determine squared plots*
 
-- [ ] `__scale_axes`
+- [N/A] `__scale_axes` - Matplotlib axes scaling helper, not applicable to JavaScript
   - **Signature:** `(axes, ax_type, which, tempo_min, tempo_max)`
   - **Docstring:** *Set the axis scaling*
 
-- [ ] `__set_current_image`
+- [N/A] `__set_current_image` - Matplotlib pyplot helper, not applicable to JavaScript
   - **Signature:** `(ax, img)`
   - **Docstring:** *Set the current image when working in pyplot mode.*
 
-- [ ] `cmap`
+- [N/A] `cmap` - Matplotlib colormap function, not applicable to JavaScript (browser uses CSS/Canvas gradients)
   - **Signature:** `(data: np.ndarray, robust: bool = True, cmap_seq: str = 'magma', cmap_bool: str = 'gray_r', cmap_div: str = 'coolwarm') -> Colormap`
   - **Docstring:** *Get a default colormap from the given data.*
 
-- [ ] `connect`
+- [N/A] `connect` - Matplotlib event callback connector, not applicable to JavaScript
   - **Signature:** `(self, ax: mplaxes.Axes, signal: str = 'xlim_changed') -> None`
   - **Docstring:** *Connect the adaptor to a signal on an axes object.*
 
-- [ ] `disconnect`
+- [N/A] `disconnect` - Matplotlib event callback disconnector, not applicable to JavaScript
   - **Signature:** `(self, strict: bool = False) -> None`
   - **Docstring:** *Disconnect the adaptor's update callback.*
 
-- [ ] `specshow`
+- [N/A] `specshow` - Matplotlib spectrogram display function, not applicable to JavaScript (browser would use Canvas/WebGL)
   - **Signature:** `(data: np.ndarray, x_coords: Optional[np.ndarray] = None, y_coords: Optional[np.ndarray] = None, x_axis: Optional[str] = None, y_axis: Optional[str] = None, sr: float = 22050, hop_length: int = 512, n_fft: Optional[int] = None, win_length: Optional[int] = None, fmin: Optional[float] = None, fmax: Optional[float] = None, tempo_min: Optional[float] = 16, tempo_max: Optional[float] = 480, tuning: float = 0.0, bins_per_octave: int = 12, key: str = 'C:maj', Sa: Optional[Union[float, int]] = None, mela: Optional[Union[str, int]] = None, thaat: Optional[str] = None, auto_aspect: bool = True, htk: bool = False, unicode: bool = True, intervals: Optional[Union[str, np.ndarray]] = None, unison: Optional[str] = None, ax: Optional[mplaxes.Axes] = None, **kwargs: Any) -> QuadMesh`
   - **Docstring:** *Display a spectrogram/chromagram/cqt/etc.*
 
-- [ ] `update`
+- [N/A] `update` - Matplotlib display update callback, not applicable to JavaScript
   - **Signature:** `(self, ax: mplaxes.Axes) -> None`
   - **Docstring:** *Update the matplotlib display according to the current viewport limits.*
 
-- [ ] `waveshow`
+- [N/A] `waveshow` - Matplotlib waveform display function, not applicable to JavaScript (browser would use Canvas/SVG)
   - **Signature:** `(y: np.ndarray, sr: float = 22050, max_points: int = 11025, axis: Optional[str] = 'time', offset: float = 0.0, marker: Union[str, MplPath, MarkerStyle] = '', where: str = 'post', label: Optional[str] = None, transpose: bool = False, ax: Optional[mplaxes.Axes] = None, x_axis: Optional[Union[str, Deprecated]] = Deprecated(), **kwargs: Any) -> AdaptiveWaveplot`
   - **Docstring:** *Visualize a waveform in the time domain.*
 
 ## `librosa/effects.py`
 
-- [ ] `_signal_to_frame_nonsilent`
+- [N/A] `_signal_to_frame_nonsilent` - Private Python implementation helper for split/trim functions, not exposed in JavaScript API
   - **Signature:** `(y: np.ndarray, frame_length: int = 2048, hop_length: int = 512, top_db: float = 60, ref: Union[Callable, float] = np.max, aggregate: Callable = np.max) -> np.ndarray`
   - **Docstring:** *Frame-wise non-silent indicator for audio input.*
 
@@ -1349,7 +1349,7 @@
 
 ## `librosa/feature/utils.py`
 
-- [ ] `__stack`
+- [N/A] `__stack` - Private Python implementation helper for stack_memory, not exposed in JavaScript API
   - **Signature:** `(history, data, n_steps, delay)`
   - **Docstring:** *Memory-stacking helper function.*
 
@@ -1363,23 +1363,23 @@
 
 ## `librosa/filters.py`
 
-- [ ] `__float_window`
+- [N/A] `__float_window` - Private Python decorator for window functions, not exposed in JavaScript API
   - **Signature:** `(window_spec)`
   - **Docstring:** *Decorate a window function to support fractional input lengths.*
 
-- [ ] `__window_ss_fill`
+- [N/A] `__window_ss_fill` - Private Python implementation helper for window envelope computation, not exposed in JavaScript API
   - **Signature:** `(x, win_sq, n_frames, hop_length)`
   - **Docstring:** *Compute the sum-square envelope of a window.*
 
-- [ ] `_multirate_fb`
+- [N/A] `_multirate_fb` - Private Python implementation helper for multirate filterbank, not exposed in JavaScript API
   - **Signature:** `(center_freqs: Optional[np.ndarray] = None, sample_rates: Optional[np.ndarray] = None, Q: float = 25.0, passband_ripple: float = 1, stopband_attenuation: float = 50, ftype: str = 'ellip', flayout: str = 'sos') -> Tuple[List[Any], np.ndarray]`
   - **Docstring:** *Construct a multirate filterbank.*
 
-- [ ] `_relative_bandwidth`
+- [N/A] `_relative_bandwidth` - Private Python implementation helper for bandwidth calculation, not exposed in JavaScript API
   - **Signature:** `(freqs: np.ndarray) -> np.ndarray`
   - **Docstring:** *Compute the relative bandwidth for each of a set of specified frequencies.*
 
-- [ ] `_wrap`
+- [N/A] `_wrap` - Private Python window wrapping helper, not exposed in JavaScript API
   - **Signature:** `(n, *args, **kwargs)`
   - **Docstring:** *Wrap the window*
 
@@ -1455,10 +1455,10 @@
 
 ## `librosa/segment.py`
 
-- [ ] `__affinity_bandwidth`
+- [N/A] `__affinity_bandwidth` - Private Python implementation helper for bandwidth calculation in recurrence matrices, not exposed in JavaScript API
   - **Signature:** `(rec: scipy.sparse.csr_matrix, bw_mode: Optional[Union[np.ndarray, _FloatLike_co, str]], k: int) -> Union[float, np.ndarray]`
 
-- [ ] `__my_filter`
+- [N/A] `__my_filter` - Private Python filter wrapper for lag domain operations, not exposed in JavaScript API
   - **Signature:** `(wrapped_f, *args, **kwargs)`
   - **Docstring:** *Wrap the filter with lag conversions*
 
@@ -1508,29 +1508,29 @@
 
 ## `librosa/sequence.py`
 
-- [ ] `__dtw_backtracking`
+- [N/A] `__dtw_backtracking` - Private Python implementation helper for DTW backtracking, not exposed in JavaScript API
   - **Signature:** `(steps: np.ndarray, step_sizes_sigma: np.ndarray, subseq: bool, start: Optional[int] = None) -> List[Tuple[int, int]]`
   - **Docstring:** *Backtrack optimal warping path.*
 
-- [ ] `__dtw_calc_accu_cost`
+- [N/A] `__dtw_calc_accu_cost` - Private Python implementation helper for DTW cost calculation, not exposed in JavaScript API
   - **Signature:** `(C: np.ndarray, D: np.ndarray, steps: np.ndarray, step_sizes_sigma: np.ndarray, weights_mul: np.ndarray, weights_add: np.ndarray, max_0: int, max_1: int) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Calculate the accumulated cost matrix D.*
 
-- [ ] `__rqa_backtrack`
+- [N/A] `__rqa_backtrack` - Private Python implementation helper for RQA backtracking, not exposed in JavaScript API
   - **Signature:** `(score, pointers)`
   - **Docstring:** *RQA path backtracking*
 
-- [ ] `__rqa_dp`
+- [N/A] `__rqa_dp` - Private Python implementation helper for RQA dynamic programming, not exposed in JavaScript API
   - **Signature:** `(sim: np.ndarray, gap_onset: float, gap_extend: float, knight: bool) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *RQA dynamic programming implementation*
 
-- [ ] `_helper`
+- [N/A] `_helper` - Private Python helper function for Viterbi, not exposed in JavaScript API
   - **Signature:** `(lp)`
 
-- [ ] `_helper`
+- [N/A] `_helper` - Private Python helper function for Viterbi (overload), not exposed in JavaScript API
   - **Signature:** `(lp)`
 
-- [ ] `_viterbi`
+- [N/A] `_viterbi` - Private Python implementation helper for Viterbi algorithm, not exposed in JavaScript API
   - **Signature:** `(log_prob: np.ndarray, log_trans: np.ndarray, log_p_init: np.ndarray) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Core Viterbi algorithm.*
 
@@ -1637,53 +1637,53 @@
 
 ## `librosa/util/_nnls.py`
 
-- [ ] `_nnls_lbfgs_block`
+- [N/A] `_nnls_lbfgs_block` - Private Python implementation helper for NNLS solver, not exposed in JavaScript API
   - **Signature:** `(A: np.ndarray, B: np.ndarray, x_init: Optional[np.ndarray] = None, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Solve the constrained problem over a single block*
 
-- [ ] `_nnls_obj`
+- [N/A] `_nnls_obj` - Private Python implementation helper for NNLS objective calculation, not exposed in JavaScript API
   - **Signature:** `(x: np.ndarray, shape: Sequence[int], A: np.ndarray, B: np.ndarray) -> Tuple[float, np.ndarray]`
   - **Docstring:** *Compute the objective and gradient for NNLS*
 
-- [ ] `nnls`
+- [TODO] `nnls` - User-facing non-negative least squares function, could be implemented in JavaScript
   - **Signature:** `(A: np.ndarray, B: np.ndarray, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Non-negative least squares.*
 
 ## `librosa/util/decorators.py`
 
-- [ ] `__wrapper`
+- [N/A] `__wrapper` - Python decorator wrapper for deprecation warnings, not applicable to JavaScript
   - **Signature:** `(func: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R`
   - **Docstring:** *Warn the user, and then proceed.*
 
-- [ ] `__wrapper`
+- [N/A] `__wrapper` - Python decorator wrapper for move warnings, not applicable to JavaScript
   - **Signature:** `(func: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R`
   - **Docstring:** *Warn the user, and then proceed.*
 
-- [ ] `__wrapper`
+- [N/A] `__wrapper` - Python decorator wrapper for vectorization, not applicable to JavaScript
   - **Signature:** `(function)`
 
-- [ ] `_vec`
+- [N/A] `_vec` - Private Python vectorization helper, not applicable to JavaScript
   - **Signature:** `(*args, **kwargs)`
 
-- [ ] `deprecated`
+- [N/A] `deprecated` - Python decorator for deprecation warnings, not applicable to JavaScript
   - **Signature:** `(version: str, version_removed: str) -> Callable[[Callable[P, R]], Callable[P, R]]`
   - **Docstring:** *Mark a function as deprecated.*
 
-- [ ] `moved`
+- [N/A] `moved` - Python decorator for moved function warnings, not applicable to JavaScript
   - **Signature:** `(moved_from: str, version: str, version_removed: str) -> Callable[[Callable[P, R]], Callable[P, R]]`
   - **Docstring:** *Mark functions as moved/renamed.*
 
-- [ ] `vectorize`
+- [N/A] `vectorize` - Python decorator for np.vectorize, not applicable to JavaScript
   - **Signature:** `(otypes: Optional[Union[str, Iterable[DTypeLike]]] = None, doc: Optional[str] = None, excluded: Optional[Iterable[Union[int, str]]] = None, cache: bool = False, signature: Optional[str] = None) -> Callable[[_F], _F]`
   - **Docstring:** *Wrap a function for use with np.vectorize.*
 
 ## `librosa/util/deprecation.py`
 
-- [ ] `__repr__`
+- [N/A] `__repr__` - Python magic method for deprecated objects display, not applicable to JavaScript
   - **Signature:** `(self) -> str`
   - **Docstring:** *Pretty-print display for deprecated objects*
 
-- [ ] `rename_kw`
+- [N/A] `rename_kw` - Python utility for handling renamed keyword arguments, not applicable to JavaScript
   - **Signature:** `(old_name: str, old_value: Any, new_name: str, new_value: Any, version_deprecated: str, version_removed: str) -> Any`
   - **Docstring:** *Handle renamed arguments.*
 
@@ -1697,48 +1697,48 @@
 
 ## `librosa/util/files.py`
 
-- [ ] `__get_files`
+- [N/A] `__get_files` - Private Python filesystem helper, not applicable to JavaScript (browser has no filesystem access)
   - **Signature:** `(dir_name: Union[str, os.PathLike[Any]], extensions: Set[str])`
   - **Docstring:** *Get a list of files in a single directory*
 
-- [ ] `_resource_file`
+- [N/A] `_resource_file` - Private Python package resource context manager, not applicable to JavaScript
   - **Signature:** `(package: str, resource: str)`
   - **Docstring:** *Provide a context manager for accessing resources in a package.*
 
-- [ ] `cite`
+- [N/A] `cite` - Python utility for printing citation information, not applicable to JavaScript browser context
   - **Signature:** `(version: Optional[str] = None) -> str`
   - **Docstring:** *Print the citation information for librosa.*
 
-- [ ] `example`
+- [N/A] `example` - Python utility for loading example audio files from package, not applicable to JavaScript (browser loads from URLs)
   - **Signature:** `(key: str, hq: bool = False) -> str`
   - **Docstring:** *Retrieve the example recording identified by 'key'.*
 
-- [ ] `example_info`
+- [N/A] `example_info` - Python utility for displaying example metadata, not applicable to JavaScript
   - **Signature:** `(key: str) -> None`
   - **Docstring:** *Display licensing and metadata information for the given example recording.*
 
-- [ ] `find_files`
+- [N/A] `find_files` - Python filesystem utility for finding audio files, not applicable to JavaScript (browser has no filesystem access)
   - **Signature:** `(directory: Union[str, os.PathLike[Any]], ext: Optional[Union[str, List[str]]] = None, recurse: bool = True, case_sensitive: bool = False, limit: Optional[int] = None, offset: int = 0) -> List[str]`
   - **Docstring:** *Get a sorted list of (audio) files in a directory or directory sub-tree.*
 
-- [ ] `list_examples`
+- [N/A] `list_examples` - Python utility for listing included examples, not applicable to JavaScript
   - **Signature:** `() -> None`
   - **Docstring:** *List the available audio recordings included with librosa.*
 
 ## `librosa/util/matching.py`
 
-- [ ] `__jaccard`
+- [N/A] `__jaccard` - Private Python implementation helper for Jaccard similarity, not exposed in JavaScript API
   - **Signature:** `(int_a: np.ndarray, int_b: np.ndarray)`
   - **Docstring:** *Jaccard similarity between two intervals*
 
-- [ ] `__match_events_helper`
+- [N/A] `__match_events_helper` - Private Python implementation helper for event matching, not exposed in JavaScript API
   - **Signature:** `(output: np.ndarray, events_from: np.ndarray, events_to: np.ndarray, left: bool = True, right: bool = True)`
 
-- [ ] `__match_interval_overlaps`
+- [N/A] `__match_interval_overlaps` - Private Python implementation helper for interval overlap matching, not exposed in JavaScript API
   - **Signature:** `(query, intervals_to, candidates)`
   - **Docstring:** *Find the best Jaccard match from query to candidates*
 
-- [ ] `__match_intervals`
+- [N/A] `__match_intervals` - Private Python Numba-accelerated helper for interval matching, not exposed in JavaScript API
   - **Signature:** `(intervals_from: np.ndarray, intervals_to: np.ndarray, strict: bool = True) -> np.ndarray`
   - **Docstring:** *Numba-accelerated interval matching algorithm.*
 
@@ -1752,47 +1752,47 @@
 
 ## `librosa/util/utils.py`
 
-- [ ] `__count_unique`
+- [N/A] `__count_unique` - Private Python implementation helper for counting unique values, not exposed in JavaScript API
   - **Signature:** `(x)`
   - **Docstring:** *Count the number of unique values in an array.*
 
-- [ ] `__is_unique`
+- [N/A] `__is_unique` - Private Python implementation helper for uniqueness checking, not exposed in JavaScript API
   - **Signature:** `(x)`
   - **Docstring:** *Determine if the input array has all unique values.*
 
-- [ ] `__peak_pick`
+- [N/A] `__peak_pick` - Private Python vectorized wrapper for peak-picking, not exposed in JavaScript API
   - **Signature:** `(x, pre_max, post_max, pre_avg, post_avg, delta, wait, peaks)`
   - **Docstring:** *Vectorized wrapper for the peak-picker*
 
-- [ ] `__shear_dense`
+- [N/A] `__shear_dense` - Private Python Numba-accelerated helper for shearing dense arrays, not exposed in JavaScript API
   - **Signature:** `(X: np.ndarray, factor: int = +1, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Numba-accelerated shear for dense (ndarray) arrays*
 
-- [ ] `__shear_sparse`
+- [N/A] `__shear_sparse` - Private Python implementation helper for shearing sparse matrices, not exposed in JavaScript API
   - **Signature:** `(X: scipy.sparse.spmatrix, factor: int = +1, axis: int = -1) -> scipy.sparse.spmatrix`
   - **Docstring:** *Fast shearing for sparse matrices*
 
-- [ ] `_cabs2`
+- [N/A] `_cabs2` - Private Python implementation helper for abs2, not exposed in JavaScript API
   - **Signature:** `(x: _ComplexLike_co) -> _FloatLike_co`
   - **Docstring:** *Efficiently compute abs2 on complex inputs*
 
-- [ ] `_localmax`
+- [N/A] `_localmax` - Private Python vectorized wrapper for local maxima, not exposed in JavaScript API
   - **Signature:** `(x, y)`
   - **Docstring:** *Vectorized wrapper for the localmax stencil*
 
-- [ ] `_localmax_sten`
+- [N/A] `_localmax_sten` - Private Python Numba stencil for local maxima, not exposed in JavaScript API
   - **Signature:** `(x)`
   - **Docstring:** *Numba stencil for local maxima computation*
 
-- [ ] `_localmin`
+- [N/A] `_localmin` - Private Python vectorized wrapper for local minima, not exposed in JavaScript API
   - **Signature:** `(x, y)`
   - **Docstring:** *Vectorized wrapper for the localmin stencil*
 
-- [ ] `_localmin_sten`
+- [N/A] `_localmin_sten` - Private Python Numba stencil for local minima, not exposed in JavaScript API
   - **Signature:** `(x)`
   - **Docstring:** *Numba stencil for local minima computation*
 
-- [ ] `_phasor_angles`
+- [N/A] `_phasor_angles` - Private Python implementation helper for phasor angles, not exposed in JavaScript API
   - **Signature:** `(x) -> np.complexfloating[Any, Any]`
 
 - [x] `abs2`
@@ -1935,10 +1935,10 @@
 
 ## `librosa/version.py`
 
-- [ ] `__get_mod_version`
+- [N/A] `__get_mod_version` - Private Python utility for getting module versions, not applicable to JavaScript
   - **Signature:** `(modname)`
 
-- [ ] `show_versions`
+- [N/A] `show_versions` - Python utility for displaying dependency versions, not applicable to JavaScript browser context
   - **Signature:** `() -> None`
   - **Docstring:** *Return the version information for all librosa dependencies.*
 
