@@ -164,7 +164,7 @@ export function mfcc_to_mel(
 
     // Inverse DCT (if dct_type is 2, inverse is DCT-III)
     const inverse_type = dct_type === 2 ? 3 : 2
-    const mel_frame = idct(frame, n_mels, inverse_type, norm)
+    const mel_frame = idct(frame, inverse_type, norm)
 
     // Store in output
     for (let m = 0; m < n_mels; m++) {

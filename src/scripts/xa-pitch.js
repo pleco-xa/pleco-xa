@@ -662,7 +662,7 @@ export function estimate_tuning(
   kwargs = {}
 ) {
   // Extract pitch using piptrack (defined in this module)
-  const [pitches, magnitudes] = piptrack(
+  const {pitches, magnitudes} = piptrack(
     y,
     sr,
     S,

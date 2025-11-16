@@ -786,7 +786,7 @@ export function __mode_to_key(signature, unicode = true) {
 
   // Shift to major key
   const major_midi = midi + degree_shift
-  const major_note = midi_to_note(major_midi, octave = false, cents = false, unicode = unicode)
+  const major_note = midi_to_note(major_midi, false, false)
 
   return major_note
 }
