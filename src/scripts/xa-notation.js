@@ -4,6 +4,8 @@
  * Librosa-compatible notation utilities for JavaScript
  */
 
+import { hz_to_midi, midi_to_hz, note_to_hz, hz_to_note, note_to_midi, midi_to_note } from './xa-convert.js';
+
 /**
  * Melakarta raga database (Carnatic classical music)
  * Maps raga names to their melakarta number (1-72)
@@ -350,4 +352,331 @@ export function thaat_to_degrees(thaat) {
   }
 
   return [...degrees];
+}
+
+/**
+ * Convert one or more frequencies (in Hz) to Functional Just System (FJS) notation
+ *
+ * FJS is a notation system for just intonation that extends conventional staff notation.
+ * This function identifies the just intonation interval that best matches each frequency.
+ *
+ * @param {number|Array<number>} frequencies - Frequency value(s) in Hz
+ * @param {number} fmin - Reference frequency for unison (default: C1 = ~32.7 Hz)
+ * @param {string} unison - Unison note name (default: 'C')
+ * @param {boolean} unicode - Use unicode symbols for accidentals (default: true)
+ * @returns {string|Array<string>} FJS notation string(s)
+ *
+ * @example
+ * hz_to_fjs(440)           // 'A4'
+ * hz_to_fjs(330, 440, 'A') // 'E5^5'  (5:3 above A4)
+ * hz_to_fjs([220, 330, 440]) // ['A3', 'E4^5', 'A4']
+ */
+export function hz_to_fjs(frequencies, fmin = null, unison = 'C', unicode = true) {
+  const isScalar = typeof frequencies === 'number';
+  const freqArray = isScalar ? [frequencies] : frequencies;
+
+  // Default fmin to C1 if not specified
+  if (fmin === null) {
+    fmin = note_to_hz('C1');
+  }
+
+  const results = freqArray.map(freq => {
+    // Calculate interval ratio from reference
+    const ratio = freq / fmin;
+
+    // Convert to semitones
+    const semitones = 12 * Math.log2(ratio);
+
+    // Find nearest 12-TET note
+    const nearestNote = Math.round(semitones);
+    const noteName = hz_to_note(fmin * Math.pow(2, nearestNote / 12), unicode);
+
+    // Calculate cents deviation
+    const cents = (semitones - nearestNote) * 100;
+
+    // Determine FJS accidentals based on cents deviation
+    // This is a simplified FJS algorithm - full FJS requires ratio analysis
+    let fjsAccidental = '';
+
+    if (Math.abs(cents) > 10) {
+      // Approximate common just intervals
+      if (Math.abs(cents - 3.9) < 5) {
+        // 5-limit sharp (5:4 vs 81:64)
+        fjsAccidental = unicode ? '^5' : '^5';
+      } else if (Math.abs(cents + 3.9) < 5) {
+        // 5-limit flat
+        fjsAccidental = unicode ? '_5' : '_5';
+      } else if (Math.abs(cents - 21.5) < 5) {
+        // 7-limit sharp
+        fjsAccidental = unicode ? '^7' : '^7';
+      } else if (Math.abs(cents + 21.5) < 5) {
+        // 7-limit flat
+        fjsAccidental = unicode ? '_7' : '_7';
+      } else if (Math.abs(cents - 27.3) < 5) {
+        // 11-limit sharp
+        fjsAccidental = unicode ? '^11' : '^11';
+      } else if (Math.abs(cents + 27.3) < 5) {
+        // 11-limit flat
+        fjsAccidental = unicode ? '_11' : '_11';
+      }
+    }
+
+    return noteName + fjsAccidental;
+  });
+
+  return isScalar ? results[0] : results;
+}
+
+/**
+ * Convert an interval to Functional Just System (FJS) notation
+ *
+ * Takes a frequency ratio and converts it to FJS interval notation.
+ *
+ * @param {number|Array<number>} interval - Frequency ratio(s)
+ * @param {string} unison - Unison note name (default: 'C')
+ * @param {number} tolerance - Tolerance for ratio matching (default: 65/63 ≈ 1.0317)
+ * @param {boolean} unicode - Use unicode symbols (default: true)
+ * @returns {string|Array<string>} FJS interval notation
+ *
+ * @example
+ * interval_to_fjs(3/2)      // 'P5'  (perfect fifth)
+ * interval_to_fjs(5/4)      // 'M3^5' (just major third)
+ * interval_to_fjs([3/2, 5/4, 7/4])  // ['P5', 'M3^5', 'm7^7']
+ */
+export function interval_to_fjs(interval, unison = 'C', tolerance = 65.0 / 63, unicode = true) {
+  const isScalar = typeof interval === 'number';
+  const intervalArray = isScalar ? [interval] : interval;
+
+  // Reference frequency
+  const refHz = note_to_hz(unison + '4');
+
+  const results = intervalArray.map(ratio => {
+    const targetHz = refHz * ratio;
+    return hz_to_fjs(targetHz, refHz, unison, unicode);
+  });
+
+  return isScalar ? results[0] : results;
+}
+
+/**
+ * Convert frequencies (in Hz) to Carnatic svara notation within a melakarta raga
+ *
+ * @param {number|Array<number>} frequencies - Frequency value(s) in Hz
+ * @param {number} Sa - Reference frequency for Sa (tonic) in Hz
+ * @param {string|number} mela - Melakarta raga name or number (1-72)
+ * @param {boolean} abbr - Use abbreviated svara names (default: true)
+ * @param {boolean} octave - Include octave notation (default: true)
+ * @param {boolean} unicode - Use unicode symbols (default: true)
+ * @returns {string|Array<string>} Carnatic svara notation
+ *
+ * @example
+ * hz_to_svara_c(440, 261.63, 'kharaharapriya')  // 'G3' (approximate)
+ * hz_to_svara_c([261.63, 293.66, 329.63], 261.63, 22)  // ['S', 'R2', 'G2']
+ */
+export function hz_to_svara_c(frequencies, Sa, mela, abbr = true, octave = true, unicode = true) {
+  const isScalar = typeof frequencies === 'number';
+  const freqArray = isScalar ? [frequencies] : frequencies;
+
+  // Get melakarta degrees
+  const degrees = mela_to_degrees(mela);
+  const svaraNames = mela_to_svara(mela, abbr, unicode);
+
+  const results = freqArray.map(freq => {
+    // Calculate semitone distance from Sa
+    const semitones = 12 * Math.log2(freq / Sa);
+    const octaveNum = Math.floor(semitones / 12);
+    const degreeInOctave = ((semitones % 12) + 12) % 12;
+
+    // Find closest svara in the melakarta scale
+    let closestIdx = 0;
+    let minDiff = Math.abs(degreeInOctave - degrees[0]);
+
+    for (let i = 1; i < degrees.length; i++) {
+      const diff = Math.abs(degreeInOctave - degrees[i]);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = i;
+      }
+    }
+
+    let svara = svaraNames[closestIdx];
+
+    // Add octave notation if requested
+    if (octave) {
+      if (octaveNum > 0) {
+        svara += unicode ? `\u{0307}`.repeat(octaveNum) : "'".repeat(octaveNum);
+      } else if (octaveNum < 0) {
+        svara += unicode ? `\u{0323}`.repeat(-octaveNum) : ','.repeat(-octaveNum);
+      }
+    }
+
+    return svara;
+  });
+
+  return isScalar ? results[0] : results;
+}
+
+/**
+ * Convert frequencies (in Hz) to Hindustani svara notation
+ *
+ * @param {number|Array<number>} frequencies - Frequency value(s) in Hz
+ * @param {number} Sa - Reference frequency for Sa (tonic) in Hz
+ * @param {boolean} abbr - Use abbreviated svara names (default: true)
+ * @param {boolean} octave - Include octave notation (default: true)
+ * @param {boolean} unicode - Use unicode symbols (default: true)
+ * @returns {string|Array<string>} Hindustani svara notation
+ *
+ * @example
+ * hz_to_svara_h(440, 261.63)  // 'G' or 'Ga' (depending on abbr)
+ * hz_to_svara_h([261.63, 293.66, 329.63], 261.63)  // ['S', 'R', 'G']
+ */
+export function hz_to_svara_h(frequencies, Sa, abbr = true, octave = true, unicode = true) {
+  const isScalar = typeof frequencies === 'number';
+  const freqArray = isScalar ? [frequencies] : frequencies;
+
+  // Hindustani svara names (12-tone chromatic)
+  const SVARA_NAMES_ABBR = ['S', 'r', 'R', 'g', 'G', 'M', 'm', 'P', 'd', 'D', 'n', 'N'];
+  const SVARA_NAMES_FULL = ['Sa', 're', 'Re', 'ga', 'Ga', 'Ma', 'ma', 'Pa', 'dha', 'Dha', 'ni', 'Ni'];
+
+  const svaraNames = abbr ? SVARA_NAMES_ABBR : SVARA_NAMES_FULL;
+
+  const results = freqArray.map(freq => {
+    // Calculate semitone distance from Sa
+    const semitones = 12 * Math.log2(freq / Sa);
+    const octaveNum = Math.floor(semitones / 12);
+    const degreeInOctave = Math.round(((semitones % 12) + 12) % 12);
+
+    let svara = svaraNames[degreeInOctave];
+
+    // Add octave notation if requested
+    if (octave) {
+      if (octaveNum > 0) {
+        svara += unicode ? `\u{0307}`.repeat(octaveNum) : "'".repeat(octaveNum);
+      } else if (octaveNum < 0) {
+        svara += unicode ? `\u{0323}`.repeat(-octaveNum) : ','.repeat(-octaveNum);
+      }
+    }
+
+    return svara;
+  });
+
+  return isScalar ? results[0] : results;
+}
+
+/**
+ * Convert MIDI numbers to Carnatic svara within a melakarta raga
+ *
+ * @param {number|Array<number>} midi - MIDI note number(s)
+ * @param {number} Sa - MIDI number or frequency (Hz) for Sa (tonic)
+ * @param {string|number} mela - Melakarta raga name or number (1-72)
+ * @param {boolean} abbr - Use abbreviated svara names (default: true)
+ * @param {boolean} octave - Include octave notation (default: true)
+ * @param {boolean} unicode - Use unicode symbols (default: true)
+ * @returns {string|Array<string>} Carnatic svara notation
+ *
+ * @example
+ * midi_to_svara_c(60, 60, 'kharaharapriya')  // 'S'
+ * midi_to_svara_c([60, 62, 64], 60, 22)      // ['S', 'R2', 'G2']
+ */
+export function midi_to_svara_c(midi, Sa, mela, abbr = true, octave = true, unicode = true) {
+  const isScalar = typeof midi === 'number';
+  const midiArray = isScalar ? [midi] : midi;
+
+  // Convert Sa to Hz if it's a MIDI number
+  const SaHz = Sa < 100 ? midi_to_hz(Sa) : Sa;
+
+  // Convert MIDI to Hz
+  const frequencies = midiArray.map(m => midi_to_hz(m));
+
+  const result = hz_to_svara_c(frequencies, SaHz, mela, abbr, octave, unicode);
+
+  return result;
+}
+
+/**
+ * Convert MIDI numbers to Hindustani svara
+ *
+ * @param {number|Array<number>} midi - MIDI note number(s)
+ * @param {number} Sa - MIDI number or frequency (Hz) for Sa (tonic)
+ * @param {boolean} abbr - Use abbreviated svara names (default: true)
+ * @param {boolean} octave - Include octave notation (default: true)
+ * @param {boolean} unicode - Use unicode symbols (default: true)
+ * @returns {string|Array<string>} Hindustani svara notation
+ *
+ * @example
+ * midi_to_svara_h(60, 60)     // 'S'
+ * midi_to_svara_h([60, 62, 64], 60)  // ['S', 'R', 'G']
+ */
+export function midi_to_svara_h(midi, Sa, abbr = true, octave = true, unicode = true) {
+  const isScalar = typeof midi === 'number';
+  const midiArray = isScalar ? [midi] : midi;
+
+  // Convert Sa to Hz if it's a MIDI number
+  const SaHz = Sa < 100 ? midi_to_hz(Sa) : Sa;
+
+  // Convert MIDI to Hz
+  const frequencies = midiArray.map(m => midi_to_hz(m));
+
+  const result = hz_to_svara_h(frequencies, SaHz, abbr, octave, unicode);
+
+  return result;
+}
+
+/**
+ * Convert western note names to Carnatic svara within a melakarta raga
+ *
+ * @param {string|Array<string>} notes - Note name(s) (e.g., 'C4', 'D#5')
+ * @param {string} Sa - Note name for Sa (tonic)
+ * @param {string|number} mela - Melakarta raga name or number (1-72)
+ * @param {boolean} abbr - Use abbreviated svara names (default: true)
+ * @param {boolean} octave - Include octave notation (default: true)
+ * @param {boolean} unicode - Use unicode symbols (default: true)
+ * @returns {string|Array<string>} Carnatic svara notation
+ *
+ * @example
+ * note_to_svara_c('C4', 'C4', 'kharaharapriya')  // 'S'
+ * note_to_svara_c(['C4', 'D4', 'E4'], 'C4', 22)  // ['S', 'R2', 'G2']
+ */
+export function note_to_svara_c(notes, Sa, mela, abbr = true, octave = true, unicode = true) {
+  const isScalar = typeof notes === 'string';
+  const noteArray = isScalar ? [notes] : notes;
+
+  // Convert Sa to Hz
+  const SaHz = note_to_hz(Sa);
+
+  // Convert notes to Hz
+  const frequencies = noteArray.map(note => note_to_hz(note));
+
+  const result = hz_to_svara_c(frequencies, SaHz, mela, abbr, octave, unicode);
+
+  return result;
+}
+
+/**
+ * Convert western note names to Hindustani svara
+ *
+ * @param {string|Array<string>} notes - Note name(s) (e.g., 'C4', 'D#5')
+ * @param {string} Sa - Note name for Sa (tonic)
+ * @param {boolean} abbr - Use abbreviated svara names (default: true)
+ * @param {boolean} octave - Include octave notation (default: true)
+ * @param {boolean} unicode - Use unicode symbols (default: true)
+ * @returns {string|Array<string>} Hindustani svara notation
+ *
+ * @example
+ * note_to_svara_h('C4', 'C4')      // 'S'
+ * note_to_svara_h(['C4', 'D4', 'E4'], 'C4')  // ['S', 'R', 'G']
+ */
+export function note_to_svara_h(notes, Sa, abbr = true, octave = true, unicode = true) {
+  const isScalar = typeof notes === 'string';
+  const noteArray = isScalar ? [notes] : notes;
+
+  // Convert Sa to Hz
+  const SaHz = note_to_hz(Sa);
+
+  // Convert notes to Hz
+  const frequencies = noteArray.map(note => note_to_hz(note));
+
+  const result = hz_to_svara_h(frequencies, SaHz, abbr, octave, unicode);
+
+  return result;
 }

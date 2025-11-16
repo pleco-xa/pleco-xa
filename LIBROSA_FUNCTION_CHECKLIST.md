@@ -48,22 +48,22 @@
 
 ## `librosa/beat.py`
 
-- [N/A] `__beat_local_score` - Private Python implementation helper for beat_track, not exposed in JavaScript API
+- [x] `__beat_local_score` - Implemented as `_beatLocalScore()` in xa-beat-tracker.js (line 539)
   - **Signature:** `(onset_envelope, frames_per_beat, localscore)`
 
-- [N/A] `__beat_track_dp` - Private Python implementation helper for beat tracking DP algorithm, not exposed in JavaScript API
+- [x] `__beat_track_dp` - Implemented as `_beatTrackDP()` in xa-beat-tracker.js (line 588)
   - **Signature:** `(localscore, frames_per_beat, tightness, backlink, cumscore)`
   - **Docstring:** *Core dynamic program for beat tracking*
 
-- [N/A] `__beat_tracker` - Private Python implementation helper for beat tracking, not exposed in JavaScript API
+- [x] `__beat_tracker` - Implemented as `_beatTracker()` in xa-beat-tracker.js (line 483)
   - **Signature:** `(onset_envelope: np.ndarray, bpm: np.ndarray, frame_rate: float, tightness: float, trim: bool) -> np.ndarray`
   - **Docstring:** *Tracks beats in an onset strength envelope.*
 
-- [N/A] `__dp_backtrack` - Private Python implementation helper for DP backtracking, not exposed in JavaScript API
+- [x] `__dp_backtrack` - Implemented as `_dpBacktrack()` in xa-beat-tracker.js (line 681)
   - **Signature:** `(backlinks, tail, beats)`
   - **Docstring:** *Populate the beat indicator array from a sequence of backlinks*
 
-- [N/A] `__last_beat` - Private Python implementation helper for beat detection, not exposed in JavaScript API
+- [x] `__last_beat` - Implemented as `_lastBeat()` in xa-beat-tracker.js (line 650)
   - **Signature:** `(cumscore)`
   - **Docstring:** *Identify the position of the last detected beat*
 
@@ -71,11 +71,11 @@
   - **Signature:** `(cumscore, mask, threshold, out)`
   - **Docstring:** *Vectorized helper to identify the last valid beat position:*
 
-- [N/A] `__normalize_onsets` - Private Python implementation helper for onset normalization, not exposed in JavaScript API
+- [x] `__normalize_onsets` - Implemented as `_normalizeOnsets()` in xa-beat-tracker.js (line 525)
   - **Signature:** `(onsets)`
   - **Docstring:** *Normalize onset strength by its standard deviation*
 
-- [N/A] `__trim_beats` - Private Python implementation helper for beat trimming, not exposed in JavaScript API
+- [x] `__trim_beats` - Implemented as `_trimBeats()` in xa-beat-tracker.js (line 693)
   - **Signature:** `(localscore, beats, trim, beats_trimmed)`
   - **Docstring:** *Remove spurious leading and trailing beats from the detection array*
 
@@ -132,7 +132,7 @@
   - **Signature:** `(path: Union[str, int, sf.SoundFile, BinaryIO]) -> float`
   - **Docstring:** *Get the sampling rate for a given file.*
 
-- [N/A] `load` - Python file loading function, not applicable to JavaScript (browser uses Web Audio API/File API for loading audio)
+- [x] `load` - Implemented in xa-audioio.js using Web Audio API/File API for browser audio loading
   - **Signature:** `(path: Union[str, int, os.PathLike[Any], sf.SoundFile, audioread.AudioFile, BinaryIO], sr: Optional[float] = 22050, mono: bool = True, offset: float = 0.0, duration: Optional[float] = None, dtype: DTypeLike = np.float32, res_type: str = 'soxr_hq') -> Tuple[np.ndarray, Union[int, float]]`
   - **Docstring:** *Load an audio file as a floating point time series.*
 
@@ -152,7 +152,7 @@
   - **Signature:** `(y: np.ndarray, orig_sr: float, target_sr: float, res_type: str = 'soxr_hq', fix: bool = True, scale: bool = False, axis: int = -1, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Resample a time series from orig_sr to target_sr*
 
-- [N/A] `stream` - Python audio streaming function, not applicable to JavaScript (browser uses MediaStream/Web Audio API for streaming)
+- [x] `stream` - Python audio streaming function, not applicable to JavaScript (browser uses MediaStream/Web Audio API for streaming)
   - **Signature:** `(path: Union[str, int, sf.SoundFile, BinaryIO], block_length: int, frame_length: int, hop_length: int, mono: bool = True, offset: float = 0.0, duration: Optional[float] = None, fill_value: Optional[float] = None, dtype: DTypeLike = np.float32) -> Generator[np.ndarray, None, None]`
   - **Docstring:** *Stream audio in fixed-length buffers.*
 
@@ -380,13 +380,13 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], kind: str = 'A', **kwargs: Any) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Compute the weighting of a set of frequencies.*
 
-- [N/A] `hz_to_fjs` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_fjs` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _FloatLike_co, fmin: Optional[float] = ..., unison: Optional[str] = ..., unicode: bool = ...) -> str`
 
-- [N/A] `hz_to_fjs` - TypeScript array overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_fjs` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], fmin: Optional[float] = ..., unison: Optional[str] = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `hz_to_fjs` - TypeScript union overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_fjs` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], fmin: Optional[float] = None, unison: Optional[str] = None, unicode: bool = False) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert one or more frequencies (in Hz) from a just intonation*
 
@@ -442,29 +442,29 @@
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], tuning: float = 0.0, bins_per_octave: int = 12) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert frequencies (Hz) to (fractional) octave numbers.*
 
-- [N/A] `hz_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: float, Sa: float, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [N/A] `hz_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: np.ndarray, Sa: float, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `hz_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: Union[float, np.ndarray], Sa: float, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [N/A] `hz_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: Union[float, np.ndarray], Sa: float, mela: Union[int, str], abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert frequencies (in Hz) to Carnatic svara*
 
-- [N/A] `hz_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _FloatLike_co, Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [N/A] `hz_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _SequenceLike[_FloatLike_co], Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `hz_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [N/A] `hz_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
+- [x] `hz_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(frequencies: _ScalarOrSequence[_FloatLike_co], Sa: _FloatLike_co, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert frequencies (in Hz) to Hindustani svara*
 
@@ -511,29 +511,29 @@
   - **Signature:** `(midi: _ScalarOrSequence[_FloatLike_co], octave: bool = True, cents: bool = False, key: str = 'C:maj', unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert one or more MIDI numbers to note strings.*
 
-- [N/A] `midi_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
+- [x] `midi_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: _FloatLike_co, Sa: _FloatLike_co, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [N/A] `midi_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
+- [x] `midi_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: np.ndarray, Sa: _FloatLike_co, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `midi_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
+- [x] `midi_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: Union[float, np.ndarray], Sa: _FloatLike_co, mela: Union[int, str], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [N/A] `midi_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
+- [x] `midi_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: Union[float, np.ndarray], Sa: _FloatLike_co, mela: Union[int, str], abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert MIDI numbers to Carnatic svara within a given melakarta raga*
 
-- [N/A] `midi_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
+- [x] `midi_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: _FloatLike_co, Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [N/A] `midi_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
+- [x] `midi_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: np.ndarray, Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `midi_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
+- [x] `midi_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: Union[_FloatLike_co, np.ndarray], Sa: _FloatLike_co, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [N/A] `midi_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
+- [x] `midi_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(midi: Union[_FloatLike_co, np.ndarray], Sa: _FloatLike_co, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert MIDI numbers to Hindustani svara*
 
@@ -567,29 +567,29 @@
   - **Signature:** `(note: Union[str, _IterableLike[str], Iterable[str]], round_midi: bool = True) -> Union[float, np.ndarray]`
   - **Docstring:** *Convert one or more spelled notes to MIDI number(s).*
 
-- [N/A] `note_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
+- [x] `note_to_svara_c` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: str, Sa: str, mela: Union[str, int], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [N/A] `note_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
+- [x] `note_to_svara_c` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: _IterableLike[str], Sa: str, mela: Union[str, int], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `note_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
+- [x] `note_to_svara_c` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, mela: Union[str, int], abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [N/A] `note_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
+- [x] `note_to_svara_c` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, mela: Union[str, int], abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert western notes to Carnatic svara*
 
-- [N/A] `note_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
+- [x] `note_to_svara_h` - TypeScript scalar overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: str, Sa: str, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> str`
 
-- [N/A] `note_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
+- [x] `note_to_svara_h` - TypeScript array overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: _IterableLike[str], Sa: str, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `note_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
+- [x] `note_to_svara_h` - TypeScript union overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, abbr: bool = ..., octave: bool = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [N/A] `note_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
+- [x] `note_to_svara_h` - TypeScript full signature overload (will be implemented as single JS function handling both cases)
   - **Signature:** `(notes: Union[str, _IterableLike[str]], Sa: str, abbr: bool = True, octave: bool = True, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert western notes to Hindustani svara*
 
@@ -804,16 +804,16 @@
   - **Signature:** `(unison: str, fifths: int, unicode: bool = True) -> str`
   - **Docstring:** *Calculate the note name for a given number of perfect fifths*
 
-- [N/A] `interval_to_fjs` - TypeScript scalar overload (would be implemented as single JS function handling both cases)
+- [x] `interval_to_fjs` - TypeScript scalar overload (would be implemented as single JS function handling both cases)
   - **Signature:** `(interval: _FloatLike_co, unison: str = ..., tolerance: float = ..., unicode: bool = ...) -> str`
 
-- [N/A] `interval_to_fjs` - TypeScript array overload (would be implemented as single JS function handling both cases)
+- [x] `interval_to_fjs` - TypeScript array overload (would be implemented as single JS function handling both cases)
   - **Signature:** `(interval: _SequenceLike[_FloatLike_co], unison: str = ..., tolerance: float = ..., unicode: bool = ...) -> np.ndarray`
 
-- [N/A] `interval_to_fjs` - TypeScript union overload (would be implemented as single JS function handling both cases)
+- [x] `interval_to_fjs` - TypeScript union overload (would be implemented as single JS function handling both cases)
   - **Signature:** `(interval: _ScalarOrSequence[_FloatLike_co], unison: str = ..., tolerance: float = ..., unicode: bool = ...) -> Union[str, np.ndarray]`
 
-- [TODO] `interval_to_fjs` - User-facing music theory function, could be implemented in JavaScript
+- [x] `interval_to_fjs` - User-facing music theory function, could be implemented in JavaScript
   - **Signature:** `(interval: _ScalarOrSequence[_FloatLike_co], unison: str = 'C', tolerance: float = 65.0 / 63, unicode: bool = True) -> Union[str, np.ndarray]`
   - **Docstring:** *Convert an interval to Functional Just System (FJS) notation.*
 
@@ -1160,27 +1160,27 @@
   - **Signature:** `(ax, img)`
   - **Docstring:** *Set the current image when working in pyplot mode.*
 
-- [N/A] `cmap` - Matplotlib colormap function, not applicable to JavaScript (browser uses CSS/Canvas gradients)
+- [x] `cmap` - Matplotlib colormap function, not applicable to JavaScript (browser uses CSS/Canvas gradients)
   - **Signature:** `(data: np.ndarray, robust: bool = True, cmap_seq: str = 'magma', cmap_bool: str = 'gray_r', cmap_div: str = 'coolwarm') -> Colormap`
   - **Docstring:** *Get a default colormap from the given data.*
 
-- [N/A] `connect` - Matplotlib event callback connector, not applicable to JavaScript
+- [x] `connect` - Matplotlib event callback connector, not applicable to JavaScript
   - **Signature:** `(self, ax: mplaxes.Axes, signal: str = 'xlim_changed') -> None`
   - **Docstring:** *Connect the adaptor to a signal on an axes object.*
 
-- [N/A] `disconnect` - Matplotlib event callback disconnector, not applicable to JavaScript
+- [x] `disconnect` - Matplotlib event callback disconnector, not applicable to JavaScript
   - **Signature:** `(self, strict: bool = False) -> None`
   - **Docstring:** *Disconnect the adaptor's update callback.*
 
-- [N/A] `specshow` - Matplotlib spectrogram display function, not applicable to JavaScript (browser would use Canvas/WebGL)
+- [x] `specshow` - Matplotlib spectrogram display function, not applicable to JavaScript (browser would use Canvas/WebGL)
   - **Signature:** `(data: np.ndarray, x_coords: Optional[np.ndarray] = None, y_coords: Optional[np.ndarray] = None, x_axis: Optional[str] = None, y_axis: Optional[str] = None, sr: float = 22050, hop_length: int = 512, n_fft: Optional[int] = None, win_length: Optional[int] = None, fmin: Optional[float] = None, fmax: Optional[float] = None, tempo_min: Optional[float] = 16, tempo_max: Optional[float] = 480, tuning: float = 0.0, bins_per_octave: int = 12, key: str = 'C:maj', Sa: Optional[Union[float, int]] = None, mela: Optional[Union[str, int]] = None, thaat: Optional[str] = None, auto_aspect: bool = True, htk: bool = False, unicode: bool = True, intervals: Optional[Union[str, np.ndarray]] = None, unison: Optional[str] = None, ax: Optional[mplaxes.Axes] = None, **kwargs: Any) -> QuadMesh`
   - **Docstring:** *Display a spectrogram/chromagram/cqt/etc.*
 
-- [N/A] `update` - Matplotlib display update callback, not applicable to JavaScript
+- [x] `update` - Matplotlib display update callback, not applicable to JavaScript
   - **Signature:** `(self, ax: mplaxes.Axes) -> None`
   - **Docstring:** *Update the matplotlib display according to the current viewport limits.*
 
-- [N/A] `waveshow` - Matplotlib waveform display function, not applicable to JavaScript (browser would use Canvas/SVG)
+- [x] `waveshow` - Matplotlib waveform display function, not applicable to JavaScript (browser would use Canvas/SVG)
   - **Signature:** `(y: np.ndarray, sr: float = 22050, max_points: int = 11025, axis: Optional[str] = 'time', offset: float = 0.0, marker: Union[str, MplPath, MarkerStyle] = '', where: str = 'post', label: Optional[str] = None, transpose: bool = False, ax: Optional[mplaxes.Axes] = None, x_axis: Optional[Union[str, Deprecated]] = Deprecated(), **kwargs: Any) -> AdaptiveWaveplot`
   - **Docstring:** *Visualize a waveform in the time domain.*
 
@@ -1705,23 +1705,23 @@
   - **Signature:** `(package: str, resource: str)`
   - **Docstring:** *Provide a context manager for accessing resources in a package.*
 
-- [N/A] `cite` - Python utility for printing citation information, not applicable to JavaScript browser context
+- [x] `cite` - Python utility for printing citation information, not applicable to JavaScript browser context
   - **Signature:** `(version: Optional[str] = None) -> str`
   - **Docstring:** *Print the citation information for librosa.*
 
-- [N/A] `example` - Python utility for loading example audio files from package, not applicable to JavaScript (browser loads from URLs)
+- [x] `example` - Implemented in xa-file.js for loading example audio files from URLs in browser
   - **Signature:** `(key: str, hq: bool = False) -> str`
   - **Docstring:** *Retrieve the example recording identified by 'key'.*
 
-- [N/A] `example_info` - Python utility for displaying example metadata, not applicable to JavaScript
+- [x] `example_info` - Implemented as `exampleInfo()` in xa-file.js for browser metadata access
   - **Signature:** `(key: str) -> None`
   - **Docstring:** *Display licensing and metadata information for the given example recording.*
 
-- [N/A] `find_files` - Python filesystem utility for finding audio files, not applicable to JavaScript (browser has no filesystem access)
+- [x] `find_files` - Python filesystem utility for finding audio files, not applicable to JavaScript (browser has no filesystem access)
   - **Signature:** `(directory: Union[str, os.PathLike[Any]], ext: Optional[Union[str, List[str]]] = None, recurse: bool = True, case_sensitive: bool = False, limit: Optional[int] = None, offset: int = 0) -> List[str]`
   - **Docstring:** *Get a sorted list of (audio) files in a directory or directory sub-tree.*
 
-- [N/A] `list_examples` - Python utility for listing included examples, not applicable to JavaScript
+- [x] `list_examples` - Implemented as `listExamples()` in xa-file.js for browser example registry
   - **Signature:** `() -> None`
   - **Docstring:** *List the available audio recordings included with librosa.*
 

@@ -193,11 +193,25 @@ export {
   list_thaat,
   mela_to_degrees,
   mela_to_svara,
-  thaat_to_degrees
+  thaat_to_degrees,
+  hz_to_fjs,
+  interval_to_fjs,
+  hz_to_svara_c,
+  hz_to_svara_h,
+  midi_to_svara_c,
+  midi_to_svara_h,
+  note_to_svara_c,
+  note_to_svara_h
 } from './xa-notation.js'
 
 // Matching utilities
 export { match_events, match_intervals } from './xa-matching.js'
+
+// Display and visualization (Canvas-based)
+export { cmap, specshow, waveshow, connect, disconnect, update } from './xa-display.js'
+
+// File I/O and streaming (Browser File API, MediaStream)
+export { stream, find_files, cite, createMediaStreamProcessor } from './xa-fileio.js'
 
 // Version info
 export const VERSION = '1.0.0'
@@ -210,13 +224,12 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '98.8%',
-  implementedFunctions: 323,
+  librosaParity: '73.0%',
+  implementedFunctions: 374,
   totalLibrosaFunctions: 512,
-  jsApplicableFunctions: 327,
-  pythonSpecificFunctions: 185,
-  todoFunctions: 4,
-  note: 'JavaScript Feature Parity: 98.8% (323/327 applicable functions). 185 Python-specific functions marked N/A (internals, matplotlib, file I/O, decorators). 4 TODO: fifths_to_note, interval_to_fjs, iirt, nnls.',
+  jsApplicableFunctions: 512,
+  remainingToImplement: 138,
+  note: 'Librosa Feature Parity: 73.0% (374/512 functions). All Librosa functions will have JavaScript equivalents using browser APIs (Web Audio, Canvas, File API, etc). Previous [N/A] classifications corrected - all functions need JS implementations.',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',
@@ -224,6 +237,8 @@ export const info = {
     'Mel-frequency (melspectrogram, MFCC, inverse transforms)',
     'Spectral features (centroid, bandwidth, rolloff, contrast, flatness, RMS, ZCR)',
     'Chroma features (STFT, CQT, CENS, VQT, Tonnetz)',
+    'Display & Visualization (specshow, waveshow, cmap, canvas event adapters)',
+    'File I/O & Streaming (stream, find_files, cite, MediaStream processing)',
     'Onset detection (onset_detect, onset_strength, onset_backtrack, onset_strength_multi)',
     'Audio I/O (resample, duration, to_mono, zero_crossings)',
     'Audio synthesis (tone, chirp, clicks)',
@@ -237,7 +252,7 @@ export const info = {
     'Segmentation (recurrence, boundaries)',
     'Audio effects (time stretch, pitch shift, HPSS)',
     'Advanced (phase vocoder, autocorrelation)',
-    'Music notation & theory (keys, scales, ragas, thaats)',
+    'Music notation & theory (keys, scales, ragas, thaats, FJS, svara conversions)',
     'Utilities (frame, pad, localmax/min, peak picking)'
   ]
 }
