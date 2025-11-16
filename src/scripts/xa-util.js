@@ -1094,3 +1094,138 @@ export function sparsify_rows(x, quantile = 0.01, dtype = null) {
 
   return result
 }
+
+/**
+ * Determine whether a variable contains valid audio data
+ * Port of librosa.util.valid_audio
+ *
+ * Valid audio must be:
+ * - A typed array or regular array
+ * - One-dimensional
+ * - Finite (no NaN or Infinity values)
+ * - Non-empty
+ *
+ * @param {Array|Float32Array|Float64Array} y - Input audio data
+ * @param {boolean} mono - If true, require strictly 1D (default: true)
+ * @returns {boolean} True if audio data is valid
+ *
+ * @example
+ * valid_audio([1, 2, 3])  // true
+ * valid_audio([NaN, 1, 2])  // false
+ * valid_audio([])  // false
+ */
+export function valid_audio(y, mono = true) {
+  if (!y || (!Array.isArray(y) && !(y instanceof Float32Array) && !(y instanceof Float64Array))) {
+    return false
+  }
+
+  // Check if non-empty
+  if (y.length === 0) {
+    return false
+  }
+
+  // Check if 1D (no nested arrays for mono audio)
+  if (mono && Array.isArray(y[0])) {
+    return false
+  }
+
+  // Check all values are finite
+  for (let i = 0; i < y.length; i++) {
+    if (!isFinite(y[i])) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/**
+ * Ensure that an input value is integer-typed
+ * Port of librosa.util.valid_int
+ *
+ * @param {number} x - Input value
+ * @param {Function} cast - Optional casting function (default: Math.round)
+ * @returns {number} Integer value
+ * @throws {ParameterError} If input cannot be cast to integer
+ *
+ * @example
+ * valid_int(3.7)  // 4
+ * valid_int(3.7, Math.floor)  // 3
+ * valid_int(NaN)  // throws ParameterError
+ */
+export function valid_int(x, cast = null) {
+  if (typeof x !== 'number') {
+    throw new ParameterError(`Input must be numeric, got ${typeof x}`)
+  }
+
+  if (!isFinite(x)) {
+    throw new ParameterError(`Input must be finite, got ${x}`)
+  }
+
+  // Use provided cast function or default to Math.round
+  const castFunc = cast || Math.round
+  const result = castFunc(x)
+
+  if (!Number.isInteger(result)) {
+    throw new ParameterError(`Cast function did not produce integer: ${result}`)
+  }
+
+  return result
+}
+
+/**
+ * Ensure that an array is a valid representation of time intervals
+ * Port of librosa.util.valid_intervals
+ *
+ * Valid intervals must be:
+ * - A 2D array with shape [n, 2]
+ * - All values finite
+ * - interval[i][0] <= interval[i][1] for all i (start <= end)
+ * - Non-negative times (if required)
+ *
+ * @param {Array} intervals - Array of [start, end] time intervals
+ * @returns {boolean} True if intervals are valid
+ *
+ * @example
+ * valid_intervals([[0, 1], [1, 2], [2, 3]])  // true
+ * valid_intervals([[0, 1], [2, 1]])  // false (end < start)
+ * valid_intervals([[0, 1, 2]])  // false (wrong shape)
+ */
+export function valid_intervals(intervals) {
+  if (!Array.isArray(intervals)) {
+    return false
+  }
+
+  if (intervals.length === 0) {
+    return false
+  }
+
+  // Check each interval
+  for (let i = 0; i < intervals.length; i++) {
+    const interval = intervals[i]
+
+    // Must be array of length 2
+    if (!Array.isArray(interval) || interval.length !== 2) {
+      return false
+    }
+
+    const [start, end] = interval
+
+    // Must be finite numbers
+    if (!isFinite(start) || !isFinite(end)) {
+      return false
+    }
+
+    // Start must be <= end
+    if (start > end) {
+      return false
+    }
+
+    // Times should be non-negative (common requirement)
+    if (start < 0 || end < 0) {
+      return false
+    }
+  }
+
+  return true
+}

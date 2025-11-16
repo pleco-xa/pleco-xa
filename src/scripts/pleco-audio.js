@@ -35,7 +35,7 @@ export {
 } from './xa-filters.js'
 
 // Mel-frequency analysis
-export { melspectrogram, mfcc, mel_filterbank, hz_to_mel, mel_to_hz, dct, idct, delta_features, lifter_mfcc, power_to_db } from './xa-mel.js'
+export { melspectrogram, mfcc, mel_filterbank, dct, idct, delta_features, lifter_mfcc, power_to_db } from './xa-mel.js'
 
 // Spectral features
 export {
@@ -78,14 +78,14 @@ export {
 // Normalization and masking
 export {
   normalize, peak_normalize, normalize_clip, softmask, apply_mask,
-  rms_normalize, lufs_normalize, compress, fade, crossfade, tiny
+  rms_normalize, lufs_normalize, compress, fade, crossfade
 } from './xa-normalize.js'
 
 // Tempogram and tempo analysis
 export { tempogram, fourier_tempogram, tempogram_ratio, estimate_tempo } from './xa-tempogram.js'
 
 // Pitch tracking
-export { piptrack, yin, pyin, autocorrelation_pitch, hz_to_midi_pitch, pitch_salience, smooth_pitch } from './xa-pitch.js'
+export { piptrack, yin, pyin, autocorrelation_pitch, hz_to_midi_pitch, pitch_salience, smooth_pitch, pitch_tuning, estimate_tuning } from './xa-pitch.js'
 
 // Source separation and decomposition
 export { hpss, median_filter, nn_filter, decompose, nmf_reconstruct, nmf_separate } from './xa-decompose.js'
@@ -169,7 +169,10 @@ export {
   axis_sort,
   expand_to,
   fill_off_diagonal,
-  sparsify_rows
+  sparsify_rows,
+  valid_audio,
+  valid_int,
+  valid_intervals
 } from './xa-util.js'
 
 // Music notation and theory
@@ -197,8 +200,8 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~45.7%',
-  implementedFunctions: 234,
+  librosaParity: '43.0%',
+  implementedFunctions: 220,
   totalLibrosaFunctions: 512,
   note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation, matching, utilities, filters',
   modules: [

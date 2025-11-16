@@ -562,3 +562,136 @@ export function smooth_pitch(f0, window_size = 5) {
 
   return smoothed
 }
+
+/**
+ * Given a collection of pitches, estimate its tuning offset (in fractions of a bin)
+ * Port of librosa.pitch_tuning
+ *
+ * This function estimates the deviation from 12-tone equal temperament (12-TET)
+ * by analyzing the distribution of pitch deviations from semitone centers.
+ *
+ * @param {Array|Float32Array} frequencies - Collection of frequencies in Hz
+ * @param {number} resolution - Resolution of tuning offset (default: 0.01 semitones)
+ * @param {number} bins_per_octave - Number of bins per octave (default: 12 for semitones)
+ * @returns {number} Tuning offset in fractions of bins_per_octave
+ *
+ * @example
+ * // If frequencies are tuned 0.2 semitones sharp
+ * pitch_tuning([442, 496, 590])  // ~0.2
+ */
+export function pitch_tuning(frequencies, resolution = 0.01, bins_per_octave = 12) {
+  if (!frequencies || frequencies.length === 0) {
+    return 0.0
+  }
+
+  // Filter out zero/invalid frequencies
+  const valid_freqs = []
+  for (let i = 0; i < frequencies.length; i++) {
+    if (frequencies[i] > 0 && isFinite(frequencies[i])) {
+      valid_freqs.push(frequencies[i])
+    }
+  }
+
+  if (valid_freqs.length === 0) {
+    return 0.0
+  }
+
+  // Convert frequencies to fractional bin numbers
+  const bins = valid_freqs.map(f => bins_per_octave * Math.log2(f / 440.0))
+
+  // Compute deviation from nearest bin (fractional part)
+  const deviations = bins.map(b => {
+    const deviation = b - Math.round(b)
+    // Wrap to [-0.5, 0.5]
+    if (deviation > 0.5) return deviation - 1.0
+    if (deviation < -0.5) return deviation + 1.0
+    return deviation
+  })
+
+  // Create histogram of deviations at specified resolution
+  const nbins = Math.ceil(1.0 / resolution)
+  const histogram = new Float32Array(nbins)
+
+  for (let i = 0; i < deviations.length; i++) {
+    // Map deviation from [-0.5, 0.5] to histogram bin [0, nbins-1]
+    const bin_idx = Math.floor((deviations[i] + 0.5) * nbins)
+    const clamped_idx = Math.max(0, Math.min(nbins - 1, bin_idx))
+    histogram[clamped_idx]++
+  }
+
+  // Find the bin with maximum count (mode of distribution)
+  let max_count = 0
+  let max_idx = 0
+  for (let i = 0; i < nbins; i++) {
+    if (histogram[i] > max_count) {
+      max_count = histogram[i]
+      max_idx = i
+    }
+  }
+
+  // Convert histogram bin back to tuning offset
+  const tuning_offset = (max_idx / nbins) - 0.5
+
+  return tuning_offset
+}
+
+/**
+ * Estimate the tuning of an audio time series or spectrogram input
+ * Port of librosa.estimate_tuning
+ *
+ * @param {Float32Array} y - Audio time series (optional if S provided)
+ * @param {number} sr - Sample rate (default: 22050)
+ * @param {Array} S - Spectrogram (optional if y provided)
+ * @param {number} n_fft - FFT window size (default: 2048)
+ * @param {number} resolution - Resolution of tuning offset (default: 0.01)
+ * @param {number} bins_per_octave - Number of bins per octave (default: 12)
+ * @param {Object} kwargs - Additional arguments passed to piptrack
+ * @returns {number} Tuning deviation from A440 in fractions of bins_per_octave
+ *
+ * @example
+ * const tuning = estimate_tuning(audioData, 22050)
+ * console.log(`Audio is ${tuning * 100} cents sharp`)
+ */
+export function estimate_tuning(
+  y = null,
+  sr = 22050,
+  S = null,
+  n_fft = 2048,
+  resolution = 0.01,
+  bins_per_octave = 12,
+  kwargs = {}
+) {
+  // Extract pitch using piptrack (defined in this module)
+  const [pitches, magnitudes] = piptrack(
+    y,
+    sr,
+    S,
+    n_fft,
+    kwargs.hop_length || 512,
+    kwargs.fmin || 150.0,
+    kwargs.fmax || 4000.0,
+    kwargs.threshold || 0.1
+  )
+
+  // Collect all detected pitches weighted by magnitude
+  const frequencies = []
+
+  for (let t = 0; t < pitches[0].length; t++) {
+    for (let f = 0; f < pitches.length; f++) {
+      const pitch = pitches[f][t]
+      const mag = magnitudes[f][t]
+
+      // Only include strong, valid pitches
+      if (pitch > 0 && mag > 0.1) {
+        // Weight by magnitude (add multiple copies based on magnitude)
+        const weight = Math.max(1, Math.floor(mag * 10))
+        for (let w = 0; w < weight; w++) {
+          frequencies.push(pitch)
+        }
+      }
+    }
+  }
+
+  // Estimate tuning from collected frequencies
+  return pitch_tuning(frequencies, resolution, bins_per_octave)
+}

@@ -873,7 +873,7 @@
   - **Signature:** `(x: np.ndarray, y: np.ndarray) -> None`
   - **Docstring:** *Vectorized wrapper for the parabolic interpolation stencil*
 
-- [ ] `estimate_tuning`
+- [x] `estimate_tuning`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: Optional[int] = 2048, resolution: float = 0.01, bins_per_octave: int = 12, **kwargs: Any) -> float`
   - **Docstring:** *Estimate the tuning of an audio time series or spectrogram input.*
 
@@ -881,7 +881,7 @@
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: Optional[int] = 2048, hop_length: Optional[int] = None, fmin: float = 150.0, fmax: float = 4000.0, threshold: float = 0.1, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', ref: Optional[Union[float, Callable]] = None) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Pitch tracking on thresholded parabolically-interpolated STFT.*
 
-- [ ] `pitch_tuning`
+- [x] `pitch_tuning`
   - **Signature:** `(frequencies: ArrayLike, resolution: float = 0.01, bins_per_octave: int = 12) -> float`
   - **Docstring:** *Given a collection of pitches, estimate its tuning offset*
 
@@ -1921,15 +1921,15 @@
   - **Signature:** `(x: Union[float, np.ndarray]) -> _FloatLike_co`
   - **Docstring:** *Compute the tiny-value corresponding to an input's data type.*
 
-- [ ] `valid_audio`
+- [x] `valid_audio`
   - **Signature:** `(y: np.ndarray) -> bool`
   - **Docstring:** *Determine whether a variable contains valid audio data.*
 
-- [ ] `valid_int`
+- [x] `valid_int`
   - **Signature:** `(x: float, cast: Optional[Callable[[float], float]] = None) -> int`
   - **Docstring:** *Ensure that an input value is integer-typed.*
 
-- [ ] `valid_intervals`
+- [x] `valid_intervals`
   - **Signature:** `(intervals: np.ndarray) -> bool`
   - **Docstring:** *Ensure that an array is a valid representation of time intervals:*
 
