@@ -172,7 +172,17 @@ export {
   sparsify_rows,
   valid_audio,
   valid_int,
-  valid_intervals
+  valid_intervals,
+  buf_to_float,
+  count_unique,
+  cyclic_gradient,
+  dtype_c2r,
+  dtype_r2c,
+  fix_frames,
+  index_to_slice,
+  is_positive_int,
+  is_unique,
+  stack
 } from './xa-util.js'
 
 // Music notation and theory
@@ -200,8 +210,8 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '47.3%',
-  implementedFunctions: 242,
+  librosaParity: '61.5%',
+  implementedFunctions: 315,
   totalLibrosaFunctions: 512,
   note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation, matching, utilities, filters',
   modules: [

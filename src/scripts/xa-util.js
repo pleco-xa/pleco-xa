@@ -149,6 +149,9 @@ export function isPositiveInt(x) {
   return Number.isInteger(x) && x > 0
 }
 
+// Alias for Librosa compatibility
+export const is_positive_int = isPositiveInt
+
 /**
  * Pad array to center data
  * @param {Array} data - Array to pad
@@ -1228,4 +1231,358 @@ export function valid_intervals(intervals) {
   }
 
   return true
+}
+
+/**
+ * Convert an integer buffer to floating point values
+ * Port of librosa.util.buf_to_float
+ *
+ * @param {TypedArray|Array} x - Integer buffer to convert
+ * @param {number} n_bytes - Number of bytes per sample (1, 2, or 4)
+ * @param {String} dtype - Output dtype (ignored in JS, always returns Float32Array)
+ * @returns {Float32Array} Normalized floating point values in range [-1, 1]
+ */
+export function buf_to_float(x, n_bytes = 2, dtype = 'float32') {
+  if (n_bytes === 1) {
+    // 8-bit samples are unsigned, range [0, 255]
+    const scale = 1.0 / 128
+    const result = new Float32Array(x.length)
+    for (let i = 0; i < x.length; i++) {
+      result[i] = (x[i] - 128) * scale
+    }
+    return result
+  } else if (n_bytes === 2) {
+    // 16-bit samples are signed, range [-32768, 32767]
+    const scale = 1.0 / 32768
+    const result = new Float32Array(x.length)
+    for (let i = 0; i < x.length; i++) {
+      result[i] = x[i] * scale
+    }
+    return result
+  } else if (n_bytes === 4) {
+    // 32-bit samples are signed, range [-2147483648, 2147483647]
+    const scale = 1.0 / 2147483648
+    const result = new Float32Array(x.length)
+    for (let i = 0; i < x.length; i++) {
+      result[i] = x[i] * scale
+    }
+    return result
+  } else {
+    throw new ParameterError(`Unsupported bit depth: ${n_bytes} bytes. Use 1, 2, or 4.`)
+  }
+}
+
+/**
+ * Count the number of unique values in a multi-dimensional array along an axis
+ * Port of librosa.util.count_unique
+ *
+ * @param {Array} data - Input array
+ * @param {number} axis - Axis along which to count unique values (default: -1)
+ * @returns {Array|number} Count(s) of unique values
+ */
+export function count_unique(data, axis = -1) {
+  const is_1d = !Array.isArray(data[0])
+
+  if (is_1d) {
+    const unique = new Set(data)
+    return unique.size
+  }
+
+  // 2D array
+  if (axis === -1 || axis === 1) {
+    // Count unique values in each row
+    return data.map(row => {
+      const unique = new Set(row)
+      return unique.size
+    })
+  } else if (axis === 0) {
+    // Count unique values in each column
+    const n_cols = data[0].length
+    const result = new Array(n_cols)
+    for (let j = 0; j < n_cols; j++) {
+      const column = data.map(row => row[j])
+      const unique = new Set(column)
+      result[j] = unique.size
+    }
+    return result
+  } else {
+    throw new ParameterError(`Invalid axis: ${axis}`)
+  }
+}
+
+/**
+ * Estimate the gradient of a function over a uniformly sampled periodic domain
+ * Port of librosa.util.cyclic_gradient
+ *
+ * @param {Array} data - Input array
+ * @param {number} edge_order - Gradient accuracy at boundaries (1 or 2, default: 1)
+ * @param {number} axis - Axis along which to compute gradient (default: -1)
+ * @returns {Array} Gradient array (same shape as input)
+ */
+export function cyclic_gradient(data, edge_order = 1, axis = -1) {
+  const is_1d = !Array.isArray(data[0])
+
+  if (is_1d) {
+    const n = data.length
+    const grad = new Array(n)
+
+    if (edge_order === 1) {
+      // First-order accurate at boundaries
+      for (let i = 0; i < n; i++) {
+        const next = (i + 1) % n
+        const prev = (i - 1 + n) % n
+        grad[i] = (data[next] - data[prev]) / 2
+      }
+    } else if (edge_order === 2) {
+      // Second-order accurate (central differences everywhere due to periodicity)
+      for (let i = 0; i < n; i++) {
+        const next = (i + 1) % n
+        const prev = (i - 1 + n) % n
+        grad[i] = (data[next] - data[prev]) / 2
+      }
+    } else {
+      throw new ParameterError(`edge_order must be 1 or 2, got ${edge_order}`)
+    }
+
+    return grad
+  }
+
+  // 2D array
+  if (axis === -1 || axis === 1) {
+    // Gradient along rows
+    return data.map(row => cyclic_gradient(row, edge_order))
+  } else if (axis === 0) {
+    // Gradient along columns
+    const n_rows = data.length
+    const n_cols = data[0].length
+    const result = Array(n_rows).fill(null).map(() => new Array(n_cols))
+
+    for (let j = 0; j < n_cols; j++) {
+      const column = data.map(row => row[j])
+      const grad_col = cyclic_gradient(column, edge_order)
+      for (let i = 0; i < n_rows; i++) {
+        result[i][j] = grad_col[i]
+      }
+    }
+    return result
+  } else {
+    throw new ParameterError(`Invalid axis: ${axis}`)
+  }
+}
+
+/**
+ * Find the real numpy dtype corresponding to a complex dtype
+ * Port of librosa.util.dtype_c2r
+ *
+ * In JavaScript, we just return appropriate TypedArray constructors
+ *
+ * @param {String|Function} d - Complex dtype identifier
+ * @param {Function} default_type - Default real type (default: Float32Array)
+ * @returns {Function} Real TypedArray constructor
+ */
+export function dtype_c2r(d, default_type = Float32Array) {
+  if (d === 'complex64' || d === Float32Array || d === 'float32') {
+    return Float32Array
+  } else if (d === 'complex128' || d === Float64Array || d === 'float64') {
+    return Float64Array
+  } else {
+    return default_type
+  }
+}
+
+/**
+ * Find the complex numpy dtype corresponding to a real dtype
+ * Port of librosa.util.dtype_r2c
+ *
+ * In JavaScript, complex numbers are typically represented as objects {real, imag}
+ * or pairs of Float32/Float64Arrays, so we return the appropriate float type
+ *
+ * @param {String|Function} d - Real dtype identifier
+ * @param {Function} default_type - Default complex type (default: Float32Array)
+ * @returns {Function} Complex-compatible TypedArray constructor
+ */
+export function dtype_r2c(d, default_type = Float32Array) {
+  if (d === 'float32' || d === Float32Array) {
+    return Float32Array // Will be used for both real and imag parts
+  } else if (d === 'float64' || d === Float64Array) {
+    return Float64Array
+  } else {
+    return default_type
+  }
+}
+
+/**
+ * Fix a list of frames to lie within [x_min, x_max]
+ * Port of librosa.util.fix_frames
+ *
+ * @param {Array} frames - Frame indices to fix
+ * @param {number} x_min - Minimum allowed frame index (default: 0)
+ * @param {number} x_max - Maximum allowed frame index (default: null, no upper bound)
+ * @param {boolean} pad - If true, pad to ensure coverage of [x_min, x_max] (default: true)
+ * @returns {Array} Fixed frame indices
+ */
+export function fix_frames(frames, x_min = 0, x_max = null, pad = true) {
+  const result = [...frames]
+
+  // Clip to valid range
+  for (let i = 0; i < result.length; i++) {
+    if (result[i] < x_min) {
+      result[i] = x_min
+    }
+    if (x_max !== null && result[i] > x_max) {
+      result[i] = x_max
+    }
+  }
+
+  // Remove duplicates (sort and filter)
+  result.sort((a, b) => a - b)
+  const unique = [result[0]]
+  for (let i = 1; i < result.length; i++) {
+    if (result[i] !== result[i - 1]) {
+      unique.push(result[i])
+    }
+  }
+
+  // Pad boundaries if requested
+  if (pad) {
+    if (unique.length === 0 || unique[0] !== x_min) {
+      unique.unshift(x_min)
+    }
+    if (x_max !== null && (unique.length === 0 || unique[unique.length - 1] !== x_max)) {
+      unique.push(x_max)
+    }
+  }
+
+  return unique
+}
+
+/**
+ * Generate a slice array from an index array
+ * Port of librosa.util.index_to_slice
+ *
+ * @param {Array} idx - Sorted array of indices
+ * @param {number} idx_min - Minimum index (default: null, use min of idx)
+ * @param {number} idx_max - Maximum index (default: null, use max of idx)
+ * @param {number} step - Step size (default: null, infer from idx)
+ * @param {boolean} pad - Pad to cover [idx_min, idx_max] (default: true)
+ * @returns {Array} Array of {start, end, step} slice objects
+ */
+export function index_to_slice(idx, idx_min = null, idx_max = null, step = null, pad = true) {
+  if (idx.length === 0) {
+    return []
+  }
+
+  const idx_fixed = fix_frames(idx, idx_min, idx_max, pad)
+
+  if (idx_fixed.length <= 1) {
+    return [{start: idx_fixed[0], end: idx_fixed[0] + 1, step: 1}]
+  }
+
+  // Infer step if not provided
+  if (step === null) {
+    step = idx_fixed[1] - idx_fixed[0]
+  }
+
+  const slices = []
+  let start = idx_fixed[0]
+  let end = idx_fixed[0] + step
+
+  for (let i = 1; i < idx_fixed.length; i++) {
+    if (idx_fixed[i] === end) {
+      // Extend current slice
+      end += step
+    } else {
+      // Start new slice
+      slices.push({start, end, step})
+      start = idx_fixed[i]
+      end = idx_fixed[i] + step
+    }
+  }
+
+  // Add final slice
+  slices.push({start, end, step})
+
+  return slices
+}
+
+/**
+ * Determine if the input array consists of all unique values along an axis
+ * Port of librosa.util.is_unique
+ *
+ * @param {Array} data - Input array
+ * @param {number} axis - Axis along which to check uniqueness (default: -1)
+ * @returns {boolean|Array} True/false or array of boolean values
+ */
+export function is_unique(data, axis = -1) {
+  const is_1d = !Array.isArray(data[0])
+
+  if (is_1d) {
+    const unique = new Set(data)
+    return unique.size === data.length
+  }
+
+  // 2D array
+  if (axis === -1 || axis === 1) {
+    // Check uniqueness in each row
+    return data.map(row => {
+      const unique = new Set(row)
+      return unique.size === row.length
+    })
+  } else if (axis === 0) {
+    // Check uniqueness in each column
+    const n_cols = data[0].length
+    const result = new Array(n_cols)
+    for (let j = 0; j < n_cols; j++) {
+      const column = data.map(row => row[j])
+      const unique = new Set(column)
+      result[j] = unique.size === column.length
+    }
+    return result
+  } else {
+    throw new ParameterError(`Invalid axis: ${axis}`)
+  }
+}
+
+/**
+ * Stack one or more arrays along a target axis
+ * Port of librosa.util.stack
+ *
+ * @param {Array} arrays - List of arrays to stack
+ * @param {number} axis - Axis along which to stack (default: 0)
+ * @returns {Array} Stacked array
+ */
+export function stack(arrays, axis = 0) {
+  if (!Array.isArray(arrays) || arrays.length === 0) {
+    throw new ParameterError('arrays must be a non-empty array of arrays')
+  }
+
+  // Check if inputs are 1D
+  const is_1d = !Array.isArray(arrays[0][0])
+
+  if (is_1d) {
+    if (axis === 0) {
+      // Stack as rows - just return the array of arrays
+      return arrays
+    } else if (axis === 1 || axis === -1) {
+      // Stack as columns - transpose
+      const n = arrays[0].length
+      const result = Array(n).fill(null).map(() => new Array(arrays.length))
+      for (let i = 0; i < arrays.length; i++) {
+        for (let j = 0; j < n; j++) {
+          result[j][i] = arrays[i][j]
+        }
+      }
+      return result
+    } else {
+      throw new ParameterError(`Invalid axis: ${axis}`)
+    }
+  }
+
+  // For 2D+ arrays, concatenate along axis
+  if (axis === 0) {
+    // Concatenate rows
+    return arrays.flat(1)
+  } else {
+    throw new ParameterError('Stacking 2D+ arrays along axis > 0 not fully implemented')
+  }
 }

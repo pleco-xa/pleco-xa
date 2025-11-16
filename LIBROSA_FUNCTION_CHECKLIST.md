@@ -1357,7 +1357,7 @@
   - **Signature:** `(data: np.ndarray, width: int = 9, order: int = 1, axis: int = -1, mode: str = 'interp', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute delta features: local estimate of the derivative*
 
-- [ ] `stack_memory`
+- [x] `stack_memory`
   - **Signature:** `(data: np.ndarray, n_steps: int = 2, delay: int = 1, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Short-term history embedding: vertically concatenate a data*
 
@@ -1809,23 +1809,23 @@
   - **Signature:** `(S: np.ndarray, axis: int = -1, index: bool = False, value: Optional[Callable[..., Any]] = None) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Sort an array along its rows or columns.*
 
-- [ ] `buf_to_float`
+- [x] `buf_to_float`
   - **Signature:** `(x: np.ndarray, n_bytes: int = 2, dtype: DTypeLike = np.float32) -> np.ndarray`
   - **Docstring:** *Convert an integer buffer to floating point values.*
 
-- [ ] `count_unique`
+- [x] `count_unique`
   - **Signature:** `(data: np.ndarray, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Count the number of unique values in a multi-dimensional array*
 
-- [ ] `cyclic_gradient`
+- [x] `cyclic_gradient`
   - **Signature:** `(data: np.ndarray, edge_order: Literal[1, 2] = 1, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Estimate the gradient of a function over a uniformly sampled,*
 
-- [ ] `dtype_c2r`
+- [x] `dtype_c2r`
   - **Signature:** `(d: DTypeLike, default: Optional[type] = np.float32) -> DTypeLike`
   - **Docstring:** *Find the real numpy dtype corresponding to a complex dtype.*
 
-- [ ] `dtype_r2c`
+- [x] `dtype_r2c`
   - **Signature:** `(d: DTypeLike, default: Optional[type] = np.complex64) -> DTypeLike`
   - **Docstring:** *Find the complex numpy dtype corresponding to a real dtype.*
 
@@ -1837,7 +1837,7 @@
   - **Signature:** `(x: np.ndarray, radius: float, value: float = 0) -> None`
   - **Docstring:** *Set all cells of a matrix to a given ``value``*
 
-- [ ] `fix_frames`
+- [x] `fix_frames`
   - **Signature:** `(frames: _SequenceLike[int], x_min: Optional[int] = 0, x_max: Optional[int] = None, pad: bool = True) -> np.ndarray`
   - **Docstring:** *Fix a list of frames to lie within [x_min, x_max]*
 
@@ -1849,15 +1849,15 @@
   - **Signature:** `(x: np.ndarray, frame_length: int, hop_length: int, axis: int = -1, writeable: bool = False, subok: bool = False) -> np.ndarray`
   - **Docstring:** *Slice a data array into (overlapping) frames.*
 
-- [ ] `index_to_slice`
+- [x] `index_to_slice`
   - **Signature:** `(idx: _SequenceLike[int], idx_min: Optional[int] = None, idx_max: Optional[int] = None, step: Optional[int] = None, pad: bool = True) -> List[slice]`
   - **Docstring:** *Generate a slice array from an index array.*
 
-- [ ] `is_positive_int`
+- [x] `is_positive_int`
   - **Signature:** `(x: float) -> bool`
   - **Docstring:** *Check that x is a positive integer, i.e. 1 or greater.*
 
-- [ ] `is_unique`
+- [x] `is_unique`
   - **Signature:** `(data: np.ndarray, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Determine if the input array consists of all unique values*
 
@@ -1884,10 +1884,10 @@
 - [x] `phasor`
   - **Signature:** `(angles: np.ndarray, mag: Optional[np.ndarray] = ...) -> np.ndarray`
 
-- [ ] `phasor`
+- [x] `phasor`
   - **Signature:** `(angles: _Real, mag: Optional[_Number] = ...) -> np.complexfloating[Any, Any]`
 
-- [ ] `phasor`
+- [x] `phasor`
   - **Signature:** `(angles: Union[np.ndarray, _Real], mag: Optional[Union[np.ndarray, _Number]] = None) -> Union[np.ndarray, np.complexfloating[Any, Any]]`
   - **Docstring:** *Construct a complex phasor representation from angles.*
 
@@ -1909,11 +1909,11 @@
   - **Signature:** `(x: np.ndarray, quantile: float = 0.01, dtype: Optional[DTypeLike] = None) -> scipy.sparse.csr_matrix`
   - **Docstring:** *Return a row-sparse matrix approximating the input*
 
-- [ ] `stack`
+- [x] `stack`
   - **Signature:** `(arrays: List[np.ndarray], axis: int = 0) -> np.ndarray`
   - **Docstring:** *Stack one or more arrays along a target axis.*
 
-- [ ] `sync`
+- [x] `sync`
   - **Signature:** `(data: np.ndarray, idx: Union[Sequence[int], Sequence[slice]], aggregate: Optional[Callable[..., Any]] = None, pad: bool = True, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Aggregate a multi-dimensional array between specified boundaries.*
 
