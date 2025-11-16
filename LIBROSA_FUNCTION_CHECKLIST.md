@@ -982,7 +982,7 @@
   - **Signature:** `(S: np.ndarray, sr: float = 22050, hop_length: int = 512, gain: float = 0.98, bias: float = 2, power: float = 0.5, time_constant: float = 0.4, eps: float = 1e-06, b: Optional[float] = None, max_size: int = 1, ref: Optional[np.ndarray] = None, axis: int = -1, max_axis: Optional[int] = None, zi: Optional[np.ndarray] = None, return_zf: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Per-channel energy normalization (PCEN)*
 
-- [ ] `perceptual_weighting`
+- [x] `perceptual_weighting`
   - **Signature:** `(S: np.ndarray, frequencies: np.ndarray, kind: str = 'A', **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Perceptual weighting of a power spectrogram::*
 
@@ -1437,7 +1437,7 @@
 
 ## `librosa/onset.py`
 
-- [ ] `onset_backtrack`
+- [x] `onset_backtrack`
   - **Signature:** `(events: np.ndarray, energy: np.ndarray) -> np.ndarray`
   - **Docstring:** *Backtrack detected onset events to the nearest preceding local*
 
@@ -1449,7 +1449,7 @@
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, lag: int = 1, max_size: int = 1, ref: Optional[np.ndarray] = None, detrend: bool = False, center: bool = True, feature: Optional[Callable] = None, aggregate: Optional[Union[Callable, bool]] = None, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute a spectral flux onset strength envelope.*
 
-- [ ] `onset_strength_multi`
+- [x] `onset_strength_multi`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, n_fft: int = 2048, hop_length: int = 512, lag: int = 1, max_size: int = 1, ref: Optional[np.ndarray] = None, detrend: bool = False, center: bool = True, feature: Optional[Callable] = None, aggregate: Optional[Union[Callable, bool]] = None, channels: Optional[Union[Sequence[int], Sequence[slice]]] = None, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute a spectral flux onset strength envelope across multiple channels.*
 
