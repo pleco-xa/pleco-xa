@@ -1251,19 +1251,19 @@
 
 ## `librosa/feature/inverse.py`
 
-- [ ] `mel_to_audio`
+- [x] `mel_to_audio`
   - **Signature:** `(M: np.ndarray, sr: float = 22050, n_fft: int = 2048, hop_length: Optional[int] = None, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', power: float = 2.0, n_iter: int = 32, length: Optional[int] = None, dtype: DTypeLike = np.float32, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Invert a mel power spectrogram to audio using Griffin-Lim.*
 
-- [ ] `mel_to_stft`
+- [x] `mel_to_stft`
   - **Signature:** `(M: np.ndarray, sr: float = 22050, n_fft: int = 2048, power: float = 2.0, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Approximate STFT magnitude from a Mel power spectrogram.*
 
-- [ ] `mfcc_to_audio`
+- [x] `mfcc_to_audio`
   - **Signature:** `(mfcc: np.ndarray, n_mels: int = 128, dct_type: int = 2, norm: Optional[str] = 'ortho', ref: float = 1.0, lifter: float = 0, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Convert Mel-frequency cepstral coefficients to a time-domain audio signal*
 
-- [ ] `mfcc_to_mel`
+- [x] `mfcc_to_mel`
   - **Signature:** `(mfcc: np.ndarray, n_mels: int = 128, dct_type: int = 2, norm: Optional[str] = 'ortho', ref: float = 1.0, lifter: float = 0) -> np.ndarray`
   - **Docstring:** *Invert Mel-frequency cepstral coefficients to approximate a Mel power*
 
@@ -1299,7 +1299,7 @@
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, S: Optional[np.ndarray] = None, norm: Optional[float] = np.inf, n_fft: int = 2048, hop_length: int = 512, win_length: Optional[int] = None, window: _WindowSpec = 'hann', center: bool = True, pad_mode: _PadModeSTFT = 'constant', tuning: Optional[float] = None, n_chroma: int = 12, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Compute a chromagram from a waveform or power spectrogram.*
 
-- [ ] `chroma_vqt`
+- [x] `chroma_vqt`
   - **Signature:** `(y: Optional[np.ndarray] = None, sr: float = 22050, V: Optional[np.ndarray] = None, hop_length: int = 512, fmin: Optional[float] = None, intervals: Union[str, Collection[float]], norm: Optional[float] = np.inf, threshold: float = 0.0, n_octaves: int = 7, bins_per_octave: int = 12, gamma: float = 0) -> np.ndarray`
   - **Docstring:** *Variable-Q chromagram*
 
