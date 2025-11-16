@@ -1502,7 +1502,7 @@
   - **Signature:** `(data: np.ndarray, frames: np.ndarray, n_segments: int = 4, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Sub-divide a segmentation by feature clustering.*
 
-- [ ] `timelag_filter`
+- [x] `timelag_filter`
   - **Signature:** `(function: _F, pad: bool = True, index: int = 0) -> _F`
   - **Docstring:** *Apply a filter in the time-lag domain.*
 

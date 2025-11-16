@@ -210,8 +210,8 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '62.1%',
-  implementedFunctions: 318,
+  librosaParity: '62.3%',
+  implementedFunctions: 319,
   totalLibrosaFunctions: 512,
   note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation, matching, utilities, filters',
   modules: [
