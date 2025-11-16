@@ -182,7 +182,10 @@ export {
   index_to_slice,
   is_positive_int,
   is_unique,
-  stack
+  stack,
+  get_fftlib,
+  set_fftlib,
+  show_versions
 } from './xa-util.js'
 
 // Music notation and theory
@@ -227,12 +230,12 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '74.8%',
-  implementedFunctions: 383,
+  librosaParity: '75.4%',
+  implementedFunctions: 386,
   totalLibrosaFunctions: 512,
   jsApplicableFunctions: 512,
-  remainingToImplement: 129,
-  note: 'Librosa Feature Parity: 74.8% (383/512 functions). All Librosa functions will have JavaScript equivalents using browser APIs (Web Audio, Canvas, File API, etc). Previous [N/A] classifications corrected - all functions need JS implementations.',
+  remainingToImplement: 126,
+  note: 'Librosa Feature Parity: 75.4% (386/512 functions). All Librosa functions will have JavaScript equivalents using browser APIs (Web Audio, Canvas, File API, etc). Previous [N/A] classifications corrected - all functions need JS implementations.',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',
@@ -257,6 +260,6 @@ export const info = {
     'Advanced (phase vocoder, autocorrelation)',
     'Music notation & theory (keys, scales, ragas, thaats, FJS, svara conversions)',
     'Cache & Decorators (LRU cache, memoization, deprecation warnings)',
-    'Utilities (frame, pad, localmax/min, peak picking)'
+    'Utilities (frame, pad, localmax/min, peak picking, FFT info, version display)'
   ]
 }

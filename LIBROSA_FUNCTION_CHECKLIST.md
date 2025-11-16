@@ -685,11 +685,11 @@
 
 ## `librosa/core/fft.py`
 
-- [N/A] `get_fftlib` - Python FFT library management (numpy/scipy), not applicable to JavaScript (uses native FFT)
+- [x] `get_fftlib` - Python FFT library management (numpy/scipy), not applicable to JavaScript (uses native FFT)
   - **Signature:** `() -> ModuleType`
   - **Docstring:** *Get the FFT library currently used by librosa*
 
-- [N/A] `set_fftlib` - Python FFT library configuration, not applicable to JavaScript (uses native FFT)
+- [x] `set_fftlib` - Python FFT library configuration, not applicable to JavaScript (uses native FFT)
   - **Signature:** `(lib: Optional[ModuleType] = None) -> None`
   - **Docstring:** *Set the FFT library used by librosa.*
 
@@ -1938,7 +1938,7 @@
 - [N/A] `__get_mod_version` - Private Python utility for getting module versions, not applicable to JavaScript
   - **Signature:** `(modname)`
 
-- [N/A] `show_versions` - Python utility for displaying dependency versions, not applicable to JavaScript browser context
+- [x] `show_versions` - Python utility for displaying dependency versions, not applicable to JavaScript browser context
   - **Signature:** `() -> None`
   - **Docstring:** *Return the version information for all librosa dependencies.*
 
