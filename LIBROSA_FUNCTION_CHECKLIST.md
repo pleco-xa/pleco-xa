@@ -599,74 +599,74 @@
 - [ ] `octs_to_hz`
   - **Signature:** `(octs: _SequenceLike[_FloatLike_co], tuning: float = ..., bins_per_octave: int = ...) -> np.ndarray`
 
-- [ ] `octs_to_hz`
+- [x] `octs_to_hz`
   - **Signature:** `(octs: _ScalarOrSequence[_FloatLike_co], tuning: float = ..., bins_per_octave: int = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `octs_to_hz`
+- [x] `octs_to_hz`
   - **Signature:** `(octs: _ScalarOrSequence[_FloatLike_co], tuning: float = 0.0, bins_per_octave: int = 12) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert octaves numbers to frequencies.*
 
-- [ ] `samples_like`
+- [x] `samples_like`
   - **Signature:** `(X: Union[np.ndarray, float], hop_length: int = 512, n_fft: Optional[int] = None, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Return an array of sample indices to match the time axis from a feature matrix.*
 
 - [x] `samples_to_frames`
   - **Signature:** `(samples: _IntLike_co, hop_length: int = ..., n_fft: Optional[int] = ...) -> np.integer[Any]`
 
-- [ ] `samples_to_frames`
+- [x] `samples_to_frames`
   - **Signature:** `(samples: _SequenceLike[_IntLike_co], hop_length: int = ..., n_fft: Optional[int] = ...) -> np.ndarray`
 
-- [ ] `samples_to_frames`
+- [x] `samples_to_frames`
   - **Signature:** `(samples: _ScalarOrSequence[_IntLike_co], hop_length: int = ..., n_fft: Optional[int] = ...) -> Union[np.integer[Any], np.ndarray]`
 
-- [ ] `samples_to_frames`
+- [x] `samples_to_frames`
   - **Signature:** `(samples: _ScalarOrSequence[_IntLike_co], hop_length: int = 512, n_fft: Optional[int] = None) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert sample indices into STFT frames.*
 
 - [x] `samples_to_time`
   - **Signature:** `(samples: _IntLike_co, sr: float = ...) -> np.floating[Any]`
 
-- [ ] `samples_to_time`
+- [x] `samples_to_time`
   - **Signature:** `(samples: _SequenceLike[_IntLike_co], sr: float = ...) -> np.ndarray`
 
-- [ ] `samples_to_time`
+- [x] `samples_to_time`
   - **Signature:** `(samples: _ScalarOrSequence[_IntLike_co], sr: float = ...) -> Union[np.floating[Any], np.ndarray]`
 
-- [ ] `samples_to_time`
+- [x] `samples_to_time`
   - **Signature:** `(samples: _ScalarOrSequence[_IntLike_co], sr: float = 22050) -> Union[np.floating[Any], np.ndarray]`
   - **Docstring:** *Convert sample indices to time (in seconds).*
 
-- [ ] `tempo_frequencies`
+- [x] `tempo_frequencies`
   - **Signature:** `(n_bins: int, hop_length: int = 512, sr: float = 22050) -> np.ndarray`
   - **Docstring:** *Compute the frequencies (in beats per minute) corresponding*
 
 - [x] `time_to_frames`
   - **Signature:** `(times: _FloatLike_co, sr: float = ..., hop_length: int = ..., n_fft: Optional[int] = ...) -> np.integer[Any]`
 
-- [ ] `time_to_frames`
+- [x] `time_to_frames`
   - **Signature:** `(times: _SequenceLike[_FloatLike_co], sr: float = ..., hop_length: int = ..., n_fft: Optional[int] = ...) -> np.ndarray`
 
-- [ ] `time_to_frames`
+- [x] `time_to_frames`
   - **Signature:** `(times: _ScalarOrSequence[_FloatLike_co], sr: float = ..., hop_length: int = ..., n_fft: Optional[int] = ...) -> Union[np.integer[Any], np.ndarray]`
 
-- [ ] `time_to_frames`
+- [x] `time_to_frames`
   - **Signature:** `(times: _ScalarOrSequence[_FloatLike_co], sr: float = 22050, hop_length: int = 512, n_fft: Optional[int] = None) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert time stamps into STFT frames.*
 
 - [x] `time_to_samples`
   - **Signature:** `(times: _FloatLike_co, sr: float = ...) -> np.integer[Any]`
 
-- [ ] `time_to_samples`
+- [x] `time_to_samples`
   - **Signature:** `(times: _SequenceLike[_FloatLike_co], sr: float = ...) -> np.ndarray`
 
-- [ ] `time_to_samples`
+- [x] `time_to_samples`
   - **Signature:** `(times: _ScalarOrSequence[_FloatLike_co], sr: float = ...) -> Union[np.integer[Any], np.ndarray]`
 
-- [ ] `time_to_samples`
+- [x] `time_to_samples`
   - **Signature:** `(times: _ScalarOrSequence[_FloatLike_co], sr: float = 22050) -> Union[np.integer[Any], np.ndarray]`
   - **Docstring:** *Convert timestamps (in seconds) to sample indices.*
 
-- [ ] `times_like`
+- [x] `times_like`
   - **Signature:** `(X: Union[np.ndarray, float], sr: float = 22050, hop_length: int = 512, n_fft: Optional[int] = None, axis: int = -1) -> np.ndarray`
   - **Docstring:** *Return an array of time values to match the time axis from a feature matrix.*
 
