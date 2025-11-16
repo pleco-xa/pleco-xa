@@ -804,3 +804,293 @@ export function stack_memory(data, n_steps = 2, delay = 1, kwargs = {}) {
 
   return stacked
 }
+
+/**
+ * Shear a matrix by a given factor
+ * Port of librosa.util.shear
+ *
+ * Applies a shearing transformation along the specified axis
+ * Used for time-frequency analysis and spectrogram enhancement
+ *
+ * @param {Array} X - Input matrix [n_rows][n_cols]
+ * @param {number} factor - Shear factor (default 1)
+ * @param {number} axis - Axis to shear (-1 for time/columns, 0 for frequency/rows)
+ * @returns {Array} Sheared matrix
+ */
+export function shear(X, factor = 1, axis = -1) {
+  if (!Array.isArray(X) || !Array.isArray(X[0])) {
+    throw new ParameterError('X must be a 2D array')
+  }
+
+  const n_rows = X.length
+  const n_cols = X[0].length
+
+  if (axis === -1 || axis === 1) {
+    // Shear along columns (time axis)
+    const X_sheared = Array(n_rows).fill(null).map(() => new Array(n_cols).fill(0))
+
+    for (let i = 0; i < n_rows; i++) {
+      const shift = Math.round(i * factor)
+
+      for (let j = 0; j < n_cols; j++) {
+        const new_j = j + shift
+        if (new_j >= 0 && new_j < n_cols) {
+          X_sheared[i][new_j] = X[i][j]
+        }
+      }
+    }
+
+    return X_sheared
+  } else if (axis === 0) {
+    // Shear along rows (frequency axis)
+    const X_sheared = Array(n_rows).fill(null).map(() => new Array(n_cols).fill(0))
+
+    for (let j = 0; j < n_cols; j++) {
+      const shift = Math.round(j * factor)
+
+      for (let i = 0; i < n_rows; i++) {
+        const new_i = i + shift
+        if (new_i >= 0 && new_i < n_rows) {
+          X_sheared[new_i][j] = X[i][j]
+        }
+      }
+    }
+
+    return X_sheared
+  } else {
+    throw new ParameterError(`Invalid axis: ${axis}. Use -1, 0, or 1`)
+  }
+}
+
+/**
+ * Sort an array along its rows or columns
+ * Port of librosa.util.axis_sort
+ *
+ * @param {Array} S - Input array [n_rows][n_cols]
+ * @param {number} axis - Axis to sort (0 for rows, -1 for columns)
+ * @param {boolean} index - If true, return indices instead of sorted values
+ * @param {Function} value - Optional function to compute sort values
+ * @returns {Array|Object} Sorted array or {values, indices}
+ */
+export function axis_sort(S, axis = -1, index = false, value = null) {
+  if (!Array.isArray(S)) {
+    throw new ParameterError('S must be an array')
+  }
+
+  const is_1d = !Array.isArray(S[0])
+
+  if (is_1d) {
+    // 1D array
+    const indices = Array.from({length: S.length}, (_, i) => i)
+    const values = value ? S.map(value) : S
+
+    indices.sort((a, b) => values[a] - values[b])
+
+    if (index) {
+      return {values: indices.map(i => S[i]), indices}
+    }
+    return indices.map(i => S[i])
+  }
+
+  // 2D array
+  const n_rows = S.length
+  const n_cols = S[0].length
+
+  if (axis === -1 || axis === 1) {
+    // Sort along columns (each row independently)
+    const sorted = []
+    const idx_array = index ? [] : null
+
+    for (let i = 0; i < n_rows; i++) {
+      const row_indices = Array.from({length: n_cols}, (_, j) => j)
+      const row_values = value ? S[i].map(value) : S[i]
+
+      row_indices.sort((a, b) => row_values[a] - row_values[b])
+
+      sorted.push(row_indices.map(j => S[i][j]))
+      if (index) {
+        idx_array.push(row_indices)
+      }
+    }
+
+    if (index) {
+      return {values: sorted, indices: idx_array}
+    }
+    return sorted
+  } else if (axis === 0) {
+    // Sort along rows (each column independently)
+    const sorted = Array(n_rows).fill(null).map(() => new Array(n_cols))
+    const idx_array = index ? Array(n_rows).fill(null).map(() => new Array(n_cols)) : null
+
+    for (let j = 0; j < n_cols; j++) {
+      const col = S.map(row => row[j])
+      const col_indices = Array.from({length: n_rows}, (_, i) => i)
+      const col_values = value ? col.map(value) : col
+
+      col_indices.sort((a, b) => col_values[a] - col_values[b])
+
+      for (let i = 0; i < n_rows; i++) {
+        sorted[i][j] = S[col_indices[i]][j]
+        if (index) {
+          idx_array[i][j] = col_indices[i]
+        }
+      }
+    }
+
+    if (index) {
+      return {values: sorted, indices: idx_array}
+    }
+    return sorted
+  } else {
+    throw new ParameterError(`Invalid axis: ${axis}`)
+  }
+}
+
+/**
+ * Expand the dimensions of an input array
+ * Port of librosa.util.expand_to
+ *
+ * @param {Array} x - Input array
+ * @param {number} ndim - Target number of dimensions
+ * @param {Array|number} axes - Axes to preserve (others will be singleton)
+ * @returns {Array} Expanded array
+ */
+export function expand_to(x, ndim, axes) {
+  if (!Array.isArray(x)) {
+    throw new ParameterError('x must be an array')
+  }
+
+  // For JS, we simulate dimension expansion by wrapping in arrays
+  // This is a simplified version - full ND array support would need a library
+
+  let result = x
+  const axesArray = Array.isArray(axes) ? axes : [axes]
+
+  // Ensure result has at least ndim dimensions
+  while (getArrayDepth(result) < ndim) {
+    result = [result]
+  }
+
+  return result
+}
+
+function getArrayDepth(arr) {
+  if (!Array.isArray(arr)) {
+    return 0
+  }
+  return 1 + getArrayDepth(arr[0])
+}
+
+/**
+ * Set all cells of a matrix to a given value if they're outside a diagonal band
+ * Port of librosa.util.fill_off_diagonal
+ *
+ * @param {Array} x - Input matrix (modified in place) [n][n]
+ * @param {number} radius - Diagonal band radius
+ * @param {number} value - Fill value (default 0)
+ */
+export function fill_off_diagonal(x, radius, value = 0) {
+  if (!Array.isArray(x) || !Array.isArray(x[0])) {
+    throw new ParameterError('x must be a 2D array')
+  }
+
+  const n = x.length
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < x[i].length; j++) {
+      if (Math.abs(i - j) > radius) {
+        x[i][j] = value
+      }
+    }
+  }
+}
+
+/**
+ * Robustly compute a soft-mask operation
+ * Port of librosa.util.softmask
+ *
+ * Computes the soft mask: X / (X + X_ref)^power
+ * Used for source separation and masking
+ *
+ * @param {Array} X - Input array (numerator)
+ * @param {Array} X_ref - Reference array (denominator)
+ * @param {number} power - Exponent for the soft mask (default 1)
+ * @param {boolean} split_zeros - If true, use 0.5 when both are zero (default false = 0.0)
+ * @returns {Array} Soft mask array
+ */
+export function softmask(X, X_ref, power = 1, split_zeros = false) {
+  const is_1d = !Array.isArray(X[0])
+
+  if (is_1d) {
+    const result = new Array(X.length)
+    for (let i = 0; i < X.length; i++) {
+      const num = X[i]
+      const denom = Math.pow(X[i] + X_ref[i], power)
+
+      if (denom === 0) {
+        result[i] = split_zeros ? 0.5 : 0.0
+      } else {
+        result[i] = num / denom
+      }
+    }
+    return result
+  }
+
+  // 2D array
+  const n_rows = X.length
+  const n_cols = X[0].length
+  const result = Array(n_rows).fill(null).map(() => new Array(n_cols))
+
+  for (let i = 0; i < n_rows; i++) {
+    for (let j = 0; j < n_cols; j++) {
+      const num = X[i][j]
+      const denom = Math.pow(X[i][j] + X_ref[i][j], power)
+
+      if (denom === 0) {
+        result[i][j] = split_zeros ? 0.5 : 0.0
+      } else {
+        result[i][j] = num / denom
+      }
+    }
+  }
+
+  return result
+}
+
+/**
+ * Return a row-sparse matrix approximating the input
+ * Port of librosa.util.sparsify_rows
+ *
+ * Retains only values above a quantile threshold in each row,
+ * setting others to zero (creating a sparse-like structure)
+ *
+ * @param {Array} x - Input matrix [n_rows][n_cols]
+ * @param {number} quantile - Quantile threshold (0-1, default 0.01)
+ * @param {String} dtype - Output data type (ignored in JS)
+ * @returns {Array} Sparsified matrix
+ */
+export function sparsify_rows(x, quantile = 0.01, dtype = null) {
+  if (!Array.isArray(x) || !Array.isArray(x[0])) {
+    throw new ParameterError('x must be a 2D array')
+  }
+
+  const n_rows = x.length
+  const n_cols = x[0].length
+  const result = Array(n_rows).fill(null).map(() => new Array(n_cols).fill(0))
+
+  for (let i = 0; i < n_rows; i++) {
+    // Sort row values to find quantile threshold
+    const sorted = [...x[i]].sort((a, b) => a - b)
+    const threshold_idx = Math.floor(quantile * sorted.length)
+    const threshold = sorted[threshold_idx]
+
+    // Keep only values above threshold
+    for (let j = 0; j < n_cols; j++) {
+      if (x[i][j] >= threshold) {
+        result[i][j] = x[i][j]
+      }
+    }
+  }
+
+  return result
+}

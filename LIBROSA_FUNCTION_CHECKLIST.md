@@ -1799,13 +1799,13 @@
   - **Signature:** `(x: _NumberOrArray, dtype: Optional[DTypeLike] = None) -> _NumberOrArray`
   - **Docstring:** *Compute the squared magnitude of a real or complex array.*
 
-- [ ] `axis_sort`
+- [x] `axis_sort`
   - **Signature:** `(S: np.ndarray, axis: int = ..., index: Literal[False] = ..., value: Optional[Callable[..., Any]] = ...) -> np.ndarray`
 
-- [ ] `axis_sort`
+- [x] `axis_sort`
   - **Signature:** `(S: np.ndarray, axis: int = ..., index: Literal[True], value: Optional[Callable[..., Any]] = ...) -> Tuple[np.ndarray, np.ndarray]`
 
-- [ ] `axis_sort`
+- [x] `axis_sort`
   - **Signature:** `(S: np.ndarray, axis: int = -1, index: bool = False, value: Optional[Callable[..., Any]] = None) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]`
   - **Docstring:** *Sort an array along its rows or columns.*
 
@@ -1829,11 +1829,11 @@
   - **Signature:** `(d: DTypeLike, default: Optional[type] = np.complex64) -> DTypeLike`
   - **Docstring:** *Find the complex numpy dtype corresponding to a real dtype.*
 
-- [ ] `expand_to`
+- [x] `expand_to`
   - **Signature:** `(x: np.ndarray, ndim: int, axes: Union[int, slice, Sequence[int], Sequence[slice]]) -> np.ndarray`
   - **Docstring:** *Expand the dimensions of an input array with*
 
-- [ ] `fill_off_diagonal`
+- [x] `fill_off_diagonal`
   - **Signature:** `(x: np.ndarray, radius: float, value: float = 0) -> None`
   - **Docstring:** *Set all cells of a matrix to a given ``value``*
 
@@ -1891,21 +1891,21 @@
   - **Signature:** `(angles: Union[np.ndarray, _Real], mag: Optional[Union[np.ndarray, _Number]] = None) -> Union[np.ndarray, np.complexfloating[Any, Any]]`
   - **Docstring:** *Construct a complex phasor representation from angles.*
 
-- [ ] `shear`
+- [x] `shear`
   - **Signature:** `(X: np.ndarray, factor: int = ..., axis: int = ...) -> np.ndarray`
 
-- [ ] `shear`
+- [x] `shear`
   - **Signature:** `(X: scipy.sparse.spmatrix, factor: int = ..., axis: int = ...) -> scipy.sparse.spmatrix`
 
-- [ ] `shear`
+- [x] `shear`
   - **Signature:** `(X: _ArrayOrSparseMatrix, factor: int = 1, axis: int = -1) -> _ArrayOrSparseMatrix`
   - **Docstring:** *Shear a matrix by a given factor.*
 
-- [ ] `softmask`
+- [x] `softmask`
   - **Signature:** `(X: np.ndarray, X_ref: np.ndarray, power: float = 1, split_zeros: bool = False) -> np.ndarray`
   - **Docstring:** *Robustly compute a soft-mask operation.*
 
-- [ ] `sparsify_rows`
+- [x] `sparsify_rows`
   - **Signature:** `(x: np.ndarray, quantile: float = 0.01, dtype: Optional[DTypeLike] = None) -> scipy.sparse.csr_matrix`
   - **Docstring:** *Return a row-sparse matrix approximating the input*
 

@@ -160,7 +160,12 @@ export {
   abs2,
   phasor,
   sync,
-  stack_memory
+  stack_memory,
+  shear,
+  axis_sort,
+  expand_to,
+  fill_off_diagonal,
+  sparsify_rows
 } from './xa-util.js'
 
 // Music notation and theory
@@ -188,10 +193,10 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~42.4%',
-  implementedFunctions: 217,
+  librosaParity: '~44.5%',
+  implementedFunctions: 228,
   totalLibrosaFunctions: 512,
-  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation, matching',
+  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation, matching, utilities',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',
