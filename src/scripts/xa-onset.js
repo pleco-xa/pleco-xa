@@ -3,68 +3,23 @@
  * High-performance implementation for real-time audio analysis
  */
 
+import { fft as fftTransform, hann_window } from './xa-fft.js'
+
 /**
- * Fast FFT implementation using Cooley-Tukey algorithm
- * Much faster than the O(N²) DFT we were using
+ * FFT wrapper to convert from xa-fft complex object format to flat array format
+ * @param {Float32Array} signal - Input signal
+ * @returns {Float32Array} FFT result as flat array [real, imag, real, imag, ...]
  */
-export function fft(signal) {
-  const N = signal.length
-  if (N <= 1) return signal
+function fft(signal) {
+  const complexResult = fftTransform(signal)
+  const flatResult = new Float32Array(complexResult.length * 2)
 
-  // Make sure N is power of 2
-  const nextPow2 = Math.pow(2, Math.ceil(Math.log2(N)))
-  if (N !== nextPow2) {
-    const padded = new Float32Array(nextPow2)
-    padded.set(signal)
-    return fft(padded)
+  for (let i = 0; i < complexResult.length; i++) {
+    flatResult[i * 2] = complexResult[i].real
+    flatResult[i * 2 + 1] = complexResult[i].imag
   }
 
-  // Bit-reversal permutation
-  const reversed = new Float32Array(N * 2) // Complex: [real, imag, real, imag, ...]
-  for (let i = 0; i < N; i++) {
-    const j = reverseBits(i, Math.log2(N))
-    reversed[j * 2] = signal[i]
-    reversed[j * 2 + 1] = 0
-  }
-
-  // Cooley-Tukey FFT
-  for (let len = 2; len <= N; len <<= 1) {
-    const angle = (-2 * Math.PI) / len
-    const wlen = [Math.cos(angle), Math.sin(angle)]
-
-    for (let i = 0; i < N; i += len) {
-      const w = [1, 0]
-      for (let j = 0; j < len / 2; j++) {
-        const u = [reversed[(i + j) * 2], reversed[(i + j) * 2 + 1]]
-        const v = [
-          reversed[(i + j + len / 2) * 2] * w[0] -
-            reversed[(i + j + len / 2) * 2 + 1] * w[1],
-          reversed[(i + j + len / 2) * 2] * w[1] +
-            reversed[(i + j + len / 2) * 2 + 1] * w[0],
-        ]
-
-        reversed[(i + j) * 2] = u[0] + v[0]
-        reversed[(i + j) * 2 + 1] = u[1] + v[1]
-        reversed[(i + j + len / 2) * 2] = u[0] - v[0]
-        reversed[(i + j + len / 2) * 2 + 1] = u[1] - v[1]
-
-        const temp = w[0] * wlen[0] - w[1] * wlen[1]
-        w[1] = w[0] * wlen[1] + w[1] * wlen[0]
-        w[0] = temp
-      }
-    }
-  }
-
-  return reversed
-}
-
-function reverseBits(num, bits) {
-  let result = 0
-  for (let i = 0; i < bits; i++) {
-    result = (result << 1) | (num & 1)
-    num >>= 1
-  }
-  return result
+  return flatResult
 }
 
 /**
@@ -109,10 +64,7 @@ export function computeSTFT(audioData, frameLength = 2048, hopLength = 512) {
   const stft = []
 
   // Pre-compute Hann window
-  const window = new Float32Array(frameLength)
-  for (let i = 0; i < frameLength; i++) {
-    window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (frameLength - 1)))
-  }
+  const window = hann_window(frameLength)
 
   for (let i = 0; i < numFrames; i++) {
     const start = i * hopLength
@@ -246,4 +198,116 @@ export function onsetsToBeats(onsetTimes) {
   }
 
   return { bpm, beatTimes, interval: medianInterval }
+}
+
+/**
+ * Backtrack detected onset events to the nearest preceding local minimum of energy
+ * @param {Array|Float32Array} events - Frame indices of detected onsets
+ * @param {Array|Float32Array} energy - Energy envelope (e.g., RMS, onset strength)
+ * @returns {Float32Array} Backtracked onset event frames
+ */
+export function onset_backtrack(events, energy) {
+  const backtracked = new Float32Array(events.length)
+
+  for (let i = 0; i < events.length; i++) {
+    const event_frame = Math.floor(events[i])
+
+    // Search backwards for local minimum
+    let min_frame = event_frame
+    let min_energy = energy[event_frame] || 0
+
+    for (let j = event_frame - 1; j >= 0 && j >= event_frame - 3; j--) {
+      if (energy[j] < min_energy) {
+        min_energy = energy[j]
+        min_frame = j
+      } else {
+        // Stop at first increase
+        break
+      }
+    }
+
+    backtracked[i] = min_frame
+  }
+
+  return backtracked
+}
+
+/**
+ * Compute a spectral flux onset strength envelope across multiple channels
+ * Useful for multi-channel or source-separated audio
+ * @param {Float32Array|null} y - Audio time series
+ * @param {number} sr - Sample rate
+ * @param {Array|null} S - Pre-computed spectrogram [channels x freq x time]
+ * @param {number} n_fft - FFT size
+ * @param {number} hop_length - Hop length
+ * @param {number} lag - Lag for onset detection
+ * @param {number} max_size - Max filter size
+ * @param {Array|null} ref - Reference power
+ * @param {boolean} detrend - Remove DC component
+ * @param {boolean} center - Center frames
+ * @param {Function|null} feature - Feature extraction function
+ * @param {Function|null} aggregate - Aggregation function across channels
+ * @param {Array|null} channels - List of channel slices
+ * @param {Object} kwargs - Additional arguments
+ * @returns {Array} Multi-channel onset strength [channels x time]
+ */
+export function onset_strength_multi(
+  y = null,
+  sr = 22050,
+  S = null,
+  n_fft = 2048,
+  hop_length = 512,
+  lag = 1,
+  max_size = 1,
+  ref = null,
+  detrend = false,
+  center = true,
+  feature = null,
+  aggregate = null,
+  channels = null,
+  kwargs = {}
+) {
+  // For now, compute onset strength for each channel separately
+  // This is a simplified version - full implementation would handle source separation
+
+  if (S === null && y === null) {
+    throw new Error('Either y or S must be provided')
+  }
+
+  // If S provided, assume it's [channels x freq x time]
+  if (S !== null) {
+    const n_channels = S.length
+    const results = []
+
+    for (let c = 0; c < n_channels; c++) {
+      const channel_strength = onset_strength(
+        {S: S[c]},
+        {
+          sr,
+          lag,
+          max_size,
+          detrend,
+          center,
+          ...kwargs
+        }
+      )
+      results.push(channel_strength)
+    }
+
+    return results
+  }
+
+  // If only y provided, compute single-channel onset strength
+  const single_channel = onset_strength(y, {
+    sr,
+    n_fft,
+    hop_length,
+    lag,
+    max_size,
+    detrend,
+    center,
+    ...kwargs
+  })
+
+  return [single_channel]
 }
