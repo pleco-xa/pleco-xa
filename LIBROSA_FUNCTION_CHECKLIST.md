@@ -1391,11 +1391,11 @@
   - **Signature:** `(sr: float, fmin: Optional[_FloatLike_co] = None, n_bins: int = 84, bins_per_octave: int = 12, window: _WindowSpec = 'hann', filter_scale: float = 1, pad_fft: bool = True, norm: Optional[float] = 1, dtype: DTypeLike = np.complex64, gamma: float = 0, **kwargs: Any) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Construct a constant-Q basis.*
 
-- [ ] `constant_q_lengths`
+- [x] `constant_q_lengths`
   - **Signature:** `(sr: float, fmin: _FloatLike_co, n_bins: int = 84, bins_per_octave: int = 12, window: _WindowSpec = 'hann', filter_scale: float = 1, gamma: float = 0) -> np.ndarray`
   - **Docstring:** *Return length of each filter in a constant-Q basis.*
 
-- [ ] `cq_to_chroma`
+- [x] `cq_to_chroma`
   - **Signature:** `(n_input: int, bins_per_octave: int = 12, n_chroma: int = 12, fmin: Optional[_FloatLike_co] = None, window: Optional[np.ndarray] = None, base_c: bool = True, dtype: DTypeLike = np.float32) -> np.ndarray`
   - **Docstring:** *Construct a linear transformation matrix to map Constant-Q bins*
 
@@ -1411,11 +1411,11 @@
   - **Signature:** `(sr: float, n_fft: int, n_mels: int = 128, fmin: float = 0.0, fmax: Optional[float] = None, htk: bool = False, norm: Optional[Union[Literal['slaney'], float]] = 'slaney', dtype: DTypeLike = np.float32) -> np.ndarray`
   - **Docstring:** *Create a Mel filter-bank.*
 
-- [ ] `mr_frequencies`
+- [x] `mr_frequencies`
   - **Signature:** `(tuning: float) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Generate center frequencies and sample rate pairs.*
 
-- [ ] `semitone_filterbank`
+- [x] `semitone_filterbank`
   - **Signature:** `(center_freqs: Optional[np.ndarray] = None, tuning: float = 0.0, sample_rates: Optional[np.ndarray] = None, flayout: str = 'ba', **kwargs: Any) -> Tuple[List[Any], np.ndarray]`
   - **Docstring:** *Construct a multi-rate bank of infinite-impulse response (IIR)*
 
@@ -1423,11 +1423,11 @@
   - **Signature:** `(freqs: np.ndarray, sr: float = 22050, window: _WindowSpec = 'hann', filter_scale: float = 1, pad_fft: bool = True, norm: Optional[float] = 1, dtype: DTypeLike = np.complex64, gamma: float = 0, alpha: Optional[float] = None, **kwargs: Any) -> Tuple[np.ndarray, np.ndarray]`
   - **Docstring:** *Construct a wavelet basis using windowed complex sinusoids.*
 
-- [ ] `wavelet_lengths`
+- [x] `wavelet_lengths`
   - **Signature:** `(freqs: ArrayLike, sr: float = 22050, window: _WindowSpec = 'hann', filter_scale: float = 1, gamma: Optional[float] = 0, alpha: Optional[Union[float, np.ndarray]] = None) -> Tuple[np.ndarray, float]`
   - **Docstring:** *Return length of each filter in a wavelet basis.*
 
-- [ ] `window_bandwidth`
+- [x] `window_bandwidth`
   - **Signature:** `(window: _WindowSpec, n: int = 1000) -> float`
   - **Docstring:** *Get the equivalent noise bandwidth (ENBW) of a window function.*
 

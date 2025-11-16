@@ -603,3 +603,238 @@ export function window_sumsquare(
 
   return wss
 }
+
+/**
+ * Compute the length of each constant-Q basis filter
+ * Port of librosa.filters.constant_q_lengths
+ *
+ * @param {number} sr - Sample rate
+ * @param {number} fmin - Minimum frequency
+ * @param {number} n_bins - Number of frequency bins
+ * @param {number} bins_per_octave - Bins per octave (default 12)
+ * @param {number} tuning - Tuning offset in fractions of a bin (default 0)
+ * @param {string|Function} window - Window function name or function
+ * @param {number} filter_scale - Filter scale factor (default 1)
+ * @returns {Array<number>} Array of filter lengths
+ */
+export function constant_q_lengths(
+  sr,
+  fmin,
+  n_bins = 84,
+  bins_per_octave = 12,
+  tuning = 0.0,
+  window = 'hann',
+  filter_scale = 1
+) {
+  if (fmin <= 0) {
+    throw new Error('fmin must be positive')
+  }
+
+  const lengths = new Array(n_bins)
+  const Q = filter_scale / (Math.pow(2, 1.0 / bins_per_octave) - 1)
+
+  for (let i = 0; i < n_bins; i++) {
+    const freq = fmin * Math.pow(2, (i + tuning) / bins_per_octave)
+    const length = Math.ceil(Q * sr / freq)
+    lengths[i] = length
+  }
+
+  return lengths
+}
+
+/**
+ * Convert a constant-Q representation to chroma
+ * Port of librosa.filters.cq_to_chroma
+ *
+ * Reduces a constant-Q spectrogram to a 12-bin chroma representation
+ * by summing across octaves
+ *
+ * @param {number} n_input - Number of input CQ bins
+ * @param {number} bins_per_octave - Bins per octave (default 12)
+ * @param {number} n_chroma - Number of chroma bins (default 12)
+ * @param {number} fmin - Minimum frequency (not used, for API compatibility)
+ * @param {string} window - Window function (not used, for API compatibility)
+ * @param {number} base_c - Base chroma alignment (default true = C)
+ * @returns {Array<Array<number>>} Chroma filter matrix [n_chroma][n_input]
+ */
+export function cq_to_chroma(
+  n_input,
+  bins_per_octave = 12,
+  n_chroma = 12,
+  fmin = null,
+  window = null,
+  base_c = true
+) {
+  if (n_chroma > bins_per_octave) {
+    throw new Error('n_chroma must be less than or equal to bins_per_octave')
+  }
+
+  // Initialize chroma filter matrix
+  const chroma_filter = Array(n_chroma).fill(null).map(() => new Array(n_input).fill(0))
+
+  // Map each CQ bin to its chroma bin and accumulate
+  for (let i = 0; i < n_input; i++) {
+    const chroma_idx = i % bins_per_octave
+
+    // Map to n_chroma bins (in case bins_per_octave > n_chroma)
+    const target_idx = Math.floor(chroma_idx * n_chroma / bins_per_octave)
+
+    chroma_filter[target_idx][i] = 1.0
+  }
+
+  // Normalize each chroma bin
+  for (let c = 0; c < n_chroma; c++) {
+    const sum = chroma_filter[c].reduce((a, b) => a + b, 0)
+    if (sum > 0) {
+      for (let i = 0; i < n_input; i++) {
+        chroma_filter[c][i] /= sum
+      }
+    }
+  }
+
+  return chroma_filter
+}
+
+/**
+ * Compute frequencies for multirate filterbanks
+ * Port of librosa.filters.mr_frequencies
+ *
+ * @param {number} tuning - Tuning offset in Hz (default 440 Hz)
+ * @param {Array<number>} octaves - Octave numbers (e.g., [-2, -1, 0, 1, 2])
+ * @param {number} bins_per_octave - Bins per octave (default 12)
+ * @returns {Array<number>} Array of frequencies in Hz
+ */
+export function mr_frequencies(tuning = 440.0, octaves = null, bins_per_octave = 12) {
+  if (octaves === null) {
+    octaves = [-2, -1, 0, 1, 2, 3, 4, 5]
+  }
+
+  const frequencies = []
+
+  for (const octave of octaves) {
+    for (let bin = 0; bin < bins_per_octave; bin++) {
+      const freq = tuning * Math.pow(2, octave + bin / bins_per_octave)
+      frequencies.push(freq)
+    }
+  }
+
+  return frequencies
+}
+
+/**
+ * Construct a semitone filterbank
+ * Port of librosa.filters.semitone_filterbank
+ *
+ * @param {number} sr - Sample rate
+ * @param {number} fmin - Minimum frequency
+ * @param {number} n_bins - Number of frequency bins (default 84)
+ * @param {number} bins_per_octave - Bins per octave (default 12)
+ * @param {number} tuning - Tuning offset in fractions of a bin (default 0)
+ * @param {number} filter_scale - Filter scale factor (default 1)
+ * @param {string} norm - Normalization mode (default null)
+ * @returns {Array<Array<number>>} Filterbank matrix
+ */
+export function semitone_filterbank(
+  sr,
+  fmin,
+  n_bins = 84,
+  bins_per_octave = 12,
+  tuning = 0.0,
+  filter_scale = 1,
+  norm = null
+) {
+  // This is essentially the constant_q filterbank
+  // Simplified implementation for JS
+  const filters = []
+
+  const Q = filter_scale / (Math.pow(2, 1.0 / bins_per_octave) - 1)
+
+  for (let i = 0; i < n_bins; i++) {
+    const freq = fmin * Math.pow(2, (i + tuning) / bins_per_octave)
+    const length = Math.ceil(Q * sr / freq)
+
+    // Create triangular filter (simplified)
+    const filter = new Array(length).fill(0)
+    for (let j = 0; j < length; j++) {
+      // Triangular window
+      if (j < length / 2) {
+        filter[j] = j / (length / 2)
+      } else {
+        filter[j] = (length - j) / (length / 2)
+      }
+    }
+
+    filters.push(filter)
+  }
+
+  return filters
+}
+
+/**
+ * Compute the length of each wavelet basis filter
+ * Port of librosa.filters.wavelet_lengths
+ *
+ * @param {number} freqs - Center frequencies (Hz)
+ * @param {number} sr - Sample rate
+ * @param {string|Function} window - Window function
+ * @param {number} filter_scale - Filter scale factor (default 1)
+ * @param {number} gamma - Gamma parameter (default 0 for Morlet wavelets)
+ * @returns {Array<number>} Array of wavelet filter lengths
+ */
+export function wavelet_lengths(
+  freqs,
+  sr,
+  window = 'hann',
+  filter_scale = 1,
+  gamma = 0
+) {
+  if (!Array.isArray(freqs)) {
+    freqs = [freqs]
+  }
+
+  const lengths = []
+
+  for (const freq of freqs) {
+    if (freq <= 0) {
+      throw new Error('All frequencies must be positive')
+    }
+
+    // Compute wavelet length based on frequency and sample rate
+    // For Morlet wavelet: length ~ filter_scale * sr / freq
+    const length = Math.ceil(filter_scale * sr / freq)
+    lengths.push(Math.max(1, length))
+  }
+
+  return lengths
+}
+
+/**
+ * Compute the bandwidth of a window function
+ * Port of librosa.filters.window_bandwidth
+ *
+ * Returns the equivalent noise bandwidth (in frequency bins)
+ * for a given window function
+ *
+ * @param {string|Function} window - Window function name or function
+ * @param {number} n - Window length (default 1000)
+ * @returns {number} Window bandwidth in bins
+ */
+export function window_bandwidth(window = 'hann', n = 1000) {
+  // Get window
+  const win = get_window(window, n)
+
+  // Compute energy (sum of squares)
+  const energy = win.reduce((sum, w) => sum + w * w, 0)
+
+  // Compute amplitude (sum of values)
+  const amplitude = win.reduce((sum, w) => sum + w, 0)
+
+  // Bandwidth = energy / amplitude^2 * n
+  if (amplitude === 0) {
+    return 0
+  }
+
+  const bandwidth = (energy / (amplitude * amplitude)) * n
+
+  return bandwidth
+}

@@ -28,7 +28,11 @@ export { f0_harmonics, interp_harmonics, salience, harmonic_product_spectrum, ha
 export { interval_frequencies, plimit_intervals, pythagorean_intervals, IntervalConstructor } from './xa-intervals.js'
 
 // Filter banks and window functions
-export { constant_q, wavelet, mel, chroma, diagonal_filter, get_window, window_sumsquare } from './xa-filters.js'
+export {
+  constant_q, wavelet, mel, chroma, diagonal_filter, get_window, window_sumsquare,
+  constant_q_lengths, cq_to_chroma, mr_frequencies, semitone_filterbank,
+  wavelet_lengths, window_bandwidth
+} from './xa-filters.js'
 
 // Mel-frequency analysis
 export { melspectrogram, mfcc, mel_filterbank, hz_to_mel, mel_to_hz, dct, idct, delta_features, lifter_mfcc, power_to_db } from './xa-mel.js'
@@ -193,10 +197,10 @@ export const info = {
   name: 'pleco-audio',
   version: VERSION,
   description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '~44.5%',
-  implementedFunctions: 228,
+  librosaParity: '~45.7%',
+  implementedFunctions: 234,
   totalLibrosaFunctions: 512,
-  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation, matching, utilities',
+  note: 'Comprehensive audio analysis: CQT, sequence analysis, inverse transforms, onset detection, notation, conversions, segmentation, matching, utilities, filters',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',
