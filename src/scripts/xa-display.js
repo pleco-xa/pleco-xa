@@ -799,3 +799,678 @@ export function update(adaptor, canvas = null) {
   const syntheticEvent = new Event('update');
   adaptor.update(targetCanvas, syntheticEvent);
 }
+
+/*───────────────────────────────────────────────────────────────────────────*/
+/* Axis Formatters (JavaScript equivalents of Matplotlib formatters)         */
+/*───────────────────────────────────────────────────────────────────────────*/
+
+/**
+ * Base formatter class for axis tick labels
+ */
+class AxisFormatter {
+  /**
+   * Format a tick value to a string label
+   * @param {number} value - Tick value
+   * @param {number} index - Tick index
+   * @returns {string} Formatted label
+   */
+  call(value, index) {
+    return value.toString();
+  }
+
+  /**
+   * Make formatter callable (JavaScript equivalent of Python's __call__)
+   * @param {number} value - Tick value
+   * @param {number} index - Tick index
+   * @returns {string} Formatted label
+   */
+  format(value, index) {
+    return this.call(value, index);
+  }
+}
+
+/**
+ * Time formatter for converting frame/sample indices to time strings
+ */
+export class TimeFormatter extends AxisFormatter {
+  /**
+   * @param {Object} options - Formatter options
+   * @param {number} options.lag - Lag parameter for time offset
+   * @param {number} options.sr - Sample rate in Hz
+   * @param {number} options.hopLength - Hop length in samples
+   * @param {string} options.unit - Time unit: 's', 'ms', 'time' (default: 's')
+   */
+  constructor({ lag = 0, sr = 22050, hopLength = 512, unit = 's' } = {}) {
+    super();
+    this.lag = lag;
+    this.sr = sr;
+    this.hopLength = hopLength;
+    this.unit = unit;
+  }
+
+  /**
+   * Format frame index to time string
+   * @param {number} value - Frame index
+   * @returns {string} Formatted time (e.g., "1.23s", "1234ms")
+   */
+  call(value) {
+    const timeInSeconds = ((value - this.lag) * this.hopLength) / this.sr;
+
+    if (this.unit === 'ms') {
+      return `${(timeInSeconds * 1000).toFixed(0)}ms`;
+    } else {
+      return `${timeInSeconds.toFixed(2)}s`;
+    }
+  }
+}
+
+/**
+ * Note formatter for converting frequency/pitch values to musical note names
+ */
+export class NoteFormatter extends AxisFormatter {
+  /**
+   * @param {Object} options - Formatter options
+   * @param {string} options.key - Key signature (default: 'C:maj')
+   * @param {boolean} options.unicode - Use unicode sharp/flat symbols (default: true)
+   * @param {number} options.octave - Octave offset (default: 0)
+   */
+  constructor({ key = 'C:maj', unicode = true, octave = 0 } = {}) {
+    super();
+    this.key = key;
+    this.unicode = unicode;
+    this.octave = octave;
+
+    this.noteNames = unicode
+      ? ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+      : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  }
+
+  /**
+   * Format MIDI note number to note name
+   * @param {number} value - MIDI note number
+   * @returns {string} Note name (e.g., "C4", "A♯3")
+   */
+  call(value) {
+    const midiNote = Math.round(value) + this.octave * 12;
+    const noteIndex = midiNote % 12;
+    const octaveNum = Math.floor(midiNote / 12) - 1;
+
+    return `${this.noteNames[noteIndex]}${octaveNum}`;
+  }
+}
+
+/**
+ * Svara formatter for Carnatic music notation (Indian classical)
+ */
+export class SvaraFormatter extends AxisFormatter {
+  /**
+   * @param {Object} options - Formatter options
+   * @param {string} options.sa - Tonic note (default: 'C')
+   * @param {string} options.mela - Melakarta raga number or name
+   * @param {boolean} options.unicode - Use unicode Carnatic symbols (default: true)
+   * @param {boolean} options.abbr - Use abbreviated notation (default: true)
+   */
+  constructor({ sa = 'C', mela = 1, unicode = true, abbr = true } = {}) {
+    super();
+    this.sa = sa;
+    this.mela = mela;
+    this.unicode = unicode;
+    this.abbr = abbr;
+
+    // Carnatic swaras (notes)
+    this.svaras = unicode && !abbr
+      ? ['స', 'ర₁', 'ర₂', 'గ₁', 'గ₂', 'మ₁', 'మ₂', 'ప', 'ద₁', 'ద₂', 'న₁', 'న₂']
+      : ['S', 'R1', 'R2', 'G1', 'G2', 'M1', 'M2', 'P', 'D1', 'D2', 'N1', 'N2'];
+  }
+
+  /**
+   * Format pitch class to Carnatic svara
+   * @param {number} value - Pitch class (0-11)
+   * @returns {string} Svara notation
+   */
+  call(value) {
+    const pitchClass = Math.round(value) % 12;
+    return this.svaras[pitchClass];
+  }
+}
+
+/**
+ * Interval formatter for musical intervals
+ */
+export class IntervalFormatter extends AxisFormatter {
+  /**
+   * @param {Object} options - Formatter options
+   * @param {boolean} options.unicode - Use unicode interval symbols (default: true)
+   */
+  constructor({ unicode = true } = {}) {
+    super();
+    this.unicode = unicode;
+
+    this.intervals = [
+      'P1', 'm2', 'M2', 'm3', 'M3', 'P4', 'A4', 'P5', 'm6', 'M6', 'm7', 'M7'
+    ];
+  }
+
+  /**
+   * Format semitone distance to interval name
+   * @param {number} value - Semitone distance
+   * @returns {string} Interval name (e.g., "P5", "m3")
+   */
+  call(value) {
+    const semitones = Math.round(value) % 12;
+    return this.intervals[semitones];
+  }
+}
+
+/**
+ * Tonnetz formatter for harmonic network coordinates
+ */
+export class TonnetzFormatter extends AxisFormatter {
+  /**
+   * @param {Object} options - Formatter options
+   * @param {string} options.axis - Axis to format: 'x', 'y', 'both' (default: 'both')
+   */
+  constructor({ axis = 'both' } = {}) {
+    super();
+    this.axis = axis;
+
+    this.xLabels = ['5th', '3rd', 'min3rd'];
+    this.yLabels = ['Tonic', 'Dominant', 'Mediant'];
+  }
+
+  /**
+   * Format tonnetz coordinate to axis label
+   * @param {number} value - Coordinate value
+   * @returns {string} Axis label
+   */
+  call(value) {
+    const index = Math.round(value) % 3;
+
+    if (this.axis === 'x') {
+      return this.xLabels[index];
+    } else if (this.axis === 'y') {
+      return this.yLabels[index];
+    } else {
+      return `${this.yLabels[index]} (${this.xLabels[index]})`;
+    }
+  }
+}
+
+/**
+ * Chroma formatter for pitch class labels
+ */
+export class ChromaFormatter extends AxisFormatter {
+  /**
+   * @param {Object} options - Formatter options
+   * @param {string} options.key - Key signature (default: 'C:maj')
+   * @param {boolean} options.unicode - Use unicode sharp/flat symbols (default: true)
+   */
+  constructor({ key = 'C:maj', unicode = true } = {}) {
+    super();
+    this.key = key;
+    this.unicode = unicode;
+
+    this.noteNames = unicode
+      ? ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+      : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  }
+
+  /**
+   * Format pitch class to note name
+   * @param {number} value - Pitch class (0-11)
+   * @returns {string} Note name
+   */
+  call(value) {
+    const pitchClass = Math.round(value) % 12;
+    return this.noteNames[pitchClass];
+  }
+}
+
+/**
+ * Chroma Svara formatter (Carnatic chroma)
+ */
+export class ChromaSvaraFormatter extends SvaraFormatter {
+  /**
+   * Format chroma bin to Carnatic svara
+   * @param {number} value - Chroma bin (0-11)
+   * @returns {string} Svara notation
+   */
+  call(value) {
+    return super.call(value);
+  }
+}
+
+/**
+ * Chroma FJS formatter (Functional Just System)
+ */
+export class ChromaFJSFormatter extends AxisFormatter {
+  /**
+   * @param {Object} options - Formatter options
+   * @param {boolean} options.unicode - Use unicode FJS symbols (default: true)
+   * @param {number} options.unison - Unison pitch class (default: 0 for C)
+   */
+  constructor({ unicode = true, unison = 0 } = {}) {
+    super();
+    this.unicode = unicode;
+    this.unison = unison;
+  }
+
+  /**
+   * Format pitch class to FJS notation
+   * @param {number} value - Pitch class
+   * @returns {string} FJS notation
+   */
+  call(value) {
+    const pitchClass = (Math.round(value) - this.unison + 12) % 12;
+
+    // FJS notation for 12-TET
+    const fjsNotation = [
+      'P1', 'd2', 'M2', 'd3', 'M3', 'P4', 'd5', 'P5', 'd6', 'M6', 'd7', 'M7'
+    ];
+
+    return fjsNotation[pitchClass];
+  }
+}
+
+/*───────────────────────────────────────────────────────────────────────────*/
+/* Internal Helper Functions for Display (Matplotlib coordinate helpers)     */
+/*───────────────────────────────────────────────────────────────────────────*/
+
+/**
+ * Check if canvas context is valid (JavaScript equivalent of __check_axes)
+ *
+ * @param {CanvasRenderingContext2D} ctx - Canvas 2D context
+ * @returns {boolean} True if context is valid
+ */
+function __check_axes(ctx) {
+  if (!ctx || !(ctx instanceof CanvasRenderingContext2D)) {
+    throw new TypeError('Invalid canvas context - must be CanvasRenderingContext2D');
+  }
+  return true;
+}
+
+/**
+ * Convert chroma bin index to coordinate for display
+ *
+ * @param {number} binIndex - Chroma bin index (0-11)
+ * @param {number} nBins - Total number of chroma bins (default: 12)
+ * @returns {number} Normalized coordinate [0, 1]
+ */
+function __coord_chroma(binIndex, nBins = 12) {
+  return binIndex / nBins;
+}
+
+/**
+ * Convert CQT bin to Hz frequency
+ *
+ * @param {number} binIndex - CQT bin index
+ * @param {number} fmin - Minimum frequency
+ * @param {number} binsPerOctave - Bins per octave (default: 12)
+ * @returns {number} Frequency in Hz
+ */
+function __coord_cqt_hz(binIndex, fmin, binsPerOctave = 12) {
+  return fmin * Math.pow(2, binIndex / binsPerOctave);
+}
+
+/**
+ * Convert FFT bin to Hz frequency
+ *
+ * @param {number} binIndex - FFT bin index
+ * @param {number} sr - Sample rate
+ * @param {number} nFft - FFT size
+ * @returns {number} Frequency in Hz
+ */
+function __coord_fft_hz(binIndex, sr, nFft) {
+  return (binIndex * sr) / nFft;
+}
+
+/**
+ * Convert Fourier tempogram bin to tempo (BPM)
+ *
+ * @param {number} binIndex - Tempogram bin index
+ * @param {number} sr - Sample rate
+ * @param {number} hopLength - Hop length in samples
+ * @param {number} nFft - FFT size for tempogram
+ * @returns {number} Tempo in BPM
+ */
+function __coord_fourier_tempo(binIndex, sr, hopLength, nFft) {
+  if (binIndex === 0) return 0;
+
+  const framesPerSecond = sr / hopLength;
+  const cyclesPerSecond = (binIndex * framesPerSecond) / nFft;
+  const bpm = cyclesPerSecond * 60;
+
+  return bpm;
+}
+
+/**
+ * Convert mel bin to Hz frequency
+ *
+ * @param {number} binIndex - Mel bin index
+ * @param {number} fmin - Minimum frequency
+ * @param {number} fmax - Maximum frequency
+ * @param {number} nMels - Number of mel bins
+ * @returns {number} Frequency in Hz
+ */
+function __coord_mel_hz(binIndex, fmin, fmax, nMels) {
+  // Mel scale: mel = 2595 * log10(1 + f/700)
+  const melMin = 2595 * Math.log10(1 + fmin / 700);
+  const melMax = 2595 * Math.log10(1 + fmax / 700);
+
+  const mel = melMin + (binIndex / nMels) * (melMax - melMin);
+
+  // Inverse mel: f = 700 * (10^(mel/2595) - 1)
+  const hz = 700 * (Math.pow(10, mel / 2595) - 1);
+
+  return hz;
+}
+
+/**
+ * Convert sample/frame index to normalized coordinate
+ *
+ * @param {number} n - Sample or frame index
+ * @param {number} nMax - Maximum index
+ * @returns {number} Normalized coordinate [0, 1]
+ */
+function __coord_n(n, nMax) {
+  return n / nMax;
+}
+
+/**
+ * Convert tempo bin to BPM
+ *
+ * @param {number} binIndex - Tempo bin index
+ * @param {number} tempoMin - Minimum tempo in BPM
+ * @param {number} tempoMax - Maximum tempo in BPM
+ * @param {number} nBins - Number of tempo bins
+ * @returns {number} Tempo in BPM
+ */
+function __coord_tempo(binIndex, tempoMin, tempoMax, nBins) {
+  return tempoMin + (binIndex / nBins) * (tempoMax - tempoMin);
+}
+
+/**
+ * Convert frame index to time in seconds
+ *
+ * @param {number} frameIndex - Frame index
+ * @param {number} sr - Sample rate
+ * @param {number} hopLength - Hop length in samples
+ * @returns {number} Time in seconds
+ */
+function __coord_time(frameIndex, sr, hopLength) {
+  return (frameIndex * hopLength) / sr;
+}
+
+/**
+ * Convert VQT bin to Hz frequency
+ *
+ * @param {number} binIndex - VQT bin index
+ * @param {number} fmin - Minimum frequency
+ * @param {number} binsPerOctave - Bins per octave
+ * @returns {number} Frequency in Hz
+ */
+function __coord_vqt_hz(binIndex, fmin, binsPerOctave) {
+  return fmin * Math.pow(2, binIndex / binsPerOctave);
+}
+
+/**
+ * Decorate axis with labels, ticks, and styling
+ *
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {string} axisType - 'x' or 'y'
+ * @param {AxisFormatter} formatter - Axis formatter instance
+ * @param {number} numTicks - Number of tick marks
+ * @param {Object} bounds - Axis bounds {min, max, plotMin, plotMax}
+ * @returns {void}
+ */
+function __decorate_axis(ctx, axisType, formatter, numTicks, bounds) {
+  __check_axes(ctx);
+
+  ctx.save();
+  ctx.strokeStyle = '#000000';
+  ctx.fillStyle = '#000000';
+  ctx.font = '10px sans-serif';
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i <= numTicks; i++) {
+    const value = bounds.min + (i / numTicks) * (bounds.max - bounds.min);
+    const coord = bounds.plotMin + (i / numTicks) * (bounds.plotMax - bounds.plotMin);
+
+    const label = formatter ? formatter.call(value, i) : value.toFixed(1);
+
+    if (axisType === 'x') {
+      // X-axis tick
+      ctx.textAlign = 'center';
+      ctx.fillText(label, coord, bounds.labelOffset);
+
+      ctx.beginPath();
+      ctx.moveTo(coord, bounds.tickStart);
+      ctx.lineTo(coord, bounds.tickEnd);
+      ctx.stroke();
+    } else {
+      // Y-axis tick
+      ctx.textAlign = 'right';
+      ctx.fillText(label, bounds.labelOffset, coord + 4);
+
+      ctx.beginPath();
+      ctx.moveTo(bounds.tickStart, coord);
+      ctx.lineTo(bounds.tickEnd, coord);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Compute envelope (min/max) for waveform display decimation
+ *
+ * @param {Float32Array|Array<number>} y - Audio signal
+ * @param {number} hop - Decimation hop size
+ * @param {number} maxPoints - Maximum number of points to display
+ * @returns {{min: Float32Array, max: Float32Array}} Min and max envelopes
+ */
+function __envelope(y, hop, maxPoints) {
+  const minEnv = new Float32Array(maxPoints);
+  const maxEnv = new Float32Array(maxPoints);
+
+  for (let i = 0; i < maxPoints; i++) {
+    const startIdx = i * hop;
+    const endIdx = Math.min(startIdx + hop, y.length);
+
+    if (startIdx >= y.length) break;
+
+    let minVal = y[startIdx];
+    let maxVal = y[startIdx];
+
+    for (let j = startIdx; j < endIdx; j++) {
+      minVal = Math.min(minVal, y[j]);
+      maxVal = Math.max(maxVal, y[j]);
+    }
+
+    minEnv[i] = minVal;
+    maxEnv[i] = maxVal;
+  }
+
+  return { min: minEnv, max: maxEnv };
+}
+
+/**
+ * Create mesh coordinates for 2D data display
+ *
+ * @param {number} nX - Number of X coordinates
+ * @param {number} nY - Number of Y coordinates
+ * @param {Function} xCoordFn - Function to compute X coordinates
+ * @param {Function} yCoordFn - Function to compute Y coordinates
+ * @returns {{x: Float32Array, y: Float32Array}} Mesh coordinate arrays
+ */
+function __mesh_coords(nX, nY, xCoordFn, yCoordFn) {
+  const xCoords = new Float32Array(nX);
+  const yCoords = new Float32Array(nY);
+
+  for (let i = 0; i < nX; i++) {
+    xCoords[i] = xCoordFn ? xCoordFn(i) : i;
+  }
+
+  for (let j = 0; j < nY; j++) {
+    yCoords[j] = yCoordFn ? yCoordFn(j) : j;
+  }
+
+  return { x: xCoords, y: yCoords };
+}
+
+/**
+ * Check if two canvas contexts belong to the same canvas
+ *
+ * @param {CanvasRenderingContext2D} ctx1 - First context
+ * @param {CanvasRenderingContext2D} ctx2 - Second context
+ * @returns {boolean} True if contexts belong to same canvas
+ */
+function __same_axes(ctx1, ctx2) {
+  return ctx1 && ctx2 && ctx1.canvas === ctx2.canvas;
+}
+
+/**
+ * Scale axis limits for display
+ *
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {string} axisType - 'x' or 'y'
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @param {string} scale - Scale type: 'linear', 'log', 'symlog'
+ * @returns {{min: number, max: number}} Scaled limits
+ */
+function __scale_axes(ctx, axisType, min, max, scale = 'linear') {
+  __check_axes(ctx);
+
+  if (scale === 'log') {
+    // Logarithmic scale
+    return {
+      min: Math.log10(Math.max(min, 1e-10)),
+      max: Math.log10(Math.max(max, 1e-10))
+    };
+  } else if (scale === 'symlog') {
+    // Symmetric logarithmic scale
+    const sign = value => value >= 0 ? 1 : -1;
+    const symlog = value => sign(value) * Math.log10(1 + Math.abs(value));
+
+    return {
+      min: symlog(min),
+      max: symlog(max)
+    };
+  } else {
+    // Linear scale
+    return { min, max };
+  }
+}
+
+/**
+ * Set canvas as current rendering target (for multi-canvas management)
+ *
+ * @param {HTMLCanvasElement} canvas - Canvas element to set as current
+ * @returns {CanvasRenderingContext2D} 2D context of current canvas
+ */
+function __set_current_image(canvas) {
+  if (!canvas || !(canvas instanceof HTMLCanvasElement)) {
+    throw new TypeError('__set_current_image: canvas must be an HTMLCanvasElement');
+  }
+
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('__set_current_image: failed to get 2D context from canvas');
+  }
+
+  // Store reference for global access (browser environment)
+  if (typeof window !== 'undefined') {
+    window.__current_canvas__ = canvas;
+    window.__current_ctx__ = ctx;
+  }
+
+  return ctx;
+}
+
+/**
+ * Adaptive waveform display that adjusts resolution based on zoom level
+ */
+export class AdaptiveWaveplot {
+  /**
+   * @param {HTMLCanvasElement} canvas - Target canvas element
+   * @param {Float32Array} y - Audio signal
+   * @param {Object} options - Display options
+   */
+  constructor(canvas, y, options = {}) {
+    if (!canvas || !(canvas instanceof HTMLCanvasElement)) {
+      throw new Error('AdaptiveWaveplot: canvas must be an HTMLCanvasElement');
+    }
+
+    this.canvas = canvas;
+    this.y = y;
+    this.options = {
+      sr: 22050,
+      maxPoints: 11025,
+      color: '#1f77b4',
+      ...options
+    };
+
+    this.zoomLevel = 1.0;
+    this.panOffset = 0.0;
+  }
+
+  /**
+   * Render the waveform with current zoom/pan settings
+   */
+  render() {
+    const { sr, maxPoints, color } = this.options;
+
+    // Calculate visible range based on zoom/pan
+    const samplesPerPixel = Math.max(1, Math.floor(this.y.length / (maxPoints * this.zoomLevel)));
+    const visibleStart = Math.floor(this.panOffset * this.y.length);
+    const visibleEnd = Math.min(this.y.length, visibleStart + maxPoints * samplesPerPixel);
+
+    const visibleY = this.y.slice(visibleStart, visibleEnd);
+
+    // Render using waveshow
+    waveshow(visibleY, {
+      canvas: this.canvas,
+      sr: sr,
+      maxPoints: maxPoints,
+      color: color,
+      envelope: samplesPerPixel > 1
+    });
+  }
+
+  /**
+   * Update zoom level
+   * @param {number} zoom - New zoom level (1.0 = 100%)
+   */
+  setZoom(zoom) {
+    this.zoomLevel = Math.max(0.1, Math.min(100, zoom));
+    this.render();
+  }
+
+  /**
+   * Update pan offset
+   * @param {number} offset - Pan offset [0, 1]
+   */
+  setPan(offset) {
+    this.panOffset = Math.max(0, Math.min(1, offset));
+    this.render();
+  }
+
+  /**
+   * Clean up resources
+   */
+  destroy() {
+    // Clear canvas
+    const ctx = this.canvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    // Release references
+    this.canvas = null;
+    this.y = null;
+    this.options = null;
+  }
+}

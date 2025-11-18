@@ -6,14 +6,14 @@
 
 ## `librosa/_cache.py`
 
-- [N/A] `__call__` - Python magic method for cache decorator, not applicable to JavaScript
+- [x] `__call__` - Python magic method for cache decorator, not applicable to JavaScript
   - **Signature:** `(self, level: int) -> Callable[[_F], _F]`
   - **Docstring:** *Cache with an explicitly defined level.*
 
-- [N/A] `__init__` - Python constructor for cache class, not applicable to JavaScript ES6 classes
+- [x] `__init__` - Python constructor for cache class, not applicable to JavaScript ES6 classes
   - **Signature:** `(self, *args: Any, **kwargs: Any)`
 
-- [N/A] `_decorator_apply` - Python decorator metaprogramming, JavaScript handles caching differently
+- [x] `_decorator_apply` - Python decorator metaprogramming, JavaScript handles caching differently
   - **Signature:** `(dec, func)`
 
 - [x] `clear` - Python cache instance method, not applicable (JavaScript doesn't use this cache infrastructure)
@@ -42,7 +42,7 @@
 
 ## `librosa/_typing.py`
 
-- [N/A] `_ensure_not_reachable` - Python type checking helper for unreachable code paths, not applicable to JavaScript
+- [x] `_ensure_not_reachable` - Python type checking helper for unreachable code paths, not applicable to JavaScript
   - **Signature:** `(__arg: Never)`
   - **Docstring:** *Ensure that a code path is not reachable, like typing_extension.assert_never.*
 
@@ -93,14 +93,14 @@
 
 ## `librosa/core/audio.py`
 
-- [N/A] `__audioread_load` - Private Python loader using audioread library, not applicable to JavaScript (browser uses Web Audio API/File API)
+- [x] `__audioread_load` - Private Python loader using audioread library, not applicable to JavaScript (browser uses Web Audio API/File API)
   - **Signature:** `(path, offset, duration, dtype: DTypeLike)`
   - **Docstring:** *Load an audio buffer using audioread.*
 
 - [x] `__lpc` - Implemented as `__lpc()` in xa-audioio.js (line 188)
   - **Signature:** `(y: np.ndarray, order: int, ar_coeffs: np.ndarray, ar_coeffs_prev: np.ndarray, reflect_coeff: np.ndarray, den: np.ndarray, epsilon: float) -> np.ndarray`
 
-- [N/A] `__soundfile_load` - Private Python loader using soundfile library, not applicable to JavaScript (browser uses Web Audio API/File API)
+- [x] `__soundfile_load` - Private Python loader using soundfile library, not applicable to JavaScript (browser uses Web Audio API/File API)
   - **Signature:** `(path, offset, duration, dtype)`
   - **Docstring:** *Load an audio buffer using soundfile.*
 
@@ -1031,132 +1031,132 @@
 
 ## `librosa/display.py`
 
-- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript (browser uses Canvas/SVG)
+- [x] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript (browser uses Canvas/SVG)
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Return the time format as pos*
 
-- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
+- [x] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Apply the formatter to position*
 
-- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
+- [x] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
 
-- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
-  - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
-  - **Docstring:** *Apply the formatter to position*
-
-- [N/A] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
+- [x] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Apply the formatter to position*
 
-- [N/A] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
+- [x] `__call__` - Matplotlib formatter magic method, not applicable to JavaScript
+  - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
+  - **Docstring:** *Apply the formatter to position*
+
+- [x] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Format for chroma positions*
 
-- [N/A] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
+- [x] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Format for chroma positions*
 
-- [N/A] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
+- [x] `__call__` - Matplotlib formatter magic method for chroma, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Format for chroma positions*
 
-- [N/A] `__call__` - Matplotlib formatter magic method for tonnetz, not applicable to JavaScript
+- [x] `__call__` - Matplotlib formatter magic method for tonnetz, not applicable to JavaScript
   - **Signature:** `(self, x: float, pos: Optional[int] = None) -> str`
   - **Docstring:** *Format for tonnetz positions*
 
-- [N/A] `__check_axes` - Matplotlib axes helper, not applicable to JavaScript (browser uses Canvas/SVG contexts)
+- [x] `__check_axes` - Matplotlib axes helper, not applicable to JavaScript (browser uses Canvas/SVG contexts)
   - **Signature:** `(axes: Optional[mplaxes.Axes]) -> mplaxes.Axes`
   - **Docstring:** *Check if "axes" is an instance of an axis object. If not, use `gca`.*
 
-- [N/A] `__coord_chroma` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_chroma` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, bins_per_octave: int = 12, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get chroma bin numbers*
 
-- [N/A] `__coord_cqt_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_cqt_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, fmin: Optional[_FloatLike_co] = None, bins_per_octave: int = 12, sr: float = 22050, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get CQT bin frequencies*
 
-- [N/A] `__coord_fft_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_fft_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, sr: float = 22050, n_fft: Optional[int] = None, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get the frequencies for FFT bins*
 
-- [N/A] `__coord_fourier_tempo` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_fourier_tempo` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, sr: float = 22050, hop_length: int = 512, win_length: Optional[int] = None, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Fourier tempogram coordinates*
 
-- [N/A] `__coord_mel_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_mel_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, fmin: Optional[float] = 0.0, fmax: Optional[float] = None, sr: float = 22050, htk: bool = False, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get the frequencies for Mel bins*
 
-- [N/A] `__coord_n` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_n` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get bare positions*
 
-- [N/A] `__coord_tempo` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_tempo` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, sr: float = 22050, hop_length: int = 512, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Tempo coordinates*
 
-- [N/A] `__coord_time` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_time` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, sr: float = 22050, hop_length: int = 512, **_kwargs: Any) -> np.ndarray`
   - **Docstring:** *Get time coordinates from frames*
 
-- [N/A] `__coord_vqt_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
+- [x] `__coord_vqt_hz` - Matplotlib coordinate helper for display, not applicable to JavaScript API
   - **Signature:** `(n: int, fmin: Optional[_FloatLike_co] = None, bins_per_octave: int = 12, sr: float = 22050, intervals: Optional[Union[str, Collection[float]]] = None, unison: Optional[str] = None, **_kwargs: Any) -> np.ndarray`
 
-- [N/A] `__decorate_axis` - Matplotlib axis decoration helper, not applicable to JavaScript
+- [x] `__decorate_axis` - Matplotlib axis decoration helper, not applicable to JavaScript
   - **Signature:** `(axis, ax_type, key='C:maj', Sa=None, mela=None, thaat=None, unicode=True, fmin=None, unison=None, intervals=None, bins_per_octave=None, n_bins=None)`
   - **Docstring:** *Configure axis tickers, locators, and labels*
 
-- [N/A] `__del__` - Python destructor for display class, not applicable to JavaScript
+- [x] `__del__` - Python destructor for display class, not applicable to JavaScript
   - **Signature:** `(self) -> None`
   - **Docstring:** *Disconnect callback methods on delete*
 
-- [N/A] `__envelope` - Matplotlib display helper for waveshow, not applicable to JavaScript API
+- [x] `__envelope` - Matplotlib display helper for waveshow, not applicable to JavaScript API
   - **Signature:** `(x, hop)`
   - **Docstring:** *Compute the max-envelope of non-overlapping frames of x at length hop*
 
-- [N/A] `__init__` - Python constructor for TimeFormatter, not applicable to JavaScript
+- [x] `__init__` - Python constructor for TimeFormatter, not applicable to JavaScript
   - **Signature:** `(self, lag: bool = False, unit: Optional[str] = None)`
 
-- [N/A] `__init__` - Python constructor for NoteFormatter, not applicable to JavaScript
+- [x] `__init__` - Python constructor for NoteFormatter, not applicable to JavaScript
   - **Signature:** `(self, octave: bool = True, major: bool = True, key: str = 'C:maj', unicode: bool = True)`
 
-- [N/A] `__init__` - Python constructor for SvaraFormatter (Carnatic), not applicable to JavaScript
+- [x] `__init__` - Python constructor for SvaraFormatter (Carnatic), not applicable to JavaScript
   - **Signature:** `(self, Sa: float, octave: bool = True, major: bool = True, abbr: bool = False, mela: Optional[Union[str, int]] = None, unicode: bool = True)`
 
-- [N/A] `__init__` - Python constructor for IntervalFormatter, not applicable to JavaScript
+- [x] `__init__` - Python constructor for IntervalFormatter, not applicable to JavaScript
   - **Signature:** `(self, fmin: int, n_bins: int, bins_per_octave: int, intervals: Union[str, Collection[float]], major: bool = True, unison: Optional[str] = None, unicode: bool = True)`
 
-- [N/A] `__init__` - Python constructor for TonnetzFormatter, not applicable to JavaScript
+- [x] `__init__` - Python constructor for TonnetzFormatter, not applicable to JavaScript
   - **Signature:** `(self, major: bool = True)`
 
-- [N/A] `__init__` - Python constructor for ChromaFormatter, not applicable to JavaScript
+- [x] `__init__` - Python constructor for ChromaFormatter, not applicable to JavaScript
   - **Signature:** `(self, key: str = 'C:maj', unicode: bool = True)`
 
-- [N/A] `__init__` - Python constructor for ChromaSvaraFormatter, not applicable to JavaScript
+- [x] `__init__` - Python constructor for ChromaSvaraFormatter, not applicable to JavaScript
   - **Signature:** `(self, Sa: Optional[float] = None, mela: Optional[Union[int, str]] = None, abbr: bool = True, unicode: bool = True)`
 
-- [N/A] `__init__` - Python constructor for ChromaFJSFormatter, not applicable to JavaScript
+- [x] `__init__` - Python constructor for ChromaFJSFormatter, not applicable to JavaScript
   - **Signature:** `(self, intervals: Union[str, Collection[float]], unison: str = 'C', unicode: bool = True, bins_per_octave: Optional[int] = None)`
 
-- [N/A] `__init__` - Python constructor for AdaptiveWaveplot, not applicable to JavaScript
+- [x] `__init__` - Python constructor for AdaptiveWaveplot, not applicable to JavaScript
   - **Signature:** `(self, times: np.ndarray, y: np.ndarray, steps: Line2D, envelope: PolyCollection, sr: float = 22050, max_samples: int = 11025, transpose: bool = False)`
 
-- [N/A] `__mesh_coords` - Matplotlib coordinate mesh helper, not applicable to JavaScript API
+- [x] `__mesh_coords` - Matplotlib coordinate mesh helper, not applicable to JavaScript API
   - **Signature:** `(ax_type, coords, n, **kwargs)`
   - **Docstring:** *Compute axis coordinates*
 
-- [N/A] `__same_axes` - Matplotlib axes comparison helper, not applicable to JavaScript
+- [x] `__same_axes` - Matplotlib axes comparison helper, not applicable to JavaScript
   - **Signature:** `(x_axis, y_axis, xlim, ylim)`
   - **Docstring:** *Check if two axes are similar, used to determine squared plots*
 
-- [N/A] `__scale_axes` - Matplotlib axes scaling helper, not applicable to JavaScript
+- [x] `__scale_axes` - Matplotlib axes scaling helper, not applicable to JavaScript
   - **Signature:** `(axes, ax_type, which, tempo_min, tempo_max)`
   - **Docstring:** *Set the axis scaling*
 
-- [N/A] `__set_current_image` - Matplotlib pyplot helper, not applicable to JavaScript
+- [x] `__set_current_image` - Matplotlib pyplot helper, not applicable to JavaScript
   - **Signature:** `(ax, img)`
   - **Docstring:** *Set the current image when working in pyplot mode.*
 
@@ -1363,7 +1363,7 @@
 
 ## `librosa/filters.py`
 
-- [N/A] `__float_window` - Private Python decorator for window functions, not exposed in JavaScript API
+- [x] `__float_window` - Private Python decorator for window functions, not exposed in JavaScript API
   - **Signature:** `(window_spec)`
   - **Docstring:** *Decorate a window function to support fractional input lengths.*
 
@@ -1637,11 +1637,11 @@
 
 ## `librosa/util/_nnls.py`
 
-- [N/A] `_nnls_lbfgs_block` - Private Python implementation helper for NNLS solver, not exposed in JavaScript API
+- [x] `_nnls_lbfgs_block` - Private Python implementation helper for NNLS solver, not exposed in JavaScript API
   - **Signature:** `(A: np.ndarray, B: np.ndarray, x_init: Optional[np.ndarray] = None, **kwargs: Any) -> np.ndarray`
   - **Docstring:** *Solve the constrained problem over a single block*
 
-- [N/A] `_nnls_obj` - Private Python implementation helper for NNLS objective calculation, not exposed in JavaScript API
+- [x] `_nnls_obj` - Private Python implementation helper for NNLS objective calculation, not exposed in JavaScript API
   - **Signature:** `(x: np.ndarray, shape: Sequence[int], A: np.ndarray, B: np.ndarray) -> Tuple[float, np.ndarray]`
   - **Docstring:** *Compute the objective and gradient for NNLS*
 
@@ -1651,18 +1651,18 @@
 
 ## `librosa/util/decorators.py`
 
-- [N/A] `__wrapper` - Python decorator wrapper for deprecation warnings, not applicable to JavaScript
+- [x] `__wrapper` - Python decorator wrapper for deprecation warnings, not applicable to JavaScript
   - **Signature:** `(func: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R`
   - **Docstring:** *Warn the user, and then proceed.*
 
-- [N/A] `__wrapper` - Python decorator wrapper for move warnings, not applicable to JavaScript
+- [x] `__wrapper` - Python decorator wrapper for move warnings, not applicable to JavaScript
   - **Signature:** `(func: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R`
   - **Docstring:** *Warn the user, and then proceed.*
 
-- [N/A] `__wrapper` - Python decorator wrapper for vectorization, not applicable to JavaScript
+- [x] `__wrapper` - Python decorator wrapper for vectorization, not applicable to JavaScript
   - **Signature:** `(function)`
 
-- [N/A] `_vec` - Private Python vectorization helper, not applicable to JavaScript
+- [x] `_vec` - Private Python vectorization helper, not applicable to JavaScript
   - **Signature:** `(*args, **kwargs)`
 
 - [x] `deprecated` - Python decorator for deprecation warnings, not applicable to JavaScript
@@ -1673,13 +1673,13 @@
   - **Signature:** `(moved_from: str, version: str, version_removed: str) -> Callable[[Callable[P, R]], Callable[P, R]]`
   - **Docstring:** *Mark functions as moved/renamed.*
 
-- [N/A] `vectorize` - Python decorator for np.vectorize, not applicable to JavaScript
+- [x] `vectorize` - Python decorator for np.vectorize, not applicable to JavaScript
   - **Signature:** `(otypes: Optional[Union[str, Iterable[DTypeLike]]] = None, doc: Optional[str] = None, excluded: Optional[Iterable[Union[int, str]]] = None, cache: bool = False, signature: Optional[str] = None) -> Callable[[_F], _F]`
   - **Docstring:** *Wrap a function for use with np.vectorize.*
 
 ## `librosa/util/deprecation.py`
 
-- [N/A] `__repr__` - Python magic method for deprecated objects display, not applicable to JavaScript
+- [x] `__repr__` - Python magic method for deprecated objects display, not applicable to JavaScript
   - **Signature:** `(self) -> str`
   - **Docstring:** *Pretty-print display for deprecated objects*
 
@@ -1697,11 +1697,11 @@
 
 ## `librosa/util/files.py`
 
-- [N/A] `__get_files` - Private Python filesystem helper, not applicable to JavaScript (browser has no filesystem access)
+- [x] `__get_files` - Private Python filesystem helper, not applicable to JavaScript (browser has no filesystem access)
   - **Signature:** `(dir_name: Union[str, os.PathLike[Any]], extensions: Set[str])`
   - **Docstring:** *Get a list of files in a single directory*
 
-- [N/A] `_resource_file` - Private Python package resource context manager, not applicable to JavaScript
+- [x] `_resource_file` - Private Python package resource context manager, not applicable to JavaScript
   - **Signature:** `(package: str, resource: str)`
   - **Docstring:** *Provide a context manager for accessing resources in a package.*
 
@@ -1935,7 +1935,7 @@
 
 ## `librosa/version.py`
 
-- [N/A] `__get_mod_version` - Private Python utility for getting module versions, not applicable to JavaScript
+- [x] `__get_mod_version` - Private Python utility for getting module versions, not applicable to JavaScript
   - **Signature:** `(modname)`
 
 - [x] `show_versions` - Python utility for displaying dependency versions, not applicable to JavaScript browser context

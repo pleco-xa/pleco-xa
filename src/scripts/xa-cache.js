@@ -207,6 +207,37 @@ export class LRUCache {
     const argsStr = JSON.stringify(args);
     return `${fnName}:${argsStr}`;
   }
+
+  /**
+   * Make cache callable - evaluate a function and cache result
+   *
+   * JavaScript equivalent of Python's __call__ magic method.
+   * Allows cache instance to be used as a function.
+   *
+   * @param {Function} fn - Function to evaluate
+   * @param {...any} args - Arguments to pass to function
+   * @returns {any} Function result (cached or newly computed)
+   *
+   * @example
+   * const cache = new LRUCache();
+   * const result = cache.call(expensiveFunction, arg1, arg2);
+   */
+  call(fn, ...args) {
+    return this.eval(fn, ...args);
+  }
+
+  /**
+   * String representation of cache (JavaScript equivalent of Python's __repr__)
+   *
+   * @returns {string} String representation of cache
+   *
+   * @example
+   * const cache = new LRUCache(50);
+   * console.log(cache.toString());  // "LRUCache(size=0/50, keys=[])"
+   */
+  toString() {
+    return this.format();
+  }
 }
 
 /**
@@ -243,6 +274,41 @@ export function wrapper(fn, maxSize = 100) {
   cachedFunction.original = fn;
 
   return cachedFunction;
+}
+
+/**
+ * Apply a decorator to a function (Python decorator metaprogramming helper)
+ *
+ * Internal helper for applying decorators in JavaScript.
+ * Mimics Python's decorator application mechanism.
+ *
+ * @param {Function} decorator - Decorator function to apply
+ * @param {Function} fn - Function to decorate
+ * @param {...any} decoratorArgs - Arguments to pass to decorator
+ * @returns {Function} Decorated function
+ *
+ * @example
+ * // Apply caching decorator
+ * const cachedFunc = _decorator_apply(wrapper, myFunction, 100);
+ *
+ * @example
+ * // Apply deprecation decorator
+ * const deprecatedFunc = _decorator_apply(
+ *   deprecated,
+ *   oldFunction,
+ *   '1.0.0',
+ *   '2.0.0',
+ *   'Use newFunction instead'
+ * );
+ */
+export function _decorator_apply(decorator, fn, ...decoratorArgs) {
+  if (decoratorArgs.length > 0) {
+    // Decorator with arguments: decorator(...args)(fn)
+    return decorator(...decoratorArgs)(fn);
+  } else {
+    // Decorator without arguments: decorator(fn)
+    return decorator(fn);
+  }
 }
 
 /**
