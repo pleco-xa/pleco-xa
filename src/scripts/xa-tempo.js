@@ -54,11 +54,12 @@ export function tempo(
 
   // Return best tempo and all candidates
   return {
-    bpm: candidates.length > 0 ? candidates[0].bpm : 120,
+    bpm: candidates.length > 0 ? candidates[0].bpm : null,
     candidates: candidates,
     tempogram: tempogram,
     onset_strength: onset_env,
     confidence: candidates.length > 0 ? candidates[0].strength : 0,
+    failed: candidates.length === 0,
   }
 }
 
@@ -450,5 +451,5 @@ export function quick_tempo(y, sr = 22050) {
   const tempogram = compute_tempogram(onset_env, sr, hop_length, ac_size)
   const candidates = find_tempo_candidates(tempogram, sr, hop_length, 200, 60)
 
-  return candidates.length > 0 ? candidates[0].bpm : 120
+  return candidates.length > 0 ? candidates[0].bpm : null
 }

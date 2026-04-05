@@ -154,7 +154,10 @@ export function detectBPM(pcm, sampleRate) {
 export function detectLoops(pcm, sampleRate) {
   const beatResult = beatTrack(pcm, sampleRate, { hopLength: 512 })
   const beats = beatResult.beats || []
-  const bpm = beatResult.tempo || 120
+  const bpm = beatResult.tempo
+  if (!bpm) {
+    return { bpm: null, loops: [], num_beats: 0, error: 'BPM detection failed - cannot compute loops without tempo' }
+  }
   const barDuration = (60 / bpm) * 4
 
   // Generate loop suggestions at musical boundaries

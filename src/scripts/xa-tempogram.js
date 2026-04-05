@@ -556,7 +556,7 @@ export function estimate_tempo(
   }
 
   return {
-    tempo: bpm_per_lag[best_lag] || 120,
+    tempo: bpm_per_lag[best_lag] || null,
     strength: best_strength,
   }
 }

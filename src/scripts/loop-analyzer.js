@@ -172,7 +172,7 @@ export async function fastOnsetLoopAnalysis(audioBuffer, bpmData = null) {
       loopStart: 0,
       loopEnd: Math.min(5, audioBuffer.duration),
       confidence: 50,
-      bpm: bpmData?.bpm ?? 120,
+      bpm: bpmData?.bpm ?? null,
       musicalDivision: 2,
     }
   }

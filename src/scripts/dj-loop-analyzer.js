@@ -417,7 +417,7 @@ export class DJLoopAnalyzer {
 
     // This would analyze the actual loop objects if properly linked
     return {
-      avgTempo: 120, // Placeholder
+      avgTempo: null, // Not yet computed
       dominantKey: 'C major',
       energyRange: [0.3, 0.7],
       commonTags: ['house', 'melodic'],

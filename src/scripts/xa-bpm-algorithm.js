@@ -139,7 +139,7 @@ export async function estimateGlobalTempo(onsetEnvelope, sr) {
 
   const candidates = [];
   let bestScore = -Infinity;
-  let bestBPM = 120;
+  let bestBPM = null;
 
   // Normalize onset envelope
   let mean = 0;

@@ -30,7 +30,7 @@ export async function recurrenceLoopAnalysis(audioBuffer) {
       loopStart: 0,
       loopEnd: Math.min(5.0, duration),
       confidence: 50,
-      bpm: 120,
+      bpm: null,
       musicalDivision: 2,
     }
   }

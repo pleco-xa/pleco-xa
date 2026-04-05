@@ -174,7 +174,7 @@ export function pickPeaks(onsetStrength, { delta = 0.07, wait = 20 } = {}) {
  * Simple version - just use onset spacing
  */
 export function onsetsToBeats(onsetTimes) {
-  if (onsetTimes.length < 2) return { bpm: 120, beatTimes: [] }
+  if (onsetTimes.length < 2) return { bpm: null, beatTimes: [], failed: true }
 
   // Calculate intervals between onsets
   const intervals = []

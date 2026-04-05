@@ -47,7 +47,7 @@ let audioContext
 let currentAudioBuffer = null
 let currentSource = null
 let isPlaying = false
-let currentBPM = 120
+let currentBPM = null
 let currentLoop = { start: 0, end: 1 }
 let playheadStartTime = 0
 let playheadAnimationId = null
@@ -387,12 +387,11 @@ async function analyzeAudio() {
 
   } catch (error) {
     console.error('❌ BPM detection error:', error);
-    // Fallback to default BPM
-    currentBPM = 120;
-    document.getElementById('bpmValue').textContent = '120';
+    currentBPM = null;
+    document.getElementById('bpmValue').textContent = '---';
 
     window.analysisResults = {
-      tempo: { bpm: currentBPM, confidence: 0.5 },
+      tempo: { bpm: null, confidence: 0, failed: true, error: error.message },
       beats: { beat_times: [] },
       spectral: { centroid: { centroid: 0, centroids: [] } }
     };
@@ -497,7 +496,7 @@ async function estimateGlobalTempo(onsetEnvelope, sr) {
     console.log(` ${i+1}. ${candidates[i].bpm.toFixed(1)} BPM (score: ${candidates[i].score.toFixed(4)})`);
   }
 
-  let bestBpm = 120, bestScore = 0;
+  let bestBpm = null, bestScore = 0;
   for (let i = 0; i < candidates.length; i++) {
     if (candidates[i].score > bestScore) {
       bestScore = candidates[i].score;

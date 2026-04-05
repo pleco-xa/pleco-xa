@@ -71,12 +71,12 @@ export class DopplerScroll {
     // Initialize tempo data
     this.tempoData = {
       loop1: {
-        bpm: 120,
+        bpm: null,
         beatGrid: [],
         loopPoints: { start: 0, end: 0 },
       },
       loop2: {
-        bpm: 120,
+        bpm: null,
         beatGrid: [],
         loopPoints: { start: 0, end: 0 },
       },
