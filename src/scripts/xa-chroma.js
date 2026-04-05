@@ -3,7 +3,7 @@
  * Pitch class profiles for harmonic analysis and key detection
  */
 
-import { fft } from './xa-onset.js'
+import { fft } from './xa-fft.js'
 
 /**
  * Compute chroma features using Constant-Q Transform
