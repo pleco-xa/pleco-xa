@@ -1,0 +1,335 @@
+---
+import MainLayout from '../components/MainLayout.astro';
+
+const title = 'Spectrogram Test - Pleco XA';
+const description = 'Librosa-style spectrogram visualization using Pleco XA';
+---
+
+<MainLayout {...{title, description}}>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      color: #00ff88;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 30px;
+    }
+
+    .controls {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+
+    select, button, input[type="range"] {
+      padding: 8px 12px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      color: #e0e0e0;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    button {
+      background: #00ff88;
+      color: #0a0a0a;
+      font-weight: 600;
+      border: none;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #00dd77;
+    }
+
+    button:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+    }
+
+    .canvas-container {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+      background: #000;
+    }
+
+    .info {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .info-label {
+      color: #888;
+      font-size: 0.8rem;
+    }
+
+    .info-value {
+      color: #00ff88;
+      font-weight: 600;
+    }
+
+    .error {
+      background: #ff3333;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+  </style>
+
+  <div class="container">
+    <h1>Spectrogram Visualization</h1>
+    <p class="subtitle">Librosa-style spectrogram using Pleco XA</p>
+
+    <div id="error" class="error" style="display: none;"></div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="audioFile">Audio File</label>
+        <select id="audioFile">
+          <option value="/audio/12-8-Jazzy-Drumset-03.wav">12-8 Jazzy Drumset</option>
+          <option value="/audio/Drive Through Beat.wav">Drive Through Beat</option>
+          <option value="/audio/Bassline For Doppler Song - 11.wav">Bassline (Short)</option>
+          <option value="/audio/Bassline For Doppler Song longer.wav">Bassline (Long)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="colormap">Colormap</label>
+        <select id="colormap">
+          <option value="viridis">Viridis</option>
+          <option value="hot">Hot</option>
+          <option value="grayscale">Grayscale</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="fftSize">FFT Size</label>
+        <select id="fftSize">
+          <option value="512">512</option>
+          <option value="1024">1024</option>
+          <option value="2048" selected>2048</option>
+          <option value="4096">4096</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="hopLength">Hop Length</label>
+        <select id="hopLength">
+          <option value="128">128</option>
+          <option value="256">256</option>
+          <option value="512" selected>512</option>
+          <option value="1024">1024</option>
+        </select>
+      </div>
+
+      <button id="generateBtn">Generate Spectrogram</button>
+      <button id="playBtn" disabled>Play Audio</button>
+    </div>
+
+    <div class="canvas-container">
+      <canvas id="spectrogramCanvas" width="1200" height="600"></canvas>
+    </div>
+
+    <div class="info" id="info" style="display: none;">
+      <div class="info-item">
+        <span class="info-label">Sample Rate</span>
+        <span class="info-value" id="sampleRate">-</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Duration</span>
+        <span class="info-value" id="duration">-</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Time Frames</span>
+        <span class="info-value" id="timeFrames">-</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Frequency Bins</span>
+        <span class="info-value" id="frequencyBins">-</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Hop Length</span>
+        <span class="info-value" id="hopLengthInfo">-</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import Pleco XA library
+    import { createSpectrogram } from './scripts/SpectrumAnalyzer.js';
+
+    let audioContext = null;
+    let audioBuffer = null;
+    let audioSource = null;
+
+    // Initialize audio context
+    function initAudioContext() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioContext;
+    }
+
+    // Load audio file
+    async function loadAudio(url) {
+      const ctx = initAudioContext();
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      return await ctx.decodeAudioData(arrayBuffer);
+    }
+
+
+    // Update info display
+    function updateInfo(spectrogramData) {
+      document.getElementById('info').style.display = 'grid';
+      document.getElementById('sampleRate').textContent = `${spectrogramData.sampleRate} Hz`;
+      document.getElementById('duration').textContent = `${spectrogramData.duration.toFixed(2)} s`;
+      document.getElementById('timeFrames').textContent = spectrogramData.timeFrames;
+      document.getElementById('frequencyBins').textContent = spectrogramData.frequencyBins;
+      document.getElementById('hopLengthInfo').textContent = spectrogramData.hopLength;
+    }
+
+    // Show error
+    function showError(message) {
+      const errorEl = document.getElementById('error');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => {
+        errorEl.style.display = 'none';
+      }, 5000);
+    }
+
+    // Play audio
+    function playAudio() {
+      if (!audioBuffer) return;
+
+      // Stop previous audio if playing
+      if (audioSource) {
+        audioSource.stop();
+      }
+
+      const ctx = initAudioContext();
+      audioSource = ctx.createBufferSource();
+      audioSource.buffer = audioBuffer;
+      audioSource.connect(ctx.destination);
+      audioSource.start(0);
+
+      audioSource.onended = () => {
+        audioSource = null;
+      };
+    }
+
+    // Generate spectrogram
+    async function generateSpectrogram() {
+      const generateBtn = document.getElementById('generateBtn');
+      const playBtn = document.getElementById('playBtn');
+      const canvas = document.getElementById('spectrogramCanvas');
+
+      try {
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'Generating...';
+
+        const audioFile = document.getElementById('audioFile').value;
+        const colormap = document.getElementById('colormap').value;
+        const fftSize = parseInt(document.getElementById('fftSize').value);
+        const hopLength = parseInt(document.getElementById('hopLength').value);
+
+        // Load audio
+        audioBuffer = await loadAudio(audioFile);
+
+        // Create spectrogram using Pleco XA library
+        // This function handles both computation AND rendering to canvas
+        const spectrogramData = await createSpectrogram(canvas, audioBuffer, {
+          fftSize,
+          hopLength,
+          colormap,
+          minDb: -100,
+          maxDb: -10
+        });
+
+        // Update info
+        updateInfo(spectrogramData);
+
+        // Enable play button
+        playBtn.disabled = false;
+
+        generateBtn.textContent = 'Generate Spectrogram';
+
+      } catch (error) {
+        console.error('Error generating spectrogram:', error);
+        showError(`Error: ${error.message}`);
+        generateBtn.textContent = 'Generate Spectrogram';
+      } finally {
+        generateBtn.disabled = false;
+      }
+    }
+
+    // Event listeners
+    document.getElementById('generateBtn').addEventListener('click', generateSpectrogram);
+    document.getElementById('playBtn').addEventListener('click', playAudio);
+
+    // Auto-generate on load
+    window.addEventListener('load', () => {
+      setTimeout(generateSpectrogram, 500);
+    });
+  </script>
+</MainLayout>
