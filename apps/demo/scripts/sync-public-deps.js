@@ -42,6 +42,13 @@ const filesToSync = [
   { src: 'src/scripts/ui/applyLoop.js', dest: 'public/scripts/ui/applyLoop.js' },
   { src: 'src/scripts/ui/toastQueue.js', dest: 'public/scripts/ui/toastQueue.js' },
 
+
+  // Parity-repaired core + flagship modules (Wave 1)
+  { src: 'src/scripts/xa-fft.js', dest: 'public/scripts/xa-fft.js' },
+  { src: 'src/scripts/xa-util.js', dest: 'public/scripts/xa-util.js' },
+  { src: 'src/scripts/xa-vocal-separation.js', dest: 'public/scripts/xa-vocal-separation.js' },
+  { src: 'src/scripts/xa-wav-encoder.js', dest: 'public/scripts/xa-wav-encoder.js' },
+  { src: 'src/scripts/SpectrumAnalyzer.js', dest: 'public/scripts/SpectrumAnalyzer.js' },
   // Effects library
   { src: 'src/lib/effects/xa-fx.js', dest: 'public/lib/effects/xa-fx.js' },
 ];

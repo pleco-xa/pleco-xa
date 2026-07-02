@@ -11,10 +11,13 @@
  * @param {number} n_fft - FFT window size (optional)
  * @returns {number|Array} Sample indices
  */
+/** Array-like check covering plain arrays AND typed arrays (Float32Array etc.). */
+const isArrayLike = (x) => Array.isArray(x) || (ArrayBuffer.isView(x) && !(x instanceof DataView))
+
 export function frames_to_samples(frames, hop_length = 512, n_fft = null) {
   const offset = n_fft !== null ? Math.floor(n_fft / 2) : 0
 
-  if (Array.isArray(frames)) {
+  if (isArrayLike(frames)) {
     return frames.map((f) => f * hop_length + offset)
   }
   return frames * hop_length + offset
@@ -30,7 +33,7 @@ export function frames_to_samples(frames, hop_length = 512, n_fft = null) {
 export function samples_to_frames(samples, hop_length = 512, n_fft = null) {
   const offset = n_fft !== null ? Math.floor(n_fft / 2) : 0
 
-  if (Array.isArray(samples)) {
+  if (isArrayLike(samples)) {
     return samples.map((s) => Math.max(0, Math.floor((s - offset) / hop_length)))
   }
   return Math.max(0, Math.floor((samples - offset) / hop_length))
@@ -47,7 +50,7 @@ export function samples_to_frames(samples, hop_length = 512, n_fft = null) {
 export function frames_to_time(frames, sr = 22050, hop_length = 512, n_fft = null) {
   const samples = frames_to_samples(frames, hop_length, n_fft)
 
-  if (Array.isArray(samples)) {
+  if (isArrayLike(samples)) {
     return samples.map((s) => s / sr)
   }
   return samples / sr
@@ -62,7 +65,7 @@ export function frames_to_time(frames, sr = 22050, hop_length = 512, n_fft = nul
  * @returns {number|Array} Frame indices
  */
 export function time_to_frames(times, sr = 22050, hop_length = 512, n_fft = null) {
-  if (Array.isArray(times)) {
+  if (isArrayLike(times)) {
     const samples = times.map((t) => Math.round(t * sr))
     return samples_to_frames(samples, hop_length, n_fft)
   }
@@ -77,7 +80,7 @@ export function time_to_frames(times, sr = 22050, hop_length = 512, n_fft = null
  * @returns {number|Array} Time in seconds
  */
 export function samples_to_time(samples, sr = 22050) {
-  if (Array.isArray(samples)) {
+  if (isArrayLike(samples)) {
     return samples.map((s) => s / sr)
   }
   return samples / sr
@@ -90,7 +93,7 @@ export function samples_to_time(samples, sr = 22050) {
  * @returns {number|Array} Sample indices
  */
 export function time_to_samples(times, sr = 22050) {
-  if (Array.isArray(times)) {
+  if (isArrayLike(times)) {
     return times.map((t) => Math.round(t * sr))
   }
   return Math.round(times * sr)
@@ -102,7 +105,7 @@ export function time_to_samples(times, sr = 22050) {
  * @returns {number|Array} MIDI note number
  */
 export function hz_to_midi(frequencies) {
-  if (Array.isArray(frequencies)) {
+  if (isArrayLike(frequencies)) {
     return frequencies.map((f) => 12 * Math.log2(f / 440.0) + 69)
   }
   return 12 * Math.log2(frequencies / 440.0) + 69
@@ -114,7 +117,7 @@ export function hz_to_midi(frequencies) {
  * @returns {number|Array} Frequency in Hz
  */
 export function midi_to_hz(notes) {
-  if (Array.isArray(notes)) {
+  if (isArrayLike(notes)) {
     return notes.map((n) => 440.0 * Math.pow(2, (n - 69) / 12))
   }
   return 440.0 * Math.pow(2, (notes - 69) / 12)
@@ -150,7 +153,7 @@ export function midi_to_note(midi, octave = true, cents = false) {
     return result
   }
 
-  if (Array.isArray(midi)) {
+  if (isArrayLike(midi)) {
     return midi.map(convertSingle)
   }
   return convertSingle(midi)
@@ -188,7 +191,7 @@ export function note_to_midi(note, round_midi = true) {
     return round_midi ? Math.round(midi) : midi
   }
 
-  if (Array.isArray(note)) {
+  if (isArrayLike(note)) {
     return note.map(convertSingle)
   }
   return convertSingle(note)
@@ -225,7 +228,7 @@ export function note_to_hz(note) {
 export function hz_to_octs(frequencies, tuning = 440.0) {
   const a4_octs = 4 + 9 / 12  // A4 in octaves from C0
 
-  if (Array.isArray(frequencies)) {
+  if (isArrayLike(frequencies)) {
     return frequencies.map((f) => Math.log2(f / tuning) + a4_octs)
   }
   return Math.log2(frequencies / tuning) + a4_octs
@@ -240,7 +243,7 @@ export function hz_to_octs(frequencies, tuning = 440.0) {
 export function octs_to_hz(octs, tuning = 440.0) {
   const a4_octs = 4 + 9 / 12
 
-  if (Array.isArray(octs)) {
+  if (isArrayLike(octs)) {
     return octs.map((o) => tuning * Math.pow(2, o - a4_octs))
   }
   return tuning * Math.pow(2, (octs - a4_octs))
@@ -260,8 +263,9 @@ export function amplitude_to_db(amplitude, ref = 1.0, amin = 1e-5, top_db = 80.0
     return 20 * Math.log10(mag / ref)
   }
 
-  if (Array.isArray(amplitude)) {
-    const db = amplitude.map(log_spec)
+  if (isArrayLike(amplitude)) {
+    const db = Array.from(amplitude, log_spec)
+    if (top_db == null) return db
     const max_db = Math.max(...db)
     const threshold = max_db - top_db
     return db.map((val) => Math.max(threshold, val))
@@ -277,7 +281,7 @@ export function amplitude_to_db(amplitude, ref = 1.0, amin = 1e-5, top_db = 80.0
  * @returns {number|Array} Amplitude value(s)
  */
 export function db_to_amplitude(db, ref = 1.0) {
-  if (Array.isArray(db)) {
+  if (isArrayLike(db)) {
     return db.map((val) => ref * Math.pow(10.0, val / 20.0))
   }
   return ref * Math.pow(10.0, db / 20.0)
@@ -298,7 +302,7 @@ export function power_to_db(power, ref = 1.0, amin = 1e-10, top_db = 80.0) {
   }
 
   // Handle 2D array (spectrogram)
-  if (Array.isArray(power) && Array.isArray(power[0])) {
+  if (isArrayLike(power) && isArrayLike(power[0])) {
     const db = power.map((band) => band.map(log_spec))
 
     // Find maximum dB for dynamic range compression
@@ -309,13 +313,15 @@ export function power_to_db(power, ref = 1.0, amin = 1e-10, top_db = 80.0) {
       }
     }
 
+    if (top_db == null) return db
     const threshold = max_db - top_db
     return db.map((band) => band.map((val) => Math.max(threshold, val)))
   }
 
   // Handle 1D array
-  if (Array.isArray(power)) {
-    const db = power.map(log_spec)
+  if (isArrayLike(power)) {
+    const db = Array.from(power, log_spec)
+    if (top_db == null) return db
     const max_db = Math.max(...db)
     const threshold = max_db - top_db
     return db.map((val) => Math.max(threshold, val))
@@ -333,12 +339,12 @@ export function power_to_db(power, ref = 1.0, amin = 1e-10, top_db = 80.0) {
  */
 export function db_to_power(db, ref = 1.0) {
   // Handle 2D array (spectrogram)
-  if (Array.isArray(db) && Array.isArray(db[0])) {
+  if (isArrayLike(db) && isArrayLike(db[0])) {
     return db.map((band) => band.map((val) => ref * Math.pow(10.0, val / 10.0)))
   }
 
   // Handle 1D array
-  if (Array.isArray(db)) {
+  if (isArrayLike(db)) {
     return db.map((val) => ref * Math.pow(10.0, val / 10.0))
   }
 
@@ -353,17 +359,18 @@ export function db_to_power(db, ref = 1.0) {
  * @returns {number|Array} A-weighting in dB
  */
 export function a_weighting(frequencies, min_db = -80.0) {
+  const C0 = 12194.217 ** 2, C1 = 20.598997 ** 2, C2 = 107.65265 ** 2, C3 = 737.86223 ** 2
   const compute_a = (f) => {
     const f_sq = f * f
-    const num = Math.pow(12194, 2) * Math.pow(f_sq, 2)
-    const den = (f_sq + Math.pow(20.6, 2)) *
-                Math.sqrt((f_sq + Math.pow(107.7, 2)) * (f_sq + Math.pow(737.9, 2))) *
-                (f_sq + Math.pow(12194, 2))
-
-    return Math.max(min_db, 2.0 + 20 * Math.log10(num / den))
+    const w = 2.0 + 20.0 * (
+      Math.log10(C0) + 2 * Math.log10(f_sq)
+      - Math.log10(f_sq + C0) - Math.log10(f_sq + C1)
+      - 0.5 * Math.log10(f_sq + C2) - 0.5 * Math.log10(f_sq + C3)
+    )
+    return min_db == null ? w : Math.max(min_db, w)
   }
 
-  if (Array.isArray(frequencies)) {
+  if (isArrayLike(frequencies)) {
     return frequencies.map(compute_a)
   }
   return compute_a(frequencies)
@@ -386,7 +393,7 @@ export function b_weighting(frequencies, min_db = -80.0) {
     return Math.max(min_db, 0.17 + 20 * Math.log10(num / den))
   }
 
-  if (Array.isArray(frequencies)) {
+  if (isArrayLike(frequencies)) {
     return frequencies.map(compute_b)
   }
   return compute_b(frequencies)
@@ -399,15 +406,17 @@ export function b_weighting(frequencies, min_db = -80.0) {
  * @returns {number|Array} C-weighting in dB
  */
 export function c_weighting(frequencies, min_db = -80.0) {
+  const C0 = 12194.217 ** 2, C1 = 20.598997 ** 2
   const compute_c = (f) => {
     const f_sq = f * f
-    const num = Math.pow(12194, 2) * f_sq
-    const den = (f_sq + Math.pow(20.6, 2)) * (f_sq + Math.pow(12194, 2))
-
-    return Math.max(min_db, 0.06 + 20 * Math.log10(num / den))
+    const w = 0.062 + 20.0 * (
+      Math.log10(C0) + Math.log10(f_sq)
+      - Math.log10(f_sq + C0) - Math.log10(f_sq + C1)
+    )
+    return min_db == null ? w : Math.max(min_db, w)
   }
 
-  if (Array.isArray(frequencies)) {
+  if (isArrayLike(frequencies)) {
     return frequencies.map(compute_c)
   }
   return compute_c(frequencies)
@@ -420,17 +429,22 @@ export function c_weighting(frequencies, min_db = -80.0) {
  * @returns {number|Array} D-weighting in dB
  */
 export function d_weighting(frequencies, min_db = -80.0) {
+  const D0 = 8.3046305e-3 ** 2, D1 = 1018.7 ** 2, D2 = 1039.6 ** 2,
+        D3 = 3136.5 ** 2, D4 = 3424 ** 2, D5 = 282.7 ** 2, D6 = 1160 ** 2
   const compute_d = (f) => {
-    const h_f = (
-      (Math.pow(1037918.48 - f * f, 2) + 1080768.16 * f * f) /
-      (Math.pow(9837328 - f * f, 2) + 11723776 * f * f)
+    const f_sq = f * f
+    const w = 20.0 * (
+      0.5 * Math.log10(f_sq) - Math.log10(D0)
+      + 0.5 * (
+        Math.log10((D1 - f_sq) ** 2 + D2 * f_sq)
+        - Math.log10((D3 - f_sq) ** 2 + D4 * f_sq)
+        - Math.log10(D5 + f_sq) - Math.log10(D6 + f_sq)
+      )
     )
-    const result = (f / (6.8966888496476e-5)) * Math.sqrt(h_f / ((f * f + 79919.29) * (f * f + 1345600)))
-
-    return Math.max(min_db, 20 * Math.log10(result))
+    return min_db == null ? w : Math.max(min_db, w)
   }
 
-  if (Array.isArray(frequencies)) {
+  if (isArrayLike(frequencies)) {
     return frequencies.map(compute_d)
   }
   return compute_d(frequencies)
@@ -527,7 +541,7 @@ export function tempo_to_lag(bpm, sr = 22050, hop_length = 512) {
     return samples_per_beat / hop_length
   }
 
-  if (Array.isArray(bpm)) {
+  if (isArrayLike(bpm)) {
     return bpm.map(compute_lag)
   }
   return compute_lag(bpm)
@@ -547,7 +561,7 @@ export function lag_to_tempo(lag, sr = 22050, hop_length = 512) {
     return beats_per_second * 60.0
   }
 
-  if (Array.isArray(lag)) {
+  if (isArrayLike(lag)) {
     return lag.map(compute_tempo)
   }
   return compute_tempo(lag)
@@ -560,7 +574,7 @@ export function lag_to_tempo(lag, sr = 22050, hop_length = 512) {
  * @returns {number|Array} Frame indices
  */
 export function blocks_to_frames(blocks, block_length) {
-  if (Array.isArray(blocks)) {
+  if (isArrayLike(blocks)) {
     return blocks.map(b => b * block_length)
   }
   return blocks * block_length
@@ -626,7 +640,7 @@ export function times_like(X, sr = 22050, hop_length = 512, n_fft = null, axis =
 
   if (typeof X === 'number') {
     n_frames = X
-  } else if (Array.isArray(X)) {
+  } else if (isArrayLike(X)) {
     // Assume [freq x time] format (Librosa default)
     n_frames = X[0] ? X[0].length : 0
   } else {
@@ -654,7 +668,7 @@ export function samples_like(X, hop_length = 512, n_fft = null, axis = -1) {
 
   if (typeof X === 'number') {
     n_frames = X
-  } else if (Array.isArray(X)) {
+  } else if (isArrayLike(X)) {
     n_frames = X[0] ? X[0].length : 0
   } else {
     throw new Error('X must be a number or array')
@@ -698,7 +712,7 @@ export function mel_frequencies(n_mels = 128, fmin = 0.0, fmax = 11025.0, htk = 
  * @returns {number|Array} Frequencies in Mel scale
  */
 export function hz_to_mel(frequencies, htk = false) {
-  if (Array.isArray(frequencies)) {
+  if (isArrayLike(frequencies)) {
     return frequencies.map(f => hz_to_mel(f, htk));
   }
 
@@ -728,7 +742,7 @@ export function hz_to_mel(frequencies, htk = false) {
  * @returns {number|Array} Frequencies in Hz
  */
 export function mel_to_hz(mels, htk = false) {
-  if (Array.isArray(mels)) {
+  if (isArrayLike(mels)) {
     return mels.map(m => mel_to_hz(m, htk));
   }
 
@@ -758,7 +772,7 @@ export function mel_to_hz(mels, htk = false) {
  * @returns {number|Array} Weighting values (all zeros for Z-weighting)
  */
 export function z_weighting(frequencies, min_db = null) {
-  if (Array.isArray(frequencies)) {
+  if (isArrayLike(frequencies)) {
     return new Array(frequencies.length).fill(0);
   }
   return 0;
@@ -771,7 +785,7 @@ export function z_weighting(frequencies, min_db = null) {
  * @returns {number|Array} Tuning deviation in fractional bins
  */
 export function A4_to_tuning(A4, bins_per_octave = 12) {
-  if (Array.isArray(A4)) {
+  if (isArrayLike(A4)) {
     return A4.map(a4 => A4_to_tuning(a4, bins_per_octave));
   }
 
@@ -786,7 +800,7 @@ export function A4_to_tuning(A4, bins_per_octave = 12) {
  * @returns {number|Array} Reference frequency for A4 in Hz
  */
 export function tuning_to_A4(tuning, bins_per_octave = 12) {
-  if (Array.isArray(tuning)) {
+  if (isArrayLike(tuning)) {
     return tuning.map(t => tuning_to_A4(t, bins_per_octave));
   }
 
@@ -832,10 +846,10 @@ export function frequency_weighting(frequencies, kind = 'A', min_db = -80.0) {
  * // Returns [[0, 0, 0], [-19.1, 0, 0], [-0.2, 0, -0.2]]
  */
 export function multi_frequency_weighting(frequencies, kinds = ['Z', 'A', 'C'], min_db = -80.0) {
-  const freqArray = Array.isArray(frequencies) ? frequencies : [frequencies];
+  const freqArray = isArrayLike(frequencies) ? frequencies : [frequencies];
 
   return kinds.map(kind => {
     const weights = frequency_weighting(freqArray, kind, min_db);
-    return Array.isArray(frequencies) ? weights : weights;
+    return isArrayLike(frequencies) ? weights : weights;
   });
 }
