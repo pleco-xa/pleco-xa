@@ -19,10 +19,10 @@ const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoo
 </button>
 
 <script>
-  import { detectLoop } from '../core/index.js';
-  import { fastLoopAnalysis } from '../scripts/xa-loop.js';
-  import { findPreciseLoop } from '../scripts/xa-precise-loop.js';
-  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  import { detectLoop } from '@pleco/core/index.js';
+  import { fastLoopAnalysis } from '@pleco/scripts/xa-loop.js';
+  import { findPreciseLoop } from '@pleco/scripts/xa-precise-loop.js';
+  import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
   
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('loopDebugBtn');

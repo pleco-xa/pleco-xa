@@ -20,6 +20,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
+const libRoot = path.join(__dirname, '../../../packages/pleco-xa');
 
 const filesToSync = [
   // Core scripts
@@ -51,7 +52,7 @@ let successCount = 0;
 let failCount = 0;
 
 filesToSync.forEach(({ src, dest }) => {
-  const srcPath = path.join(root, src);
+  const srcPath = path.join(src.startsWith('src/') ? libRoot : root, src);
   const destPath = path.join(root, dest);
 
   // Check if source exists

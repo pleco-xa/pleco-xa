@@ -174,6 +174,8 @@ export function computeZeroCrossingRate(audioBuffer) {
 
   for (let ch = 0; ch < channels; ch++) {
     const data = audioBuffer.getChannelData(ch)
+    if (data.length < 2) continue
+    // crossings per sample interval: alternating-sign signal → 1, constant signal → 0
     let crossings = 0
 
     for (let i = 1; i < data.length; i++) {
@@ -184,8 +186,7 @@ export function computeZeroCrossingRate(audioBuffer) {
         crossings++
       }
     }
-    totalRate += crossings / data.length
-
+    totalRate += crossings / (data.length - 1)
   }
 
   return channels ? totalRate / channels : 0
@@ -210,7 +211,7 @@ export function reverseBufferSection(buffer, start, end) {
 export function findZeroCrossing(data, startIndex) {
   for (let i = startIndex + 1; i < data.length; i++) {
     if ((data[i - 1] >= 0 && data[i] < 0) || (data[i - 1] < 0 && data[i] >= 0)) {
-      return i - 1
+      return i
     }
   }
   return startIndex

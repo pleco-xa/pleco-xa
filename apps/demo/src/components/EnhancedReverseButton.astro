@@ -19,13 +19,13 @@ const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoo
 </button>
 
 <script>
-  import { detectLoop } from '../core/index.js';
-  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  import { detectLoop } from '@pleco/core/index.js';
+  import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
   import { 
     applyOperationEnhanced, 
     checkBufferSafety, 
     isLargeOperation 
-  } from '../scripts/enhanced-audio-ops.js';
+  } from '@pleco/scripts/enhanced-audio-ops.js';
   
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('enhancedReverseBtn');
