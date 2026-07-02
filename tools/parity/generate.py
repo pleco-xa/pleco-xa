@@ -198,3 +198,30 @@ gen_melspectrogram()
 gen_onset_strength()
 gen_tempo_beats()
 print("rhythm fixtures done")
+
+
+# ---------------- Wave 3: structure (RQA for loop detection) ----------------
+
+def gen_rqa():
+    rng = np.random.default_rng(7)
+    cases = []
+    # Small deterministic recurrence matrices: random + one with a planted diagonal
+    R1 = (rng.random((24, 24)) < 0.2).astype(np.float64)
+    R2 = np.zeros((32, 32))
+    for i in range(20):
+        R2[i + 6, i] = 1.0  # planted off-diagonal path (a "loop" signature)
+    R2 += (rng.random((32, 32)) < 0.05)
+    R2 = np.clip(R2, 0, 1)
+    for name, R in (("random24", R1), ("planted32", R2)):
+        score, path = librosa.sequence.rqa(R, gap_onset=1, gap_extend=1, knight_moves=True, backtrack=True)
+        cases.append({
+            "input": {"name": name, "R": R.ravel().tolist(), "shape": list(R.shape),
+                      "gap_onset": 1, "gap_extend": 1, "knight_moves": True},
+            "expected_path": np.asarray(path).tolist(),
+            "expected_score_max": float(np.max(score)),
+        })
+    write("rqa", "librosa.sequence.rqa", {}, cases)
+
+
+gen_rqa()
+print("rqa fixtures done")
