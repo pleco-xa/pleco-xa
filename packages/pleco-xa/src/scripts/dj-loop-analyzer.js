@@ -6,7 +6,8 @@
 
 import { dtw, dtwDistanceMatrix, dtwKMeans } from './xa-dtw.js'
 import { chroma_cqt, enhance_chroma, chroma_energy } from './xa-chroma.js'
-import { tempo, beat_track, analyze_groove } from './xa-tempo.js'
+import { analyze_groove } from './xa-tempo.js'
+import { tempo, beat_track } from './xa-beat-tracker.js'
 import { onset_strength } from './xa-onset.js'
 import { debugLog } from './debug.js'
 import { spectralCentroid } from './xa-spectral.js'
@@ -92,10 +93,11 @@ export class DJLoopAnalyzer {
     const chroma = chroma_cqt(audioData, sampleRate)
     const enhanced_chroma = enhance_chroma(chroma)
 
-    // Rhythmic features
-    const tempo_result = tempo(audioData, sampleRate)
-    const beat_result = beat_track(audioData, sampleRate, 512, tempo_result.bpm)
-    const groove = analyze_groove(beat_result.beat_times, sampleRate)
+    // Rhythmic features (canonical librosa-parity engine)
+    const bpm = tempo(audioData, { sr: sampleRate })
+    const tempo_result = { bpm }
+    const beat_result = beat_track(audioData, sampleRate, { bpm, units: 'time' })
+    const groove = analyze_groove(beat_result.beats, sampleRate)
 
     // Spectral features
     const onset_env = onset_strength(audioData, { sr: sampleRate })
@@ -133,7 +135,7 @@ export class DJLoopAnalyzer {
       energy: energy_features,
 
       // Structural
-      structure: this.analyzeStructure(onset_env, beat_result.beat_times),
+      structure: this.analyzeStructure(onset_env, beat_result.beats),
     }
 
     this.analysisCache.set(cacheKey, features)

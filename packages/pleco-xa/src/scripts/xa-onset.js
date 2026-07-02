@@ -173,6 +173,9 @@ function maximumFilterFreq(S, size) {
  *   @param {number} [opts.fmin=0]           lowest mel frequency
  *   @param {number} [opts.fmax=sr/2]        highest mel frequency (librosa default)
  *   @param {boolean} [opts.htk=false]       HTK mel scale
+ *   @param {string} [opts.aggregate='mean'] frequency aggregation: 'mean'
+ *     (librosa onset_strength default) or 'median' (what librosa.beat.beat_track
+ *     passes as aggregate=np.median)
  * @param {number} [maybeHop] - hop_length when called positionally (y, sr, hop)
  * @returns {Float32Array} onset strength envelope
  */
@@ -198,7 +201,12 @@ export function onset_strength(y, opts = {}, maybeHop) {
     fmin = 0,
     fmax = 0.5 * sr, // librosa: kwargs.setdefault('fmax', 0.5 * sr)
     htk = false,
+    aggregate = 'mean',
   } = opts
+
+  if (aggregate !== 'mean' && aggregate !== 'median') {
+    throw new Error(`aggregate=${aggregate} must be 'mean' or 'median'`)
+  }
 
   const fft_size = typeof frame_length === 'number' ? frame_length : n_fft
 
@@ -246,16 +254,33 @@ export function onset_strength(y, opts = {}, maybeHop) {
     throw new Error('Reference spectrum shape must match input spectrum')
   }
 
-  // Rectified difference at the given lag, averaged over frequency bins
+  // Rectified difference at the given lag, aggregated over frequency bins
+  // (librosa: aggregate(np.maximum(0, S[..., lag:] - ref[..., :-lag]), axis=-2))
   const rawLen = Math.max(0, nFrames - lag)
   const raw = new Float64Array(rawLen)
-  for (let t = 0; t < rawLen; t++) {
-    let sum = 0
-    for (let f = 0; f < nFreq; f++) {
-      const d = S[f][t + lag] - refS[f][t]
-      if (d > 0) sum += d
+  if (aggregate === 'mean') {
+    for (let t = 0; t < rawLen; t++) {
+      let sum = 0
+      for (let f = 0; f < nFreq; f++) {
+        const d = S[f][t + lag] - refS[f][t]
+        if (d > 0) sum += d
+      }
+      raw[t] = sum / nFreq
     }
-    raw[t] = sum / nFreq
+  } else {
+    // median (np.median: average of the two middle values for even counts)
+    const column = new Float64Array(nFreq)
+    for (let t = 0; t < rawLen; t++) {
+      for (let f = 0; f < nFreq; f++) {
+        const d = S[f][t + lag] - refS[f][t]
+        column[f] = d > 0 ? d : 0
+      }
+      const sorted = Float64Array.from(column).sort()
+      raw[t] =
+        nFreq % 2 === 1
+          ? sorted[(nFreq - 1) / 2]
+          : 0.5 * (sorted[nFreq / 2 - 1] + sorted[nFreq / 2])
+    }
   }
 
   // Compensate for lag (and framing effects when center=true)

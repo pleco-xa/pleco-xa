@@ -21,9 +21,17 @@ export {
   fft_frequencies, spectrogram,
 } from './scripts/xa-fft.js'
 
-// Rhythm (canonical engines: lb-migrated tempo path + Ellis DP tracker)
-export { BeatTracker, beat_track, tempo, quickBeatTrack, dynamicBeatTrack } from './scripts/xa-beat-tracker.js'
+// Rhythm — canonical librosa-parity engine (fixture-gated: tempo_beats.json).
+// tempo()/beat_track() are the parity tier; quickTempo() is the explicit
+// quick tier (windowed lb-style live estimate, never a silent fallback).
+export { BeatTracker, beat_track, tempo, quickTempo } from './scripts/xa-beat-tracker.js'
 export * as bpm from './scripts/xa-bpm-algorithm.js'
+
+// Onset detection (librosa-parity onset_strength; fixture-gated: onset_strength.json)
+export { onset_strength, onsetDetect } from './scripts/xa-onset.js'
+
+// Streaming analyzers (worker-safe, incremental push API)
+export { createRmsMeter, createFluxAnalyzer } from './streaming/analyzers.js'
 
 // IO (universal: Node + browser + workers)
 export { encodeWav, decodeWav } from './io/wav.js'

@@ -1,66 +1,14 @@
 /**
- * Librosa-style tempo detection and beat tracking for JavaScript
- * BPM estimation and rhythmic analysis for DJ applications
+ * Rhythm analysis helpers: autocorrelation tempograms, tempo-candidate
+ * ranking, and groove/swing analysis for DJ applications.
+ *
+ * NOTE (collision resolution, v2 wave 2): this module no longer exports
+ * `tempo`, `beat_track`, or `dp_beat_track`. The canonical, librosa-parity
+ * tempo/beat engine lives in ./xa-beat-tracker.js. The `dp_beat_track`
+ * implementation that used to live here had a verified backtracking bug
+ * (indexOf of a float score in an index array) and was deleted outright.
+ * What remains are the distinctly-named, salvageable helpers.
  */
-
-import * as onsetLib from './xa-onset.js'
-
-// Resolve the correct onset-strength helper regardless of which name
-// the onset module actually exports.
-const onset_strength =
-  onsetLib.onset_strength || // snake_case alias (preferred)
-  onsetLib.onsetStrength || // camelCase version, if present
-  onsetLib.computeSpectralFlux // raw helper used as fallback
-
-/**
- * Estimate tempo (BPM) from audio
- * @param {Float32Array} y - Audio time series
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length for analysis
- * @param {number} ac_size - Autocorrelation size in seconds
- * @param {number} max_tempo - Maximum tempo to consider
- * @param {number} min_tempo - Minimum tempo to consider
- * @param {boolean} prior - Whether to use tempo prior
- * @returns {Object} Tempo estimation result
- */
-export function tempo(
-  y,
-  sr = 22050,
-  hop_length = 512,
-  ac_size = 8.0,
-  max_tempo = 320.0,
-  min_tempo = 30.0,
-  prior = true,
-) {
-  // Get onset strength
-  const onset_env = onset_strength(y, sr, hop_length)
-
-  // Compute tempogram via autocorrelation
-  const tempogram = compute_tempogram(onset_env, sr, hop_length, ac_size)
-
-  // Find tempo candidates
-  const candidates = find_tempo_candidates(
-    tempogram,
-    sr,
-    hop_length,
-    max_tempo,
-    min_tempo,
-  )
-
-  // Apply prior if requested
-  if (prior && candidates.length > 0) {
-    apply_tempo_prior(candidates)
-  }
-
-  // Return best tempo and all candidates
-  return {
-    bpm: candidates.length > 0 ? candidates[0].bpm : 120,
-    candidates: candidates,
-    tempogram: tempogram,
-    onset_strength: onset_env,
-    confidence: candidates.length > 0 ? candidates[0].strength : 0,
-  }
-}
 
 /**
  * Compute tempogram using autocorrelation
@@ -251,116 +199,6 @@ export function detect_tempo_multiples(base_tempo, candidates) {
 }
 
 /**
- * Beat tracking using dynamic programming
- * @param {Float32Array} y - Audio time series
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @param {number|null} bpm - Known BPM (estimated if null)
- * @returns {Object} Beat tracking result
- */
-export function beat_track(y, sr = 22050, hop_length = 512, bpm = null) {
-  // Get onset strength
-  const onset_env = onset_strength(y, sr, hop_length)
-
-  // Estimate tempo if not provided
-  if (bpm === null) {
-    const tempo_result = tempo(y, sr, hop_length)
-    bpm = tempo_result.bpm
-  }
-
-  // Convert BPM to frame period
-  const beat_period = (60.0 * sr) / (bpm * hop_length)
-
-  // Dynamic programming beat tracking
-  const beats = dp_beat_track(onset_env, beat_period)
-
-  // Convert frame indices to time
-  const beat_times = beats.map((frame) => (frame * hop_length) / sr)
-
-  return {
-    beat_frames: beats,
-    beat_times: beat_times,
-    bpm: bpm,
-    onset_strength: onset_env,
-  }
-}
-
-/**
- * Dynamic programming beat tracker
- * @param {Array} onset_env - Onset strength envelope
- * @param {number} period - Expected beat period in frames
- * @returns {Array} Beat frame indices
- */
-export function dp_beat_track(onset_env, period) {
-  const n = onset_env.length
-
-  // State variables
-  const backlink = new Int32Array(n)
-  const cumulative_score = new Float32Array(n)
-
-  // Initialize
-  cumulative_score[0] = onset_env[0]
-  backlink[0] = -1
-
-  // Dynamic programming
-  for (let i = 1; i < n; i++) {
-    let max_score = -Infinity
-    let max_idx = -1
-
-    // Search range centered around expected period
-    const start = Math.max(0, Math.floor(i - 2 * period))
-    const end = Math.max(0, i - 1)
-
-    for (let j = start; j <= end; j++) {
-      // Transition score: local onset + transition cost
-      const beat_strength = onset_env[i]
-      const transition_cost = -0.5 * Math.pow((i - j - period) / period, 2)
-      const score = cumulative_score[j] + beat_strength + transition_cost
-
-      if (score > max_score) {
-        max_score = score
-        max_idx = j
-      }
-    }
-
-    cumulative_score[i] = max_score
-    backlink[i] = max_idx
-  }
-
-  // Backtracking
-  const beats = []
-  let current = backlink.indexOf(Math.max(...cumulative_score))
-
-  while (current >= 0) {
-    beats.unshift(current)
-    current = backlink[current]
-  }
-
-  return beats
-}
-
-/**
- * Compute transition matrix for beat tracking
- * @param {number} period - Expected beat period
- * @param {number} tightness - Tempo consistency parameter
- * @returns {Array} Transition costs
- */
-// This function is defined but not used anywhere in the code
-/* eslint-disable-next-line no-unused-vars */
-function _compute_transition_matrix(period, tightness) {
-  const max_transition = Math.round(2 * period)
-  const transitions = new Array(max_transition + 1)
-
-  for (let dt = 1; dt <= max_transition; dt++) {
-    // Gaussian penalty around expected period
-    const deviation = dt - period
-    transitions[dt] = (tightness * (deviation * deviation)) / (period * period)
-  }
-
-  return transitions
-}
-
-/**
  * Estimate groove and timing feel
  * @param {Array} beat_times - Beat times in seconds
  * @param {number} sr - Sample rate
@@ -435,20 +273,3 @@ function analyze_subdivisions(beat_times) {
   }
 }
 
-/**
- * Simple tempo estimation for quick analysis
- * @param {Float32Array} y - Audio signal
- * @param {number} sr - Sample rate
- * @returns {number} Estimated BPM
- */
-export function quick_tempo(y, sr = 22050) {
-  const hop_length = 512
-  const onset_env = onset_strength(y, sr, hop_length)
-
-  // Simple autocorrelation-based tempo
-  const ac_size = 4.0 // Shorter for speed
-  const tempogram = compute_tempogram(onset_env, sr, hop_length, ac_size)
-  const candidates = find_tempo_candidates(tempogram, sr, hop_length, 200, 60)
-
-  return candidates.length > 0 ? candidates[0].bpm : 120
-}

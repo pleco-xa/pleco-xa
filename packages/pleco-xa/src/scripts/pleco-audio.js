@@ -90,8 +90,9 @@ export { piptrack, yin, pyin, autocorrelation_pitch, hz_to_midi_pitch, pitch_sal
 // Source separation and decomposition
 export { hpss, median_filter, nn_filter, decompose, nmf_reconstruct, nmf_separate } from './xa-decompose.js'
 
-// Rhythm and beat tracking
-export { beat_track, tempo, plp, beat_sync } from './xa-rhythm.js'
+// Rhythm and beat tracking (canonical librosa-parity engine)
+export { beat_track, tempo, quickTempo, BeatTracker } from './xa-beat-tracker.js'
+export { plp, beat_sync } from './xa-rhythm.js'
 
 // Onset detection
 export {
