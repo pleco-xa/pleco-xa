@@ -1,0 +1,23 @@
+{
+  "name": "@pleco-xa/demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "sync": "node scripts/sync-public-deps.js",
+    "prebuild": "node scripts/sync-public-deps.js",
+    "start": "node dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.5.0",
+    "astro": "^5.15.3",
+    "autoprefixer": "^10.4.21",
+    "gsap": "^3.13.0",
+    "lenis": "^1.3.3",
+    "modern-normalize": "^3.0.1",
+    "pleco-xa": "*",
+    "sass": "^1.89.0"
+  }
+}

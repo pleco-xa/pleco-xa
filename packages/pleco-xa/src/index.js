@@ -1,24 +1,29 @@
 /**
- * Pleco-XA: Professional Audio Analysis Toolkit
- * Designed for audio engineers and developers, Pleco-XA provides advanced tools for analyzing, processing, and visualizing audio data.
- * Core audio processing features (no UI components)
+ * Pleco-Xa — browser-native audio analysis engine.
+ * Wave-0 curated surface: every export here is import-safe in Node and browser.
+ * The surface grows namespace-by-namespace as each wave lands (see docs/superpowers/specs/).
  */
 
-// Core audio analysis modules
-export { BPMDetector } from './scripts/analysis/BPMDetector.ts'
-export { LoopAnalyzer } from './scripts/analysis/LoopAnalyzer.ts'
-export { WaveformData } from './scripts/analysis/WaveformData.ts'
+// Debug gate
+export { setDebug, debugLog, isDebugEnabled } from './scripts/debug.js'
 
-// Audio playback and control
-export { AudioPlayer } from './scripts/analysis/AudioPlayer.ts'
-export { LoopController } from './scripts/loop-controller.js'
+// Audio utilities
+export {
+  createLoopBuffer, exportBufferAsWav, computeRMS, computePeak,
+  computeZeroCrossingRate, defineMultipleLoopPoints, reverseBufferSection,
+  findZeroCrossing, findAllZeroCrossings, findAudioStart, applyHannWindow,
+} from './scripts/audio-utils.js'
 
-// Visualization components
-export { WaveformRenderer } from './scripts/WaveformRenderer.js'
-export { SpectrumAnalyzer } from './scripts/SpectrumAnalyzer.js'
+// Spectral core (numerical-parity repairs land in Wave 1)
+export {
+  fft, ifft, stft, istft, get_window, hann_window, hamming_window,
+  blackman_window, magnitude, phase, power, polar_to_complex,
+  fft_frequencies, spectrogram,
+} from './scripts/xa-fft.js'
 
-// Utility functions
-// Export the main PlecoXA class, which provides core audio analysis and processing features, making it the primary export for npm consumers
-export { PlecoXA } from './scripts/pleco-xa.js'
+// Rhythm (canonical engines: lb-migrated tempo path + Ellis DP tracker)
+export { BeatTracker, beat_track, tempo, quickBeatTrack, dynamicBeatTrack } from './scripts/xa-beat-tracker.js'
+export * as bpm from './scripts/xa-bpm-algorithm.js'
 
-export { startBeatGlitch, GibClock } from './core/index.js'
+// Loop detection (flagship — consolidation lands in Wave 3)
+export { fastLoopAnalysis } from './scripts/xa-loop.js'
