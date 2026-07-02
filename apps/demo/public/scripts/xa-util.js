@@ -102,7 +102,7 @@ export function frame(x, { frameLength, hopLength, axis = -1 }) {
  * @returns {boolean} True if valid
  * @throws {ParameterError} If validation fails
  */
-export const validAudio = cache(20)((y, mono = true) => {
+export function validAudio(y, mono = true) {
   if (!Array.isArray(y) && !isTypedArray(y)) {
     throw new ParameterError('Audio data must be an array or typed array')
   }
@@ -120,12 +120,12 @@ export const validAudio = cache(20)((y, mono = true) => {
   }
 
   // Check for mono constraint
-  if (mono && y.length > 0 && Array.isArray(y[0])) {
+  if (mono && y.length > 0 && (Array.isArray(y[0]) || isTypedArray(y[0]))) {
     throw new ParameterError('Audio data must be mono (1D array)')
   }
 
   return true
-})
+}
 
 /**
  * Ensure value is integer-typed
@@ -244,10 +244,10 @@ export function fixLength(
  * @param {boolean|null} [options.fill=null] - How to handle small norms
  * @returns {Array} Normalized array
  */
-export const normalize = cache(40)((
+export function normalize(
   S,
   { norm = Infinity, axis = 0, threshold = null, fill = null } = {},
-) => {
+) {
   if (threshold === null) {
     threshold = tiny(S)
   } else if (threshold <= 0) {
@@ -266,8 +266,8 @@ export const normalize = cache(40)((
 
   if (norm === null) return S
 
-  // For 1D arrays
-  if (!Array.isArray(S[0])) {
+  // For 1D arrays (plain or typed)
+  if (!(Array.isArray(S[0]) || isTypedArray(S[0]))) {
     return normalize1D(S, norm, threshold, fill)
   }
 
@@ -287,7 +287,7 @@ export const normalize = cache(40)((
     // Normalize each row
     return S.map((row) => normalize1D(row, norm, threshold, fill))
   }
-})
+}
 
 /**
  * Find local maxima in an array
@@ -451,8 +451,9 @@ export function peakPick(
  * @returns {number} Tiny value for the data type
  */
 export function tiny(_x) {
-  // JavaScript uses double precision floats
-  return Number.EPSILON
+  // librosa tiny(): smallest positive normal for the dtype.
+  // Pleco stores audio as float32, so mirror np.finfo(np.float32).tiny.
+  return 1.1754943508222875e-38
 }
 
 /**
@@ -522,7 +523,7 @@ export function phasor(angles, { mag = null } = {}) {
 function getShape(arr) {
   const shape = []
   let current = arr
-  while (Array.isArray(current)) {
+  while (Array.isArray(current) || isTypedArray(current)) {
     shape.push(current.length)
     current = current[0]
   }
@@ -530,8 +531,17 @@ function getShape(arr) {
 }
 
 function flatten(arr) {
+  if (isTypedArray(arr)) return Array.from(arr)
   if (!Array.isArray(arr)) return [arr]
-  return arr.flat(Infinity)
+  const out = []
+  for (const v of arr) {
+    if (Array.isArray(v) || isTypedArray(v)) {
+      for (const w of flatten(v)) out.push(w)
+    } else {
+      out.push(v)
+    }
+  }
+  return out
 }
 
 function isTypedArray(arr) {
