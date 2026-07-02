@@ -225,3 +225,63 @@ def gen_rqa():
 
 gen_rqa()
 print("rqa fixtures done")
+
+
+# ---------------- Wave 4: spectral features ----------------
+
+def gen_spectral_features():
+    sigs = signals()
+    cases = []
+    for name in ("sine440", "noise"):
+        y = sigs[name][: SR // 2]
+        entry = {"input": {"signal": name, "y": f32(y), "sr": SR, "n_fft": 2048, "hop_length": 512}}
+        S = np.abs(librosa.stft(y, n_fft=2048, hop_length=512))
+        entry["centroid"] = f32(librosa.feature.spectral_centroid(S=S, sr=SR).ravel())
+        entry["bandwidth"] = f32(librosa.feature.spectral_bandwidth(S=S, sr=SR).ravel())
+        entry["rolloff"] = f32(librosa.feature.spectral_rolloff(S=S, sr=SR).ravel())
+        entry["flatness"] = f32(librosa.feature.spectral_flatness(S=S).ravel())
+        entry["contrast_shape"] = list(librosa.feature.spectral_contrast(S=S, sr=SR).shape)
+        entry["contrast"] = f32(librosa.feature.spectral_contrast(S=S, sr=SR).ravel())
+        entry["rms"] = f32(librosa.feature.rms(S=S).ravel())
+        entry["zcr"] = f32(librosa.feature.zero_crossing_rate(y).ravel())
+        cases.append(entry)
+    write("spectral_features", "librosa.feature.spectral_*", {"n_fft": 2048, "hop": 512}, cases)
+
+
+def gen_mfcc():
+    sigs = signals()
+    cases = []
+    for name in ("sine440", "noise"):
+        y = sigs[name][: SR // 2]
+        M = librosa.feature.mfcc(y=y, sr=SR, n_mfcc=20)
+        cases.append({
+            "input": {"signal": name, "y": f32(y), "sr": SR, "n_mfcc": 20},
+            "expected_shape": list(M.shape),
+            "expected": f32(M.ravel()),
+        })
+    write("mfcc", "librosa.feature.mfcc", {}, cases)
+
+
+def gen_chroma():
+    sigs = signals()
+    cases = []
+    y = sigs["sine440"][: SR // 2]
+    C = librosa.feature.chroma_stft(y=y, sr=SR, n_fft=2048, hop_length=512)
+    cases.append({
+        "input": {"signal": "sine440", "y": f32(y), "sr": SR, "n_fft": 2048, "hop_length": 512},
+        "expected_shape": list(C.shape),
+        "expected": f32(C.ravel()),
+    })
+    fb = librosa.filters.chroma(sr=SR, n_fft=2048)
+    cases.append({
+        "input": {"signal": "__filterbank__", "sr": SR, "n_fft": 2048},
+        "expected_shape": list(fb.shape),
+        "expected": f32(fb.ravel()),
+    })
+    write("chroma", "librosa.feature.chroma_stft + librosa.filters.chroma", {}, cases)
+
+
+gen_spectral_features()
+gen_mfcc()
+gen_chroma()
+print("spectral fixtures done")
