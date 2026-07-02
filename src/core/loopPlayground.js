@@ -10,7 +10,7 @@ import { GibClock } from './GibClock.js';
 
 export function randomSequence(
   buffer,
-  { durationMs = buffer.duration * 1000, minMs = 10, maxMs = buffer.duration * 1000, steps = 4 } = {},
+  { durationMs = buffer.duration * 1000, minMs = 10, maxMs = buffer.duration * 1000, steps = 4, rng = Math.random, warmup = 5 } = {},
 ) {
   const minSamples = Math.floor((minMs / 1000) * buffer.sampleRate);
   const maxSamples = Math.min(
@@ -91,7 +91,7 @@ export function randomSequence(
           case 'move': {
             const len = loop.endSample - loop.startSample;
             const maxMove = buffer.length - len;
-            const step = Math.floor(Math.random() * (maxMove + 1));
+            const step = Math.floor(rng() * (maxMove + 1));
             loop = moveForward(loop, step, buffer.length);
             break;
           }
@@ -111,12 +111,12 @@ export function randomSequence(
       rightSideOperations = 0;
       i += Math.min(complexSequence.length, steps - i - 1); // Skip ahead
       action = 'move'; // Set dummy action for the regular flow
-    } else if (i < 5) {
-      // First 5 steps: very high chance of half (90%)
-      action = Math.random() < 0.9 ? 'half' : 'move';
+    } else if (i < warmup) {
+      // Warmup steps: very high chance of half (90%) to narrow down first
+      action = rng() < 0.9 ? 'half' : 'move';
     } else {
       // Rest of steps: normal random distribution
-      let r = Math.random() * totalW;
+      let r = rng() * totalW;
       let acc = 0;
       for (const { op, w } of actions) {
         acc += w;
@@ -168,34 +168,34 @@ export function randomSequence(
         const cocktailOps = [];
         
         // 2-3 half loops when full width (just enough to narrow down)
-        const halfCount = 2 + Math.floor(Math.random() * 2);
+        const halfCount = 2 + Math.floor(rng() * 2);
         for (let h = 0; h < halfCount; h++) {
           cocktailOps.push('half');
         }
         
         // 4-6 forwards interspersed with reverses (increased to spread around more)
-        const forwardCount = 4 + Math.floor(Math.random() * 3);
+        const forwardCount = 4 + Math.floor(rng() * 3);
         for (let f = 0; f < forwardCount; f++) {
           cocktailOps.push('move');
-          if (Math.random() < 0.3) cocktailOps.push('reverse');
+          if (rng() < 0.3) cocktailOps.push('reverse');
         }
         
         // 2-4 doubles with random placement (increased to grow loops back)
-        const doubleCount = 2 + Math.floor(Math.random() * 3);
+        const doubleCount = 2 + Math.floor(rng() * 3);
         for (let d = 0; d < doubleCount; d++) {
-          const insertPos = Math.floor(Math.random() * cocktailOps.length);
+          const insertPos = Math.floor(rng() * cocktailOps.length);
           cocktailOps.splice(insertPos, 0, 'double');
         }
         
         // Add some resets to break out of small loops
-        if (Math.random() < 0.3) {
-          cocktailOps.splice(Math.floor(Math.random() * cocktailOps.length), 0, 'reset');
+        if (rng() < 0.3) {
+          cocktailOps.splice(Math.floor(rng() * cocktailOps.length), 0, 'reset');
         }
         
         // Add final reverses and halfs
-        if (Math.random() < 0.7) cocktailOps.push('reverse');
-        if (Math.random() < 0.6) cocktailOps.push('half');
-        if (Math.random() < 0.5) cocktailOps.push('reverse');
+        if (rng() < 0.7) cocktailOps.push('reverse');
+        if (rng() < 0.6) cocktailOps.push('half');
+        if (rng() < 0.5) cocktailOps.push('reverse');
         
         // Execute cocktail sequence
         for (const op of cocktailOps) {
