@@ -16,8 +16,7 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
-        '@/': `${path.resolve(__dirname, 'src')}/`,
-        '@pleco': path.resolve(__dirname, '../../packages/pleco-xa/src')
+        '@/': `${path.resolve(__dirname, 'src')}/`
       }
     },
     css: {

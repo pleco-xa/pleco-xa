@@ -213,9 +213,10 @@ const description = 'Librosa-style spectrogram visualization using Pleco XA';
     </div>
   </div>
 
-  <script type="module">
-    // Import Pleco XA library
-    import { createSpectrogram } from './scripts/SpectrumAnalyzer.js';
+  <script>
+    // Wave 6: processed script consuming the pleco-xa package (the old
+    // is:inline relative './scripts/...' import 404'd at runtime).
+    import { createSpectrogram } from 'pleco-xa';
 
     let audioContext = null;
     let audioBuffer = null;

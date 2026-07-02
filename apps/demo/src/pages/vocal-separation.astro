@@ -297,16 +297,16 @@ const description = 'Multi-scale spectral fingerprinting vocal separation demo';
     </div>
   </div>
 
-  <script type="module">
-    // Import Pleco XA modules
-    import {
+  <script>
+    // Wave 6: processed script consuming the pleco-xa package (the old
+    // is:inline /scripts/ URL imports loaded hand-copied duplicates).
+    import { decompose, createSpectrogram, createAudioBlob } from 'pleco-xa';
+
+    const {
       processAudioToFingerprints,
       optimizeEqCurves,
-      reconstructVocal
-    } from '/scripts/xa-vocal-separation.js';
-
-    import { createSpectrogram } from '/scripts/SpectrumAnalyzer.js';
-    import { createAudioBlob } from '/scripts/xa-wav-encoder.js';
+      reconstructVocal,
+    } = decompose;
 
     let vocalBuffer = null;
     let mixtureBuffer = null;

@@ -1,145 +1,129 @@
 ---
-interface Props {
-  audioBufferVar?: string;
-  ctxVar?: string;
-  applyLoopVar?: string;
-}
-const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
-
 ---
 
 <div class="live-speed-controls">
-  <button
-    class="loop-btn"
-    id="liveHalfSpeedBtn"
-    data-buffer-var={audioBufferVar}
-    data-ctx-var={ctxVar}
-    data-apply-loop-var={applyLoopVar}
-  >
+  <button class="loop-btn" id="liveHalfSpeedBtn">
     🐌 Live Half Speed
   </button>
-  
-  <button
-    class="loop-btn"
-    id="liveDoubleSpeedBtn"
-    data-buffer-var={audioBufferVar}
-    data-ctx-var={ctxVar}
-    data-apply-loop-var={applyLoopVar}
-  >
+
+  <button class="loop-btn" id="liveDoubleSpeedBtn">
     🏃 Live Double Speed
   </button>
-  
-  <button
-    class="loop-btn"
-    id="liveNormalSpeedBtn"
-    data-buffer-var={audioBufferVar}
-    data-ctx-var={ctxVar}
-    data-apply-loop-var={applyLoopVar}
-  >
+
+  <button class="loop-btn" id="liveNormalSpeedBtn">
     ⏸️ Normal Speed
   </button>
 </div>
 
 <script>
-  import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
-  import { 
-    applyLiveHalfSpeed, 
-    applyLiveDoubleSpeed, 
+  import {
+    applyLiveHalfSpeed,
+    applyLiveDoubleSpeed,
     resetLiveSpeed,
-    liveSpeedController 
-  } from '@pleco/scripts/live-speed-control.js';
-  
+    liveSpeedController,
+  } from 'pleco-xa';
+  import { enqueueToast } from '../lib/ui/toastQueue.js';
+  import { session } from '../scripts/session.js';
+
   document.addEventListener('DOMContentLoaded', () => {
-    
+
     // Live Half Speed Button
     const halfBtn = document.getElementById('liveHalfSpeedBtn');
     halfBtn?.addEventListener('click', async () => {
-      const buffer = window[halfBtn.dataset.bufferVar];
-      const ctx = window[halfBtn.dataset.ctxVar];
-      const applyLoop = window[halfBtn.dataset.applyLoopVar];
-      
+      const buffer = session.currentBuffer;
+      const ctx = session.audioContext;
+      const applyLoop = session.applyLoop;
+
       if (!buffer || !ctx) {
         enqueueToast('❌ No audio loaded');
         return;
       }
-      
+
       try {
         enqueueToast('🐌 Applying live half speed...');
-        
+
         // Use playbackRate method for immediate response (changes pitch)
-        const result = await applyLiveHalfSpeed(false);
-        
+        const result = await applyLiveHalfSpeed({
+          audioContext: ctx,
+          buffer,
+          audioProcessor: session.audioProcessor,
+        });
+
         // Update the audio buffer if we got a resampled version
         if (result.buffer) {
-          window.currentAudioBuffer = result.buffer;
+          session.setBuffer(result.buffer);
           if (typeof applyLoop === 'function') {
             const loop = { startSample: 0, endSample: result.buffer.length };
             applyLoop(result.buffer, loop, 'half_speed');
           }
         }
-        
+
         enqueueToast(`✅ Half speed active (${result.method})`);
         console.log('🐌 Half speed result:', result);
-        
+
       } catch (error) {
         console.error('❌ Live half speed failed:', error);
         enqueueToast(`❌ Half speed failed: ${error.message}`);
       }
     });
-    
-    // Live Double Speed Button  
+
+    // Live Double Speed Button
     const doubleBtn = document.getElementById('liveDoubleSpeedBtn');
     doubleBtn?.addEventListener('click', async () => {
-      const buffer = window[doubleBtn.dataset.bufferVar];
-      const ctx = window[doubleBtn.dataset.ctxVar];
-      const applyLoop = window[doubleBtn.dataset.applyLoopVar];
-      
+      const buffer = session.currentBuffer;
+      const ctx = session.audioContext;
+      const applyLoop = session.applyLoop;
+
       if (!buffer || !ctx) {
         enqueueToast('❌ No audio loaded');
         return;
       }
-      
+
       try {
         enqueueToast('🏃 Applying live double speed...');
-        
+
         // Use playbackRate method for immediate response (changes pitch)
-        const result = await applyLiveDoubleSpeed(false);
-        
+        const result = await applyLiveDoubleSpeed({
+          audioContext: ctx,
+          buffer,
+          audioProcessor: session.audioProcessor,
+        });
+
         // Update the audio buffer if we got a resampled version
         if (result.buffer) {
-          window.currentAudioBuffer = result.buffer;
+          session.setBuffer(result.buffer);
           if (typeof applyLoop === 'function') {
             const loop = { startSample: 0, endSample: result.buffer.length };
             applyLoop(result.buffer, loop, 'double_speed');
           }
         }
-        
+
         enqueueToast(`✅ Double speed active (${result.method})`);
         console.log('🏃 Double speed result:', result);
-        
+
       } catch (error) {
         console.error('❌ Live double speed failed:', error);
         enqueueToast(`❌ Double speed failed: ${error.message}`);
       }
     });
-    
+
     // Normal Speed Reset Button
     const normalBtn = document.getElementById('liveNormalSpeedBtn');
     normalBtn?.addEventListener('click', async () => {
       try {
         enqueueToast('⏸️ Resetting to normal speed...');
-        
+
         const result = await resetLiveSpeed();
-        
+
         enqueueToast('✅ Normal speed restored');
         console.log('⏸️ Speed reset result:', result);
-        
+
       } catch (error) {
         console.error('❌ Speed reset failed:', error);
         enqueueToast(`❌ Reset failed: ${error.message}`);
       }
     });
-    
+
     // Show current speed info on any button click
     [halfBtn, doubleBtn, normalBtn].forEach(btn => {
       btn?.addEventListener('click', () => {
@@ -159,7 +143,7 @@ const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoo
     flex-wrap: wrap;
     margin: 0.5rem 0;
   }
-  
+
   .live-speed-controls .loop-btn {
     flex: 1;
     min-width: 120px;

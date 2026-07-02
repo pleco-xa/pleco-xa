@@ -1,34 +1,22 @@
 ---
-interface Props {
-  audioBufferVar?: string;
-  ctxVar?: string;
-  applyLoopVar?: string;
-}
-const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
-
 ---
 
-<button
-  class="loop-btn"
-  id="loopDebugBtn"
-  data-buffer-var={audioBufferVar}
-  data-ctx-var={ctxVar}
-  data-apply-loop-var={applyLoopVar}
->
+<button class="loop-btn" id="loopDebugBtn">
   🔍 Debug Loop Detection
 </button>
 
 <script>
-  import { detectLoop } from '@pleco/core/index.js';
-  import { fastLoopAnalysis } from '@pleco/scripts/xa-loop.js';
-  import { findPreciseLoop } from '@pleco/scripts/xa-precise-loop.js';
-  import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
-  
+  import { detectLoop, fastLoopAnalysis, loop } from 'pleco-xa';
+  import { enqueueToast } from '../lib/ui/toastQueue.js';
+  import { session } from '../scripts/session.js';
+
+  const { findPreciseLoop } = loop;
+
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('loopDebugBtn');
     btn?.addEventListener('click', async () => {
-      const buffer = window[btn.dataset.bufferVar];
-      
+      const buffer = session.currentBuffer;
+
       if (!buffer) {
         enqueueToast('❌ No audio loaded');
         return;

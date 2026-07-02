@@ -3,11 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npm run build -w pleco-xa",
     "dev": "astro dev",
+    "prebuild": "npm run build -w pleco-xa",
     "build": "astro build",
     "preview": "astro preview",
-    "sync": "node scripts/sync-public-deps.js",
-    "prebuild": "node scripts/sync-public-deps.js",
     "start": "node dist/server/entry.mjs"
   },
   "dependencies": {

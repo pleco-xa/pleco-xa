@@ -71,3 +71,72 @@ export * as effects from './effects/index.js'
 // Decompose — Wave 5 (fixture-gated: hpss.json; H+P≈S at margin=1).
 // Includes the pleco-unique vocal-separation flagship via its module.
 export * as decompose from './decompose/index.js'
+
+// ─── Wave 6: playback / display / play layer ────────────────────────────────
+
+// Playback ops: loop-speed / gap / reverse buffer operations hoisted from the
+// demo's AudioAnalyzer. Pure functions on AudioBuffer-shaped objects with an
+// injectable createBuffer factory (no DOM, no AudioContext).
+export * as playback from './playback/ops.js'
+
+// Playback engines: loop-aware players and the demo audio processor.
+// AudioPlayer/LoopPlayer construct an AudioContext lazily (browser-only at
+// call time, import-safe everywhere).
+export { LoopPlayer } from './scripts/LoopPlayer.js'
+export { AudioPlayer } from './scripts/analysis/AudioPlayer.ts'
+export {
+  initAudioProcessor, loadAudioFile, drawWaveform,
+} from './scripts/xa-audio-core.js'
+
+// Live speed control (playbackRate crossfade / resample tiers). Dependencies
+// (audioContext, buffer, audioProcessor) are injected explicitly — no global
+// bus reads.
+export {
+  applyLiveHalfSpeed, applyLiveDoubleSpeed, resetLiveSpeed, liveSpeedController,
+} from './scripts/live-speed-control.js'
+
+// Display: canvas-native spectrogram rendering (librosa.display replacement
+// tier — see PARITY.md exceptions ledger).
+export {
+  createSpectrogram, renderStaticSpectrum, RealtimeSpectrumAnalyzer,
+} from './scripts/SpectrumAnalyzer.js'
+
+// Browser WAV Blob helper (wraps the WAV encode tier for <audio> playback).
+export { createAudioBlob } from './scripts/xa-wav-encoder.js'
+
+// Play layer — loop choreography + glitch toys (spec §6 play/).
+// NOTE: core's detectLoop is the deprecated full-buffer stub kept for
+// play-layer compatibility; real detection is loop.detect().
+export {
+  signatureDemo, detectLoop, fullBufferLoop, halfLoop, doubleLoop,
+  moveForward, resetLoop, randomSequence, randomLocal, glitchBurst,
+  startBeatGlitch, GibClock,
+} from './core/index.js'
+export {
+  generateChaotic, generateFibonacci, generatePrimeRhythm, generateWaveform,
+  executeOperation,
+} from './scripts/algorithmic-sequences.js'
+export {
+  buildQuantumOpList, buildQuantumSequence, playQuantumOps,
+} from './scripts/quantum-sequencer.js'
+export { allPresets, randomPreset } from './scripts/beat-presets.js'
+export { applyQuantumOp } from './lib/effects/xa-fx.js'
+
+// Enhanced buffer ops: safety-checked, progress-reporting reverse for large
+// buffers (used by the demo's Enhanced Reverse control).
+export {
+  applyOperationEnhanced, checkBufferSafety, isLargeOperation,
+} from './scripts/enhanced-audio-ops.js'
+
+// Quick-tier BPM helpers consumed by the demo. Explicitly quick (see the
+// rhythm section above): the parity tier remains tempo()/beat_track();
+// detectBPM/fastBPMDetect are fast estimators that report failure honestly.
+export { detectBPM } from './scripts/xa-bpm-detection.js'
+export { fastBPMDetect } from './scripts/xa-beat.js'
+
+// Browser file loading (decodeAudioData path from the xa-file registry) and
+// downbeat-aware musical loop search (loop/ taxonomy; already powers the
+// 'fast' strategy internally). MP3-support advisory from util.
+export { loadFile } from './scripts/xa-file.js'
+export { findMusicalLoop } from './scripts/xa-downbeat.js'
+export { warnIfNoMp3Support } from './scripts/xa-util.js'

@@ -10,6 +10,16 @@
  * librosa/util/utils.py (softmask, l.1678–1793).
  */
 
+// Pleco-unique vocal-separation flagship (multi-scale spectral
+// fingerprinting → EQ-curve optimization → vocal reconstruction). Lives in
+// its own module; re-exported here so consumers reach it as
+// decompose.processAudioToFingerprints / optimizeEqCurves / reconstructVocal.
+export {
+  processAudioToFingerprints,
+  optimizeEqCurves,
+  reconstructVocal,
+} from '../scripts/xa-vocal-separation.js'
+
 /** Smallest usable float32 (np.finfo(np.float32).tiny) — librosa computes in
  *  float32, so the softmask underflow threshold must match that dtype. */
 const FLOAT32_TINY = 1.1754943508222875e-38

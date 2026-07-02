@@ -1,8 +1,7 @@
-// Keyboard shortcut controller for Pleco-XA
-import { detectLoop } from '../core/index.js';
+// Keyboard shortcut controller for the Pleco-XA demo
+import { detectLoop, applyQuantumOp, allPresets } from 'pleco-xa';
 import { enqueueToast } from './ui/toastQueue.js';
-import { applyQuantumOp } from '../lib/effects/xa-fx.js';
-import { allPresets } from './beat-presets.js';
+import { session } from '../scripts/session.js';
 
 class KeyboardController {
   constructor() {
@@ -186,7 +185,7 @@ class KeyboardController {
   }
   
   activateEffect(effectName) {
-    const buffer = window.currentAudioBuffer;
+    const buffer = session.currentBuffer;
 
     if (!buffer) {
       enqueueToast('❌ No audio loaded');
@@ -200,14 +199,14 @@ class KeyboardController {
     console.log('🎹 Keyboard effect debug:', {
       effectName,
       hasBuffer: !!buffer,
-      hasApplyLoop: typeof window.applyLoop,
-      windowKeys: Object.keys(window).filter(k => k.includes('apply') || k.includes('Audio'))
+      hasApplyLoop: typeof session.applyLoop,
     });
 
     try {
       let loop = detectLoop(buffer);
 
       // Pass phaser parameters if it's the phase effect
+      // (window.phaserParams is xa-fx's documented parameter channel)
       if (effectName === 'phase') {
         window.phaserParams = this.phaserParams;
       }
@@ -217,13 +216,12 @@ class KeyboardController {
       // Store for relatch functionality
       this.relatchBuffer = result.buffer;
 
-      // Use window.applyLoop (initialized in AudioAnalyzer.astro)
-      if (typeof window.applyLoop === 'function') {
-        window.applyLoop(result.buffer, result.loop, effectName);
+      // Use session.applyLoop (installed by AudioAnalyzer.astro)
+      if (typeof session.applyLoop === 'function') {
+        session.applyLoop(result.buffer, result.loop, effectName);
       } else {
-        console.warn('⚠️ window.applyLoop not initialized yet');
-        // Fallback: just update the window buffer
-        window.currentAudioBuffer = result.buffer;
+        console.warn('⚠️ session.applyLoop not initialized yet');
+        session.setBuffer(result.buffer);
       }
 
       enqueueToast(`✅ ${this.keyMappings[this.getKeyForEffect(effectName)].description} ON`);
@@ -269,9 +267,9 @@ class KeyboardController {
   
   startBeat() {
     if (this.beatPlaying) return;
-    
-    const buffer = window.currentAudioBuffer;
-    const applyLoop = window.applyLoop;
+
+    const buffer = session.currentBuffer;
+    const applyLoop = session.applyLoop;
     
     if (!buffer || typeof applyLoop !== 'function') {
       enqueueToast('❌ No audio loaded');
@@ -313,17 +311,17 @@ class KeyboardController {
   }
   
   relatchEffects() {
-    const buffer = window.currentAudioBuffer;
-    const applyLoop = window.applyLoop;
-    
+    const buffer = session.currentBuffer;
+    const applyLoop = session.applyLoop;
+
     if (!buffer || typeof applyLoop !== 'function') {
       enqueueToast('❌ No audio loaded');
       return;
     }
-    
+
     // Relatch current audio state
     if (this.relatchBuffer) {
-      window.currentAudioBuffer = this.relatchBuffer;
+      session.setBuffer(this.relatchBuffer);
       enqueueToast('🔄 Audio effects relatched');
     } else {
       // If no relatch buffer, just refresh current state
@@ -399,12 +397,12 @@ class KeyboardController {
     }
 
     const previousBuffer = this.undoStack.pop();
-    window.currentAudioBuffer = previousBuffer;
+    session.setBuffer(previousBuffer);
 
     // Restart playback if playing
-    if (typeof window.applyLoop === 'function') {
+    if (typeof session.applyLoop === 'function') {
       let loop = detectLoop(previousBuffer);
-      window.applyLoop(previousBuffer, loop, 'undo');
+      session.applyLoop(previousBuffer, loop, 'undo');
     }
 
     enqueueToast(`⏮️ Undone (${this.undoStack.length} steps remaining)`);
@@ -436,7 +434,7 @@ class KeyboardController {
 
   // Reapply phaser with volume compensation
   reapplyPhaserWithGain(gain) {
-    const buffer = window.currentAudioBuffer;
+    const buffer = session.currentBuffer;
     if (!buffer) return;
 
     try {
@@ -453,10 +451,10 @@ class KeyboardController {
         }
       }
 
-      if (typeof window.applyLoop === 'function') {
-        window.applyLoop(result.buffer, result.loop, 'phase-adjust');
+      if (typeof session.applyLoop === 'function') {
+        session.applyLoop(result.buffer, result.loop, 'phase-adjust');
       } else {
-        window.currentAudioBuffer = result.buffer;
+        session.setBuffer(result.buffer);
       }
     } catch (error) {
       console.error('Phaser adjustment failed:', error);

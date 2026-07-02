@@ -19,11 +19,6 @@ const {
   showControls = true,
   class: className = ''
 } = Astro.props;
-
-let currentAudioBuffer = null;
-let audioContext = null;
-function applyLoop() {}
-
 ---
 
 <div class={`pleco-audio-analyzer ${className}`}>
@@ -139,11 +134,7 @@ function applyLoop() {}
         <div class="card-value" id="audioFormat">--</div>
         <p class="card-description">Decoded audio information</p>
       </div>
-      <SignatureDemoButton
-        audioBuffer={currentAudioBuffer}
-        ctx={audioContext}
-        applyLoop={applyLoop}
-      />
+      <SignatureDemoButton />
 
     </div>
   </div>
@@ -491,60 +482,31 @@ function applyLoop() {}
   }
 </style>
 
-<script client:load>
+<script>
+  // Wave 6: this component is a true consumer of the pleco-xa package.
+  // Everything library-grade comes from the barrel; demo glue (toast queue,
+  // applyLoop UI helper, keyboard controller, session bus) is demo-local.
+  import {
+    initAudioProcessor,
+    loadAudioFile,
+    drawWaveform,
+    detectBPM,
+    loop,
+    playback,
+  } from 'pleco-xa';
+  import { applyLoop as applyLoopHelper } from '../lib/ui/applyLoop.js';
+  import { enqueueToast } from '../lib/ui/toastQueue.js';
+  import { initKeyboardController } from '../lib/keyboard-controller.js';
+  import { session } from '../scripts/session.js';
+
   // Set up animation frame for continuous waveform updates
   let animationFrameId = null;
-  
-  // Dynamic imports for browser context
-  let initAudioProcessor, loadAudioFile, drawWaveform;
-  let applyLoopHelper;
-  let detectBPM;
-  let findLoop, manipulateLoop;
-  let enqueueToast;
-  
-  // Load modules dynamically
-  async function loadModules() {
-    try {
-      console.log('🔄 Loading modules...');
-
-      const coreModule = await import('/scripts/xa-audio-core.js');
-      initAudioProcessor = coreModule.initAudioProcessor;
-      loadAudioFile = coreModule.loadAudioFile;
-      drawWaveform = coreModule.drawWaveform;
-      console.log('✅ Core module loaded');
-
-      const applyLoopModule = await import('/scripts/ui/applyLoop.js');
-      applyLoopHelper = applyLoopModule.applyLoop;
-      console.log('✅ ApplyLoop module loaded');
-
-      const bpmModule = await import('/scripts/xa-bpm-detection.js');
-      detectBPM = bpmModule.detectBPM;
-      console.log('✅ BPM module loaded');
-
-      const loopModule = await import('/scripts/xa-loop-detection.js');
-      findLoop = loopModule.findLoop;
-      manipulateLoop = loopModule.manipulateLoop;
-      console.log('✅ Loop module loaded');
-
-      const toastModule = await import('/scripts/ui/toastQueue.js');
-      enqueueToast = toastModule.enqueueToast;
-      console.log('✅ Toast module loaded');
-
-      console.log('✅ All modules loaded successfully');
-    } catch (error) {
-      console.error('❌ Error loading modules:', error);
-      throw error;
-    }
-  }
 
   // Initialize state
   let audioProcessor;
-  let originalAudioBuffer = null; // Keep original for easter egg
-  currentAudioBuffer = null;
-  if (typeof window !== 'undefined') {
-    window.currentAudioBuffer ||= null;
-    window.audioContext ||= null;
-  }
+  let audioContext = null;
+  let currentAudioBuffer = null;
+  let originalAudioBuffer = null; // Keep original for nudge/reveal
   let isPlaying = false;
   let currentBeats = []; // Store beat times from BPM detection
   let currentTrackName = '';
@@ -554,10 +516,20 @@ function applyLoop() {}
   let dragMarker = null; // Track which marker is being dragged ('start' or 'end')
   let fractalMode = true; // Fractal mode for double speed unquantz (default ON)
 
-  // Initialize keyboard controller
-  import('/scripts/keyboard-controller.js').then(module => {
-    module.initKeyboardController();
-  });
+  // Playback ops allocate through the live AudioContext so results are real
+  // AudioBuffers the processor can play.
+  function opOptions(extra = {}) {
+    return {
+      createBuffer: (ch, len, sr) => audioContext.createBuffer(ch, len, sr),
+      ...extra,
+    };
+  }
+
+  // Track the active buffer in one place: local state + shared session.
+  function setCurrentBuffer(buffer) {
+    currentAudioBuffer = buffer;
+    session.setBuffer(buffer);
+  }
 
   function normalizeBPM(bpm) {
     if (!allowHalfDouble) return bpm;
@@ -566,19 +538,59 @@ function applyLoop() {}
     return bpm;
   }
 
-  
+  /**
+   * Manipulate the audio processor's normalized loop points.
+   * (Demo UI glue — real detection is loop.detect().)
+   */
+  function manipulateLoop(action, processor, audioBuffer) {
+    if (!processor || !audioBuffer) return null;
+
+    const currentLoop = processor.getLoopPoints();
+    let newLoop = { ...currentLoop };
+
+    switch (action) {
+      case 'half': {
+        const halfDuration = (currentLoop.end - currentLoop.start) / 2;
+        newLoop.end = currentLoop.start + halfDuration;
+        break;
+      }
+      case 'double': {
+        const doubleDuration = (currentLoop.end - currentLoop.start) * 2;
+        newLoop.end = Math.min(1, currentLoop.start + doubleDuration);
+        break;
+      }
+      case 'forward': {
+        const duration = currentLoop.end - currentLoop.start;
+        if (currentLoop.end + duration <= 1) {
+          newLoop.start += duration;
+          newLoop.end += duration;
+        }
+        break;
+      }
+      case 'reset':
+        newLoop = { start: 0, end: 1 };
+        break;
+    }
+
+    processor.setLoopPoints(newLoop.start, newLoop.end);
+    session.setLoop(newLoop);
+
+    return newLoop;
+  }
+
   // Initialize audio processor when DOM is ready
-  document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', () => {
     try {
-      // Load modules first
-      await loadModules();
-      
-      // Initialize the audio processor
+      // Initialize the audio processor and share it on the session
       audioProcessor = initAudioProcessor();
+      session.audioProcessor = audioProcessor;
+
+      // Keyboard shortcuts
+      initKeyboardController();
 
       // Set up event listeners
       setupEventListeners();
-      
+
       console.log('✅ Audio analyzer initialized');
     } catch (error) {
       console.error('❌ Failed to initialize audio analyzer:', error);
@@ -614,28 +626,26 @@ function applyLoop() {}
           // Load and analyze the file
 
           const result = await loadAudioFile(file);
-          currentAudioBuffer = result.audioBuffer;
+          setCurrentBuffer(result.audioBuffer);
           originalAudioBuffer = result.audioBuffer; // Store original
-          window.currentAudioBuffer = currentAudioBuffer;
+          session.originalBuffer = originalAudioBuffer;
           audioContext = result.audioContext;
-          window.currentAudioBuffer = currentAudioBuffer;
-
-          window.audioContext = audioContext;
+          session.audioContext = audioContext;
 
           // Update UI with file info
           updateTrackInfo(
             file.name,
             `${currentAudioBuffer.duration.toFixed(1)}s`
           );
-          
+
           document.getElementById('audioFormat').textContent =
             `${currentAudioBuffer.sampleRate}Hz / ${currentAudioBuffer.numberOfChannels}ch`;
-          
+
           // Fallback BPM detection if worker fails
           const bpmResult = await detectBPM(currentAudioBuffer);
           rawBPM = bpmResult.bpm;
           const normalized = normalizeBPM(rawBPM);
-          window.currentBPM = normalized;
+          session.setBpm(normalized);
           document.getElementById('bpmValue').textContent = normalized.toFixed(1);
 
           // BPM and loop detection handled by worker; show placeholder
@@ -672,14 +682,18 @@ function applyLoop() {}
         
         // Force a small delay to ensure UI updates
         await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Run loop detection
-        const loopResult = await findLoop(currentAudioBuffer, {
-          bpmHint: parseFloat(document.getElementById('bpmValue').textContent) || 120
-        });
-        
+
+        // Run loop detection (library flagship; throws diagnostics on failure)
+        const detected = await loop.detect(currentAudioBuffer);
+        const loopResult = {
+          start: detected.loopStartSample / currentAudioBuffer.length,
+          end: detected.loopEndSample / currentAudioBuffer.length,
+          confidence: detected.confidence,
+        };
+
         // Apply loop points
         audioProcessor.setLoopPoints(loopResult.start, loopResult.end);
+        session.setLoop({ start: loopResult.start, end: loopResult.end });
 
         // Clear history stack when loop points change
         clearHalfSpeedHistory();
@@ -772,9 +786,8 @@ function applyLoop() {}
         const loopLength = endSample - startSample;
         const stretchedLength = loopLength * 2;
 
-        const newBuffer = halfSpeedLoop(currentAudioBuffer, currentLoop);
-        currentAudioBuffer = newBuffer;
-        window.currentAudioBuffer = newBuffer;
+        const newBuffer = playback.halfSpeedLoop(currentAudioBuffer, currentLoop, opOptions());
+        setCurrentBuffer(newBuffer);
 
         // Calculate new loop points to encompass the stretched content
         const newLength = newBuffer.length;
@@ -827,9 +840,8 @@ function applyLoop() {}
           nudgeReverseState: nudgeReverseState
         });
 
-        const newBuffer = halfSpeedQuantzLoop(currentAudioBuffer, currentLoop);
-        currentAudioBuffer = newBuffer;
-        window.currentAudioBuffer = newBuffer;
+        const newBuffer = playback.halfSpeedQuantzLoop(currentAudioBuffer, currentLoop, opOptions());
+        setCurrentBuffer(newBuffer);
 
         // Enable nudge for this specific loop
         nudgeEnabled = true;
@@ -871,9 +883,9 @@ function applyLoop() {}
         const previousState = halfSpeedQuantzHistory.pop();
 
         // Restore the previous state
-        currentAudioBuffer = previousState.buffer;
-        window.currentAudioBuffer = previousState.buffer;
+        setCurrentBuffer(previousState.buffer);
         originalAudioBuffer = previousState.originalBuffer;
+        session.originalBuffer = originalAudioBuffer;
 
         // Restore loop points
         const restoredLoop = previousState.loopPoints;
@@ -924,9 +936,8 @@ function applyLoop() {}
         }
 
         // Apply gapless double speed quantz
-        const result = doubleSpeedQuantzLoop(currentAudioBuffer, currentLoop);
-        currentAudioBuffer = result.buffer;
-        window.currentAudioBuffer = result.buffer;
+        const result = playback.doubleSpeedQuantzLoop(currentAudioBuffer, currentLoop, opOptions());
+        setCurrentBuffer(result.buffer);
 
         // Update loop end to the new shorter position
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
@@ -964,9 +975,12 @@ function applyLoop() {}
 
       try {
         const currentLoop = audioProcessor.getLoopPoints();
-        const newBuffer = doubleSpeedUnquantzLoop(currentAudioBuffer, currentLoop);
-        currentAudioBuffer = newBuffer;
-        window.currentAudioBuffer = newBuffer;
+        const newBuffer = playback.doubleSpeedUnquantzLoop(
+          currentAudioBuffer,
+          currentLoop,
+          opOptions({ fractal: fractalMode }),
+        );
+        setCurrentBuffer(newBuffer);
 
         // Disable nudge for double speed (no hidden half to reveal)
         nudgeEnabled = false;
@@ -992,15 +1006,14 @@ function applyLoop() {}
 
       try {
         const currentLoop = audioProcessor.getLoopPoints();
-        const result = closeGapLeft(currentAudioBuffer, currentLoop);
+        const result = playback.closeGapLeft(currentAudioBuffer, currentLoop, opOptions());
 
         if (!result) {
           enqueueToast('ℹ️ No gap detected after loop end');
           return;
         }
 
-        currentAudioBuffer = result.buffer;
-        window.currentAudioBuffer = result.buffer;
+        setCurrentBuffer(result.buffer);
 
         // Update loop points with new positions
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
@@ -1023,15 +1036,14 @@ function applyLoop() {}
 
       try {
         const currentLoop = audioProcessor.getLoopPoints();
-        const result = closeGapRight(currentAudioBuffer, currentLoop);
+        const result = playback.closeGapRight(currentAudioBuffer, currentLoop, opOptions());
 
         if (!result) {
           enqueueToast('ℹ️ No gap detected after loop end');
           return;
         }
 
-        currentAudioBuffer = result.buffer;
-        window.currentAudioBuffer = result.buffer;
+        setCurrentBuffer(result.buffer);
 
         // Update loop points with new positions
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
@@ -1086,10 +1098,12 @@ function applyLoop() {}
           stopWaveformAnimation();
         }
 
-        // Normal reverse
+        // Normal reverse (copy-based, input untouched)
         const startSample = Math.floor(loopPoints.start * currentAudioBuffer.length);
         const endSample = Math.floor(loopPoints.end * currentAudioBuffer.length);
-        currentAudioBuffer = reverseBufferSection(currentAudioBuffer, startSample, endSample);
+        setCurrentBuffer(
+          playback.reverseSection(currentAudioBuffer, startSample, endSample, opOptions()),
+        );
 
         // Update nudge reverse state if nudge is enabled for this loop
         if (nudgeEnabled && currentNudgeLoop &&
@@ -1097,8 +1111,6 @@ function applyLoop() {}
             Math.abs(loopPoints.end - currentNudgeLoop.end) < 0.001) {
           nudgeReverseState = !nudgeReverseState; // Toggle reverse state
         }
-
-        window.currentAudioBuffer = currentAudioBuffer;
 
         // Update the waveform display
         drawWaveform(currentAudioBuffer, 'waveformCanvas', loopPoints);
@@ -1163,17 +1175,22 @@ function applyLoop() {}
 
         if (nudgeState === 'first') {
           // Currently showing first half, switch to second half
-          currentAudioBuffer = revealHiddenHalf(currentAudioBuffer, originalAudioBuffer, currentNudgeLoop, nudgeReverseState);
+          setCurrentBuffer(playback.revealHiddenHalf(
+            currentAudioBuffer, originalAudioBuffer, currentNudgeLoop,
+            opOptions({ reverse: nudgeReverseState }),
+          ));
           nudgeState = 'second';
           enqueueToast('👁️ Nudged to second half');
         } else {
           // Currently showing second half, switch back to first half
-          currentAudioBuffer = revealFirstHalf(currentAudioBuffer, originalAudioBuffer, currentNudgeLoop, nudgeReverseState);
+          setCurrentBuffer(playback.revealFirstHalf(
+            currentAudioBuffer, originalAudioBuffer, currentNudgeLoop,
+            opOptions({ reverse: nudgeReverseState }),
+          ));
           nudgeState = 'first';
           enqueueToast('👁️ Nudged to first half');
         }
 
-        window.currentAudioBuffer = currentAudioBuffer;
         updateLoopInfo(currentLoop);
         drawWaveform(currentAudioBuffer, 'waveformCanvas', currentLoop);
 
@@ -1248,7 +1265,7 @@ function applyLoop() {}
       allowHalfDouble = e.target.checked;
       if (rawBPM !== null) {
         const bpm = normalizeBPM(rawBPM);
-        window.currentBPM = bpm;
+        session.setBpm(bpm);
         document.getElementById('bpmValue').textContent = bpm.toFixed(1);
       }
     });
@@ -1280,13 +1297,11 @@ function applyLoop() {}
       // First load the audio file
       console.log('📁 Loading audio file...');
       const result = await loadAudioFile(url);
-      currentAudioBuffer = result.audioBuffer;
+      setCurrentBuffer(result.audioBuffer);
       originalAudioBuffer = result.audioBuffer; // Store original
-      window.currentAudioBuffer = currentAudioBuffer;
+      session.originalBuffer = originalAudioBuffer;
       audioContext = result.audioContext;
-      window.currentAudioBuffer = currentAudioBuffer;
-
-      window.audioContext = audioContext;
+      session.audioContext = audioContext;
       currentTrackName = name;
 
       // Update UI with file info immediately
@@ -1362,7 +1377,7 @@ function applyLoop() {}
     let lastBeatTime = 0;
     let lastBPMUpdateTime = 0;
     let currentBeatIndex = 0;
-    const beatInterval = window.currentBPM ? (60 / window.currentBPM) : 0.5; // Default to 120 BPM if not set
+    const beatInterval = session.bpm ? (60 / session.bpm) : 0.5; // Default to 120 BPM if not set
     const bpmUpdateInterval = 2.0; // Update BPM every 2 seconds
     
     function animate() {
@@ -1436,7 +1451,7 @@ function applyLoop() {}
               currentBeatIndex = 0;
             }
           }
-        } else if (window.currentBPM && currentTime - lastBeatTime >= beatInterval) {
+        } else if (session.bpm && currentTime - lastBeatTime >= beatInterval) {
           // Fallback to interval-based pulsing if no beat data
           const bpmElement = document.getElementById('bpmValue');
           if (bpmElement) {
@@ -1454,7 +1469,7 @@ function applyLoop() {}
           detectBPM(currentAudioBuffer, { windowStart: currentSample, windowDuration: 4.0 }).then(result => {
             rawBPM = result.bpm;
             const bpm = normalizeBPM(rawBPM);
-            window.currentBPM = bpm;
+            session.setBpm(bpm);
             document.getElementById('bpmValue').textContent = bpm.toFixed(1);
             console.log('✅ Live BPM updated:', bpm);
           }).catch(error => {
@@ -1536,517 +1551,8 @@ function applyLoop() {}
     document.getElementById('loopInfo').textContent = 'Full Track';
     audioProcessor?.setLoopPoints(0, 1);
   }
-  
-  // Reveal hidden half with half-speed processing applied
-  function revealHiddenHalf(currentBuffer, originalBuffer, loopData, shouldReverse = false) {
-    const startSample = Math.floor(loopData.start * currentBuffer.length);
-    const endSample = Math.floor(loopData.end * currentBuffer.length);
-    const loopLength = endSample - startSample;
-    
-    // Create new buffer
-    const newBuffer = audioContext.createBuffer(
-      currentBuffer.numberOfChannels,
-      currentBuffer.length,
-      currentBuffer.sampleRate
-    );
-    
-    // Copy all current buffer data
-    for (let channel = 0; channel < currentBuffer.numberOfChannels; channel++) {
-      const currentData = currentBuffer.getChannelData(channel);
-      const originalData = originalBuffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-      
-      // Copy everything from current buffer
-      for (let i = 0; i < currentBuffer.length; i++) {
-        outputData[i] = currentData[i];
-      }
-      
-      // Replace loop section with "hidden half" from original, half-speed processed AND reversed
-      for (let i = 0; i < loopLength; i++) {
-        // Map to the "second half" of the original loop with half-speed stretch
-        const halfSpeedPos = i * 0.5; // Half speed mapping
-        const originalHalfOffset = loopLength / 2; // Start from second half of original
-        // Use the stored nudge loop position to read from correct part of original
-        const nudgeStartSample = Math.floor(loopData.start * originalBuffer.length);
-        const srcIndex = nudgeStartSample + originalHalfOffset + halfSpeedPos;
-        
-        const srcIndexFloor = Math.floor(srcIndex);
-        const nudgeEndSample = Math.floor(loopData.end * originalBuffer.length);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, nudgeEndSample - 1);
-        const fraction = srcIndex - srcIndexFloor;
-        
-        // Linear interpolation from the second half of original, half-speed processed
-        if (srcIndexFloor < nudgeEndSample && srcIndexFloor >= nudgeStartSample + originalHalfOffset) {
-          const sample1 = originalData[srcIndexFloor] || 0;
-          const sample2 = originalData[srcIndexCeil] || 0;
-          const interpolatedSample = sample1 + (sample2 - sample1) * fraction;
-          
-          // Apply reverse only if shouldReverse is true
-          if (shouldReverse) {
-            const reversedIndex = startSample + (loopLength - 1 - i);
-            outputData[reversedIndex] = interpolatedSample;
-          } else {
-            outputData[startSample + i] = interpolatedSample;
-          }
-        }
-      }
-    }
-    
-    return newBuffer;
-  }
 
-  // Reveal first half with half-speed processing applied
-  function revealFirstHalf(currentBuffer, originalBuffer, loopData, shouldReverse = false) {
-    const startSample = Math.floor(loopData.start * currentBuffer.length);
-    const endSample = Math.floor(loopData.end * currentBuffer.length);
-    const loopLength = endSample - startSample;
-    
-    // Create new buffer
-    const newBuffer = audioContext.createBuffer(
-      currentBuffer.numberOfChannels,
-      currentBuffer.length,
-      currentBuffer.sampleRate
-    );
-    
-    // Copy all current buffer data
-    for (let channel = 0; channel < currentBuffer.numberOfChannels; channel++) {
-      const currentData = currentBuffer.getChannelData(channel);
-      const originalData = originalBuffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-      
-      // Copy everything from current buffer
-      for (let i = 0; i < currentBuffer.length; i++) {
-        outputData[i] = currentData[i];
-      }
-      
-      // Replace loop section with "first half" from original, half-speed processed AND reversed
-      for (let i = 0; i < loopLength; i++) {
-        // Map to the "first half" of the original loop with half-speed stretch
-        const halfSpeedPos = i * 0.5; // Half speed mapping
-        // Use the stored nudge loop position to read from correct part of original
-        const nudgeStartSample = Math.floor(loopData.start * originalBuffer.length);
-        const srcIndex = nudgeStartSample + halfSpeedPos; // Start from beginning of original
-        
-        const srcIndexFloor = Math.floor(srcIndex);
-        const nudgeEndSample = Math.floor(loopData.end * originalBuffer.length);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, nudgeStartSample + (loopLength / 2) - 1);
-        const fraction = srcIndex - srcIndexFloor;
-        
-        // Linear interpolation from the first half of original, half-speed processed
-        if (srcIndexFloor < nudgeStartSample + (loopLength / 2)) {
-          const sample1 = originalData[srcIndexFloor] || 0;
-          const sample2 = originalData[srcIndexCeil] || 0;
-          const interpolatedSample = sample1 + (sample2 - sample1) * fraction;
-          
-          // Apply reverse only if shouldReverse is true
-          if (shouldReverse) {
-            const reversedIndex = startSample + (loopLength - 1 - i);
-            outputData[reversedIndex] = interpolatedSample;
-          } else {
-            outputData[startSample + i] = interpolatedSample;
-          }
-        }
-      }
-    }
-    
-    return newBuffer;
-  }
-
-  // Half speed quantz (time stretch with masking to preserve track length)
-  function halfSpeedQuantzLoop(audioBuffer, loopData) {
-    const startSample = Math.floor(loopData.start * audioBuffer.length);
-    const endSample = Math.floor(loopData.end * audioBuffer.length);
-    const loopLength = endSample - startSample;
-    
-    // Create new buffer with same length (no track length change)
-    const newBuffer = audioContext.createBuffer(
-      audioBuffer.numberOfChannels,
-      audioBuffer.length,
-      audioBuffer.sampleRate
-    );
-    
-    // Copy data to new buffer with masked time stretching
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-      const inputData = audioBuffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-      
-      // Copy data before the loop unchanged
-      for (let i = 0; i < startSample; i++) {
-        outputData[i] = inputData[i];
-      }
-      
-      // Apply half speed stretch within loop boundaries (mask/clip effect)
-      for (let i = 0; i < loopLength; i++) {
-        // Map output position to input position with 2x stretch (half speed)
-        const stretchedInputPos = i * 0.5; // Half speed = half position in source
-        const srcIndex = startSample + stretchedInputPos;
-        const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
-        const fraction = srcIndex - srcIndexFloor;
-        
-        // Linear interpolation - only from the FIRST HALF of loop content
-        if (srcIndexFloor < endSample) {
-          const sample1 = inputData[srcIndexFloor] || 0;
-          const sample2 = inputData[srcIndexCeil] || 0;
-          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
-        } else {
-          outputData[startSample + i] = 0; // Silence if beyond source material
-        }
-      }
-      
-      // Copy data after the loop unchanged
-      for (let i = endSample; i < audioBuffer.length; i++) {
-        outputData[i] = inputData[i];
-      }
-    }
-    
-    return newBuffer;
-  }
-
-  // Half speed (time stretch) a loop section
-  function halfSpeedLoop(audioBuffer, loopData) {
-    const startSample = Math.floor(loopData.start * audioBuffer.length);
-    const endSample = Math.floor(loopData.end * audioBuffer.length);
-    const loopLength = endSample - startSample;
-    const stretchedLength = loopLength * 2; // Double the length for half speed
-
-    // Create new buffer with extra space for stretched audio
-    const newLength = audioBuffer.length + stretchedLength - loopLength;
-    const newBuffer = audioContext.createBuffer(
-      audioBuffer.numberOfChannels,
-      newLength,
-      audioBuffer.sampleRate
-    );
-
-    // Copy data to new buffer with time stretching
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-      const inputData = audioBuffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-
-      // Copy data before the loop
-      for (let i = 0; i < startSample; i++) {
-        outputData[i] = inputData[i];
-      }
-
-      // Stretch the loop section (simple linear interpolation)
-      for (let i = 0; i < stretchedLength; i++) {
-        const srcIndex = startSample + (i * loopLength) / stretchedLength;
-        const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
-        const fraction = srcIndex - srcIndexFloor;
-
-        // Linear interpolation
-        const sample1 = inputData[srcIndexFloor] || 0;
-        const sample2 = inputData[srcIndexCeil] || 0;
-        outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
-      }
-
-      // Copy data after the loop
-      const outputOffset = startSample + stretchedLength;
-      for (let i = endSample; i < audioBuffer.length; i++) {
-        const outputIndex = outputOffset + (i - endSample);
-        if (outputIndex < newLength) {
-          outputData[outputIndex] = inputData[i];
-        }
-      }
-    }
-
-    return newBuffer;
-  }
-
-  // Double speed quantz (compress 2x content into same loop window)
-  // Double speed unquantz - leaves a gap (original behavior)
-  function doubleSpeedUnquantzLoop(audioBuffer, loopData) {
-    const startSample = Math.floor(loopData.start * audioBuffer.length);
-    const endSample = Math.floor(loopData.end * audioBuffer.length);
-    const loopLength = endSample - startSample;
-
-    // Check if there's enough room after loop for natural glitch
-    const availableAfterLoop = audioBuffer.length - endSample;
-    const hasEnoughRoomForGlitch = availableAfterLoop >= loopLength;
-
-    // Determine write length based on available space and fractal mode
-    let writeLength;
-    if (hasEnoughRoomForGlitch) {
-      // Natural glitch can occur - use full loop
-      writeLength = loopLength;
-    } else if (fractalMode) {
-      // Not enough room + fractal mode ON - write to first half only (creates matryoshka effect)
-      writeLength = Math.floor(loopLength / 2);
-    } else {
-      // Not enough room + fractal mode OFF - normal behavior
-      writeLength = loopLength;
-    }
-
-    // Create new buffer with same length (no track length change)
-    const newBuffer = audioContext.createBuffer(
-      audioBuffer.numberOfChannels,
-      audioBuffer.length,
-      audioBuffer.sampleRate
-    );
-
-    // Copy data to new buffer with double speed compression
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-      const inputData = audioBuffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-
-      // Copy data before the loop unchanged
-      for (let i = 0; i < startSample; i++) {
-        outputData[i] = inputData[i];
-      }
-
-      // FIRST: Copy the entire loop region to preserve existing content (fractal layers)
-      for (let i = 0; i < loopLength; i++) {
-        outputData[startSample + i] = inputData[startSample + i];
-      }
-
-      // THEN: Overwrite only the writeLength portion with compressed data
-      for (let i = 0; i < writeLength; i++) {
-        // Map output position to input position with 2x compression (double speed)
-        const compressedInputPos = i * 2.0; // Double speed = double position in source
-        const srcIndex = startSample + compressedInputPos;
-        const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, audioBuffer.length - 1);
-        const fraction = srcIndex - srcIndexFloor;
-
-        // Linear interpolation - reads 2x the content in same time window
-        if (srcIndexFloor < audioBuffer.length) {
-          const sample1 = inputData[srcIndexFloor] || 0;
-          const sample2 = inputData[srcIndexCeil] || 0;
-          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
-        } else {
-          outputData[startSample + i] = 0; // Silence if beyond source material
-        }
-      }
-
-      // Copy data after the loop unchanged
-      for (let i = endSample; i < audioBuffer.length; i++) {
-        outputData[i] = inputData[i];
-      }
-    }
-
-    return newBuffer;
-  }
-
-  // Double speed quantz - gapless version (shifts audio left to close gap)
-  function doubleSpeedQuantzLoop(audioBuffer, loopData) {
-    const startSample = Math.floor(loopData.start * audioBuffer.length);
-    const endSample = Math.floor(loopData.end * audioBuffer.length);
-    const loopLength = endSample - startSample;
-
-    // When we compress at 2x speed, the loop content fits into half the space
-    const compressedLoopLength = Math.floor(loopLength / 2);
-    const gapSize = loopLength - compressedLoopLength; // The gap created after compression
-
-    // Create new buffer that's shorter by the gap size
-    const newBufferLength = audioBuffer.length - gapSize;
-    const newBuffer = audioContext.createBuffer(
-      audioBuffer.numberOfChannels,
-      newBufferLength,
-      audioBuffer.sampleRate
-    );
-
-    // Copy data to new buffer with double speed compression and gap closure
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-      const inputData = audioBuffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-
-      // Copy data before the loop unchanged
-      for (let i = 0; i < startSample; i++) {
-        outputData[i] = inputData[i];
-      }
-
-      // Compress the loop content at 2x speed (fits into half the space)
-      for (let i = 0; i < compressedLoopLength; i++) {
-        // Map output position to input position with 2x compression
-        const compressedInputPos = i * 2.0; // Read at double speed
-        const srcIndex = startSample + compressedInputPos;
-        const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
-        const fraction = srcIndex - srcIndexFloor;
-
-        // Linear interpolation - only from WITHIN the original loop region
-        if (srcIndexFloor < endSample) {
-          const sample1 = inputData[srcIndexFloor] || 0;
-          const sample2 = inputData[srcIndexCeil] || 0;
-          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
-        } else {
-          outputData[startSample + i] = 0;
-        }
-      }
-
-      // Copy data after the original loop end, shifted left to close the gap
-      const afterStartInInput = endSample;
-      const afterStartInOutput = startSample + compressedLoopLength;
-      for (let i = 0; i < audioBuffer.length - endSample; i++) {
-        if (afterStartInOutput + i < newBufferLength) {
-          outputData[afterStartInOutput + i] = inputData[afterStartInInput + i];
-        }
-      }
-    }
-
-    // Calculate new loop end position (now at the compressed length)
-    const newLoopEnd = (startSample + compressedLoopLength) / newBufferLength;
-
-    return { buffer: newBuffer, newLoopEnd: newLoopEnd };
-  }
-
-  // Detect gap (silence or near-silence) after the loop end
-  function detectGap(audioBuffer, loopData) {
-    const endSample = Math.floor(loopData.end * audioBuffer.length);
-    const silenceThreshold = 0.01; // Adjust as needed
-    const minGapSize = 100; // Minimum gap size in samples to detect
-
-    // Check if there's enough space after the loop to have a gap
-    if (endSample + minGapSize >= audioBuffer.length) {
-      return null; // No gap - not enough space
-    }
-
-    // For each channel, find the first silence region after endSample
-    let silenceRegions = [];
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-      const data = audioBuffer.getChannelData(channel);
-      let silenceStart = -1;
-      let found = false;
-      for (let i = endSample; i < audioBuffer.length; i++) {
-        if (Math.abs(data[i]) < silenceThreshold) {
-          if (silenceStart === -1) {
-            silenceStart = i;
-          }
-        } else {
-          if (silenceStart !== -1 && (i - silenceStart) >= minGapSize) {
-            // Found a silence region
-            silenceRegions.push({ start: silenceStart, end: i });
-            found = true;
-            break;
-          }
-          silenceStart = -1;
-        }
-      }
-      // Check if silence extends to the end
-      if (!found && silenceStart !== -1 && (audioBuffer.length - silenceStart) >= minGapSize) {
-        silenceRegions.push({ start: silenceStart, end: audioBuffer.length });
-      } else if (!found && silenceStart === -1) {
-        // No silence region found for this channel
-        return null;
-      }
-    }
-
-    // Find intersection of silence regions across all channels
-    let gapStart = Math.max(...silenceRegions.map(r => r.start));
-    let gapEnd = Math.min(...silenceRegions.map(r => r.end));
-    if (gapEnd - gapStart < minGapSize) {
-      return null;
-    }
-
-    return { start: gapStart, end: gapEnd, size: gapEnd - gapStart };
-  }
-
-  // Close gap by shifting audio left
-  function closeGapLeft(audioBuffer, loopData) {
-    const gap = detectGap(audioBuffer, loopData);
-
-    if (!gap) {
-      return null; // No gap detected
-    }
-
-    const newBufferLength = audioBuffer.length - gap.size;
-    const newBuffer = audioContext.createBuffer(
-      audioBuffer.numberOfChannels,
-      newBufferLength,
-      audioBuffer.sampleRate
-    );
-
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-      const inputData = audioBuffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-
-      // Copy everything before the gap
-      for (let i = 0; i < gap.start; i++) {
-        outputData[i] = inputData[i];
-      }
-
-      // Copy everything after the gap, shifted left
-      for (let i = gap.end; i < audioBuffer.length; i++) {
-        outputData[i - gap.size] = inputData[i];
-      }
-    }
-
-    // Calculate new loop end position
-    const newLoopEnd = loopData.end; // Loop end stays at same ratio
-
-    return { buffer: newBuffer, newLoopEnd: newLoopEnd, gapSize: gap.size };
-  }
-
-  // Close gap by shifting audio right (shifting content after gap to the right)
-  function closeGapRight(audioBuffer, loopData) {
-    const gap = detectGap(audioBuffer, loopData);
-
-    if (!gap) {
-      return null; // No gap detected
-    }
-
-    const newBufferLength = audioBuffer.length - gap.size;
-    const newBuffer = audioContext.createBuffer(
-      audioBuffer.numberOfChannels,
-      newBufferLength,
-      audioBuffer.sampleRate
-    );
-
-    const endSample = Math.floor(loopData.end * audioBuffer.length);
-
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-      const inputData = audioBuffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-
-      // Copy everything before the loop end
-      for (let i = 0; i < endSample; i++) {
-        outputData[i] = inputData[i];
-      }
-
-      // Skip the gap and copy the rest
-      for (let i = gap.end; i < audioBuffer.length; i++) {
-        const outputIndex = i - gap.size;
-        if (outputIndex < newBufferLength) {
-          outputData[outputIndex] = inputData[i];
-        }
-      }
-    }
-
-    // Calculate new loop end position (shifts left as buffer is shorter)
-    const newLoopEnd = loopData.end * (newBufferLength / audioBuffer.length);
-
-    return { buffer: newBuffer, newLoopEnd: newLoopEnd, gapSize: gap.size };
-  }
-
-  // Reverse a section of an audio buffer
-  function reverseBufferSection(audioBuffer, startSample, endSample) {
-    // Create a new buffer with the same properties
-    const newBuffer = audioContext.createBuffer(
-      audioBuffer.numberOfChannels,
-      audioBuffer.length,
-      audioBuffer.sampleRate
-    );
-
-    // Copy all channels
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-      const originalData = audioBuffer.getChannelData(channel);
-      const newData = newBuffer.getChannelData(channel);
-      
-      // Copy the entire buffer first
-      newData.set(originalData);
-      
-      // Reverse just the loop section
-      const loopLength = endSample - startSample;
-      for (let i = 0; i < loopLength; i++) {
-        const originalIndex = startSample + i;
-        const reversedIndex = startSample + (loopLength - 1 - i);
-        newData[originalIndex] = originalData[reversedIndex];
-      }
-    }
-    
-    return newBuffer;
-  }
+  // (Loop-speed / gap / reverse / reveal DSP now lives in pleco-xa playback ops.)
 
   // Show error message
   function showError(message) {
@@ -2081,22 +1587,20 @@ function applyLoop() {}
   }
 
   // Wrapper using shared helper
-  function applyLoop(buf, loop, op, subOps) {
-    applyLoopHelper(buf, loop, op, subOps, {
+  function applyLoop(buf, loopDescriptor, op, subOps) {
+    applyLoopHelper(buf, loopDescriptor, op, subOps, {
       audioProcessor,
       drawWaveform,
       updateLoopInfo,
       updateTrackInfo,
       currentTrackName: currentTrackName || '',
-      setCurrentBuffer: (b) => {
-        currentAudioBuffer = b
-        window.currentAudioBuffer = b
-      },
+      setCurrentBuffer,
       restart: isPlaying,
       startTimelineAnimation,
       startWaveformAnimation,
     })
 
   }
-  window.applyLoop = applyLoop;
+  // Install on the shared session so other components can push results
+  session.applyLoop = applyLoop;
 </script>

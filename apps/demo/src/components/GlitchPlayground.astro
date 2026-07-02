@@ -1,21 +1,21 @@
 ---
-interface Props {
-  audioBufferVar?: string
-  applyLoopVar?: string
-}
-const { audioBufferVar = 'currentAudioBuffer', applyLoopVar = 'applyLoop' } = Astro.props
 ---
 <button id="glitchToggleBtn">Start Glitch</button>
 
 <script>
-  import { startBeatGlitch } from '@pleco/core/index.js'
+  // Wave 6 fix: the client script used to reference frontmatter-only
+  // variables (audioBufferVar/applyLoopVar) — undefined at runtime in the
+  // browser. It now reads the shared session directly.
+  import { startBeatGlitch } from 'pleco-xa'
+  import { session } from '../scripts/session.js'
+
   let stop = null
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('glitchToggleBtn')
     btn?.addEventListener('click', () => {
       if (!stop) {
-        const buffer = window[audioBufferVar]
-        const applyLoop = window[applyLoopVar]
+        const buffer = session.currentBuffer
+        const applyLoop = session.applyLoop
         if (!buffer || typeof applyLoop !== 'function') return
         stop = startBeatGlitch(buffer, {
           maxOpsPerBar: 1,

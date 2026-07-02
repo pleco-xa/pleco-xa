@@ -1,49 +1,38 @@
 ---
-interface Props {
-  audioBufferVar?: string;
-  ctxVar?: string;
-  applyLoopVar?: string;
-}
-const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
-
 ---
 
-<button
-  class="loop-btn"
-  id="enhancedReverseBtn"
-  data-buffer-var={audioBufferVar}
-  data-ctx-var={ctxVar}
-  data-apply-loop-var={applyLoopVar}
->
+<button class="loop-btn" id="enhancedReverseBtn">
   🔄 Enhanced Reverse
 </button>
 
 <script>
-  import { detectLoop } from '@pleco/core/index.js';
-  import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
-  import { 
-    applyOperationEnhanced, 
-    checkBufferSafety, 
-    isLargeOperation 
-  } from '@pleco/scripts/enhanced-audio-ops.js';
-  
+  import {
+    detectLoop,
+    applyOperationEnhanced,
+    checkBufferSafety,
+    isLargeOperation,
+    drawWaveform,
+  } from 'pleco-xa';
+  import { enqueueToast } from '../lib/ui/toastQueue.js';
+  import { session } from '../scripts/session.js';
+
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('enhancedReverseBtn');
     btn?.addEventListener('click', async () => {
-      const buffer = window[btn.dataset.bufferVar];
-      const ctx = window[btn.dataset.ctxVar];
-      const applyLoop = window[btn.dataset.applyLoopVar];
-      
+      const buffer = session.currentBuffer;
+      const ctx = session.audioContext;
+      const applyLoop = session.applyLoop;
+
       if (!buffer || !ctx || typeof applyLoop !== 'function') {
         enqueueToast('❌ No audio loaded');
         return;
       }
-      
+
       try {
         // Get current loop from audio processor or detect it
         let loop;
-        if (window.audioProcessor && window.audioProcessor.getLoopPoints) {
-          const loopPoints = window.audioProcessor.getLoopPoints();
+        if (session.audioProcessor && session.audioProcessor.getLoopPoints) {
+          const loopPoints = session.audioProcessor.getLoopPoints();
           loop = {
             startSample: Math.floor(loopPoints.start * buffer.length),
             endSample: Math.floor(loopPoints.end * buffer.length)
@@ -87,25 +76,23 @@ const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoo
         });
         
         // Apply the result
-        window.currentAudioBuffer = result;
-        
+        session.setBuffer(result);
+
         // Update the UI
-        if (window.audioProcessor) {
+        if (session.audioProcessor && typeof session.audioProcessor.loadBuffer === 'function') {
           // Reload the buffer in the audio processor
-          window.audioProcessor.loadBuffer(result);
+          session.audioProcessor.loadBuffer(result);
         }
-        
+
         // Apply to the loop system
         applyLoop(result, loop, 'reverse', undefined);
-        
-        // Update waveform if available
-        if (window.drawWaveform) {
-          const displayLoop = {
-            start: loop.startSample / buffer.length,
-            end: loop.endSample / buffer.length
-          };
-          window.drawWaveform(result, 'waveformCanvas', displayLoop);
-        }
+
+        // Update waveform
+        const displayLoop = {
+          start: loop.startSample / buffer.length,
+          end: loop.endSample / buffer.length
+        };
+        drawWaveform(result, 'waveformCanvas', displayLoop);
         
         if (isLarge) {
           enqueueToast('✅ Large reverse operation completed successfully');

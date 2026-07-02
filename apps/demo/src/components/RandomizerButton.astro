@@ -8,9 +8,6 @@ interface Props {
   label: string;
   algorithm: 'smart' | 'reverseHeavy' | 'rhythmic' | 'chaosTheory' | 'spiralMorph' | 'invertible' | 'aphexPolyrhythm' | 'perfectInversion' | 'destructive' | 'moveIntensive' | 'halfBias' | 'doubleBias' | 'silentExplorer' | 'fractalDescent' | 'quantumLeap';
   steps?: number;
-  audioBufferVar?: string;
-  ctxVar?: string;
-  applyLoopVar?: string;
 }
 
 const {
@@ -18,9 +15,6 @@ const {
   label,
   algorithm,
   steps = 41,
-  audioBufferVar = 'currentAudioBuffer',
-  ctxVar = 'audioContext',
-  applyLoopVar = 'applyLoop'
 } = Astro.props;
 ---
 
@@ -29,18 +23,27 @@ const {
   id={id}
   data-algorithm={algorithm}
   data-steps={steps}
-  data-buffer-var={audioBufferVar}
-  data-ctx-var={ctxVar}
-  data-apply-loop-var={applyLoopVar}
 >
   {label}
 </button>
 
 <script>
-import { randomSequence, reverseBufferSection, resetLoop, detectLoop, halfLoop, doubleLoop, moveForward } from '@pleco/core/index.js';
-  import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
-  import { generateChaotic, executeOperation } from '@pleco/scripts/algorithmic-sequences.js';
-  import { buildQuantumOpList, buildQuantumSequence } from '@pleco/scripts/quantum-sequencer.js';
+  import {
+    reverseBufferSection, resetLoop, detectLoop, halfLoop, doubleLoop,
+    generateChaotic, executeOperation,
+    buildQuantumOpList, buildQuantumSequence,
+    playback,
+  } from 'pleco-xa';
+  import { enqueueToast } from '../lib/ui/toastQueue.js';
+  import { session } from '../scripts/session.js';
+
+  // Allocate op results through the shared AudioContext so they are real,
+  // playable AudioBuffers.
+  function opOptions() {
+    return {
+      createBuffer: (ch, len, sr) => session.audioContext.createBuffer(ch, len, sr),
+    };
+  }
 
   // Algorithm weight configurations
   const algorithms = {
@@ -672,108 +675,29 @@ import { randomSequence, reverseBufferSection, resetLoop, detectLoop, halfLoop, 
   };
 
   /**
-   * Half speed quantz - compress audio at half speed within loop boundaries
+   * Half speed quantz — pleco-xa playback op (loop given in samples here).
    */
   function halfSpeedQuantz(buffer, startSample, endSample) {
-    const loopLength = endSample - startSample;
-    const audioContext = new AudioContext();
-
-    // Create new buffer with same length
-    const newBuffer = audioContext.createBuffer(
-      buffer.numberOfChannels,
-      buffer.length,
-      buffer.sampleRate
+    return playback.halfSpeedQuantzLoop(
+      buffer,
+      { start: startSample / buffer.length, end: endSample / buffer.length },
+      opOptions(),
     );
-
-    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-      const inputData = buffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-
-      // Copy before loop
-      for (let i = 0; i < startSample; i++) {
-        outputData[i] = inputData[i];
-      }
-
-      // Half speed stretch within loop
-      for (let i = 0; i < loopLength; i++) {
-        const stretchedInputPos = i * 0.5;
-        const srcIndex = startSample + stretchedInputPos;
-        const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
-        const fraction = srcIndex - srcIndexFloor;
-
-        if (srcIndexFloor < endSample) {
-          const sample1 = inputData[srcIndexFloor] || 0;
-          const sample2 = inputData[srcIndexCeil] || 0;
-          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
-        } else {
-          outputData[startSample + i] = 0;
-        }
-      }
-
-      // Copy after loop
-      for (let i = endSample; i < buffer.length; i++) {
-        outputData[i] = inputData[i];
-      }
-    }
-
-    return newBuffer;
   }
 
   /**
-   * Double speed quantz - compress audio at double speed and remove gap
+   * Double speed quantz — pleco-xa playback op (loop given in samples here).
    */
   function doubleSpeedQuantz(buffer, startSample, endSample) {
-    const loopLength = endSample - startSample;
-    const compressedLoopLength = Math.floor(loopLength / 2);
-    const gapSize = loopLength - compressedLoopLength;
-    const audioContext = new AudioContext();
-
-    // Create shorter buffer
-    const newBufferLength = buffer.length - gapSize;
-    const newBuffer = audioContext.createBuffer(
-      buffer.numberOfChannels,
-      newBufferLength,
-      buffer.sampleRate
+    const result = playback.doubleSpeedQuantzLoop(
+      buffer,
+      { start: startSample / buffer.length, end: endSample / buffer.length },
+      opOptions(),
     );
-
-    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-      const inputData = buffer.getChannelData(channel);
-      const outputData = newBuffer.getChannelData(channel);
-
-      // Copy before loop
-      for (let i = 0; i < startSample; i++) {
-        outputData[i] = inputData[i];
-      }
-
-      // Compress at 2x speed
-      for (let i = 0; i < compressedLoopLength; i++) {
-        const compressedInputPos = i * 2.0;
-        const srcIndex = startSample + compressedInputPos;
-        const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
-        const fraction = srcIndex - srcIndexFloor;
-
-        if (srcIndexFloor < endSample) {
-          const sample1 = inputData[srcIndexFloor] || 0;
-          const sample2 = inputData[srcIndexCeil] || 0;
-          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
-        } else {
-          outputData[startSample + i] = 0;
-        }
-      }
-
-      // Copy after loop, shifted left
-      const afterStartInInput = endSample;
-      const afterStartInOutput = startSample + compressedLoopLength;
-      for (let i = 0; i < buffer.length - endSample; i++) {
-        if (afterStartInOutput + i < newBufferLength) {
-          outputData[afterStartInOutput + i] = inputData[afterStartInInput + i];
-        }
-      }
-    }
-
-    return { buffer: newBuffer, newEndSample: startSample + compressedLoopLength };
+    return {
+      buffer: result.buffer,
+      newEndSample: Math.round(result.newLoopEnd * result.buffer.length),
+    };
   }
 
   /**
@@ -844,9 +768,9 @@ import { randomSequence, reverseBufferSection, resetLoop, detectLoop, halfLoop, 
 
     buttons.forEach(btn => {
       btn.addEventListener('click', async () => {
-        const buffer = window[btn.dataset.bufferVar];
-        const ctx = window[btn.dataset.ctxVar];
-        const applyLoop = window[btn.dataset.applyLoopVar];
+        const buffer = session.currentBuffer;
+        const ctx = session.audioContext;
+        const applyLoop = session.applyLoop;
 
         if (!buffer || !ctx || typeof applyLoop !== 'function') {
           enqueueToast('❌ No audio loaded');

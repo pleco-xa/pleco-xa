@@ -1,23 +1,17 @@
 ---
-interface Props {
-  audioBuffer?: AudioBuffer;
-  ctx?: AudioContext;
-  applyLoop?: (buffer: AudioBuffer, loop: any, op: string | undefined, subOps?: any) => void;
-}
-
-const { audioBuffer = undefined, ctx = undefined, applyLoop = undefined } = Astro.props;
 ---
 <button class="sig-demo" id="sigDemoBtn">
   🚀 Signature Demo
 </button>
 
 <script>
-  import { signatureDemo } from '@pleco/core/index.js';
-  import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
+  import { signatureDemo } from 'pleco-xa';
+  import { enqueueToast } from '../lib/ui/toastQueue.js';
+  import { session } from '../scripts/session.js';
 
   async function runDemo() {
-    const audioBuffer = window.currentAudioBuffer;
-    const applyLoop = window.applyLoop;
+    const audioBuffer = session.currentBuffer;
+    const applyLoop = session.applyLoop;
     if (!audioBuffer || typeof applyLoop !== 'function') return;
     const steps = signatureDemo(audioBuffer);
     for (const { fn, op } of steps) {

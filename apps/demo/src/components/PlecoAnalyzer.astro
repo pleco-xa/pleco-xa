@@ -159,11 +159,15 @@ const {
 </style>
 
 <script>
-  import { fastBPMDetect } from '@pleco/scripts/xa-beat.js'
-  import { fastLoopAnalysis } from '@pleco/scripts/xa-loop.js'
-  import { LoopPlayer } from '@pleco/scripts/LoopPlayer.js'
-  import { computeRMS } from '@pleco/scripts/audio-utils.js'
-  import { spectral_centroid } from '@pleco/feature/spectral.js'
+  import {
+    fastBPMDetect,
+    fastLoopAnalysis,
+    LoopPlayer,
+    computeRMS,
+    feature,
+  } from 'pleco-xa'
+
+  const { spectral_centroid } = feature
 
   let currentPlayer = null
 

@@ -1,46 +1,22 @@
 // ===== CORE IMPORTS =====
-// Main audio player and file handling
-import { loadFile } from './xa-file.js'
-
-// Advanced BPM Detection
-import { detectBPM } from './analysis/BPMDetector.ts'
-import { fastBPMDetect } from './xa-beat.js'
-
-// Advanced beat tracking with phase detection
-import { BeatTracker } from './xa-beat-tracker.js'
-import { enqueueToast } from './ui/toastQueue.js'
-
-import { debugLog } from './debug.js'
-
-// Onset detection for transients
-
-// Spectral features with RMS energy
-// import {
-//   spectralCentroid,
-//   spectralRolloff,
-//   spectralBandwidth,
-//   zeroCrossingRate,
-//   rms,
-// } from './xa-spectral.js' // Commented out as unused per task warning
-
-// Chroma features for harmonic analysis
-import { chroma_stft, enhance_chroma } from './xa-chroma.js'
-
-// Loop detection algorithms
-import { fastLoopAnalysis } from './xa-loop.js'
-import { findPreciseLoop } from './xa-precise-loop.js'
-import { findMusicalLoop, findDownbeatPhase } from './xa-downbeat.js'
-import { warnIfNoMp3Support } from './xa-util.js'
-
-// Audio utilities
+// Wave 6: this DOM controller moved out of the library into the demo; all
+// library functionality now comes from the public 'pleco-xa' package
+// (unused legacy imports were pruned in the move).
 import {
+  loadFile,
+  BeatTracker,
+  debugLog,
+  fastLoopAnalysis,
+  findMusicalLoop,
+  warnIfNoMp3Support,
   computeRMS,
   computePeak,
-  computeZeroCrossingRate,
-} from './xa-audio-features.js'
+  loop,
+} from 'pleco-xa'
+import { enqueueToast } from './ui/toastQueue.js'
 
-// Dynamic zero crossing for clean loops
-import { DynamicZeroCrossing } from './dynamic-zero-crossing.js'
+// Loop primitives (precise onset-pair search + zero-crossing snapping)
+const { findPreciseLoop, DynamicZeroCrossing } = loop
 
 // ===== GLOBAL STATE =====
 let audioContext

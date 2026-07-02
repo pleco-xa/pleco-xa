@@ -85,8 +85,13 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
   }
 </style>
 
-<script type="module">
-  import { analyzeWithProgress } from '@pleco/scripts/xa-bpm-algorithm.js';
+<script>
+  // Wave 6 fix: this was an is:inline module script whose '@pleco/...' import
+  // could never resolve in the browser (404). It is now a processed script
+  // importing the bpm namespace from the pleco-xa package.
+  import { bpm as bpmAlgorithm } from 'pleco-xa';
+
+  const { analyzeWithProgress } = bpmAlgorithm;
 
   /**
    * Main BPM detection function that matches lb/index.html lines 216-364
@@ -295,9 +300,6 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
       };
     }
   }
-
-  // Export for use in AudioAnalyzer.astro
-  window.detectBPMWithLogs = detectBPMWithLogs;
 
   // Handle file upload UI
   document.addEventListener('DOMContentLoaded', () => {

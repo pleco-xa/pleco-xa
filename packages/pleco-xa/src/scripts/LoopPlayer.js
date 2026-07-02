@@ -3,7 +3,7 @@
  * Part of Pleco Xa audio analysis engine
  */
 
-import { debugLog } from '../utils/debug.js'
+import { debugLog } from './debug.js'
 
 export class LoopPlayer {
   constructor(audioBuffer) {

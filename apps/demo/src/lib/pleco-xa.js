@@ -1,11 +1,13 @@
 /**
- * Pleco-XA: Main class that combines all audio analysis features
- * This is the main entry point for the Pleco-XA library
+ * PlecoXA demo facade: a convenience class bundling player + loop controller.
+ * Wave 6: moved out of the library into the demo (spec §6 'leaves the
+ * library'); consumes the public 'pleco-xa' package like any other consumer.
  */
 
-import { AudioPlayer } from './analysis/AudioPlayer.ts'
-import { LoopController } from './loop-controller.js'
+import { AudioPlayer, loop } from 'pleco-xa'
 import { enqueueToast } from './ui/toastQueue.js'
+
+const { LoopController } = loop
 
 export class PlecoXA {
   constructor(options = {}) {
@@ -317,45 +319,5 @@ export class PlecoXA {
   }
 }
 
-// Make these functions available globally for the tests
-if (typeof window !== 'undefined') {
-  window.halfLoop = function () {
-    if (window.plecoXA) return window.plecoXA.halfLoop()
-  }
+// (Wave 6: legacy window.* global compat shims removed with the bus.)
 
-  window.doubleLoop = function () {
-    if (window.plecoXA) return window.plecoXA.doubleLoop()
-  }
-
-  window.moveForward = function () {
-    if (window.plecoXA) return window.plecoXA.moveForward()
-  }
-
-  window.playAudio = async function () {
-    if (window.plecoXA) return await window.plecoXA.playAudio()
-  }
-
-  window.stopAudio = function () {
-    if (window.plecoXA) return window.plecoXA.stopAudio()
-  }
-
-  window.updateTrackInfo = function (name, status) {
-    if (window.plecoXA) return window.plecoXA.updateTrackInfo(name, status)
-  }
-
-  window.updateLoopInfo = function () {
-    if (window.plecoXA) return window.plecoXA.updateLoopInfo()
-  }
-
-  window.analyzeAudio = async function () {
-    if (window.plecoXA) return await window.plecoXA.analyzeAudio()
-  }
-
-  window.showError = function (message) {
-    if (window.plecoXA) return window.plecoXA.showError(message)
-  }
-
-  window.drawWaveform = function () {
-    if (window.plecoXA) return window.plecoXA.drawWaveform()
-  }
-}

@@ -1,29 +1,24 @@
 ---
-import { glitchBurst } from '@pleco/core/index.js';
-interface Props {
-  audioBufferVar?: string;
-  ctxVar?: string;
-  applyLoopVar?: string;
-}
-const {
-  audioBufferVar = 'currentAudioBuffer',
-  ctxVar = 'audioContext',
-  applyLoopVar = 'applyLoop'
-} = Astro.props;
-
-function runBurst() {
-  const buffer = window[audioBufferVar];
-  const ctx = window[ctxVar];
-  const applyLoop = window[applyLoopVar];
-  if (!buffer || !ctx || typeof applyLoop !== 'function') return;
-  glitchBurst(buffer, { ctx, durationMs: 8000, onUpdate: applyLoop });
-}
 ---
 <button class="glitch-burst" id="glitchBurstBtn">
-  ⚡ Glitch Burst (8 s)
+  ⚡ Glitch Burst (8 s)
 </button>
 
 <script>
+  // Wave 6 fix: runBurst used to be defined in the server-side frontmatter
+  // while the client script referenced it — a guaranteed ReferenceError.
+  // It now lives here, in the client script, reading the shared session.
+  import { glitchBurst } from 'pleco-xa';
+  import { session } from '../scripts/session.js';
+
+  function runBurst() {
+    const buffer = session.currentBuffer;
+    const ctx = session.audioContext;
+    const applyLoop = session.applyLoop;
+    if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+    glitchBurst(buffer, { ctx, durationMs: 8000, onUpdate: applyLoop });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('glitchBurstBtn');
     btn?.addEventListener('click', runBurst);

@@ -1,6 +1,7 @@
-// Live speed control for real-time half/double speed effects
+// Live speed control for real-time half/double speed effects.
+// Wave 6: all dependencies (audioContext, buffer, audioProcessor) are
+// injected explicitly — this module performs no window.* bus reads.
 import { detectLoop } from '../core/index.js';
-import { enqueueToast } from './ui/toastQueue.js';
 
 class LiveSpeedController {
   constructor() {
@@ -9,13 +10,16 @@ class LiveSpeedController {
     this.originalBuffer = null;
     this.speedBuffer = null;
     this.audioContext = null;
+    this.audioProcessor = null;
     this.source = null;
   }
 
-  // Initialize with current audio context and buffer
-  init(audioContext, buffer) {
+  // Initialize with current audio context, buffer, and (optionally) the
+  // audio processor used for playbackRate-based live speed changes.
+  init(audioContext, buffer, audioProcessor = null) {
     this.audioContext = audioContext;
     this.originalBuffer = buffer;
+    this.audioProcessor = audioProcessor;
     this.currentSpeed = 1.0;
     this.isActive = false;
   }
@@ -45,10 +49,12 @@ class LiveSpeedController {
 
   // Fast method using playbackRate (changes pitch)
   async applyPlaybackRateSpeed(targetSpeed, fadeTime) {
-    // Get current audio source
-    const audioProcessor = window.audioProcessor;
+    // Get current audio source (injected via init())
+    const audioProcessor = this.audioProcessor;
     if (!audioProcessor) {
-      throw new Error('Audio processor not available');
+      throw new Error(
+        'Audio processor not available — pass audioProcessor to init()/applyLive*Speed()',
+      );
     }
 
     // If currently playing, we need to adjust the playback rate
@@ -203,28 +209,33 @@ class LiveSpeedController {
 // Export singleton instance
 export const liveSpeedController = new LiveSpeedController();
 
-// Helper functions for easy use
-export async function applyLiveHalfSpeed(preservePitch = false) {
-  const buffer = window.currentAudioBuffer;
-  const audioContext = window.audioContext;
-  
+// Helper functions for easy use. Dependencies are explicit arguments
+// (no global bus): pass the session's audioContext / buffer / audioProcessor.
+export async function applyLiveHalfSpeed({
+  audioContext,
+  buffer,
+  audioProcessor = null,
+  preservePitch = false,
+} = {}) {
   if (!buffer || !audioContext) {
-    throw new Error('No audio loaded');
+    throw new Error('applyLiveHalfSpeed: audioContext and buffer are required');
   }
-  
-  liveSpeedController.init(audioContext, buffer);
+
+  liveSpeedController.init(audioContext, buffer, audioProcessor);
   return await liveSpeedController.halfSpeed(preservePitch);
 }
 
-export async function applyLiveDoubleSpeed(preservePitch = false) {
-  const buffer = window.currentAudioBuffer;
-  const audioContext = window.audioContext;
-  
+export async function applyLiveDoubleSpeed({
+  audioContext,
+  buffer,
+  audioProcessor = null,
+  preservePitch = false,
+} = {}) {
   if (!buffer || !audioContext) {
-    throw new Error('No audio loaded');
+    throw new Error('applyLiveDoubleSpeed: audioContext and buffer are required');
   }
-  
-  liveSpeedController.init(audioContext, buffer);
+
+  liveSpeedController.init(audioContext, buffer, audioProcessor);
   return await liveSpeedController.doubleSpeed(preservePitch);
 }
 
