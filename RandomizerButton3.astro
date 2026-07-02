@@ -1,0 +1,103 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn3"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  🥁 Rhythmic Sequence
+</button>
+
+<script>
+  import { halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop, detectLoop } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  
+  function rhythmicSequence(buffer, { steps = 32 } = {}) {
+    let loop = detectLoop(buffer);
+    const sequence = [];
+    
+    // Rhythmic pattern: 4/4 time signature style operations
+    const rhythmicPattern = [
+      // Bar 1: Setup the groove
+      'half', 'half', 'move', 'reverse',
+      // Bar 2: Build complexity  
+      'double', 'half', 'move', 'half',
+      // Bar 3: Add variation
+      'reverse', 'move', 'double', 'half',
+      // Bar 4: Reset and repeat variations
+      'reset', 'half', 'half', 'move',
+      // Bar 5-8: More complex rhythmic patterns
+      'reverse', 'half', 'double', 'move',
+      'half', 'reverse', 'move', 'double',
+      'half', 'half', 'reverse', 'move',
+      'double', 'reset', 'half', 'move'
+    ];
+    
+    for (let i = 0; i < steps; i++) {
+      const action = rhythmicPattern[i % rhythmicPattern.length];
+      
+      const fn = () => {
+        switch (action) {
+          case 'half':
+            if (loop.endSample - loop.startSample >= 2 * (10 / 1000) * buffer.sampleRate) {
+              loop = halfLoop(loop);
+            }
+            break;
+          case 'double':
+            loop = doubleLoop(loop, buffer.length);
+            break;
+          case 'move': {
+            const duration = loop.endSample - loop.startSample;
+            const newStart = loop.startSample + duration;
+            const newEnd = loop.endSample + duration;
+            if (newEnd <= buffer.length) {
+              loop = { startSample: newStart, endSample: newEnd };
+            }
+            break;
+          }
+          case 'reverse':
+            buffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
+            break;
+          case 'reset':
+            loop = resetLoop(buffer);
+            break;
+        }
+        return { buffer, loop, op: action };
+      };
+      fn.op = action;
+      sequence.push(fn);
+    }
+    
+    return sequence;
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn3');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      const seq = rhythmicSequence(buffer, { steps: 32 });
+      enqueueToast('🥁 Rhythmic sequence: ' + seq.map(fn => fn.op).join(' → '));
+      let buf = buffer;
+      for (const step of seq) {
+        const { buffer: newBuf, loop } = step();
+        buf = newBuf;
+        applyLoop(buf, loop, step.op, undefined);
+        await new Promise(r => setTimeout(r, 150)); // Slightly slower for rhythmic feel
+      }
+      enqueueToast('Rhythmic sequence complete');
+    });
+  });
+</script>

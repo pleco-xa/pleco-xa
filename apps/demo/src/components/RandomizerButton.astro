@@ -37,17 +37,48 @@ const {
 </button>
 
 <script>
-  import { randomSequence, halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop, detectLoop } from '@pleco/core/index.js';
+import { randomSequence, reverseBufferSection, resetLoop, detectLoop, halfLoop, doubleLoop, moveForward } from '@pleco/core/index.js';
   import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
+  import { generateChaotic, executeOperation } from '@pleco/scripts/algorithmic-sequences.js';
+  import { buildQuantumOpList, buildQuantumSequence } from '@pleco/scripts/quantum-sequencer.js';
 
   // Algorithm weight configurations
   const algorithms = {
     smart: (buffer, { steps = 41 } = {}) => {
-      return randomSequence(buffer, {
-        minMs: 10,
-        maxMs: buffer.duration * 1000,
-        steps
-      });
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const sequence = [];
+      const minSamples = (10 / 1000) * buffer.sampleRate;
+
+      const actions = [
+        { op: 'half', w: 30 },
+        { op: 'double', w: 25 },
+        { op: 'move', w: 20 },
+        { op: 'reverse', w: 15 },
+        { op: 'reset', w: 10 },
+      ];
+      const totalW = actions.reduce((s, { w }) => s + w, 0);
+
+      for (let i = 0; i < steps; i++) {
+        let r = Math.random() * totalW;
+        let acc = 0;
+        let action = 'half';
+        for (const { op, w } of actions) {
+          acc += w;
+          if (r < acc) {
+            action = op;
+            break;
+          }
+        }
+
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
+        sequence.push(fn);
+
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
+      }
+      return sequence;
     },
 
     reverseHeavy: (buffer, { steps = 41 } = {}) => {
@@ -77,7 +108,6 @@ const {
         }
 
         const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
-        fn.op = action;
         sequence.push(fn);
 
         // Update currentLoop and currentBuffer for next iteration by executing the step
@@ -115,7 +145,6 @@ const {
         }
 
         const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
-        fn.op = action;
         sequence.push(fn);
 
         // Update currentLoop and currentBuffer for next iteration
@@ -131,20 +160,25 @@ const {
       let currentBuffer = buffer;
       const sequence = [];
       const minSamples = (10 / 1000) * buffer.sampleRate;
-      const actions = [
-        { op: 'half', w: 50 },
-        { op: 'move', w: 20 },
-        { op: 'reverse', w: 15 },
-        { op: 'double', w: 10 },
-        { op: 'reset', w: 5 },
-      ];
-      const totalW = actions.reduce((s, { w }) => s + w, 0);
+      let halfCount = 0;
+      let doubleCount = 0;
 
       for (let i = 0; i < steps; i++) {
+        // Dynamic weight balancing based on half/double count
+        const balance = halfCount - doubleCount;
+        const baseActions = [
+          { op: 'half', w: balance < 8 ? 50 : (balance < 12 ? 20 : 5) },
+          { op: 'move', w: 20 },
+          { op: 'reverse', w: 15 },
+          { op: 'double', w: balance > -3 ? 10 : 30 },
+          { op: 'reset', w: 5 },
+        ];
+        const totalW = baseActions.reduce((s, { w }) => s + w, 0);
+
         let r = Math.random() * totalW;
         let acc = 0;
         let action = 'half';
-        for (const { op, w } of actions) {
+        for (const { op, w } of baseActions) {
           acc += w;
           if (r < acc) {
             action = op;
@@ -152,8 +186,10 @@ const {
           }
         }
 
+        if (action === 'half') halfCount++;
+        if (action === 'double') doubleCount++;
+
         const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
-        fn.op = action;
         sequence.push(fn);
 
         // Update currentLoop and currentBuffer for next iteration
@@ -169,20 +205,25 @@ const {
       let currentBuffer = buffer;
       const sequence = [];
       const minSamples = (10 / 1000) * buffer.sampleRate;
-      const actions = [
-        { op: 'double', w: 50 },
-        { op: 'move', w: 20 },
-        { op: 'half', w: 15 },
-        { op: 'reverse', w: 10 },
-        { op: 'reset', w: 5 },
-      ];
-      const totalW = actions.reduce((s, { w }) => s + w, 0);
+      let halfCount = 0;
+      let doubleCount = 0;
 
       for (let i = 0; i < steps; i++) {
+        // Dynamic weight balancing - inverse of halfBias
+        const balance = doubleCount - halfCount;
+        const baseActions = [
+          { op: 'double', w: balance < 8 ? 50 : (balance < 12 ? 20 : 5) },
+          { op: 'move', w: 20 },
+          { op: 'half', w: balance > -3 ? 15 : 35 },
+          { op: 'reverse', w: 10 },
+          { op: 'reset', w: 5 },
+        ];
+        const totalW = baseActions.reduce((s, { w }) => s + w, 0);
+
         let r = Math.random() * totalW;
         let acc = 0;
         let action = 'double';
-        for (const { op, w } of actions) {
+        for (const { op, w } of baseActions) {
           acc += w;
           if (r < acc) {
             action = op;
@@ -190,8 +231,10 @@ const {
           }
         }
 
+        if (action === 'half') halfCount++;
+        if (action === 'double') doubleCount++;
+
         const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
-        fn.op = action;
         sequence.push(fn);
 
         // Update currentLoop and currentBuffer for next iteration
@@ -222,7 +265,6 @@ const {
       for (let i = 0; i < steps; i++) {
         const action = rhythmicPattern[i % rhythmicPattern.length];
         const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
-        fn.op = action;
         sequence.push(fn);
 
         // Update currentLoop and currentBuffer for next iteration
@@ -233,60 +275,506 @@ const {
       return sequence;
     },
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects chaosTheory to reverseHeavy.
-     */
-    chaosTheory: function(buffer, opts) { return this.reverseHeavy(buffer, opts); },
+    chaosTheory: (buffer, { steps = 256 } = {}) => {
+      let loop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const sequence = [];
+      const actionSequence = generateChaotic(steps);
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects spiralMorph to moveIntensive.
-     */
-    spiralMorph: function(buffer, opts) { return this.moveIntensive(buffer, opts); },
+      for (const action of actionSequence) {
+        const fn = () => {
+          const result = executeOperation(action, currentBuffer, loop);
+          currentBuffer = result.buffer;
+          loop = result.loop;
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects invertible to reverseHeavy.
-     */
-    invertible: function(buffer, opts) { return this.reverseHeavy(buffer, opts); },
+          return {
+            buffer: result.buffer,
+            loop: result.loop,
+            op: action
+          };
+        };
+        sequence.push(fn);
+      }
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects aphexPolyrhythm to rhythmic.
-     */
-    aphexPolyrhythm: function(buffer, opts) { return this.rhythmic(buffer, opts); },
+      return sequence;
+    },
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects perfectInversion to reverseHeavy.
-     */
-    perfectInversion: function(buffer, opts) { return this.reverseHeavy(buffer, opts); },
+    spiralMorph: (buffer, { steps = 35 } = {}) => {
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const sequence = [];
+      const minSamples = (10 / 1000) * buffer.sampleRate;
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects destructive to reverseHeavy.
-     */
-    destructive: function(buffer, opts) { return this.reverseHeavy(buffer, opts); },
+      // 4-phase spiral: inward spiral → core manipulation → explosion → chaotic finale
+      for (let i = 0; i < steps; i++) {
+        let action;
+        const phase = i / steps;
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects silentExplorer to halfBias.
-     */
-    silentExplorer: function(buffer, opts) { return this.halfBias(buffer, opts); },
+        if (phase < 0.3) {
+          // Phase 1: Inward spiral
+          const cyclePos = (i % 6);
+          action = ['half', 'move', 'half', 'reverse', 'move', 'half'][cyclePos];
+        } else if (phase < 0.6) {
+          // Phase 2: Core manipulation
+          const cyclePos = (i % 4);
+          action = ['reverse', 'move', 'reverse', 'move'][cyclePos];
+        } else if (phase < 0.8) {
+          // Phase 3: Explosion outward - includes speed changes
+          const cyclePos = (i % 5);
+          const explosionOps = ['double', 'reverse', 'double', 'move', 'reverse'];
+          action = explosionOps[cyclePos];
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects fractalDescent to halfBias.
-     */
-    fractalDescent: function(buffer, opts) { return this.halfBias(buffer, opts); },
+          // 10% chance to add speed during explosion
+          if (Math.random() < 0.1) {
+            action = Math.random() < 0.5 ? 'doubleSpeed' : 'halfSpeed';
+          }
+        } else {
+          // Phase 4: Chaotic finale - includes speed changes
+          const chaosOps = ['reset', 'half', 'double', 'reverse', 'move', 'half', 'double'];
+          action = chaosOps[i % chaosOps.length];
 
-    /**
-     * @todo Proper implementation needed.
-     * Temporary placeholder: redirects quantumLeap to smart.
-     */
-    quantumLeap: function(buffer, opts) { return this.smart(buffer, opts); },
+          // 8% chance for speed changes in chaos
+          if (Math.random() < 0.08) {
+            action = Math.random() < 0.6 ? 'doubleSpeed' : 'halfSpeed';
+          }
+        }
+
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
+        sequence.push(fn);
+
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
+      }
+      return sequence;
+    },
+
+    invertible: (buffer, { steps = 16 } = {}) => {
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const forwardSequence = [];
+      const inverseSequence = [];
+      const minSamples = (10 / 1000) * buffer.sampleRate;
+
+      const forwardPattern = ['half', 'move', 'reverse', 'double'];
+
+      const inverseMap = {
+        'half': 'double',
+        'double': 'half',
+        'move': 'moveBack',
+        'reverse': 'reverse'
+      };
+
+      // Helper for moveBack
+      const moveBack = (loop) => {
+        const span = loop.endSample - loop.startSample;
+        return {
+          startSample: loop.startSample - span,
+          endSample: loop.endSample - span
+        };
+      };
+
+      // Build forward sequence
+      for (let i = 0; i < steps; i++) {
+        const action = forwardPattern[i % forwardPattern.length];
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
+        forwardSequence.push(fn);
+
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
+      }
+
+      // Build inverse sequence (in reverse order with inverse operations)
+      let inverseLoop = currentLoop;
+      let inverseBuffer = currentBuffer;
+
+      for (let i = steps - 1; i >= 0; i--) {
+        const action = forwardPattern[i % forwardPattern.length];
+        const inverseAction = inverseMap[action];
+
+        let fn;
+        if (inverseAction === 'moveBack') {
+          fn = () => {
+            const newLoop = moveBack(inverseLoop);
+            return { buffer: inverseBuffer, loop: newLoop, op: 'moveBack' };
+          };
+        } else {
+          fn = createSequenceStep(inverseBuffer, inverseLoop, inverseAction, minSamples);
+        }
+
+        inverseSequence.push(fn);
+
+        const result = fn();
+        inverseLoop = result.loop;
+        inverseBuffer = result.buffer;
+      }
+
+      return [...forwardSequence, ...inverseSequence];
+    },
+
+    aphexPolyrhythm: (buffer, { steps = 48 } = {}) => {
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const sequence = [];
+      const minSamples = (10 / 1000) * buffer.sampleRate;
+
+      // 6-phase polyrhythmic algorithm with custom operations and speed changes
+      for (let i = 0; i < steps; i++) {
+        let action;
+        const phase = Math.floor((i / steps) * 6);
+
+        switch(phase) {
+          case 0: // Phase 1: Polyrhythmic introduction
+            action = ['half', 'half', 'reverse', 'move'][i % 4];
+            break;
+          case 1: // Phase 2: 3:4 polyrhythm
+            action = ['half', 'move', 'reverse'][i % 3];
+            break;
+          case 2: // Phase 3: Time stretch - add actual speed changes
+            action = ['double', 'move', 'reverse', 'double'][i % 4];
+            // 15% chance for speed manipulation during time stretch
+            if (Math.random() < 0.15) {
+              action = 'halfSpeed'; // Slow down for time stretch effect
+            }
+            break;
+          case 3: // Phase 4: Compression - add actual speed changes
+            action = ['half', 'half', 'move'][i % 3];
+            // 12% chance for speed manipulation during compression
+            if (Math.random() < 0.12) {
+              action = 'doubleSpeed'; // Speed up for compression effect
+            }
+            break;
+          case 4: // Phase 5: 5:4 polyrhythm
+            action = ['double', 'reverse', 'move', 'half', 'reverse'][i % 5];
+            // 5% chance for speed variations
+            if (Math.random() < 0.05) {
+              action = Math.random() < 0.7 ? 'doubleSpeed' : 'halfSpeed';
+            }
+            break;
+          case 5: // Phase 6: Resolution
+            action = ['reset', 'half', 'move', 'double', 'reverse'][i % 5];
+            break;
+          default:
+            action = 'move';
+        }
+
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
+        sequence.push(fn);
+
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
+      }
+      return sequence;
+    },
+
+    perfectInversion: (buffer, { steps = 24 } = {}) => {
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const sequence = [];
+      const minSamples = (10 / 1000) * buffer.sampleRate;
+
+      // Helper for moveBackward
+      const moveBackward = (loop) => {
+        const span = loop.endSample - loop.startSample;
+        return {
+          startSample: loop.startSample - span,
+          endSample: loop.endSample - span
+        };
+      };
+
+      // Forward sequence
+      const seqA = ['half', 'half', 'reverse', 'move', 'double', 'reverse'];
+
+      // Build inverse map
+      const inverseMap = {
+        half: 'double',
+        double: 'half',
+        reverse: 'reverse',
+        move: 'moveBack',
+        moveBack: 'move'
+      };
+
+      // Create forward sequence
+      for (let i = 0; i < steps / 2; i++) {
+        const action = seqA[i % seqA.length];
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
+        sequence.push(fn);
+
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
+      }
+
+      // Create inverse sequence (reversed operations)
+      const seqB = [...seqA].reverse().map(op => inverseMap[op]);
+
+      for (let i = 0; i < steps / 2; i++) {
+        const action = seqB[i % seqB.length];
+
+        let fn;
+        if (action === 'moveBack') {
+          fn = () => {
+            const newLoop = moveBackward(currentLoop);
+            return { buffer: currentBuffer, loop: newLoop, op: 'moveBack' };
+          };
+        } else {
+          fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
+        }
+
+        sequence.push(fn);
+
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
+      }
+
+      return sequence;
+    },
+
+    destructive: (buffer, { steps = 72 } = {}) => {
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const sequence = [];
+      const minSamples = (10 / 1000) * buffer.sampleRate;
+
+      // 6-movement destructive symphony with speed variations
+      const movements = [
+        // Movement 1: Fragmentation (12 ops)
+        ['half', 'reverse', 'half', 'move', 'half', 'reverse', 'half', 'move', 'reverse', 'half', 'move', 'half'],
+        // Movement 2: Chaos (12 ops) - add speed variations
+        ['reverse', 'half', 'reverse', 'move', 'reverse', 'half', 'reverse', 'move', 'half', 'reverse', 'half', 'move'],
+        // Movement 3: Expansion (12 ops)
+        ['double', 'move', 'double', 'reverse', 'double', 'move', 'double', 'reverse', 'move', 'double', 'reverse', 'double'],
+        // Movement 4: Violent Deconstruction (12 ops) - add speed variations
+        ['half', 'half', 'reverse', 'half', 'reverse', 'half', 'move', 'half', 'reverse', 'half', 'half', 'move'],
+        // Movement 5: Reconstruction (12 ops)
+        ['double', 'reverse', 'move', 'double', 'reverse', 'double', 'move', 'reverse', 'double', 'move', 'double', 'reverse'],
+        // Movement 6: Final Destruction (12 ops) - add speed variations
+        ['half', 'reverse', 'half', 'reverse', 'half', 'move', 'reset', 'half', 'reverse', 'half', 'reverse', 'move']
+      ];
+
+      for (let movementIndex = 0; movementIndex < movements.length; movementIndex++) {
+        const movement = movements[movementIndex];
+
+        for (const action of movement) {
+          let finalAction = action;
+
+          // Add speed variations to chaos (movement 1), violent deconstruction (movement 3), and final destruction (movement 5)
+          if (movementIndex === 1) {
+            // Chaos: 12% chance for speed changes
+            if (Math.random() < 0.12) {
+              finalAction = Math.random() < 0.5 ? 'doubleSpeed' : 'halfSpeed';
+            }
+          } else if (movementIndex === 3) {
+            // Violent Deconstruction: 15% chance for speed changes (more aggressive)
+            if (Math.random() < 0.15) {
+              finalAction = Math.random() < 0.6 ? 'doubleSpeed' : 'halfSpeed';
+            }
+          } else if (movementIndex === 5) {
+            // Final Destruction: 10% chance for speed changes
+            if (Math.random() < 0.1) {
+              finalAction = Math.random() < 0.7 ? 'doubleSpeed' : 'halfSpeed';
+            }
+          }
+
+          const fn = createSequenceStep(currentBuffer, currentLoop, finalAction, minSamples);
+          sequence.push(fn);
+
+          const result = fn();
+          currentLoop = result.loop;
+          currentBuffer = result.buffer;
+        }
+      }
+
+      return sequence;
+    },
+
+    silentExplorer: (buffer, { steps = 50 } = {}) => {
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const sequence = [];
+      const minSamples = (10 / 1000) * buffer.sampleRate;
+
+      // Silent Explorer: Progressive exploration with strategic pauses
+      for (let i = 0; i < steps; i++) {
+        let action;
+        const progress = i / steps;
+
+        if (progress < 0.33) {
+          // Phase 1: Cautious exploration - slow, methodical
+          const exploreOps = ['half', 'move', 'half', 'move', 'half'];
+          action = exploreOps[i % exploreOps.length];
+        } else if (progress < 0.66) {
+          // Phase 2: Deep exploration with reversals and pauses
+          const deepOps = ['half', 'reverse', 'move', 'half', 'reverse', 'reset'];
+          action = deepOps[i % deepOps.length];
+        } else {
+          // Phase 3: Return journey with expansion
+          const returnOps = ['double', 'move', 'reverse', 'double', 'move'];
+          action = returnOps[i % returnOps.length];
+        }
+
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
+        sequence.push(fn);
+
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
+      }
+      return sequence;
+    },
+
+    fractalDescent: (buffer, { steps = 64 } = {}) => {
+      let currentLoop = detectLoop(buffer);
+      let currentBuffer = buffer;
+      const sequence = [];
+      const minSamples = (10 / 1000) * buffer.sampleRate;
+
+      // Fractal Descent: Progressive halving with fractal patterns
+      for (let i = 0; i < steps; i++) {
+        let action;
+        const depth = Math.floor(i / 8); // Fractal depth increases every 8 steps
+
+        // Create fractal descent pattern
+        if (depth % 3 === 0) {
+          // Descent phase: aggressive halving
+          const descentOps = ['half', 'half', 'reverse', 'half'];
+          action = descentOps[i % descentOps.length];
+        } else if (depth % 3 === 1) {
+          // Fractal echo: repeat at smaller scale
+          const echoOps = ['half', 'move', 'reverse', 'half'];
+          action = echoOps[i % echoOps.length];
+        } else {
+          // Reset and descend again
+          if (i % 8 === 0) {
+            action = 'reset';
+          } else {
+            action = ['half', 'reverse', 'move', 'half'][i % 4];
+          }
+        }
+
+        const fn = createSequenceStep(currentBuffer, currentLoop, action, minSamples);
+        sequence.push(fn);
+
+        const result = fn();
+        currentLoop = result.loop;
+        currentBuffer = result.buffer;
+      }
+      return sequence;
+    },
+
+    quantumLeap: (buffer, { steps = 128 } = {}) => {
+      const opList = buildQuantumOpList(steps, 4);
+      return buildQuantumSequence(buffer, opList);
+    },
   };
+
+  /**
+   * Half speed quantz - compress audio at half speed within loop boundaries
+   */
+  function halfSpeedQuantz(buffer, startSample, endSample) {
+    const loopLength = endSample - startSample;
+    const audioContext = new AudioContext();
+
+    // Create new buffer with same length
+    const newBuffer = audioContext.createBuffer(
+      buffer.numberOfChannels,
+      buffer.length,
+      buffer.sampleRate
+    );
+
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const inputData = buffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+
+      // Copy before loop
+      for (let i = 0; i < startSample; i++) {
+        outputData[i] = inputData[i];
+      }
+
+      // Half speed stretch within loop
+      for (let i = 0; i < loopLength; i++) {
+        const stretchedInputPos = i * 0.5;
+        const srcIndex = startSample + stretchedInputPos;
+        const srcIndexFloor = Math.floor(srcIndex);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
+        const fraction = srcIndex - srcIndexFloor;
+
+        if (srcIndexFloor < endSample) {
+          const sample1 = inputData[srcIndexFloor] || 0;
+          const sample2 = inputData[srcIndexCeil] || 0;
+          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
+        } else {
+          outputData[startSample + i] = 0;
+        }
+      }
+
+      // Copy after loop
+      for (let i = endSample; i < buffer.length; i++) {
+        outputData[i] = inputData[i];
+      }
+    }
+
+    return newBuffer;
+  }
+
+  /**
+   * Double speed quantz - compress audio at double speed and remove gap
+   */
+  function doubleSpeedQuantz(buffer, startSample, endSample) {
+    const loopLength = endSample - startSample;
+    const compressedLoopLength = Math.floor(loopLength / 2);
+    const gapSize = loopLength - compressedLoopLength;
+    const audioContext = new AudioContext();
+
+    // Create shorter buffer
+    const newBufferLength = buffer.length - gapSize;
+    const newBuffer = audioContext.createBuffer(
+      buffer.numberOfChannels,
+      newBufferLength,
+      buffer.sampleRate
+    );
+
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const inputData = buffer.getChannelData(channel);
+      const outputData = newBuffer.getChannelData(channel);
+
+      // Copy before loop
+      for (let i = 0; i < startSample; i++) {
+        outputData[i] = inputData[i];
+      }
+
+      // Compress at 2x speed
+      for (let i = 0; i < compressedLoopLength; i++) {
+        const compressedInputPos = i * 2.0;
+        const srcIndex = startSample + compressedInputPos;
+        const srcIndexFloor = Math.floor(srcIndex);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
+        const fraction = srcIndex - srcIndexFloor;
+
+        if (srcIndexFloor < endSample) {
+          const sample1 = inputData[srcIndexFloor] || 0;
+          const sample2 = inputData[srcIndexCeil] || 0;
+          outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
+        } else {
+          outputData[startSample + i] = 0;
+        }
+      }
+
+      // Copy after loop, shifted left
+      const afterStartInInput = endSample;
+      const afterStartInOutput = startSample + compressedLoopLength;
+      for (let i = 0; i < buffer.length - endSample; i++) {
+        if (afterStartInOutput + i < newBufferLength) {
+          outputData[afterStartInOutput + i] = inputData[afterStartInInput + i];
+        }
+      }
+    }
+
+    return { buffer: newBuffer, newEndSample: startSample + compressedLoopLength };
+  }
 
   /**
    * Creates a sequence step function with explicit buffer and loop parameters.
@@ -307,12 +795,29 @@ const {
       switch (action) {
         case 'half':
           if (loop.endSample - loop.startSample >= 2 * minSamples) {
+            // Change loop boundaries only (no speed changes)
             newLoop = halfLoop(loop);
           }
           break;
-        case 'double':
-          newLoop = doubleLoop(loop, buffer.length);
+        case 'double': {
+          const loopLength = loop.endSample - loop.startSample;
+          if (loopLength >= minSamples) {
+            // Change loop boundaries only (no speed changes)
+            newLoop = doubleLoop(loop, buffer.length);
+          }
           break;
+        }
+        case 'halfSpeed':
+          // Actually change playback speed to half (slower)
+          newBuffer = halfSpeedQuantz(buffer, loop.startSample, loop.endSample);
+          break;
+        case 'doubleSpeed': {
+          // Actually change playback speed to double (faster) and remove gap
+          const result = doubleSpeedQuantz(buffer, loop.startSample, loop.endSample);
+          newBuffer = result.buffer;
+          newLoop = { startSample: loop.startSample, endSample: result.newEndSample };
+          break;
+        }
         case 'move': {
           const duration = loop.endSample - loop.startSample;
           const newStart = loop.startSample + duration;
@@ -359,13 +864,14 @@ const {
 
         try {
           const seq = algorithm(buffer, { steps });
+
           enqueueToast(`${btn.textContent} → ${seq.length} steps`);
 
           let buf = buffer;
           for (const step of seq) {
-            const { buffer: newBuf, loop } = step();
+            const { buffer: newBuf, loop, op } = step();
             buf = newBuf;
-            applyLoop(buf, loop, step.op || step.action, undefined);
+            applyLoop(buf, loop, op, undefined);
             await new Promise(r => setTimeout(r, 100));
           }
 

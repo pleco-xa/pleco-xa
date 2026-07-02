@@ -1,0 +1,173 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn10"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  🎵 Epic Journey
+</button>
+
+<script>
+  import { halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop, detectLoop } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  
+  /** 1-liner inverse of moveForward (same Δ but negative). */
+  function moveBackward(loop) {
+    const span = loop.endSample - loop.startSample;
+    return {
+      startSample: loop.startSample - span,
+      endSample: loop.endSample - span
+    };
+  }
+
+  /** Low-level executor – mutates `buffer`/`loop` in-place. */
+  function applyOp(op, buffer, loop) {
+    switch (op) {
+      case 'half':    return { buffer, loop: halfLoop(loop) };
+      case 'double':  return { buffer, loop: doubleLoop(loop, buffer.length) };
+      case 'reverse': return {
+        buffer: reverseBufferSection(buffer, loop.startSample, loop.endSample),
+        loop
+      };
+      case 'moveF':   return { buffer, loop: moveForward(loop, buffer.length) };
+      case 'moveB':   return { buffer, loop: moveBackward(loop) };
+      default: throw new Error(`Unknown op "${op}"`);
+    }
+  }
+
+  /** Build epic 5-minute journey sequence */
+  function buildEpicJourney() {
+    // Epic 5-minute composition with verse/chorus structure
+    const seqA = [
+      // Intro (8 bars) - Setting the scene
+      'half', 'moveF', 'reverse', 'half', 'moveF', 'reverse', 'double', 'moveF',
+      
+      // Verse 1 (16 bars) - Building melody
+      'half', 'reverse', 'moveF', 'half', 'reverse', 'moveF', 'double', 'reverse',
+      'half', 'moveF', 'reverse', 'half', 'moveF', 'double', 'reverse', 'moveF',
+      
+      // Pre-Chorus (8 bars) - Rising tension
+      'reverse', 'half', 'reverse', 'moveF', 'double', 'reverse', 'moveF', 'half',
+      
+      // Chorus (16 bars) - Explosive release
+      'double', 'reverse', 'moveF', 'double', 'reverse', 'moveF', 'half', 'reverse',
+      'double', 'moveF', 'reverse', 'double', 'moveF', 'half', 'reverse', 'double',
+      
+      // Bridge (12 bars) - Destructive breakdown
+      'half', 'half', 'reverse', 'moveF', 'half', 'reverse', 'moveF', 'half',
+      'reverse', 'moveF', 'half', 'reverse',
+      
+      // Verse 2 (16 bars) - Variation on theme
+      'moveF', 'double', 'reverse', 'half', 'moveF', 'reverse', 'double', 'half',
+      'reverse', 'moveF', 'double', 'half', 'reverse', 'moveF', 'double', 'reverse',
+      
+      // Final Chorus (20 bars) - Climactic destruction
+      'double', 'double', 'reverse', 'moveF', 'reverse', 'double', 'moveF', 'half',
+      'reverse', 'double', 'moveF', 'reverse', 'half', 'double', 'reverse', 'moveF',
+      'double', 'reverse', 'moveF', 'half',
+      
+      // Outro (16 bars) - Deconstruction and fade
+      'reverse', 'half', 'reverse', 'moveF', 'half', 'reverse', 'half', 'moveF',
+      'reverse', 'half', 'reverse', 'half', 'moveF', 'reverse', 'half', 'moveF'
+    ];
+
+    // Mechanically create perfect inverse
+    const inverseMap = { 
+      half: 'double', 
+      double: 'half', 
+      reverse: 'reverse', 
+      moveF: 'moveB', 
+      moveB: 'moveF' 
+    };
+    const seqB = [...seqA].reverse().map(op => inverseMap[op]);
+
+    return { seqA, seqB };
+  }
+
+  /** Run epic journey with detailed section announcements */
+  async function runEpicJourney(buffer, applyLoop, tickMs = 140) {
+    let loop = detectLoop(buffer);
+    let curBuf = buffer;
+    const { seqA, seqB } = buildEpicJourney();
+
+    // Section markers with poetic descriptions
+    const sections = [
+      { start: 0, name: '🌅 Intro: Dawn Breaks' },
+      { start: 8, name: '🎶 Verse 1: The Journey Begins' },
+      { start: 24, name: '⚡ Pre-Chorus: Rising Storm' },
+      { start: 32, name: '💥 Chorus: Thunder Unleashed' },
+      { start: 48, name: '🌉 Bridge: Crossing the Void' },
+      { start: 60, name: '🎵 Verse 2: Echoes Return' },
+      { start: 76, name: '🔥 Final Chorus: Inferno' },
+      { start: 96, name: '🌑 Outro: Into Silence' }
+    ];
+
+    const play = async (ops, label) => {
+      console.log(`⟶ Playing ${label}:`, ops.join(' → '));
+      enqueueToast(`${label} - ${ops.length} movements`);
+      
+      for (let i = 0; i < ops.length; i++) {
+        const op = ops[i];
+        
+        // Announce sections
+        const section = sections.find(s => s.start === i);
+        if (section) {
+          enqueueToast(section.name);
+          await new Promise(r => setTimeout(r, 400)); // Pause for section announcement
+        }
+        
+        ({ buffer: curBuf, loop } = applyOp(op, curBuf, loop));
+        applyLoop(curBuf, loop, op);
+        
+        // Dynamic timing based on musical structure
+        let timing = tickMs;
+        
+        // Intro/Outro - slower, contemplative
+        if (i < 8 || i >= 96) timing = tickMs * 1.3;
+        
+        // Pre-chorus/Bridge - building tension, slightly faster
+        if ((i >= 24 && i < 32) || (i >= 48 && i < 60)) timing = tickMs * 0.9;
+        
+        // Chorus sections - powerful, measured
+        if ((i >= 32 && i < 48) || (i >= 76 && i < 96)) timing = tickMs * 1.1;
+        
+        // Verses - steady rhythm
+        if ((i >= 8 && i < 24) || (i >= 60 && i < 76)) timing = tickMs;
+        
+        await new Promise(r => setTimeout(r, timing));
+      }
+    };
+
+    enqueueToast('🎵 Beginning Epic Journey - 112 operations');
+    await play(seqA, '🚀 Epic Journey (Forward)');
+    
+    await new Promise(r => setTimeout(r, 1500)); // Epic pause
+    enqueueToast('🔄 The Return Journey Begins...');
+    
+    await play(seqB, '🏠 Return Journey (Inverse)');
+    enqueueToast('✅ Epic Journey Complete - Home Again');
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn10');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      
+      await runEpicJourney(buffer, applyLoop, 140); // 140ms = musical timing
+    });
+  });
+</script>

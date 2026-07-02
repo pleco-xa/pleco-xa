@@ -1,0 +1,122 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn13"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  〰️ Sine Wave Symphony
+</button>
+
+<script>
+  import { detectLoop } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  import { generateWaveform, executeOperation } from '../scripts/algorithmic-sequences.js';
+  
+  function createWaveformSequence(buffer, { steps = 200 } = {}) {
+    let loop = detectLoop(buffer);
+    const sequence = [];
+    const actionSequence = generateWaveform(steps);
+    
+    // Waveform-based sections following sine wave phases
+    const sections = {
+      "🌅 Rising Wave": actionSequence.slice(0, Math.floor(steps * 0.25)),      // 0 to π/2
+      "⚡ Peak Intensity": actionSequence.slice(Math.floor(steps * 0.25), Math.floor(steps * 0.5)),  // π/2 to π
+      "🌊 Falling Cascade": actionSequence.slice(Math.floor(steps * 0.5), Math.floor(steps * 0.75)), // π to 3π/2
+      "🌑 Deep Trough": actionSequence.slice(Math.floor(steps * 0.75), Math.floor(steps * 0.9)),     // 3π/2 to 2π
+      "🔄 Harmonic Return": actionSequence.slice(Math.floor(steps * 0.9))       // Return to zero
+    };
+    
+    const createSectionSequence = (section, sectionName) => {
+      return section.map((action, idx) => {
+        return () => {
+          const result = executeOperation(action, buffer, loop);
+          buffer = result.buffer;
+          loop = result.loop;
+          
+          return {
+            buffer: result.buffer,
+            loop: result.loop,
+            op: `${sectionName}-${action}-${idx+1}`
+          };
+        };
+      });
+    };
+    
+    Object.entries(sections).forEach(([sectionName, sectionActions]) => {
+      sequence.push(...createSectionSequence(sectionActions, sectionName));
+    });
+    
+    return sequence;
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn13');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      
+      const seq = createWaveformSequence(buffer, { steps: 200 });
+      enqueueToast('〰️ Sine Wave Symphony: Harmonic Mathematical Journey');
+      
+      let buf = buffer;
+      let currentLoop = detectLoop(buf);
+      let section = "";
+      let stepCount = 0;
+      
+      for (const step of seq) {
+        const result = step();
+        buf = result.buffer;
+        currentLoop = result.loop;
+        
+        // Detect section changes
+        const newSection = result.op.split('-')[0];
+        if (newSection !== section) {
+          enqueueToast(`${newSection}`);
+          section = newSection;
+        }
+        
+        applyLoop(buf, currentLoop, result.op, undefined);
+        
+        // Sine wave timing - follows actual wave pattern
+        const wavePosition = (stepCount / 200) * 2 * Math.PI;
+        const sineValue = Math.sin(wavePosition);
+        const baseTime = 150;
+        let timing = baseTime + (sineValue * 100); // 50-250ms range
+        
+        // Anti-micro-stutter protection - prevent getting stuck too fast
+        const minTiming = 80;
+        const maxFastSequence = 3; // Max consecutive fast operations
+        if (timing < minTiming) {
+          const fastCount = (window.fastSequenceCount || 0) + 1;
+          window.fastSequenceCount = fastCount;
+          
+          if (fastCount > maxFastSequence) {
+            timing = baseTime; // Reset to normal speed
+            window.fastSequenceCount = 0;
+          }
+        } else {
+          window.fastSequenceCount = 0; // Reset counter on normal timing
+        }
+        
+        stepCount++;
+        await new Promise(r => setTimeout(r, Math.abs(timing)));
+      }
+      
+      enqueueToast('〰️ Sine Wave Symphony Complete - Harmonic Cycle Fulfilled');
+    });
+  });
+</script>

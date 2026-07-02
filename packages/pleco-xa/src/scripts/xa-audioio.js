@@ -25,6 +25,127 @@ async function decodeBuffer(arrayBuffer) {
   return audio
 }
 
+/**
+ * Private loader using Web Audio API (JavaScript equivalent of soundfile backend)
+ *
+ * Internal helper function that loads audio using the Web Audio API.
+ * This is the primary audio loading backend for browser environments.
+ *
+ * @param {string|ArrayBuffer} source - URL or ArrayBuffer of audio file
+ * @param {Object} options - Loading options
+ * @param {number} options.sr - Target sample rate (null to use native)
+ * @param {boolean} options.mono - Convert to mono if true
+ * @param {number} options.offset - Start time in seconds
+ * @param {number} options.duration - Duration in seconds (null for entire file)
+ * @returns {Promise<{y: Float32Array, sr: number}>} Audio data and sample rate
+ *
+ * @example
+ * // Load audio file using Web Audio API backend
+ * const {y, sr} = await __soundfile_load('audio.mp3', {sr: 22050, mono: true});
+ */
+async function __soundfile_load(source, { sr = 22050, mono = true, offset = 0, duration = null } = {}) {
+  let arrayBuffer;
+
+  if (source instanceof ArrayBuffer) {
+    arrayBuffer = source;
+  } else {
+    const response = await fetch(source);
+    arrayBuffer = await response.arrayBuffer();
+  }
+
+  const decoded = await decodeBuffer(arrayBuffer);
+
+  const nativeSr = decoded.sampleRate;
+  const start = Math.floor(offset * nativeSr);
+  const end = duration === null
+    ? decoded.length
+    : Math.min(decoded.length, start + Math.floor(duration * nativeSr));
+  const length = end - start;
+
+  const chans = Array.from({ length: decoded.numberOfChannels }, (_, c) =>
+    decoded.getChannelData(c).slice(start, end)
+  );
+
+  let y = mono ? toMono(chans) : Float32Array.from(chans.flat());
+
+  if (sr !== null && sr !== nativeSr) {
+    y = resample(y, { origSr: nativeSr, targetSr: sr });
+  }
+
+  return { y, sr: sr ?? nativeSr };
+}
+
+/**
+ * Private loader using HTML5 Audio element (JavaScript equivalent of audioread backend)
+ *
+ * Fallback audio loader using HTML5 Audio element when Web Audio API fails.
+ * Provides compatibility with older browsers or when AudioContext is unavailable.
+ *
+ * @param {string} url - URL of audio file
+ * @param {Object} options - Loading options
+ * @param {number} options.sr - Target sample rate (null to use native)
+ * @param {boolean} options.mono - Convert to mono if true
+ * @param {number} options.offset - Start time in seconds
+ * @param {number} options.duration - Duration in seconds (null for entire file)
+ * @returns {Promise<{y: Float32Array, sr: number}>} Audio data and sample rate
+ *
+ * @example
+ * // Load audio with HTML5 Audio fallback
+ * const {y, sr} = await __audioread_load('audio.mp3', {sr: 22050});
+ */
+async function __audioread_load(url, { sr = 22050, mono = true, offset = 0, duration = null } = {}) {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio();
+    audio.crossOrigin = 'anonymous';
+
+    audio.addEventListener('error', (e) => {
+      reject(new Error(`Failed to load audio: ${e.message || 'Unknown error'}`));
+    });
+
+    audio.addEventListener('canplaythrough', async () => {
+      try {
+        // Create offline context to capture audio data
+        const ctx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+          mono ? 1 : 2,
+          Math.floor(audio.duration * sr),
+          sr
+        );
+
+        // Create media element source
+        const source = ctx.createMediaElementSource(audio);
+        source.connect(ctx.destination);
+
+        // Render audio
+        const rendered = await ctx.startRendering();
+
+        // Extract channel data
+        const nativeSr = rendered.sampleRate;
+        const start = Math.floor(offset * nativeSr);
+        const end = duration === null
+          ? rendered.length
+          : Math.min(rendered.length, start + Math.floor(duration * nativeSr));
+
+        const chans = Array.from({ length: rendered.numberOfChannels }, (_, c) =>
+          rendered.getChannelData(c).slice(start, end)
+        );
+
+        let y = mono ? toMono(chans) : Float32Array.from(chans.flat());
+
+        if (sr !== null && sr !== nativeSr) {
+          y = resample(y, { origSr: nativeSr, targetSr: sr });
+        }
+
+        resolve({ y, sr: sr ?? nativeSr });
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    audio.src = url;
+    audio.load();
+  });
+}
+
 export async function load(
   url,
   { sr = 22050, mono = true, offset = 0, duration = null } = {},
@@ -168,6 +289,70 @@ export function autocorrelate(y, maxSize = y.length) {
     out[lag] = sum
   }
   return out
+}
+
+/**
+ * Private helper for LPC computation using Levinson-Durbin recursion
+ *
+ * Computes Linear Predictive Coding coefficients from autocorrelation.
+ * This is an alternative implementation helper for the main lpc() function.
+ *
+ * @param {Float32Array|Float64Array} y - Input signal
+ * @param {number} order - LPC order
+ * @param {Float64Array} ar_coeffs - Output buffer for AR coefficients
+ * @param {Float64Array} ar_coeffs_prev - Previous AR coefficients (work buffer)
+ * @param {Float64Array} reflect_coeff - Reflection coefficients output
+ * @param {Float64Array} den - Denominator buffer
+ * @param {number} epsilon - Small value to prevent division by zero
+ * @returns {Float64Array} AR coefficients
+ */
+function __lpc(y, order, ar_coeffs, ar_coeffs_prev, reflect_coeff, den, epsilon) {
+  const n = y.length
+
+  // Compute autocorrelation
+  const r = new Float64Array(order + 1)
+  for (let lag = 0; lag <= order; lag++) {
+    let sum = 0
+    for (let i = 0; i < n - lag; i++) {
+      sum += y[i] * y[i + lag]
+    }
+    r[lag] = sum
+  }
+
+  // Levinson-Durbin recursion
+  let error = r[0]
+
+  for (let i = 0; i < order; i++) {
+    // Compute reflection coefficient
+    let acc = 0
+    for (let j = 0; j < i; j++) {
+      acc += ar_coeffs[j] * r[i - j]
+    }
+
+    const k = (r[i + 1] - acc) / (error + epsilon)
+    reflect_coeff[i] = k
+
+    // Update AR coefficients
+    for (let j = 0; j < i; j++) {
+      ar_coeffs_prev[j] = ar_coeffs[j]
+    }
+
+    for (let j = 0; j < i; j++) {
+      ar_coeffs[j] = ar_coeffs_prev[j] - k * ar_coeffs_prev[i - 1 - j]
+    }
+    ar_coeffs[i] = k
+
+    // Update error
+    error *= (1 - k * k)
+  }
+
+  // Set up denominator polynomial [1, -a1, -a2, ..., -ap]
+  den[0] = 1
+  for (let i = 0; i < order; i++) {
+    den[i + 1] = -ar_coeffs[i]
+  }
+
+  return ar_coeffs
 }
 
 /** Burg LPC (real‑valued) — returns LPC denominator polynomial a[0..p], a[0] == 1  */

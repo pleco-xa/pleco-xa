@@ -1,0 +1,110 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn4"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  🌀 Spiral Morph
+</button>
+
+<script>
+  import { halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop, detectLoop } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  
+  function spiralMorphSequence(buffer, { steps = 35 } = {}) {
+    let loop = detectLoop(buffer);
+    const sequence = [];
+    const minSamples = (10 / 1000) * buffer.sampleRate;
+    
+    // Spiral morph: starts wide, spirals inward, then explodes outward
+    for (let i = 0; i < steps; i++) {
+      let action;
+      const phase = i / steps;
+      
+      if (phase < 0.3) {
+        // Phase 1: Inward spiral (narrow down with movement)
+        const cyclePos = (i % 6);
+        action = ['half', 'move', 'half', 'reverse', 'move', 'half'][cyclePos];
+      } else if (phase < 0.6) {
+        // Phase 2: Core manipulation (micro adjustments)
+        const cyclePos = (i % 4);
+        action = ['reverse', 'move', 'reverse', 'move'][cyclePos];
+      } else if (phase < 0.8) {
+        // Phase 3: Explosion outward (growth and complexity)
+        const cyclePos = (i % 5);
+        action = ['double', 'reverse', 'double', 'move', 'reverse'][cyclePos];
+      } else {
+        // Phase 4: Chaotic finale
+        const chaosOps = ['reset', 'half', 'double', 'reverse', 'move', 'half', 'double'];
+        action = chaosOps[i % chaosOps.length];
+      }
+      
+      const fn = () => {
+        switch (action) {
+          case 'half':
+            if (loop.endSample - loop.startSample >= 2 * minSamples) {
+              loop = halfLoop(loop);
+            }
+            break;
+          case 'double':
+            loop = doubleLoop(loop, buffer.length);
+            break;
+          case 'move': {
+            const len = loop.endSample - loop.startSample;
+            const maxMove = buffer.length - len;
+            // Move by loop duration (like manual button)
+            const duration = loop.endSample - loop.startSample;
+            const newStart = loop.startSample + duration;
+            const newEnd = loop.endSample + duration;
+            if (newEnd <= buffer.length) {
+              loop = { startSample: newStart, endSample: newEnd };
+            }
+            break;
+          }
+          case 'reverse':
+            buffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
+            break;
+          case 'reset':
+            loop = resetLoop(buffer);
+            break;
+        }
+        return { buffer, loop, op: action };
+      };
+      fn.op = action;
+      sequence.push(fn);
+    }
+    
+    return sequence;
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn4');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      const seq = spiralMorphSequence(buffer, { steps: 35 });
+      enqueueToast('🌀 Spiral morphing: inward → core → explosion → chaos');
+      let buf = buffer;
+      for (const step of seq) {
+        const { buffer: newBuf, loop } = step();
+        buf = newBuf;
+        applyLoop(buf, loop, step.op, undefined);
+        await new Promise(r => setTimeout(r, 120));
+      }
+      enqueueToast('Spiral morph complete');
+    });
+  });
+</script>

@@ -88,7 +88,16 @@ function applyLoop() {}
         <button class="loop-btn" id="halfSpeedQuantzBtn">⚡ Half Speed Quantz</button>
         <button class="loop-btn" id="unHalfSpeedQuantzBtn">↩️ UnHalf Speed Quantz</button>
         <button class="loop-btn" id="doubleSpeedQuantzBtn">🏃 Double Speed Quantz</button>
-        <button class="loop-btn" id="doubleSpeedUnquantzBtn">🏃 Double Speed Unquantz</button>
+        <div class="button-with-toggle">
+          <button class="loop-btn" id="doubleSpeedUnquantzBtn">🏃 Double Speed Unquantz</button>
+          <div class="toggle-container">
+            <span class="toggle-label">Fractal</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="fractalModeToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
         <button class="loop-btn-small" id="nudgeBtn">👁️ Nudge</button>
         <button class="loop-btn-small" id="closeGapLeftBtn">◀️ Close Gap Left</button>
         <button class="loop-btn-small" id="closeGapRightBtn">▶️ Close Gap Right</button>
@@ -368,6 +377,73 @@ function applyLoop() {}
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
 
+  .button-with-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .toggle-label {
+    white-space: nowrap;
+  }
+
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+  }
+
+  .toggle-slider:before {
+    content: "";
+    position: absolute;
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+  }
+
+  .toggle-switch input:checked + .toggle-slider {
+    background: linear-gradient(45deg, #4ecdc4, #6bcf7f);
+  }
+
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+  }
+
+  .toggle-switch:hover .toggle-slider {
+    box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+  }
+
   .analysis-cards {
     display: flex;
     flex-direction: column;
@@ -476,6 +552,7 @@ function applyLoop() {}
   let allowHalfDouble = true;
   let isDraggingMarker = false; // Track if dragging waveform markers
   let dragMarker = null; // Track which marker is being dragged ('start' or 'end')
+  let fractalMode = true; // Fractal mode for double speed unquantz (default ON)
 
   // Initialize keyboard controller
   import('/scripts/keyboard-controller.js').then(module => {
@@ -800,7 +877,6 @@ function applyLoop() {}
 
         // Restore loop points
         const restoredLoop = previousState.loopPoints;
-        audioProcessor.setBuffer(previousState.buffer);
         audioProcessor.setLoopPoints(restoredLoop.start, restoredLoop.end);
 
         // Restore nudge state
@@ -837,7 +913,7 @@ function applyLoop() {}
       try {
         const currentLoop = audioProcessor.getLoopPoints();
 
-        // Check if currently playing
+        // Stop playback if playing
         const wasPlaying = isPlaying;
         if (isPlaying) {
           audioProcessor.stop();
@@ -854,7 +930,6 @@ function applyLoop() {}
 
         // Update loop end to the new shorter position
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
-        audioProcessor.setBuffer(result.buffer);
         audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
 
         // Disable nudge for double speed (no hidden half to reveal)
@@ -883,7 +958,9 @@ function applyLoop() {}
 
     document.getElementById('doubleSpeedUnquantzBtn')?.addEventListener('click', () => {
       if (!currentAudioBuffer || !audioProcessor) return;
-      enqueueToast('Applying double speed unquantz...');
+
+      const mode = fractalMode ? 'fractal' : 'gap';
+      enqueueToast(`Applying double speed unquantz (${mode} mode)...`);
 
       try {
         const currentLoop = audioProcessor.getLoopPoints();
@@ -897,7 +974,12 @@ function applyLoop() {}
 
         updateLoopInfo(currentLoop);
         drawWaveform(newBuffer, 'waveformCanvas', currentLoop);
-        enqueueToast('✅ Double speed unquantz applied (with gap)');
+
+        if (fractalMode) {
+          enqueueToast('✅ Double speed unquantz applied 🪆 (fractal preserved)');
+        } else {
+          enqueueToast('✅ Double speed unquantz applied (with gap)');
+        }
       } catch (error) {
         console.error('Double speed unquantz error:', error);
         enqueueToast('❌ Double speed unquantz failed');
@@ -922,13 +1004,12 @@ function applyLoop() {}
 
         // Update loop points with new positions
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
-        audioProcessor.setBuffer(result.buffer);
         audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
 
         updateLoopInfo(newLoop);
         drawWaveform(result.buffer, 'waveformCanvas', newLoop);
 
-        const gapMs = Math.round((result.gapSize / audioProcessor.audioBuffer.sampleRate) * 1000);
+        const gapMs = Math.round((result.gapSize / result.buffer.sampleRate) * 1000);
         enqueueToast(`✅ Gap closed left (${gapMs}ms removed)`);
       } catch (error) {
         console.error('Close gap left error:', error);
@@ -954,13 +1035,12 @@ function applyLoop() {}
 
         // Update loop points with new positions
         const newLoop = { start: currentLoop.start, end: result.newLoopEnd };
-        audioProcessor.setBuffer(result.buffer);
         audioProcessor.setLoopPoints(newLoop.start, newLoop.end);
 
         updateLoopInfo(newLoop);
         drawWaveform(result.buffer, 'waveformCanvas', newLoop);
 
-        const gapMs = Math.round((result.gapSize / audioProcessor.audioBuffer.sampleRate) * 1000);
+        const gapMs = Math.round((result.gapSize / result.buffer.sampleRate) * 1000);
         enqueueToast(`✅ Gap closed right (${gapMs}ms removed)`);
       } catch (error) {
         console.error('Close gap right error:', error);
@@ -1171,6 +1251,14 @@ function applyLoop() {}
         window.currentBPM = bpm;
         document.getElementById('bpmValue').textContent = bpm.toFixed(1);
       }
+    });
+
+    // Fractal mode toggle
+    document.getElementById('fractalModeToggle')?.addEventListener('change', (e) => {
+      fractalMode = e.target.checked;
+      const mode = fractalMode ? 'ON' : 'OFF';
+      console.log(`🪆 Fractal mode: ${mode}`);
+      enqueueToast(`🪆 Fractal mode: ${mode}`);
     });
   }
   
@@ -1673,6 +1761,23 @@ function applyLoop() {}
     const endSample = Math.floor(loopData.end * audioBuffer.length);
     const loopLength = endSample - startSample;
 
+    // Check if there's enough room after loop for natural glitch
+    const availableAfterLoop = audioBuffer.length - endSample;
+    const hasEnoughRoomForGlitch = availableAfterLoop >= loopLength;
+
+    // Determine write length based on available space and fractal mode
+    let writeLength;
+    if (hasEnoughRoomForGlitch) {
+      // Natural glitch can occur - use full loop
+      writeLength = loopLength;
+    } else if (fractalMode) {
+      // Not enough room + fractal mode ON - write to first half only (creates matryoshka effect)
+      writeLength = Math.floor(loopLength / 2);
+    } else {
+      // Not enough room + fractal mode OFF - normal behavior
+      writeLength = loopLength;
+    }
+
     // Create new buffer with same length (no track length change)
     const newBuffer = audioContext.createBuffer(
       audioBuffer.numberOfChannels,
@@ -1690,8 +1795,13 @@ function applyLoop() {}
         outputData[i] = inputData[i];
       }
 
-      // Compress double content into loop boundaries (double speed effect)
+      // FIRST: Copy the entire loop region to preserve existing content (fractal layers)
       for (let i = 0; i < loopLength; i++) {
+        outputData[startSample + i] = inputData[startSample + i];
+      }
+
+      // THEN: Overwrite only the writeLength portion with compressed data
+      for (let i = 0; i < writeLength; i++) {
         // Map output position to input position with 2x compression (double speed)
         const compressedInputPos = i * 2.0; // Double speed = double position in source
         const srcIndex = startSample + compressedInputPos;
@@ -1724,8 +1834,9 @@ function applyLoop() {}
     const endSample = Math.floor(loopData.end * audioBuffer.length);
     const loopLength = endSample - startSample;
 
-    // Calculate the gap size (effectively half the loop length when doubled)
-    const gapSize = Math.floor(loopLength / 2);
+    // When we compress at 2x speed, the loop content fits into half the space
+    const compressedLoopLength = Math.floor(loopLength / 2);
+    const gapSize = loopLength - compressedLoopLength; // The gap created after compression
 
     // Create new buffer that's shorter by the gap size
     const newBufferLength = audioBuffer.length - gapSize;
@@ -1745,28 +1856,28 @@ function applyLoop() {}
         outputData[i] = inputData[i];
       }
 
-      // Compress double content into loop boundaries (double speed effect)
-      for (let i = 0; i < loopLength; i++) {
-        // Map output position to input position with 2x compression (double speed)
-        const compressedInputPos = i * 2.0; // Double speed = double position in source
+      // Compress the loop content at 2x speed (fits into half the space)
+      for (let i = 0; i < compressedLoopLength; i++) {
+        // Map output position to input position with 2x compression
+        const compressedInputPos = i * 2.0; // Read at double speed
         const srcIndex = startSample + compressedInputPos;
         const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, audioBuffer.length - 1);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, endSample - 1);
         const fraction = srcIndex - srcIndexFloor;
 
-        // Linear interpolation - reads 2x the content in same time window
-        if (srcIndexFloor < audioBuffer.length) {
+        // Linear interpolation - only from WITHIN the original loop region
+        if (srcIndexFloor < endSample) {
           const sample1 = inputData[srcIndexFloor] || 0;
           const sample2 = inputData[srcIndexCeil] || 0;
           outputData[startSample + i] = sample1 + (sample2 - sample1) * fraction;
         } else {
-          outputData[startSample + i] = 0; // Silence if beyond source material
+          outputData[startSample + i] = 0;
         }
       }
 
-      // Copy data after the loop, shifted left to close the gap
+      // Copy data after the original loop end, shifted left to close the gap
       const afterStartInInput = endSample;
-      const afterStartInOutput = startSample + loopLength;
+      const afterStartInOutput = startSample + compressedLoopLength;
       for (let i = 0; i < audioBuffer.length - endSample; i++) {
         if (afterStartInOutput + i < newBufferLength) {
           outputData[afterStartInOutput + i] = inputData[afterStartInInput + i];
@@ -1774,8 +1885,8 @@ function applyLoop() {}
       }
     }
 
-    // Calculate new loop end position (as ratio of new buffer length)
-    const newLoopEnd = (startSample + loopLength) / newBufferLength;
+    // Calculate new loop end position (now at the compressed length)
+    const newLoopEnd = (startSample + compressedLoopLength) / newBufferLength;
 
     return { buffer: newBuffer, newLoopEnd: newLoopEnd };
   }

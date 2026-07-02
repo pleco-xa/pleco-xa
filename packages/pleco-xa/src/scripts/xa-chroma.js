@@ -415,3 +415,140 @@ export const NOTE_NAMES = [
 export function chroma_to_note(chroma_idx) {
   return NOTE_NAMES[chroma_idx % 12]
 }
+
+/**
+ * Compute a Variable-Q chromagram
+ * @param {Float32Array|null} y - Audio time series
+ * @param {number} sr - Sample rate
+ * @param {Array|null} V - Pre-computed VQT spectrogram
+ * @param {number} hop_length - Hop length
+ * @param {number|null} fmin - Minimum frequency (default: C1)
+ * @param {string|Array} intervals - Interval specification (default: 'equal')
+ * @param {number|null} norm - Normalization (default: np.inf)
+ * @param {number} threshold - Threshold for chroma calculation
+ * @param {number} n_octaves - Number of octaves
+ * @param {number} bins_per_octave - Bins per octave
+ * @param {number} gamma - Bandwidth offset for VQT (0 for CQT)
+ * @returns {Array} Chroma features [12 x n_frames]
+ */
+export async function chroma_vqt(
+  y = null,
+  sr = 22050,
+  V = null,
+  hop_length = 512,
+  fmin = null,
+  intervals = 'equal',
+  norm = Infinity,
+  threshold = 0.0,
+  n_octaves = 7,
+  bins_per_octave = 12,
+  gamma = 0
+) {
+  // Import vqt dynamically to avoid circular dependencies
+  const { vqt } = await import('./xa-constantq.js')
+
+  if (fmin === null) {
+    fmin = 32.7 // C1
+  }
+
+  let vqt_spec = V
+
+  // Compute VQT if not provided
+  if (vqt_spec === null) {
+    if (y === null) {
+      throw new Error('Either y or V must be provided')
+    }
+
+    vqt_spec = vqt(
+      y,
+      sr,
+      hop_length,
+      fmin,
+      bins_per_octave * n_octaves,
+      intervals,
+      gamma,
+      bins_per_octave,
+      0.0, // tuning
+      1.0, // filter_scale
+      1.0, // norm
+      0.01, // sparsity
+      'hann', // window
+      true, // scale
+      'constant', // pad_mode
+      'soxr_hq', // res_type
+      null // dtype
+    )
+  }
+
+  // Convert VQT to magnitude
+  const n_bins = vqt_spec.length
+  const n_frames = vqt_spec[0] ? vqt_spec[0].length : 0
+
+  const vqt_mag = Array(n_bins)
+    .fill(null)
+    .map(() => new Float32Array(n_frames))
+
+  for (let i = 0; i < n_bins; i++) {
+    for (let j = 0; j < n_frames; j++) {
+      const bin = vqt_spec[i][j]
+      vqt_mag[i][j] = Math.sqrt(bin.real * bin.real + bin.imag * bin.imag)
+    }
+  }
+
+  // Group by chroma bins (12 semitones)
+  const n_chroma = 12
+  const chroma = Array(n_chroma)
+    .fill(null)
+    .map(() => new Float32Array(n_frames))
+
+  for (let b = 0; b < n_bins; b++) {
+    const chroma_idx = b % n_chroma
+
+    for (let t = 0; t < n_frames; t++) {
+      chroma[chroma_idx][t] += vqt_mag[b][t]
+    }
+  }
+
+  // Apply threshold
+  if (threshold > 0) {
+    for (let c = 0; c < n_chroma; c++) {
+      for (let t = 0; t < n_frames; t++) {
+        if (chroma[c][t] < threshold) {
+          chroma[c][t] = 0
+        }
+      }
+    }
+  }
+
+  // Normalize
+  if (norm !== null) {
+    for (let t = 0; t < n_frames; t++) {
+      if (norm === Infinity) {
+        // L-inf norm (max norm)
+        let max_val = 0
+        for (let c = 0; c < n_chroma; c++) {
+          max_val = Math.max(max_val, Math.abs(chroma[c][t]))
+        }
+        if (max_val > 0) {
+          for (let c = 0; c < n_chroma; c++) {
+            chroma[c][t] /= max_val
+          }
+        }
+      } else if (typeof norm === 'number') {
+        // L-p norm
+        let sum = 0
+        for (let c = 0; c < n_chroma; c++) {
+          sum += Math.pow(Math.abs(chroma[c][t]), norm)
+        }
+        const norm_factor = Math.pow(sum, 1 / norm)
+        if (norm_factor > 0) {
+          for (let c = 0; c < n_chroma; c++) {
+            chroma[c][t] /= norm_factor
+          }
+        }
+      }
+    }
+  }
+
+  return chroma
+}

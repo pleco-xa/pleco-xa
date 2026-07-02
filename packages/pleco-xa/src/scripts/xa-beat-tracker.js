@@ -1035,3 +1035,36 @@ export function tempo(
       maxBpm,
   )
 }
+
+/**
+ * Vectorized helper to identify the last valid beat position
+ *
+ * Selects the last beat position that meets the threshold criteria.
+ * This is a vectorized operation used in dynamic programming beat tracking.
+ *
+ * @param {Float32Array|Array<number>} cumscore - Cumulative score array
+ * @param {Float32Array|Array<boolean>} mask - Validity mask for beat positions
+ * @param {number} threshold - Minimum score threshold
+ * @param {Float32Array|Array<number>} out - Output array for selected positions (modified in-place)
+ */
+function __last_beat_selector(cumscore, mask, threshold, out) {
+  const n = cumscore.length
+
+  if (mask.length !== n || out.length !== n) {
+    throw new Error('All arrays must have the same length')
+  }
+
+  for (let i = 0; i < n; i++) {
+    let last_valid = -1
+
+    // Scan backwards to find the last valid beat
+    for (let j = i; j >= 0; j--) {
+      if (mask[j] && cumscore[j] >= threshold) {
+        last_valid = j
+        break
+      }
+    }
+
+    out[i] = last_valid
+  }
+}

@@ -1,0 +1,109 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="randomizeLoopBtn5"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  ⚡ Micro Crusher
+</button>
+
+<script>
+  import { halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop, detectLoop } from '../core/index.js';
+  import { enqueueToast } from '../scripts/ui/toastQueue.js';
+  
+  async function microCrusherSequence(buffer, applyLoop) {
+    let loop = detectLoop(buffer);
+    
+    // Phase 1: Half until we reach 0.001s (check loopInfo each time)
+    enqueueToast('Phase 1: Halving to 0.001s...');
+    while (true) {
+      // Apply half
+      loop = halfLoop(loop);
+      applyLoop(buffer, loop, 'half');
+      await new Promise(r => setTimeout(r, 200)); // Give time for UI update
+      
+      // Check the actual loopInfo display
+      const loopInfoElement = document.getElementById('loopInfo');
+      const loopText = loopInfoElement ? loopInfoElement.textContent : '';
+      
+      // Look for very small duration (0.00Xs pattern)
+      if (loopText.includes('0.00') && parseFloat(loopText) <= 0.001) {
+        enqueueToast('Reached 0.001s! Starting pattern...');
+        break;
+      }
+    }
+    
+    // Phase 2: Reverse → Double → Move Forward pattern
+    enqueueToast('Phase 2: Reverse/Double/Move pattern...');
+    let canDouble = true;
+    let cycles = 0;
+    
+    while (canDouble && cycles < 10) { // Safety limit
+      // Reverse
+      buffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
+      applyLoop(buffer, loop, 'reverse');
+      await new Promise(r => setTimeout(r, 200));
+      
+      // Double
+      const oldLength = loop.endSample - loop.startSample;
+      loop = doubleLoop(loop, buffer.length);
+      applyLoop(buffer, loop, 'double');
+      await new Promise(r => setTimeout(r, 200));
+      
+      // Check if we can still double
+      const newLength = loop.endSample - loop.startSample;
+      if (newLength <= oldLength) {
+        canDouble = false;
+        break;
+      }
+      
+      // Move forward (same as manual button - move by loop duration)
+      const duration = loop.endSample - loop.startSample;
+      const newStart = loop.startSample + duration;
+      const newEnd = loop.endSample + duration;
+      
+      if (newEnd <= buffer.length) {
+        loop = { startSample: newStart, endSample: newEnd };
+        applyLoop(buffer, loop, 'move');
+        await new Promise(r => setTimeout(r, 200));
+      } else {
+        // Can't move forward anymore, stop this part
+        break;
+      }
+      
+      cycles++;
+    }
+    
+    // Phase 3: Reset
+    enqueueToast('Phase 3: Reset and complete');
+    loop = resetLoop(buffer);
+    applyLoop(buffer, loop, 'reset');
+    
+    return buffer;
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('randomizeLoopBtn5');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      if (!buffer || !ctx || typeof applyLoop !== 'function') return;
+      
+      enqueueToast('⚡ Starting Micro Crusher sequence...');
+      await microCrusherSequence(buffer, applyLoop);
+      enqueueToast('Micro crusher sequence complete');
+    });
+  });
+</script>

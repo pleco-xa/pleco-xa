@@ -1,374 +1,285 @@
 /**
- * Advanced rhythm analysis - librosa ports for precise beat alignment
- * Fixes phase/alignment issues in loop detection
+ * Port of librosa.beat
+ * Unified rhythm analysis: beat tracking, tempo estimation, and downbeat detection
+ * Librosa-compatible rhythm analysis for JavaScript
  */
 
-import { computeSTFT, fft } from './xa-onset.js'
+import { stft } from './xa-fft.js'
 
 /**
- * Port of librosa.beat.plp() - Predominant Local Pulse
- * Finds the actual phase of the beat grid (where beat 1 really is)
+ * Beat tracking using dynamic programming
+ * Port of librosa.beat.beat_track
+ * @param {Float32Array} y - Audio time series (optional if onset_envelope provided)
+ * @param {number} sr - Sample rate
+ * @param {Array} onset_envelope - Pre-computed onset strength envelope
+ * @param {number} hop_length - Hop length
+ * @param {number} start_bpm - Initial tempo estimate
+ * @param {number} tightness - Tightness of beat distribution around tempo
+ * @param {boolean} trim - Trim leading/trailing beats outside signal
+ * @param {number} bpm - Pre-specified tempo (skips tempo estimation)
+ * @param {boolean} units - Return beat times in 'time' (seconds) or 'frames'
+ * @returns {Object} {tempo: number, beats: Array} - estimated tempo and beat positions
  */
-export function predominantLocalPulse(
-  onsetStrength,
-  tempo,
-  sampleRate,
-  hopLength = 512,
+export function beat_track(
+  y = null,
+  sr = 22050,
+  onset_envelope = null,
+  hop_length = 512,
+  start_bpm = 120,
+  tightness = 100,
+  trim = true,
+  bpm = null,
+  units = 'frames',
 ) {
-  console.time('predominant_local_pulse')
-
-  const beatPeriod = ((60.0 / tempo) * sampleRate) / hopLength // Period in frames
-  const nBins = Math.ceil(beatPeriod)
-
-  // Create phase histogram
-  const phaseHistogram = new Float32Array(nBins)
-
-  // Accumulate onset strength at different phases
-  for (let i = 0; i < onsetStrength.length; i++) {
-    const phase = (i % beatPeriod) / beatPeriod // 0 to 1
-    const bin = Math.floor(phase * nBins)
-    phaseHistogram[bin] += onsetStrength[i]
-  }
-
-  // Find the strongest phase
-  let maxPhase = 0
-  let maxStrength = 0
-  for (let i = 0; i < nBins; i++) {
-    if (phaseHistogram[i] > maxStrength) {
-      maxStrength = phaseHistogram[i]
-      maxPhase = i / nBins
+  // Compute onset envelope if not provided
+  let oenv = onset_envelope
+  if (oenv === null) {
+    if (y === null) {
+      throw new Error('Either y or onset_envelope must be provided')
     }
+    oenv = compute_onset_strength(y, sr, hop_length)
   }
 
-  // Convert phase to time offset
-  const phaseOffset = (maxPhase * beatPeriod * hopLength) / sampleRate
+  // Estimate tempo if not provided
+  let estimated_tempo = bpm
+  if (estimated_tempo === null) {
+    estimated_tempo = estimate_tempo_from_onsets(oenv, sr, hop_length, start_bpm)
+  }
 
-  console.timeEnd('predominant_local_pulse')
+  // Convert tempo to lag (frames per beat)
+  const period = (60.0 * sr) / (estimated_tempo * hop_length)
+
+  // Dynamic programming beat tracking
+  const beats = dp_beat_track(oenv, period, tightness)
+
+  // Trim beats if requested
+  let final_beats = beats
+  if (trim && final_beats.length > 0) {
+    final_beats = final_beats.filter((b) => b >= 0 && b < oenv.length)
+  }
+
+  // Convert to time if requested
+  if (units === 'time') {
+    final_beats = final_beats.map((b) => (b * hop_length) / sr)
+  }
 
   return {
-    phase: maxPhase,
-    phaseOffset: phaseOffset,
-    histogram: phaseHistogram,
+    tempo: estimated_tempo,
+    beats: final_beats,
   }
 }
 
 /**
- * Port of librosa.onset.onset_strength_multi()
- * Multi-band onset strength for better beat detection
+ * Estimate tempo from onset strength envelope
+ * @param {Float32Array} y - Audio time series
+ * @param {number} sr - Sample rate
+ * @param {Array} onset_envelope - Pre-computed onset strength
+ * @param {number} hop_length - Hop length
+ * @param {number} start_bpm - Starting tempo for search
+ * @returns {number} Estimated tempo in BPM
  */
-export function onsetStrengthMulti(
-  audioData,
-  sampleRate,
-  {
-    hopLength = 512,
-    frameLength = 2048,
-    nMels = 128,
-    fMin = 80,
-    fMax = 16000,
-  } = {},
+export function tempo(
+  y = null,
+  sr = 22050,
+  onset_envelope = null,
+  hop_length = 512,
+  start_bpm = 120,
 ) {
-  // Compute STFT
-  const stft = computeSTFT(audioData, frameLength, hopLength)
-
-  // Create mel filterbank (simplified version)
-  const melFilters = createMelFilterbank(
-    sampleRate,
-    frameLength,
-    nMels,
-    fMin,
-    fMax,
-  )
-
-  // Apply mel filters to get mel spectrogram
-  const melSpec = []
-  for (let frame = 0; frame < stft.length; frame++) {
-    const melFrame = new Float32Array(nMels)
-
-    for (let mel = 0; mel < nMels; mel++) {
-      let energy = 0
-      const filter = melFilters[mel]
-
-      for (let bin = 0; bin < filter.length; bin++) {
-        if (filter[bin] > 0) {
-          const real = stft[frame][bin * 2]
-          const imag = stft[frame][bin * 2 + 1]
-          const magnitude = Math.sqrt(real * real + imag * imag)
-          energy += magnitude * filter[bin]
-        }
-      }
-
-      melFrame[mel] = energy
+  // Compute onset envelope if not provided
+  let oenv = onset_envelope
+  if (oenv === null) {
+    if (y === null) {
+      throw new Error('Either y or onset_envelope must be provided')
     }
-
-    melSpec.push(melFrame)
+    oenv = compute_onset_strength(y, sr, hop_length)
   }
 
-  // Compute onset strength from mel spectrogram
-  const onsetStrength = new Float32Array(melSpec.length)
-
-  for (let i = 1; i < melSpec.length; i++) {
-    let strength = 0
-
-    for (let mel = 0; mel < nMels; mel++) {
-      const diff = melSpec[i][mel] - melSpec[i - 1][mel]
-      if (diff > 0) {
-        strength += diff
-      }
-    }
-
-    onsetStrength[i] = strength
-  }
-
-  return onsetStrength
+  // Estimate tempo
+  return estimate_tempo_from_onsets(oenv, sr, hop_length, start_bpm)
 }
 
-/**
- * Create mel filterbank (simplified)
- */
-function createMelFilterbank(sampleRate, fftSize, nMels, fMin, fMax) {
-  const filters = []
-  const melMin = 2595 * Math.log10(1 + fMin / 700)
-  const melMax = 2595 * Math.log10(1 + fMax / 700)
+// Helper functions
+function compute_onset_strength(y, sr, hop_length) {
+  const D = stft(y, 2048, hop_length, null, 'hann', true, 'constant')
+  const n_freq = D.length
+  const n_frames = D[0] ? D[0].length : 0
 
-  // Create mel points
-  const melPoints = []
-  for (let i = 0; i <= nMels + 1; i++) {
-    const mel = melMin + ((melMax - melMin) * i) / (nMels + 1)
-    const freq = 700 * (Math.pow(10, mel / 2595) - 1)
-    const bin = Math.floor((freq * fftSize) / sampleRate)
-    melPoints.push(bin)
+  const mag = Array(n_freq).fill(null).map(() => new Float32Array(n_frames))
+  for (let f = 0; f < n_freq; f++) {
+    for (let t = 0; t < n_frames; t++) {
+      const bin = D[f][t]
+      mag[f][t] = Math.sqrt(bin.real * bin.real + bin.imag * bin.imag)
+    }
   }
 
-  // Create triangular filters
-  for (let i = 0; i < nMels; i++) {
-    const filter = new Float32Array(fftSize / 2)
-
-    const left = melPoints[i]
-    const center = melPoints[i + 1]
-    const right = melPoints[i + 2]
-
-    for (let bin = left; bin < center; bin++) {
-      filter[bin] = (bin - left) / (center - left)
+  const oenv = new Float32Array(n_frames)
+  for (let t = 1; t < n_frames; t++) {
+    let flux = 0
+    for (let f = 0; f < n_freq; f++) {
+      flux += Math.max(0, mag[f][t] - mag[f][t - 1])
     }
-
-    for (let bin = center; bin < right; bin++) {
-      filter[bin] = (right - bin) / (right - center)
-    }
-
-    filters.push(filter)
+    oenv[t] = flux
   }
-
-  return filters
+  return oenv
 }
 
-/**
- * Port of librosa.sequence.viterbi()
- * Dynamic programming for beat tracking with proper phase
- */
-export function viterbiBeats(
-  onsetStrength,
-  tempo,
-  sampleRate,
-  hopLength = 512,
-  tightness = 100,
-) {
-  const beatPeriod = ((60.0 / tempo) * sampleRate) / hopLength
-  const nFrames = onsetStrength.length
+function estimate_tempo_from_onsets(oenv, sr, hop_length, start_bpm = 120) {
+  const min_bpm = 30
+  const max_bpm = 300
+  const min_lag = Math.floor((60 * sr) / (max_bpm * hop_length))
+  const max_lag = Math.floor((60 * sr) / (min_bpm * hop_length))
 
-  // Find phase offset using PLP
-  const plp = predominantLocalPulse(onsetStrength, tempo, sampleRate, hopLength)
-  const phaseOffset = (plp.phaseOffset * sampleRate) / hopLength // Convert to frames
+  const ac = autocorrelate_onset(oenv, max_lag)
+  let best_lag = min_lag
+  let best_strength = -Infinity
 
-  // Initialize dynamic programming table
-  const nStates = Math.ceil(beatPeriod * 1.2) // Allow some tempo variation
-  const dp = Array(nFrames)
-    .fill(null)
-    .map(() => new Float32Array(nStates).fill(-Infinity))
-  const path = Array(nFrames)
-    .fill(null)
-    .map(() => new Int32Array(nStates))
-
-  // Initialize first frame
-  for (let state = 0; state < nStates; state++) {
-    dp[0][state] = onsetStrength[0]
-  }
-
-  // Forward pass
-  for (let frame = 1; frame < nFrames; frame++) {
-    for (let state = 0; state < nStates; state++) {
-      let maxScore = -Infinity
-      let maxPrev = 0
-
-      // Try different previous states
-      for (let prevState = 0; prevState < nStates; prevState++) {
-        const interval = state - prevState
-        const expectedInterval = beatPeriod
-
-        // Transition penalty based on tempo consistency
-        const penalty =
-          Math.pow((interval - expectedInterval) / expectedInterval, 2) *
-          tightness
-        const score = dp[frame - 1][prevState] - penalty
-
-        if (score > maxScore) {
-          maxScore = score
-          maxPrev = prevState
-        }
-      }
-
-      dp[frame][state] = maxScore + onsetStrength[frame]
-      path[frame][state] = maxPrev
+  for (let lag = min_lag; lag <= max_lag && lag < ac.length; lag++) {
+    if (ac[lag] > best_strength) {
+      best_strength = ac[lag]
+      best_lag = lag
     }
   }
 
-  // Backtrack to find best path
+  const tempo_bpm = (60 * sr) / (best_lag * hop_length)
+  return Math.max(min_bpm, Math.min(max_bpm, tempo_bpm))
+}
+
+function autocorrelate_onset(oenv, max_lag) {
+  const n = oenv.length
+  const ac = new Float32Array(Math.min(max_lag + 1, n))
+
+  for (let lag = 0; lag < ac.length; lag++) {
+    let sum = 0
+    for (let i = 0; i < n - lag; i++) {
+      sum += oenv[i] * oenv[i + lag]
+    }
+    ac[lag] = sum
+  }
+
+  if (ac[0] > 0) {
+    for (let i = 0; i < ac.length; i++) {
+      ac[i] /= ac[0]
+    }
+  }
+  return ac
+}
+
+function dp_beat_track(oenv, period, tightness = 100) {
+  const n_frames = oenv.length
+  if (n_frames === 0) return []
+
+  const score = new Float32Array(n_frames).fill(-Infinity)
+  const backlink = new Int32Array(n_frames).fill(-1)
+
+  const first_beat = Math.floor(period / 2)
+  score[first_beat] = oenv[first_beat]
+
+  for (let t = 1; t < n_frames; t++) {
+    const window = Math.floor(period * 0.5)
+    const start = Math.max(0, t - Math.floor(period) - window)
+    const end = Math.min(n_frames, t - Math.floor(period) + window)
+
+    for (let prev_t = start; prev_t < end; prev_t++) {
+      if (score[prev_t] === -Infinity) continue
+
+      const interval = t - prev_t
+      const deviation = Math.abs(interval - period)
+      const transition = Math.exp(-tightness * (deviation / period) ** 2)
+      const candidate_score = score[prev_t] + oenv[t] * transition
+
+      if (candidate_score > score[t]) {
+        score[t] = candidate_score
+        backlink[t] = prev_t
+      }
+    }
+  }
+
   const beats = []
-  let currentState = 0
-  let maxScore = -Infinity
-
-  // Find best ending state
-  for (let state = 0; state < nStates; state++) {
-    if (dp[nFrames - 1][state] > maxScore) {
-      maxScore = dp[nFrames - 1][state]
-      currentState = state
+  let current = 0
+  for (let t = 0; t < n_frames; t++) {
+    if (score[t] > score[current]) {
+      current = t
     }
   }
 
-  // Backtrack
-  for (let frame = nFrames - 1; frame >= 0; frame--) {
-    if (
-      frame % Math.round(beatPeriod) ===
-      Math.round(phaseOffset) % Math.round(beatPeriod)
-    ) {
-      beats.unshift((frame * hopLength) / sampleRate)
-    }
-
-    if (frame > 0) {
-      currentState = path[frame][currentState]
-    }
+  while (current >= 0) {
+    beats.unshift(current)
+    current = backlink[current]
   }
 
   return beats
 }
 
 /**
- * Refined beat and downbeat detection using multi-band analysis
+ * Predominant Local Pulse (PLP) estimation
  */
-export function refineBeatsAndDownbeats(audioData, sampleRate, tempo) {
-  console.time('refine_beats_and_downbeats')
-
-  // Multi-band onset strength
-  const onsetStrength = onsetStrengthMulti(audioData, sampleRate)
-
-  // Viterbi beat tracking for precise alignment
-  const beats = viterbiBeats(onsetStrength, tempo, sampleRate)
-
-  // Find downbeats using spectral flux patterns
-  const downbeats = findDownbeatsFromBeats(audioData, beats, sampleRate)
-
-  console.timeEnd('refine_beats_and_downbeats')
-
-  return {
-    beats: beats,
-    downbeats: downbeats,
-    onsetStrength: onsetStrength,
+export function plp(y = null, sr = 22050, onset_envelope = null, hop_length = 512, win_length = 384) {
+  let oenv = onset_envelope
+  if (oenv === null) {
+    if (y === null) throw new Error('Either y or onset_envelope must be provided')
+    oenv = compute_onset_strength(y, sr, hop_length)
   }
+
+  const n_frames = oenv.length
+  const half_window = Math.floor(win_length / 2)
+  const plp_curve = new Float32Array(n_frames)
+
+  for (let t = 0; t < n_frames; t++) {
+    const start = Math.max(0, t - half_window)
+    const end = Math.min(n_frames, t + half_window)
+    const window = Array.from(oenv.slice(start, end))
+
+    if (window.length < 2) {
+      plp_curve[t] = 0
+      continue
+    }
+
+    const max_lag = Math.floor(window.length / 2)
+    const ac = new Float32Array(max_lag)
+
+    for (let lag = 1; lag < max_lag; lag++) {
+      let sum = 0
+      for (let i = 0; i < window.length - lag; i++) {
+        sum += window[i] * window[i + lag]
+      }
+      ac[lag] = sum
+    }
+
+    plp_curve[t] = Math.max(...ac.slice(1))
+  }
+
+  const max_plp = Math.max(...plp_curve)
+  if (max_plp > 0) {
+    for (let i = 0; i < n_frames; i++) {
+      plp_curve[i] /= max_plp
+    }
+  }
+
+  return plp_curve
 }
 
 /**
- * Find downbeats from beat positions using spectral patterns
+ * Beat-synchronous feature aggregation
  */
-function findDownbeatsFromBeats(audioData, beats, sampleRate) {
-  const downbeats = []
-  const frameSize = 4096
+export function beat_sync(data, beats, aggregate = 'mean') {
+  const is_1d = !Array.isArray(data[0])
 
-  // Analyze spectral change at each beat
-  const beatChanges = []
-
-  for (let i = 0; i < beats.length; i++) {
-    const beatSample = Math.floor(beats[i] * sampleRate)
-    const prevBeatSample = i > 0 ? Math.floor(beats[i - 1] * sampleRate) : 0
-
-    // Get spectral change magnitude
-    const change = getSpectralChange(
-      audioData,
-      prevBeatSample,
-      beatSample,
-      frameSize,
-    )
-
-    beatChanges.push({
-      time: beats[i],
-      change: change,
-      index: i,
-    })
-  }
-
-  // Find peaks in spectral change (likely downbeats)
-  for (let i = 0; i < beatChanges.length - 4; i++) {
-    const current = beatChanges[i].change
-    let isPeak = true
-
-    // Check if this is a local maximum over 4 beats
-    for (let j = 1; j <= 3; j++) {
-      if (i + j < beatChanges.length && beatChanges[i + j].change > current) {
-        isPeak = false
-        break
+  if (is_1d) {
+    const synced = new Float32Array(beats.length - 1)
+    for (let i = 0; i < beats.length - 1; i++) {
+      const segment = data.slice(beats[i], beats[i + 1])
+      synced[i] = aggregate === 'mean' ? segment.reduce((a, b) => a + b, 0) / segment.length : Math.max(...segment)
+    }
+    return synced
+  } else {
+    const n_features = data.length
+    const synced = Array(n_features).fill(null).map(() => new Float32Array(beats.length - 1))
+    for (let f = 0; f < n_features; f++) {
+      for (let i = 0; i < beats.length - 1; i++) {
+        const segment = data[f].slice(beats[i], beats[i + 1])
+        synced[f][i] = aggregate === 'mean' ? segment.reduce((a, b) => a + b, 0) / segment.length : Math.max(...segment)
       }
     }
-
-    if (isPeak) {
-      downbeats.push(beatChanges[i].time)
-      i += 3 // Skip ahead
-    }
+    return synced
   }
-
-  // If we didn't find enough downbeats, use every 4th beat
-  if (downbeats.length < 4) {
-    return beats.filter((_, i) => i % 4 === 0)
-  }
-
-  return downbeats
-}
-
-/**
- * Calculate spectral change between two points
- */
-function getSpectralChange(audioData, startSample, endSample, frameSize) {
-  let frame1 = audioData.slice(
-    Math.max(0, startSample - frameSize / 2),
-    Math.min(audioData.length, startSample + frameSize / 2),
-  )
-
-  let frame2 = audioData.slice(
-    Math.max(0, endSample - frameSize / 2),
-    Math.min(audioData.length, endSample + frameSize / 2),
-  )
-
-  // Pad if necessary - create new arrays instead of reassigning
-  if (frame1.length < frameSize) {
-    const padded1 = new Float32Array(frameSize)
-    padded1.set(frame1)
-    frame1 = padded1
-  }
-
-  if (frame2.length < frameSize) {
-    const padded2 = new Float32Array(frameSize)
-    padded2.set(frame2)
-    frame2 = padded2
-  }
-
-  // Compute FFTs
-  const fft1 = fft(frame1)
-  const fft2 = fft(frame2)
-
-  // Calculate spectral difference
-  let change = 0
-  for (let i = 0; i < fft1.length; i += 2) {
-    const mag1 = Math.sqrt(fft1[i] * fft1[i] + fft1[i + 1] * fft1[i + 1])
-    const mag2 = Math.sqrt(fft2[i] * fft2[i] + fft2[i + 1] * fft2[i + 1])
-    change += Math.abs(mag2 - mag1)
-  }
-
-  return change
 }
