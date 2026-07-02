@@ -294,8 +294,10 @@ def gen_effects():
     y = sigs["sine440"][: SR // 2].copy()
     # bury silence around a burst for trim/split
     q = np.zeros(SR, dtype=np.float32)
-    q[SR // 4 : SR // 2] = sigs["noise"][: SR // 4] * 0.8
-    q[3 * SR // 4 : 3 * SR // 4 + SR // 8] = sigs["noise"][: SR // 8] * 0.6
+    seg1 = sigs["noise"][: SR // 4] * 0.8
+    q[SR // 4 : SR // 4 + len(seg1)] = seg1
+    seg2 = sigs["noise"][: SR // 8] * 0.6
+    q[3 * SR // 4 : 3 * SR // 4 + len(seg2)] = seg2
     yt, idx = librosa.effects.trim(q, top_db=30)
     intervals = librosa.effects.split(q, top_db=30)
     pre = librosa.effects.preemphasis(y)
