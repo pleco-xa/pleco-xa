@@ -119,6 +119,7 @@ Namespace ← primary sources (full fold/split/kill tables: `docs/superpowers/re
 - `apps/demo` imports `'pleco-xa'` workspace-linked; CI builds it as the e2e consumer check.
 - `window.*` global bus replaced by one exported session/controller object; AudioAnalyzer's inlined DSP (halfSpeedLoop, quantz variants, gap detect/close, reverse ops) hoists into the library; latent bugs fixed (BPMDetector script 404, GlitchBurstButton server/client split, GlitchPlayground frontmatter refs).
 - Docs: identity-led README rewrite (current one claims v1.0.6 and imports that don't exist); TypeDoc API reference; interactive docs — every example runs in-browser on the reader's own audio; Echoplex origin story as flavor; CHANGELOG.
+- **Example gallery (proof-of-work):** replicate librosa's advanced-example gallery (`~/Developer/librosa/docs/examples/` — 15 scripts: vocal separation, superflux onsets, music sync, Laplacian segmentation, HPSS, viterbi, chroma, presets, dynamic beat, PCEN streaming, rainbowgram, patch generation, spectral harmonics, display, playback) as pleco-xa interactive pages, each running live in-browser on the reader's own audio. Each replica is a discovered-parity demonstration; where pleco adds a real-time twist librosa can't (streaming PCEN, live beat), showcase it. Lands with Wave 6 docs; each earlier wave should keep its APIs example-gallery-ready.
 - Marketing layer is an explicit deliverable with the same weight as DSP.
 
 ## 9. Roadmap Waves & 2.0 Cut Line
