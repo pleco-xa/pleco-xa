@@ -81,3 +81,4 @@ lb/
 .oracle/
 LibrosaDemo-PR1/
 .DS_Store
+tools/parity/.venv/
