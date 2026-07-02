@@ -1,5 +1,27 @@
-export function detectLoop(buffer) {
+/**
+ * Pure loop-descriptor helpers for the play layer.
+ * A loop descriptor is `{ startSample, endSample }` over a buffer.
+ */
+
+/**
+ * Return a loop spanning the entire buffer.
+ * This performs NO detection — it is the honest name for what the old
+ * `detectLoop` stub always did (return the full range).
+ * @param {{length: number}} buffer
+ * @returns {{startSample: number, endSample: number}}
+ */
+export function fullBufferLoop(buffer) {
   return { startSample: 0, endSample: buffer.length };
+}
+
+/**
+ * @deprecated Misleading name kept for play-layer compatibility: this has
+ * never detected anything — it returns the full buffer range. Use
+ * `fullBufferLoop` for this behavior, or `loop.detect()`
+ * (src/loop/detect.js) for real loop detection.
+ */
+export function detectLoop(buffer) {
+  return fullBufferLoop(buffer);
 }
 
 export function halfLoop(loop) {
@@ -20,7 +42,7 @@ export function moveForward(loop, steps, maxSamples) {
 }
 
 export function resetLoop(buffer) {
-  return detectLoop(buffer);
+  return fullBufferLoop(buffer);
 }
 
 export function reverseBufferSection(buffer, start, end) {

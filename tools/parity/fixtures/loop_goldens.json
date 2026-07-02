@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "capturedAt": "2026-07-02T18:52:07.604Z",
+    "pipeline": "fastLoopAnalysis (pre-Wave-3 legacy, src/scripts/xa-loop.js)",
+    "toleranceSamples": 441,
+    "note": "Loop points are golden (±441 samples = 10ms @ 44.1kHz). Confidence values are intentionally NOT captured as goldens: the legacy ×1000 normalization pegged them at 1.0. Wave 3 re-derives confidence on a documented 0..1 scale."
+  },
+  "files": {
+    "12-8-Jazzy-Drumset-03.wav": {
+      "sampleRate": 48000,
+      "lengthSamples": 151579,
+      "durationSeconds": 3.1578958333333333,
+      "loopStartSeconds": 0,
+      "loopEndSeconds": 1.5789479166666667,
+      "loopStartSamples": 0,
+      "loopEndSamples": 75790,
+      "bpm": 113.63636363636364,
+      "musicalDivision": 0.7476079150883838,
+      "legacyConfidence": 0.5
+    },
+    "Bassline For Doppler Song - 11.wav": {
+      "sampleRate": 44100,
+      "lengthSamples": 115378,
+      "durationSeconds": 2.616281179138322,
+      "loopStartSeconds": 0,
+      "loopEndSeconds": 1.308140589569161,
+      "loopStartSamples": 0,
+      "loopEndSamples": 57689,
+      "bpm": 92.28515625,
+      "musicalDivision": 0.5030081612723214,
+      "legacyConfidence": 0.5
+    },
+    "Bassline For Doppler Song longer.wav": {
+      "sampleRate": 44100,
+      "lengthSamples": 1987396,
+      "durationSeconds": 45.065668934240364,
+      "loopStartSeconds": 11.988571428571428,
+      "loopEndSeconds": 14.600816326530612,
+      "loopStartSamples": 528696,
+      "loopEndSamples": 643896,
+      "bpm": 92.28515625,
+      "musicalDivision": 1.0044642857142863,
+      "legacyConfidence": 1
+    },
+    "Drive Through Beat.wav": {
+      "sampleRate": 48000,
+      "lengthSamples": 720000,
+      "durationSeconds": 15,
+      "loopStartSeconds": 0,
+      "loopEndSeconds": 11.264,
+      "loopStartSamples": 0,
+      "loopEndSamples": 540672,
+      "bpm": 127.8409090909091,
+      "musicalDivision": 6,
+      "legacyConfidence": 1
+    }
+  }
+}

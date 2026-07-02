@@ -39,5 +39,11 @@ export { encodeWav, decodeWav } from './io/wav.js'
 // Conversions (fixture-validated vs librosa 0.11.0)
 export * as convert from './scripts/xa-convert.js'
 
-// Loop detection (flagship — consolidation lands in Wave 3)
-export { fastLoopAnalysis } from './scripts/xa-loop.js'
+// Loop detection (flagship — Wave 3 consolidated namespace).
+// loop.detect(buffer, { strategy }) is THE public API; the top-level
+// fastLoopAnalysis export is kept (delegating) for demo compatibility.
+export * as loop from './loop/index.js'
+export { fastLoopAnalysis } from './loop/fast.js'
+
+// Sequence analysis — librosa.sequence.rqa port (fixture-gated: rqa.json)
+export { rqa } from './sequence/rqa.js'

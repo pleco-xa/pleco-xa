@@ -1,6 +1,7 @@
 //index.js
 export { signatureDemo } from './demoSequences.js';
 export {
+  fullBufferLoop,
   detectLoop,
   halfLoop,
   doubleLoop,

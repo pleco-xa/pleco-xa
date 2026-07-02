@@ -1010,21 +1010,16 @@ async function detectLoop() {
       }
     }
 
-    // Use dynamic zero crossing for cleaner transitions
-    const dzc = new DynamicZeroCrossing(channel, sr);
-    
-    // Find optimal zero crossings near the boundaries
-    let startSample = dzc.findOptimalCrossing(Math.floor(startSec * sr), {
-      direction: 1,
-      maxSearch: 2048,
-      preferLowEnergy: true
-    });
-    
-    let endSample = dzc.findOptimalCrossing(Math.floor(endSec * sr), {
-      direction: -1,
-      maxSearch: 2048,
-      preferLowEnergy: true
-    });
+    // Use dynamic zero crossing for cleaner transitions.
+    // (Wave 3 fix: DynamicZeroCrossing is an all-static class — the old
+    // `new DynamicZeroCrossing(...)` + `dzc.findOptimalCrossing(...)` calls
+    // targeted an API that never existed and threw at runtime.)
+    let [startSample, endSample] = DynamicZeroCrossing.snap(
+      channel,
+      Math.floor(startSec * sr),
+      Math.floor(endSec * sr),
+      2048,
+    );
 
     /* --- Advanced onset alignment: find strongest transient near start --- */
     try {
@@ -1040,6 +1035,8 @@ async function detectLoop() {
       // Compute energy and its derivative
       const energyValues = [];
       let prevRms = 0;
+      let maxDiff = 0;
+      let maxIdx = 0;
       
       for (let i = 0; i + frame < seg.length; i += hop) {
         const rms = Math.sqrt(
@@ -1058,11 +1055,11 @@ async function detectLoop() {
       // Only adjust if we found a significant onset
       if (maxIdx > hop && maxDiff > 0.05) {
         const onsetSample = startSample + maxIdx;
-        startSample = dzc.findOptimalCrossing(onsetSample, {
-          direction: 1,
-          maxSearch: 1024,
-          preferLowEnergy: false
-        });
+        startSample = DynamicZeroCrossing.findNearestZeroCrossing(
+          channel,
+          onsetSample,
+          1024,
+        ).sample;
         debugLog(`🎯 Start aligned to onset @ ${(startSample / sr).toFixed(3)}s`);
       }
     } catch (e) {

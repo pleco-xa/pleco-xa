@@ -33,7 +33,9 @@ const filesToSync = [
   // Audio analysis modules
   { src: 'src/scripts/xa-audio-core.js', dest: 'public/scripts/xa-audio-core.js' },
   { src: 'src/scripts/xa-bpm-detection.js', dest: 'public/scripts/xa-bpm-detection.js' },
-  { src: 'src/scripts/xa-loop-detection.js', dest: 'public/scripts/xa-loop-detection.js' },
+  // xa-loop-detection.js was deleted in Wave 3 (4th duplicate loop detector).
+  // The frozen public/scripts/xa-loop-detection.js copy stays as-is until the
+  // Wave 6 demo migration to loop.detect().
 
   // Controllers
   { src: 'src/scripts/keyboard-controller.js', dest: 'public/scripts/keyboard-controller.js' },
