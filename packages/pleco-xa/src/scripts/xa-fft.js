@@ -74,23 +74,69 @@ function fftRecursive(signal) {
 }
 
 /**
- * Inverse Fast Fourier Transform
- * @param {Array} spectrum - Complex spectrum
- * @returns {Array} IFFT result
+ * Recursive FFT over complex input ({real, imag} array, power-of-2 length)
+ * @param {Array<{real: number, imag: number}>} x - Complex input
+ * @returns {Array<{real: number, imag: number}>} FFT result
+ */
+function fftComplexRecursive(x) {
+  const N = x.length
+
+  if (N <= 1) {
+    return [{ real: x[0] ? x[0].real : 0, imag: x[0] ? x[0].imag : 0 }]
+  }
+
+  const even = new Array(N / 2)
+  const odd = new Array(N / 2)
+  for (let i = 0; i < N / 2; i++) {
+    even[i] = x[2 * i]
+    odd[i] = x[2 * i + 1]
+  }
+
+  const evenFFT = fftComplexRecursive(even)
+  const oddFFT = fftComplexRecursive(odd)
+
+  const result = new Array(N)
+  for (let k = 0; k < N / 2; k++) {
+    const t = (-2 * Math.PI * k) / N
+    const wReal = Math.cos(t)
+    const wImag = Math.sin(t)
+
+    const oddReal = wReal * oddFFT[k].real - wImag * oddFFT[k].imag
+    const oddImag = wReal * oddFFT[k].imag + wImag * oddFFT[k].real
+
+    result[k] = {
+      real: evenFFT[k].real + oddReal,
+      imag: evenFFT[k].imag + oddImag,
+    }
+    result[k + N / 2] = {
+      real: evenFFT[k].real - oddReal,
+      imag: evenFFT[k].imag - oddImag,
+    }
+  }
+
+  return result
+}
+
+/**
+ * Inverse Fast Fourier Transform (complex input preserved — no component discarded)
+ * ifft(X) = conj(fft(conj(X))) / N
+ * @param {Array<{real: number, imag: number}>} spectrum - Complex spectrum (power-of-2 length)
+ * @returns {Array<{real: number, imag: number}>} IFFT result
  */
 export function ifft(spectrum) {
   const N = spectrum.length
+  if (N === 0) return []
+  if ((N & (N - 1)) !== 0) {
+    throw new Error(`ifft requires power-of-2 length, got ${N}`)
+  }
 
-  // Conjugate the spectrum
   const conjugated = spectrum.map((bin) => ({
     real: bin.real,
     imag: -bin.imag,
   }))
 
-  // Apply FFT
-  const result = fft(conjugated.map((bin) => bin.real))
+  const result = fftComplexRecursive(conjugated)
 
-  // Conjugate and scale
   return result.map((bin) => ({
     real: bin.real / N,
     imag: -bin.imag / N,
@@ -269,11 +315,17 @@ export function istft(
     }
   }
 
-  // Remove padding if center was true
+  // Remove padding if center was true.
+  // When a target length is known, take it directly from the OLA buffer —
+  // trimming pad from BOTH ends starves the tail for non-hop-aligned signals.
   let result = y
   if (center) {
     const pad = Math.floor(n_fft / 2)
-    result = y.slice(pad, Math.max(pad, y.length - pad))
+    if (length !== null) {
+      result = y.slice(pad, Math.min(y.length, pad + length))
+    } else {
+      result = y.slice(pad, Math.max(pad, y.length - pad))
+    }
   }
 
   // Trim or pad to requested length if specified
@@ -320,7 +372,7 @@ export function get_window(window_type, n_fft) {
 export function hann_window(n) {
   const window = new Float32Array(n)
   for (let i = 0; i < n; i++) {
-    window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (n - 1)))
+    window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / n))
   }
   return window
 }
@@ -333,7 +385,7 @@ export function hann_window(n) {
 export function hamming_window(n) {
   const window = new Float32Array(n)
   for (let i = 0; i < n; i++) {
-    window[i] = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (n - 1))
+    window[i] = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / n)
   }
   return window
 }
@@ -348,8 +400,8 @@ export function blackman_window(n) {
   for (let i = 0; i < n; i++) {
     window[i] =
       0.42 -
-      0.5 * Math.cos((2 * Math.PI * i) / (n - 1)) +
-      0.08 * Math.cos((4 * Math.PI * i) / (n - 1))
+      0.5 * Math.cos((2 * Math.PI * i) / n) +
+      0.08 * Math.cos((4 * Math.PI * i) / n)
   }
   return window
 }
