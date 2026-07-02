@@ -1,4 +1,4 @@
-name: CI and Deploy
+name: CI
 
 on:
   push:
@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -34,21 +32,3 @@ jobs:
 
       - name: Build demo (consumer e2e)
         run: npm run build -w @pleco-xa/demo
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: apps/demo/dist
-
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v2
