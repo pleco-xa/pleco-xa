@@ -136,6 +136,8 @@ Namespace ← primary sources (full fold/split/kill tables: `docs/superpowers/re
 
 **Cut line:** 2.0 requires core/rhythm/loop/spectral verified. effects/segment/sequence may ship flagged `experimental` if lagging. Streaming analyzers are worker-safe from birth; full AudioWorklet story is 2.1; WASM deferred with a no-regrets API note.
 
+**Goal split (Cameron, 2026-07-02):** this spec's waves 0–5 plus the functional demo-as-consumer rebuild constitute the **"develop pleco fully"** goal. A separate follow-on goal — **"ship pleco"** — owns, as its own multi-wave effort: (1) documentation with librosa's own documentation architecture as the structural template (docs-structure parity: per-module API reference, getting-started, advanced-examples gallery, troubleshooting), including the 15 example-gallery replicas and the README rewrite; (2) the dev-state → ship-state strip pass: stale comments, deprecation shims/throwers, placeholder markers, and audit-era scaffolding removed from everything that ships. Docs and cleanup are deliberately NOT squeezed into the development waves.
+
 ## 10. Testing, CI, Release
 
 - CI matrix: `vitest run` (Node) · real-browser lane (jsdom has no Web Audio — required for AudioBuffer paths) · Node import-smoke of built `dist/` (catches top-level-DOM crashes) · demo `astro build` · size-limit bundle budget · benchmark baseline (×-realtime for `loop.detect`/`beat.tempo` on fixed fixtures, regression-gated).
