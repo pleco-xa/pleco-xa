@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import * as convert from '../../src/scripts/xa-convert.js';
-import { almostEqual, knownTestVectors } from '../fixtures/test-data.js';
+import * as convert from '../src/scripts/xa-convert.js';
+import { almostEqual, knownTestVectors } from './fixtures/test-data.js';
 
 describe('xa-convert', () => {
   describe('hz_to_midi', () => {

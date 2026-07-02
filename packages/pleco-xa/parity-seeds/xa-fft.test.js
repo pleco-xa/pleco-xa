@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as xa_fft from '../../src/scripts/xa-fft.js';
+import * as xa_fft from '../src/scripts/xa-fft.js';
 import {
   generateTestAudio,
   generateWhiteNoise,
@@ -24,7 +24,7 @@ import {
   isFiniteArray,
   isNonNegativeArray,
   knownTestVectors
-} from '../fixtures/test-data.js';
+} from './fixtures/test-data.js';
 
 describe('xa-fft - Algorithmic Validation', () => {
   let sampleRate;

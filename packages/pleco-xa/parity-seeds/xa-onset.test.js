@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as xa_onset from '../../src/scripts/xa-onset.js';
+import * as xa_onset from '../src/scripts/xa-onset.js';
 import {
   generateTestAudio,
   generateSilence,
@@ -20,7 +20,7 @@ import {
   almostEqual,
   isFiniteArray,
   isNonNegativeArray
-} from '../fixtures/test-data.js';
+} from './fixtures/test-data.js';
 
 describe('xa-onset - Algorithmic Validation', () => {
   let sampleRate;

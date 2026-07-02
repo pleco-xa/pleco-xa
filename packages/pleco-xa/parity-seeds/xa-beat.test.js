@@ -9,14 +9,14 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as xa_beat from '../../src/scripts/xa-beat.js';
+import * as xa_beat from '../src/scripts/xa-beat.js';
 import {
   generateClickTrack,
   generateSilence,
   withinPercent,
   almostEqual,
   knownTestVectors
-} from '../fixtures/test-data.js';
+} from './fixtures/test-data.js';
 
 describe('xa-beat - Algorithmic Validation', () => {
   let sampleRate;
