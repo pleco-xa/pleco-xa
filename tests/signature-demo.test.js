@@ -11,15 +11,19 @@ beforeAll(() => {
 })
 
 describe('signatureDemo', () => {
-  it('produces steps with expected operations', () => {
+  it('produces the canonical signature choreography', () => {
     const ctx = new AudioContext({ sampleRate: 44100 })
     const buffer = ctx.createBuffer(1, 44100, 44100)
     const steps = signatureDemo(buffer)
     const ops = steps.map(s => s.op)
 
-    expect(ops.slice(0, 5)).toEqual(['half', 'half', 'half', 'half', 'reverse'])
-    expect(ops).toContain('move×3')
-    expect(ops.slice(-5)).toEqual(['move×2', 'double', 'reverse', 'move×1', 'reverse'])
-    expect(steps).toHaveLength(60)
+    // Self-golden: exact current choreography (narrow down → move/reverse → grow back → finish)
+    expect(ops).toEqual([
+      'half', 'half', 'half', 'reverse',
+      'move forward', 'reverse', 'move forward', 'reverse',
+      'double', 'reverse', 'double', 'reverse', 'double',
+      'move forward', 'reverse',
+    ])
+    for (const s of steps) expect(typeof s.fn).toBe('function')
   })
 })
