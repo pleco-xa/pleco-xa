@@ -285,3 +285,86 @@ gen_spectral_features()
 gen_mfcc()
 gen_chroma()
 print("spectral fixtures done")
+
+
+# ---------------- Wave 5: effects, decompose, sequence, segment ----------------
+
+def gen_effects():
+    sigs = signals()
+    y = sigs["sine440"][: SR // 2].copy()
+    # bury silence around a burst for trim/split
+    q = np.zeros(SR, dtype=np.float32)
+    q[SR // 4 : SR // 2] = sigs["noise"][: SR // 4] * 0.8
+    q[3 * SR // 4 : 3 * SR // 4 + SR // 8] = sigs["noise"][: SR // 8] * 0.6
+    yt, idx = librosa.effects.trim(q, top_db=30)
+    intervals = librosa.effects.split(q, top_db=30)
+    pre = librosa.effects.preemphasis(y)
+    cases = [
+        {"input": {"fn": "trim", "y": f32(q), "top_db": 30}, "expected_index": np.asarray(idx).tolist()},
+        {"input": {"fn": "split", "y": f32(q), "top_db": 30}, "expected_intervals": np.asarray(intervals).tolist()},
+        {"input": {"fn": "preemphasis", "y": f32(y), "coef": 0.97}, "expected": f32(pre)},
+    ]
+    write("effects", "librosa.effects trim/split/preemphasis", {}, cases)
+
+
+def gen_phase_vocoder():
+    sigs = signals()
+    y = sigs["sine440"][: SR // 4]
+    D = librosa.stft(y, n_fft=512, hop_length=128)
+    cases = []
+    for rate in (0.5, 2.0):
+        Dh = librosa.phase_vocoder(D, rate=rate, hop_length=128)
+        cases.append({
+            "input": {"y": f32(y), "n_fft": 512, "hop_length": 128, "rate": rate},
+            "expected_shape": list(Dh.shape),
+            "expected_real": f32(Dh.real.ravel()),
+            "expected_imag": f32(Dh.imag.ravel()),
+        })
+    write("phase_vocoder", "librosa.phase_vocoder", {}, cases)
+
+
+def gen_hpss():
+    sigs = signals()
+    y = (sigs["sine440"][: SR // 2] * 0.7 + _click_signal(120.0, dur=0.5) * 0.8).astype(np.float32)
+    S = librosa.stft(y, n_fft=512, hop_length=128)
+    H, P = librosa.decompose.hpss(np.abs(S))
+    Hm, Pm = librosa.decompose.hpss(np.abs(S), margin=2.0)
+    cases = [{
+        "input": {"y": f32(y), "n_fft": 512, "hop_length": 128},
+        "expected_shape": list(H.shape),
+        "H": f32(H.ravel()), "P": f32(P.ravel()),
+        "H_margin2": f32(Hm.ravel()), "P_margin2": f32(Pm.ravel()),
+    }]
+    write("hpss", "librosa.decompose.hpss (magnitude S)", {}, cases)
+
+
+def gen_dtw_segment():
+    rng = np.random.default_rng(11)
+    X = rng.random((6, 20))
+    Y = rng.random((6, 26))
+    D, wp = librosa.sequence.dtw(X=X, Y=Y)
+    feats = rng.random((12, 40))
+    R = librosa.segment.recurrence_matrix(feats, k=5, mode="connectivity", sym=True)
+    Raff = librosa.segment.recurrence_matrix(feats, k=5, mode="affinity", sym=True)
+    lag = librosa.segment.recurrence_to_lag(R.astype(float), pad=False)
+    bounds = librosa.segment.agglomerative(feats, 5)
+    cases = [{
+        "input": {"X": X.ravel().tolist(), "X_shape": list(X.shape),
+                  "Y": Y.ravel().tolist(), "Y_shape": list(Y.shape)},
+        "dtw_D_last": float(D[-1, -1]),
+        "dtw_path": np.asarray(wp).tolist(),
+    }, {
+        "input": {"feats": feats.ravel().tolist(), "feats_shape": list(feats.shape), "k": 5},
+        "recurrence_connectivity": R.astype(float).ravel().tolist(),
+        "recurrence_affinity": f32(Raff.ravel()),
+        "lag_nopad": lag.ravel().tolist(),
+        "agglomerative_k5": np.asarray(bounds).tolist(),
+    }]
+    write("dtw_segment", "librosa.sequence.dtw + librosa.segment.*", {}, cases)
+
+
+gen_effects()
+gen_phase_vocoder()
+gen_hpss()
+gen_dtw_segment()
+print("wave5 fixtures done")
