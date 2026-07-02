@@ -191,15 +191,20 @@ describe('xa-convert', () => {
       expect(typeof convert.mel_to_hz).toBe('function');
     });
 
-    it('should convert mel scale correctly', () => {
-      expect(almostEqual(convert.mel_to_hz(0), 0, 0.1)).toBe(true);
-      expect(almostEqual(convert.mel_to_hz(1000), 1000, 1)).toBe(true);
+    it('should convert mel scale correctly (librosa Slaney default)', () => {
+      // librosa default is the Slaney scale: linear below 1000 Hz (f = mel * 200/3),
+      // logarithmic above. mel 15.0 -> 1000 Hz (pinned in tools/parity/fixtures/conversions.json)
+      expect(almostEqual(convert.mel_to_hz(0), 0, 1e-6)).toBe(true);
+      expect(almostEqual(convert.mel_to_hz(3), 200, 1e-3)).toBe(true);
+      expect(almostEqual(convert.mel_to_hz(15), 1000, 1e-3)).toBe(true);
+      // HTK scale must be requested explicitly: mel 1000 -> ~1000.02 Hz
+      expect(almostEqual(convert.mel_to_hz(1000, true), 1000.0218, 0.01)).toBe(true);
     });
 
-    it('should handle high mel values', () => {
-      const hz = convert.mel_to_hz(2840);
-      expect(hz).toBeGreaterThan(7000);
-      expect(hz).toBeLessThan(9000);
+    it('should handle high mel values (HTK scale requested explicitly)', () => {
+      // librosa: mel_to_hz(2840, htk=True) ~= 7999.82 Hz
+      const hz = convert.mel_to_hz(2840, true);
+      expect(almostEqual(hz, 7999.822, 0.01)).toBe(true);
     });
 
     it('should produce monotonically increasing output', () => {
@@ -218,9 +223,14 @@ describe('xa-convert', () => {
       expect(typeof convert.hz_to_mel).toBe('function');
     });
 
-    it('should convert frequency to mel scale', () => {
-      expect(almostEqual(convert.hz_to_mel(0), 0, 0.1)).toBe(true);
-      expect(almostEqual(convert.hz_to_mel(1000), 1000, 1)).toBe(true);
+    it('should convert frequency to mel scale (librosa Slaney default)', () => {
+      // librosa slaney default: 1000 Hz -> 15.0 mel, 440 Hz -> 6.6 mel
+      // (pinned in tools/parity/fixtures/conversions.json)
+      expect(almostEqual(convert.hz_to_mel(0), 0, 1e-6)).toBe(true);
+      expect(almostEqual(convert.hz_to_mel(1000), 15.0, 1e-6)).toBe(true);
+      expect(almostEqual(convert.hz_to_mel(440), 6.6, 1e-3)).toBe(true);
+      // HTK scale must be requested explicitly: 1000 Hz -> ~999.99 mel
+      expect(almostEqual(convert.hz_to_mel(1000, true), 999.9855, 0.01)).toBe(true);
     });
 
     it('should be inverse of mel_to_hz', () => {
@@ -334,60 +344,6 @@ describe('xa-convert', () => {
         const time = convert.samples_to_time(sample, sr);
         const reconstructed = convert.time_to_samples(time, sr);
         expect(Math.abs(sample - reconstructed)).toBeLessThan(1);
-      });
-    });
-  });
-
-  describe('bpm_to_tempo', () => {
-    it('should be defined and exported', () => {
-      expect(convert.bpm_to_tempo).toBeDefined();
-      expect(typeof convert.bpm_to_tempo).toBe('function');
-    });
-
-    it('should convert BPM to tempo (frames per beat)', () => {
-      const bpm = 120;
-      const sr = 22050;
-      const hop_length = 512;
-      const tempo = convert.bpm_to_tempo(bpm, sr, hop_length);
-
-      expect(tempo).toBeGreaterThan(0);
-      expect(Number.isFinite(tempo)).toBe(true);
-    });
-
-    it('should handle different BPM values', () => {
-      const bpms = [60, 90, 120, 140, 180];
-      bpms.forEach(bpm => {
-        const tempo = convert.bpm_to_tempo(bpm, 22050, 512);
-        expect(tempo).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  describe('tempo_to_bpm', () => {
-    it('should be defined and exported', () => {
-      expect(convert.tempo_to_bpm).toBeDefined();
-      expect(typeof convert.tempo_to_bpm).toBe('function');
-    });
-
-    it('should convert tempo to BPM', () => {
-      const sr = 22050;
-      const hop_length = 512;
-      const tempo = 100;
-      const bpm = convert.tempo_to_bpm(tempo, sr, hop_length);
-
-      expect(bpm).toBeGreaterThan(0);
-      expect(Number.isFinite(bpm)).toBe(true);
-    });
-
-    it('should be inverse of bpm_to_tempo', () => {
-      const sr = 22050;
-      const hop_length = 512;
-      const bpms = [60, 90, 120, 140, 180];
-
-      bpms.forEach(bpm => {
-        const tempo = convert.bpm_to_tempo(bpm, sr, hop_length);
-        const reconstructed = convert.tempo_to_bpm(tempo, sr, hop_length);
-        expect(almostEqual(bpm, reconstructed, 0.1)).toBe(true);
       });
     });
   });

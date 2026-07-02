@@ -20,7 +20,7 @@ import {
   almostEqual,
   isFiniteArray,
   isNonNegativeArray
-} from './fixtures/test-data.js';
+} from '../tests/fixtures/test-data.js';
 
 describe('xa-onset - Algorithmic Validation', () => {
   let sampleRate;

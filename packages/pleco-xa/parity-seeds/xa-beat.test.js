@@ -16,7 +16,7 @@ import {
   withinPercent,
   almostEqual,
   knownTestVectors
-} from './fixtures/test-data.js';
+} from '../tests/fixtures/test-data.js';
 
 describe('xa-beat - Algorithmic Validation', () => {
   let sampleRate;

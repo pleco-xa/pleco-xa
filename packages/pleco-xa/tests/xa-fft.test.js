@@ -26,6 +26,18 @@ import {
   knownTestVectors
 } from './fixtures/test-data.js';
 
+/**
+ * xa-fft's actual API:
+ *   fft(realArray)  -> Array<{real, imag}>
+ *   ifft(spectrum)  -> Array<{real, imag}>
+ *   stft(y, n_fft, hop_length, win_length, window, center, pad_mode) -> [freq][time] of {real, imag}
+ *   istft(D, hop_length, win_length, window, center, length) -> Float32Array
+ */
+const magnitudesOf = (spectrum) =>
+  spectrum.map((bin) => Math.sqrt(bin.real ** 2 + bin.imag ** 2));
+
+const realPartsOf = (spectrum) => spectrum.map((bin) => bin.real);
+
 describe('xa-fft - Algorithmic Validation', () => {
   let sampleRate;
 
@@ -43,21 +55,11 @@ describe('xa-fft - Algorithmic Validation', () => {
       const result = xa_fft.fft(impulse);
 
       expect(result).toBeDefined();
+      expect(result.length).toBe(8);
+      expect(result[0]).toHaveProperty('real');
+      expect(result[0]).toHaveProperty('imag');
 
-      // Extract magnitudes
-      let magnitudes;
-      if (result.real && result.imag) {
-        // Complex result
-        magnitudes = new Float32Array(result.real.length);
-        for (let i = 0; i < result.real.length; i++) {
-          magnitudes[i] = Math.sqrt(result.real[i] ** 2 + result.imag[i] ** 2);
-        }
-      } else if (result.magnitude) {
-        magnitudes = result.magnitude;
-      } else {
-        // Assume result is magnitude array
-        magnitudes = result;
-      }
+      const magnitudes = magnitudesOf(result);
 
       // All magnitudes should be approximately 1
       for (const mag of magnitudes) {
@@ -74,19 +76,9 @@ describe('xa-fft - Algorithmic Validation', () => {
       const result = xa_fft.fft(dcSignal);
 
       expect(result).toBeDefined();
+      expect(result.length).toBe(8);
 
-      // Extract magnitudes
-      let magnitudes;
-      if (result.real && result.imag) {
-        magnitudes = new Float32Array(result.real.length);
-        for (let i = 0; i < result.real.length; i++) {
-          magnitudes[i] = Math.sqrt(result.real[i] ** 2 + result.imag[i] ** 2);
-        }
-      } else if (result.magnitude) {
-        magnitudes = result.magnitude;
-      } else {
-        magnitudes = result;
-      }
+      const magnitudes = magnitudesOf(result);
 
       // DC bin (index 0) should be ≈ 8 (length of signal)
       expect(almostEqual(magnitudes[0], 8.0, 0.1)).toBe(true);
@@ -113,24 +105,14 @@ describe('xa-fft - Algorithmic Validation', () => {
       const result = xa_fft.fft(padded);
 
       expect(result).toBeDefined();
+      expect(result.length).toBe(nfft);
 
-      // Extract magnitudes
-      let magnitudes;
-      if (result.real && result.imag) {
-        magnitudes = new Float32Array(result.real.length);
-        for (let i = 0; i < result.real.length; i++) {
-          magnitudes[i] = Math.sqrt(result.real[i] ** 2 + result.imag[i] ** 2);
-        }
-      } else if (result.magnitude) {
-        magnitudes = result.magnitude;
-      } else {
-        magnitudes = result;
-      }
+      const magnitudes = magnitudesOf(result);
 
-      // Find peak bin
+      // Find peak bin over the positive-frequency half (the upper half mirrors it)
       let peakBin = 0;
       let peakMag = magnitudes[0];
-      for (let i = 1; i < magnitudes.length; i++) {
+      for (let i = 1; i <= nfft / 2; i++) {
         if (magnitudes[i] > peakMag) {
           peakMag = magnitudes[i];
           peakBin = i;
@@ -155,7 +137,7 @@ describe('xa-fft - Algorithmic Validation', () => {
       const testSignal = signal.slice(0, length);
 
       const fftResult = xa_fft.fft(testSignal);
-      const reconstructed = xa_fft.ifft(fftResult);
+      const reconstructed = realPartsOf(xa_fft.ifft(fftResult));
 
       expect(reconstructed).toBeDefined();
       expect(reconstructed.length).toBe(testSignal.length);
@@ -169,7 +151,7 @@ describe('xa-fft - Algorithmic Validation', () => {
       const impulse = generateImpulse(128, 0);
 
       const fftResult = xa_fft.fft(impulse);
-      const reconstructed = xa_fft.ifft(fftResult);
+      const reconstructed = realPartsOf(xa_fft.ifft(fftResult));
 
       expect(reconstructed).toBeDefined();
       expect(reconstructed.length).toBe(impulse.length);
@@ -182,7 +164,7 @@ describe('xa-fft - Algorithmic Validation', () => {
       const dcSignal = generateDCSignal(128, 0.5);
 
       const fftResult = xa_fft.fft(dcSignal);
-      const reconstructed = xa_fft.ifft(fftResult);
+      const reconstructed = realPartsOf(xa_fft.ifft(fftResult));
 
       expect(reconstructed).toBeDefined();
       expect(reconstructed.length).toBe(dcSignal.length);
@@ -194,60 +176,52 @@ describe('xa-fft - Algorithmic Validation', () => {
 
   describe('STFT (Short-Time Fourier Transform)', () => {
     it('should be defined and exported', () => {
-      const hasSTFT = xa_fft.stft || xa_fft.STFT || xa_fft.shortTimeFourierTransform;
-      expect(hasSTFT).toBeDefined();
+      expect(xa_fft.stft).toBeDefined();
+      expect(typeof xa_fft.stft).toBe('function');
     });
 
     it('should produce 2D time-frequency representation', () => {
-      const stftFn = xa_fft.stft || xa_fft.STFT || xa_fft.shortTimeFourierTransform;
+      const signal = generateTestAudio(1.0, sampleRate, 440);
+      const n_fft = 2048;
+      const hop_length = 512;
 
-      if (stftFn) {
-        const signal = generateTestAudio(1.0, sampleRate, 440);
-        const result = stftFn(signal, { sr: sampleRate, nfft: 2048, hopLength: 512 });
+      // stft(y, n_fft, hop_length, ...) -> [freq][time] of {real, imag}
+      const result = xa_fft.stft(signal, n_fft, hop_length);
 
-        expect(result).toBeDefined();
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
 
-        // STFT should produce 2D array: [frequency_bins][time_frames]
-        if (Array.isArray(result)) {
-          expect(result.length).toBeGreaterThan(0);
-          expect(result[0]).toBeDefined();
-        }
-      }
+      // Librosa shape: (1 + n_fft/2) freq bins x (1 + floor(len/hop)) frames (center=true)
+      expect(result.length).toBe(n_fft / 2 + 1);
+      const expectedFrames = 1 + Math.floor(signal.length / hop_length);
+      expect(result[0].length).toBe(expectedFrames);
+
+      // Bins are complex {real, imag} and finite
+      expect(Number.isFinite(result[0][0].real)).toBe(true);
+      expect(Number.isFinite(result[0][0].imag)).toBe(true);
     });
   });
 
   describe('ISTFT (Inverse STFT)', () => {
     it('should be defined and exported', () => {
-      const hasISTFT = xa_fft.istft || xa_fft.ISTFT || xa_fft.inverseSTFT;
-      expect(hasISTFT).toBeDefined();
+      expect(xa_fft.istft).toBeDefined();
+      expect(typeof xa_fft.istft).toBe('function');
     });
 
     it('should reconstruct signal from STFT (istft(stft(x)) ≈ x)', () => {
-      const stftFn = xa_fft.stft || xa_fft.STFT;
-      const istftFn = xa_fft.istft || xa_fft.ISTFT;
+      const signal = generateTestAudio(0.5, sampleRate, 440);
+      const n_fft = 2048;
+      const hop_length = 512;
 
-      if (stftFn && istftFn) {
-        const signal = generateTestAudio(0.5, sampleRate, 440);
-        const nfft = 2048;
-        const hopLength = 512;
+      const stftResult = xa_fft.stft(signal, n_fft, hop_length);
+      // istft(D, hop_length, win_length, window, center, length)
+      const reconstructed = xa_fft.istft(stftResult, hop_length, null, 'hann', true, signal.length);
 
-        const stftResult = stftFn(signal, { sr: sampleRate, nfft, hopLength });
-        const reconstructed = istftFn(stftResult, { hopLength, length: signal.length });
+      expect(reconstructed).toBeDefined();
+      expect(reconstructed.length).toBe(signal.length);
 
-        expect(reconstructed).toBeDefined();
-
-        // Reconstructed signal should be close to original
-        // Note: Perfect reconstruction requires overlap-add windowing
-        if (reconstructed.length === signal.length) {
-          const correlationTest = allclose(
-            reconstructed,
-            signal,
-            { rtol: 0.1, atol: 0.1 }
-          );
-          // May not be perfect due to windowing, but should be similar
-          expect(reconstructed).toBeDefined();
-        }
-      }
+      // Hann window with 75% overlap satisfies COLA -> near-perfect reconstruction
+      expect(allclose(reconstructed, signal, { rtol: 1e-3, atol: 1e-4 })).toBe(true);
     });
   });
 
@@ -296,7 +270,9 @@ describe('xa-fft - Algorithmic Validation', () => {
         const result = xa_fft.fft(signal);
 
         expect(result).toBeDefined();
-        expect(Number.isFinite(result.real ? result.real[0] : result[0])).toBe(true);
+        expect(result.length).toBe(len);
+        expect(Number.isFinite(result[0].real)).toBe(true);
+        expect(Number.isFinite(result[0].imag)).toBe(true);
       });
     });
 
@@ -312,12 +288,8 @@ describe('xa-fft - Algorithmic Validation', () => {
       testSignals.forEach(signal => {
         const result = xa_fft.fft(signal);
 
-        if (result.real && result.imag) {
-          expect(isFiniteArray(Array.from(result.real))).toBe(true);
-          expect(isFiniteArray(Array.from(result.imag))).toBe(true);
-        } else {
-          expect(isFiniteArray(Array.from(result))).toBe(true);
-        }
+        expect(isFiniteArray(result.map((bin) => bin.real))).toBe(true);
+        expect(isFiniteArray(result.map((bin) => bin.imag))).toBe(true);
       });
     });
 
@@ -341,11 +313,8 @@ describe('xa-fft - Algorithmic Validation', () => {
     });
 
     it('should export STFT-related functions', () => {
-      const hasSTFT = xa_fft.stft || xa_fft.STFT || xa_fft.shortTimeFourierTransform;
-      const hasISTFT = xa_fft.istft || xa_fft.ISTFT || xa_fft.inverseSTFT;
-
-      expect(hasSTFT).toBeDefined();
-      expect(hasISTFT).toBeDefined();
+      expect(typeof xa_fft.stft).toBe('function');
+      expect(typeof xa_fft.istft).toBe('function');
     });
   });
 });

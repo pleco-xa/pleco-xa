@@ -1,6 +1,7 @@
 /** audio-util.js
  * Audio utility functions for processing and manipulating audio data.
  */
+import { encodeWav } from '../io/wav.js'
 // 
 /**
  * Create a loopable AudioBuffer with custom waveform, multichannel support, and export options.
@@ -62,49 +63,11 @@ export function createLoopBuffer({
  * @returns {Blob} - A Blob representing the .wav file.
  */
 export function exportBufferAsWav(buffer) {
-  const numChannels = buffer.numberOfChannels
-  const sampleRate = buffer.sampleRate
-  const length = buffer.length
-  const wavBuffer = new ArrayBuffer(44 + length * numChannels * 2)
-  const view = new DataView(wavBuffer)
-
-  // Write WAV header
-  const writeString = (offset, str) => {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i))
-    }
+  const channels = []
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    channels.push(buffer.getChannelData(ch))
   }
-
-  writeString(0, 'RIFF')
-  view.setUint32(4, 36 + length * numChannels * 2, true)
-  writeString(8, 'WAVE')
-  writeString(12, 'fmt ')
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true)
-  view.setUint16(22, numChannels, true)
-  view.setUint32(24, sampleRate, true)
-  view.setUint32(28, sampleRate * numChannels * 2, true)
-  view.setUint16(32, numChannels * 2, true)
-  view.setUint16(34, 16, true)
-  writeString(36, 'data')
-  view.setUint32(40, length * numChannels * 2, true)
-
-  // Write PCM data
-  let offset = 44
-  for (let ch = 0; ch < numChannels; ch++) {
-    const data = buffer.getChannelData(ch)
-    for (let i = 0; i < length; i++) {
-      const sample = Math.max(-1, Math.min(1, data[i]))
-      view.setInt16(
-        offset,
-        sample < 0 ? sample * 0x8000 : sample * 0x7fff,
-        true,
-      )
-      offset += 2
-    }
-  }
-
-  return new Blob([view], { type: 'audio/wav' })
+  return new Blob([encodeWav(channels, buffer.sampleRate)], { type: 'audio/wav' })
 }
 
 /**

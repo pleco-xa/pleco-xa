@@ -13,9 +13,12 @@
  * @param {boolean} fill - Fill zeros with threshold value (default: false)
  * @returns {Array|Float32Array} Normalized array
  */
+const _isRow = (x) => Array.isArray(x) || (ArrayBuffer.isView(x) && !(x instanceof DataView))
+
+
 export function normalize(S, norm = Infinity, axis = null, threshold = 1e-10, fill = false) {
   // Handle 1D array
-  if (!Array.isArray(S[0])) {
+  if (!_isRow(S[0])) {
     const magnitude = compute_norm(S, norm)
     const scale = magnitude > threshold ? magnitude : (fill ? threshold : 1.0)
     return S.map((val) => val / scale)
@@ -92,7 +95,7 @@ function compute_norm(arr, norm) {
  */
 export function peak_normalize(S, target = 1.0, threshold = 1e-10) {
   // Handle 1D array
-  if (!Array.isArray(S[0])) {
+  if (!_isRow(S[0])) {
     const peak = Math.max(...S.map(Math.abs))
     const scale = peak > threshold ? target / peak : 1.0
     return S.map((val) => val * scale)
@@ -120,7 +123,7 @@ export function normalize_clip(S, norm = Infinity, axis = null, threshold = 1e-1
   const normalized = normalize(S, norm, axis, threshold, false)
 
   // Clip values
-  if (!Array.isArray(normalized[0])) {
+  if (!_isRow(normalized[0])) {
     return normalized.map((val) => Math.max(clip_min, Math.min(clip_max, val)))
   }
 
@@ -139,7 +142,7 @@ export function normalize_clip(S, norm = Infinity, axis = null, threshold = 1e-1
  */
 export function softmask(X, X_ref, power = 1.0, split_zeros = false) {
   // Handle 1D arrays
-  if (!Array.isArray(X[0])) {
+  if (!_isRow(X[0])) {
     return X.map((val, i) => {
       const ref = X_ref[i]
       if (ref === 0) {

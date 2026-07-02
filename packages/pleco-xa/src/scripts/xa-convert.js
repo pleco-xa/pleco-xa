@@ -105,10 +105,17 @@ export function time_to_samples(times, sr = 22050) {
  * @returns {number|Array} MIDI note number
  */
 export function hz_to_midi(frequencies) {
-  if (isArrayLike(frequencies)) {
-    return frequencies.map((f) => 12 * Math.log2(f / 440.0) + 69)
+  const convertSingle = (f) => {
+    if (typeof f !== 'number' || !Number.isFinite(f) || f <= 0) {
+      throw new Error(`hz_to_midi: frequency must be a positive finite number, got ${f}`)
+    }
+    return 12 * Math.log2(f / 440.0) + 69
   }
-  return 12 * Math.log2(frequencies / 440.0) + 69
+
+  if (isArrayLike(frequencies)) {
+    return frequencies.map(convertSingle)
+  }
+  return convertSingle(frequencies)
 }
 
 /**
@@ -117,10 +124,17 @@ export function hz_to_midi(frequencies) {
  * @returns {number|Array} Frequency in Hz
  */
 export function midi_to_hz(notes) {
-  if (isArrayLike(notes)) {
-    return notes.map((n) => 440.0 * Math.pow(2, (n - 69) / 12))
+  const convertSingle = (n) => {
+    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || n > 127) {
+      throw new Error(`midi_to_hz: MIDI note must be a finite number in [0, 127], got ${n}`)
+    }
+    return 440.0 * Math.pow(2, (n - 69) / 12)
   }
-  return 440.0 * Math.pow(2, (notes - 69) / 12)
+
+  if (isArrayLike(notes)) {
+    return notes.map(convertSingle)
+  }
+  return convertSingle(notes)
 }
 
 /**
@@ -134,6 +148,9 @@ export function midi_to_note(midi, octave = true, cents = false) {
   const note_names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
   const convertSingle = (m) => {
+    if (typeof m !== 'number' || !Number.isFinite(m) || m < 0 || m > 127) {
+      throw new Error(`midi_to_note: MIDI note must be a finite number in [0, 127], got ${m}`)
+    }
     const note_int = Math.round(m)
     const note_name = note_names[note_int % 12]
     const octave_num = Math.floor(note_int / 12) - 1
@@ -166,10 +183,11 @@ export function midi_to_note(midi, octave = true, cents = false) {
  * @returns {number|Array} MIDI note number(s)
  */
 export function note_to_midi(note, round_midi = true) {
-  const note_pattern = /^([A-G])(#|b)?(-?\d+)$/
+  // Leading note name is case-insensitive, matching librosa's note_to_midi
+  const note_pattern = /^([A-Ga-g])(#|b)?(-?\d+)$/
 
   const convertSingle = (n) => {
-    const match = n.match(note_pattern)
+    const match = typeof n === 'string' ? n.match(note_pattern) : null
 
     if (!match) {
       throw new Error(`Invalid note format: ${n}`)
@@ -180,7 +198,7 @@ export function note_to_midi(note, round_midi = true) {
     }
 
     const [, letter, accidental, octave] = match
-    let midi = note_names[letter] + (parseInt(octave) + 1) * 12
+    let midi = note_names[letter.toUpperCase()] + (parseInt(octave) + 1) * 12
 
     if (accidental === '#') {
       midi += 1
@@ -853,3 +871,11 @@ export function multi_frequency_weighting(frequencies, kinds = ['Z', 'A', 'C'], 
     return isArrayLike(frequencies) ? weights : weights;
   });
 }
+
+// Librosa-faithful public aliases: librosa.core.convert exports these as
+// A_weighting, B_weighting, C_weighting, D_weighting, Z_weighting
+export const A_weighting = a_weighting
+export const B_weighting = b_weighting
+export const C_weighting = c_weighting
+export const D_weighting = d_weighting
+export const Z_weighting = z_weighting

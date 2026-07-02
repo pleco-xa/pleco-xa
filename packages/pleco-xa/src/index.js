@@ -25,5 +25,11 @@ export {
 export { BeatTracker, beat_track, tempo, quickBeatTrack, dynamicBeatTrack } from './scripts/xa-beat-tracker.js'
 export * as bpm from './scripts/xa-bpm-algorithm.js'
 
+// IO (universal: Node + browser + workers)
+export { encodeWav, decodeWav } from './io/wav.js'
+
+// Conversions (fixture-validated vs librosa 0.11.0)
+export * as convert from './scripts/xa-convert.js'
+
 // Loop detection (flagship — consolidation lands in Wave 3)
 export { fastLoopAnalysis } from './scripts/xa-loop.js'

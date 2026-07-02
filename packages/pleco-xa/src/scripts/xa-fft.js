@@ -9,11 +9,20 @@
  * @returns {Array} FFT result as complex numbers
  */
 export function fft(signal) {
+  if (signal == null || typeof signal.length !== 'number') {
+    throw new Error('fft: input must be an array or typed array of samples')
+  }
+
   const N = signal.length
 
-  // Base case
-  if (N <= 1) {
-    return signal.map((x) => ({ real: x, imag: 0 }))
+  if (N === 0) {
+    throw new Error('fft: input signal must not be empty')
+  }
+
+  // Base case. Array.from (not signal.map) so typed-array inputs still
+  // produce an array of {real, imag} objects instead of coerced NaNs.
+  if (N === 1) {
+    return Array.from(signal, (x) => ({ real: x, imag: 0 }))
   }
 
   // Pad to power of 2
