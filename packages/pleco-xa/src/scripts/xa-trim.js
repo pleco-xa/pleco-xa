@@ -1,16 +1,23 @@
 /**
- * Librosa-style trim functionality for JavaScript
- * Remove leading and trailing silence from audio
+ * Librosa-style trim functionality for JavaScript.
+ * SHIM (Wave 5A): delegates to the canonical librosa-parity implementation
+ * in src/effects/index.js (fixture-gated: effects.json). The legacy local
+ * implementation used peak sample amplitude as the silence reference (librosa
+ * uses max frame RMS), extended the end index by a full frame, and spread the
+ * whole signal through Math.max — all repaired in the canonical module.
  */
 
+import { trim as trimCanonical } from '../effects/index.js'
+
 /**
- * Remove leading and trailing silence from audio
+ * Remove leading and trailing silence from audio.
  * @param {Float32Array} y - Audio time series
  * @param {number} top_db - Silence threshold in dB below reference
- * @param {number|null} ref - Reference power (auto-calculated if null)
+ * @param {number|null} ref - Reference amplitude (max frame RMS if null)
  * @param {number} frame_length - Frame size for analysis
  * @param {number} hop_length - Frame hop size
- * @returns {Object} Object with trimmed audio and indices
+ * @returns {{y_trimmed: Float32Array, index: number[]}} Trimmed audio and [start, end).
+ *   All-silent input yields an empty y_trimmed with index [0, 0] (librosa semantics).
  */
 export function trim(
   y,
@@ -19,53 +26,8 @@ export function trim(
   frame_length = 2048,
   hop_length = 512,
 ) {
-  // Calculate reference power if not provided
-  if (ref === null) {
-    ref = Math.max(...y.map((x) => Math.abs(x)))
-  }
-
-  // Convert to power and then to dB
-  const threshold = Math.pow(10, -top_db / 20) * ref
-
-  // Compute envelope using frame-based energy
-  const envelope = []
-  for (let i = 0; i <= y.length - frame_length; i += hop_length) {
-    const frame = y.slice(i, i + frame_length)
-    const energy = Math.sqrt(
-      frame.reduce((sum, x) => sum + x * x, 0) / frame_length,
-    )
-    envelope.push(energy)
-  }
-
-  // Find non-silent regions
-  let start_frame = 0
-  let end_frame = envelope.length - 1
-
-  // Find first non-silent frame
-  for (let i = 0; i < envelope.length; i++) {
-    if (envelope[i] >= threshold) {
-      start_frame = i
-      break
-    }
-  }
-
-  // Find last non-silent frame
-  for (let i = envelope.length - 1; i >= 0; i--) {
-    if (envelope[i] >= threshold) {
-      end_frame = i
-      break
-    }
-  }
-
-  // Convert frame indices to sample indices
-  const start_sample = start_frame * hop_length
-  const end_sample = Math.min(end_frame * hop_length + frame_length, y.length)
-
-  // Return trimmed audio and indices
-  return {
-    y_trimmed: y.slice(start_sample, end_sample),
-    index: [start_sample, end_sample],
-  }
+  const [y_trimmed, index] = trimCanonical(y, { top_db, ref, frame_length, hop_length })
+  return { y_trimmed, index }
 }
 
 /**

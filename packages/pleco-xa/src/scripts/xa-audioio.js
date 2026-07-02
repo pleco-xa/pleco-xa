@@ -4,7 +4,9 @@
  *
  */
 
-import { fft, ifft } from 'src/core/xa-fft.js'
+// Repaired path (Wave 5A): the old 'src/core/xa-fft.js' specifier resolved
+// nowhere in Node or the browser — xa-fft lives beside this module.
+import { fft, ifft } from './xa-fft.js'
 
 let globalAudioContext = null
 let currentAudioBuffer = null

@@ -1,7 +1,15 @@
 /**
- * Remix functionality for JavaScript
- * Re-order time intervals in audio with zero-crossing alignment
+ * Remix functionality for JavaScript.
+ * SHIM (Wave 5A): remix() delegates to the canonical librosa-parity
+ * implementation in src/effects/index.js. The legacy local implementation
+ * SORTED intervals by start time, which defeated reordering — librosa's
+ * canonical remix use case (beat reversal) was a no-op through it. The
+ * canonical remix preserves caller order and defaults align_zeros=true,
+ * snapping boundaries to zero crossings of the whole signal (librosa
+ * match_events semantics) instead of shrinking each segment.
  */
+
+import { remix as remixCanonical } from '../effects/index.js'
 
 /**
  * Helper function to find zero crossings
@@ -24,60 +32,14 @@ export function find_zero_crossing(y, start, direction) {
 }
 
 /**
- * Remix audio by reordering time intervals
+ * Remix audio by reordering time intervals (caller order preserved).
  * @param {Float32Array} y - Audio time series
- * @param {Array} intervals - Array of [start, end] sample indices to reorder
- * @param {boolean} align_zeros - Whether to align segments to zero crossings
+ * @param {Array<number[]>} intervals - [start, end) sample intervals, in output order
+ * @param {boolean} align_zeros - Snap boundaries to zero crossings of y (librosa default: true)
  * @returns {Float32Array} Remixed audio
  */
-export function remix(y, intervals, align_zeros = false) {
-  // Validate intervals
-  intervals = intervals.map((interval) => {
-    if (interval[0] < 0 || interval[1] > y.length) {
-      throw new Error('Interval exceeds audio bounds')
-    }
-    return interval
-  })
-
-  // Sort intervals by start time if needed
-  intervals.sort((a, b) => a[0] - b[0])
-
-  // Extract and concatenate intervals
-  const segments = []
-
-  for (let [start, end] of intervals) {
-    // Convert to integer sample indices
-    start = Math.floor(start)
-    end = Math.floor(end)
-
-    // Extract segment
-    let segment = y.slice(start, end)
-
-    // Align zeros if requested
-    if (align_zeros && segment.length > 0) {
-      // Find zero crossings
-      const zero_start = find_zero_crossing(segment, 0, 1)
-      const zero_end = find_zero_crossing(segment, segment.length - 1, -1)
-
-      if (zero_start !== null && zero_end !== null) {
-        segment = segment.slice(zero_start, zero_end + 1)
-      }
-    }
-
-    segments.push(segment)
-  }
-
-  // Concatenate all segments
-  const total_length = segments.reduce((sum, seg) => sum + seg.length, 0)
-  const result = new Float32Array(total_length)
-
-  let offset = 0
-  for (let segment of segments) {
-    result.set(segment, offset)
-    offset += segment.length
-  }
-
-  return result
+export function remix(y, intervals, align_zeros = true) {
+  return remixCanonical(y, intervals, { align_zeros })
 }
 
 /**

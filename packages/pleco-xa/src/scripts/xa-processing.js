@@ -1,52 +1,35 @@
 /**
  * Librosa-style audio processing for JavaScript
  * Advanced audio manipulation including HPSS, pitch shifting, and pitch detection
+ *
+ * SHIM (Wave 5A): hpss / phase_vocoder / time_stretch / pitch_shift delegate
+ * to the canonical librosa-parity implementations in src/decompose/index.js
+ * and src/effects/index.js (fixture-gated: hpss.json, phase_vocoder.json).
+ * The legacy local copies returned raw median-filtered spectrograms from
+ * hpss (not a decomposition of S), wrapped the raw phase delta instead of
+ * the deviation in phase_vocoder, and time_stretch/pitch_shift crashed on a
+ * dead require('./librosa-fft.js') with inverted rate semantics.
  */
+
+import { hpss as hpssCanonical } from '../decompose/index.js'
+import {
+  phase_vocoder as phaseVocoderCanonical,
+  time_stretch as timeStretchCanonical,
+  pitch_shift as pitchShiftCanonical,
+} from '../effects/index.js'
 
 /**
  * Harmonic-Percussive Source Separation (HPSS)
- * @param {Array} S - Magnitude spectrogram (freq x time)
- * @param {number} kernel_size - Median filter kernel size
+ * Default output is the MASKED components S*mask_H / S*mask_P, so
+ * harmonic + percussive ≈ S at margin=1 (librosa semantics).
+ * @param {Array} S - Magnitude (or complex) spectrogram (freq x time)
+ * @param {number|Array} kernel_size - Median filter kernel size(s)
  * @param {number} power - Power for soft masking
- * @param {boolean} mask - Whether to return soft masks
- * @returns {Object} Separated harmonic and percussive components
+ * @param {boolean} mask - Whether to return the soft masks instead
+ * @returns {Object} {harmonic, percussive} components (or masks)
  */
 export function hpss(S, kernel_size = 31, power = 2.0, mask = false) {
-  const [n_freq, n_time] = [S.length, S[0].length]
-
-  // Median filters
-  const H = median_filter_horizontal(S, kernel_size)
-  const P = median_filter_vertical(S, kernel_size)
-
-  if (mask) {
-    // Soft masking
-    const H_mask = Array(n_freq)
-      .fill(null)
-      .map(() => new Float32Array(n_time))
-    const P_mask = Array(n_freq)
-      .fill(null)
-      .map(() => new Float32Array(n_time))
-
-    for (let i = 0; i < n_freq; i++) {
-      for (let j = 0; j < n_time; j++) {
-        const H_power = Math.pow(H[i][j], power)
-        const P_power = Math.pow(P[i][j], power)
-        const sum = H_power + P_power
-
-        if (sum > 0) {
-          H_mask[i][j] = H_power / sum
-          P_mask[i][j] = P_power / sum
-        } else {
-          H_mask[i][j] = 0.5
-          P_mask[i][j] = 0.5
-        }
-      }
-    }
-
-    return { harmonic: H_mask, percussive: P_mask }
-  }
-
-  return { harmonic: H, percussive: P }
+  return hpssCanonical(S, { kernel_size, power, mask })
 }
 
 /**
@@ -129,120 +112,23 @@ export function median(array) {
  * @param {number} bins_per_octave - Bins per octave (default 12)
  * @returns {Float32Array} Pitch-shifted audio
  */
-export function pitch_shift(y, _sr, n_steps, bins_per_octave = 12) {
-  // Import STFT functions
-  const { stft, istft } = require('./librosa-fft.js')
-
-  const hop_length = 512
-  const n_fft = 2048
-
-  // Compute STFT
-  const D = stft(y, n_fft, hop_length)
-
-  // Shift ratio
-  const shift_ratio = Math.pow(2, n_steps / bins_per_octave)
-
-  // Phase vocoder pitch shift
-  const D_shifted = phase_vocoder(D, shift_ratio)
-
-  // Reconstruct signal
-  const y_shifted = istft(D_shifted, hop_length)
-
-  return y_shifted
+export function pitch_shift(y, sr, n_steps, bins_per_octave = 12) {
+  return pitchShiftCanonical(y, sr, n_steps, { bins_per_octave })
 }
 
 /**
- * Phase vocoder for pitch/time manipulation
- * @param {Array} D - STFT matrix
- * @param {number} rate - Time stretch factor
- * @returns {Array} Modified STFT matrix
+ * Phase vocoder for time-stretching an STFT matrix (librosa formulation).
+ * NOTE: operates on the [freq][time] layout produced by xa-fft.js stft —
+ * the legacy version here expected a [time][freq] layout that nothing in
+ * the library produced.
+ * @param {Array} D - STFT matrix [freq][time] of {real, imag} bins
+ * @param {number} rate - Time stretch factor (>1 faster, <1 slower)
+ * @param {number|null} hop_length - Hop length (default n_fft/4 inferred from D)
+ * @param {number|null} n_fft - FFT size (default 2*(D.length-1))
+ * @returns {Array} Stretched STFT matrix [freq][ceil(time/rate)]
  */
-export function phase_vocoder(D, rate) {
-  const n_freq = D[0].length
-  const n_time = D.length
-  const hop_length = 512 // Default
-
-  // Output time steps
-  const time_steps = []
-  for (let i = 0; i < Math.ceil(n_time / rate); i++) {
-    time_steps.push(i * rate)
-  }
-
-  // Initialize output
-  const D_stretched = Array(time_steps.length)
-    .fill(null)
-    .map(() =>
-      Array(n_freq)
-        .fill(null)
-        .map(() => ({ real: 0, imag: 0 })),
-    )
-
-  // Phase advance per bin
-  const phase_advance = new Array(n_freq)
-  for (let k = 0; k < n_freq; k++) {
-    phase_advance[k] = (2 * Math.PI * k * hop_length) / (n_freq * 2)
-  }
-
-  // Phase accumulator for each frequency bin
-  const phase_accumulator = new Array(n_freq).fill(0)
-  let last_phase = new Array(n_freq).fill(0)
-
-  // Process each output frame
-  for (let t_out = 0; t_out < time_steps.length; t_out++) {
-    const t_in = time_steps[t_out]
-    const t_floor = Math.floor(t_in)
-    const t_frac = t_in - t_floor
-
-    if (t_floor >= n_time - 1) break
-
-    // Interpolate magnitude and phase
-    for (let k = 0; k < n_freq; k++) {
-      // Get current and next frames
-      const curr_real = D[t_floor][k].real
-      const curr_imag = D[t_floor][k].imag
-
-      let next_real = curr_real
-      let next_imag = curr_imag
-      if (t_floor + 1 < n_time) {
-        next_real = D[t_floor + 1][k].real
-        next_imag = D[t_floor + 1][k].imag
-      }
-
-      // Interpolate magnitude
-      const curr_mag = Math.sqrt(curr_real * curr_real + curr_imag * curr_imag)
-      const next_mag = Math.sqrt(next_real * next_real + next_imag * next_imag)
-      const magnitude = curr_mag * (1 - t_frac) + next_mag * t_frac
-
-      // Calculate phase difference
-      const curr_phase = Math.atan2(curr_imag, curr_real)
-      const next_phase = Math.atan2(next_imag, next_real)
-
-      let phase_diff = next_phase - curr_phase
-
-      // Unwrap phase
-      while (phase_diff > Math.PI) phase_diff -= 2 * Math.PI
-      while (phase_diff < -Math.PI) phase_diff += 2 * Math.PI
-
-      // Expected phase advance
-      const expected_advance = phase_advance[k]
-
-      // True instantaneous frequency
-      const inst_freq = expected_advance + phase_diff
-
-      // Accumulate phase
-      phase_accumulator[k] += inst_freq
-
-      // Output with new phase
-      D_stretched[t_out][k] = {
-        real: magnitude * Math.cos(phase_accumulator[k]),
-        imag: magnitude * Math.sin(phase_accumulator[k]),
-      }
-
-      last_phase[k] = curr_phase
-    }
-  }
-
-  return D_stretched
+export function phase_vocoder(D, rate, hop_length = null, n_fft = null) {
+  return phaseVocoderCanonical(D, rate, { hop_length, n_fft })
 }
 
 /**
@@ -366,22 +252,10 @@ export function polyval(coeffs, x) {
  * Time stretching without pitch change
  * @param {Float32Array} y - Audio signal
  * @param {number} rate - Time stretch factor (>1 = faster, <1 = slower)
- * @returns {Float32Array} Time-stretched audio
+ * @returns {Float32Array} Time-stretched audio, length round(y.length / rate)
  */
 export function time_stretch(y, rate) {
-  const { stft, istft } = require('./librosa-fft.js')
-
-  const hop_length = 512
-  const n_fft = 2048
-
-  // Compute STFT
-  const D = stft(y, n_fft, hop_length)
-
-  // Phase vocoder time stretch
-  const D_stretched = phase_vocoder(D, 1 / rate)
-
-  // Reconstruct signal
-  return istft(D_stretched, hop_length)
+  return timeStretchCanonical(y, rate)
 }
 
 /**

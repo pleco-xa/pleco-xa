@@ -55,5 +55,19 @@ export * as filters from './filters/index.js'
 export * as loop from './loop/index.js'
 export { fastLoopAnalysis } from './loop/fast.js'
 
-// Sequence analysis — librosa.sequence.rqa port (fixture-gated: rqa.json)
+// Sequence analysis — Wave 3+5 (fixture-gated: rqa.json, dtw_segment.json —
+// dtw cumulative cost bit-exact, paths exact)
+export * as sequence from './sequence/index.js'
 export { rqa } from './sequence/rqa.js'
+
+// Structural segmentation — Wave 5 (fixture-gated: dtw_segment.json —
+// recurrence/lag/agglomerative exact)
+export * as segment from './segment/index.js'
+
+// Effects — Wave 5 (fixture-gated: effects.json, phase_vocoder.json).
+// Real phase vocoder; time_stretch/pitch_shift honor their contracts or throw.
+export * as effects from './effects/index.js'
+
+// Decompose — Wave 5 (fixture-gated: hpss.json; H+P≈S at margin=1).
+// Includes the pleco-unique vocal-separation flagship via its module.
+export * as decompose from './decompose/index.js'

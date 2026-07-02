@@ -421,19 +421,13 @@ export function processAudioToFingerprints(audioBuffer, nFft = 2048, hopLength =
   const channelData = audioBuffer.getChannelData(0)
   const sr = audioBuffer.sampleRate
 
-  // Create STFT - returns (time x freq) format
-  const stftResultTimeFreq = stft(channelData, nFft, hopLength)
-
-  // Transpose to (freq x time) to match Python librosa format
-  const numWindows = stftResultTimeFreq.length
-  const numFreqBins = stftResultTimeFreq[0].length
-
-  const stftResult = Array.from({ length: numFreqBins }, () => new Array(numWindows))
-  for (let t = 0; t < numWindows; t++) {
-    for (let f = 0; f < numFreqBins; f++) {
-      stftResult[f][t] = stftResultTimeFreq[t][f]
-    }
-  }
+  // Create STFT — xa-fft.js returns (freq x time), already librosa layout.
+  // (Wave 5A repair: the old code transposed here on the assumption stft
+  // returned time x freq, which scrambled frequency and time semantics for
+  // the entire fingerprint pipeline.)
+  const stftResult = stft(channelData, nFft, hopLength)
+  const numFreqBins = stftResult.length
+  const numWindows = stftResult[0].length
 
   // Extract magnitude spectrogram in (freq x time) format
   const magnitudeSpec = stftResult.map(freqRow => freqRow.map(bin => {
@@ -633,25 +627,27 @@ export function reconstructVocal(mixtureStft, eqCurves, sr, nFft = 2048, hopLeng
     }))
   )
 
-  // Transpose back to (time x freq) for istft
-  const adjustedStftTimeFreq = Array.from({ length: numWindows }, () => new Array(numFreqBins))
-  for (let f = 0; f < numFreqBins; f++) {
-    for (let t = 0; t < numWindows; t++) {
-      adjustedStftTimeFreq[t][f] = adjustedStft[f][t]
-    }
-  }
-
-  // Inverse STFT
+  // Inverse STFT — istft expects (freq x time), which adjustedStft already is.
+  // (Wave 5A repair: the old code transposed to time x freq and passed
+  // 'hann'/true into the win_length/window slots of istft(D, hop_length,
+  // win_length, window, center, length) — both wrong.)
   console.log('  Converting back to audio...')
-  const reconstructedAudio = istft(adjustedStftTimeFreq, hopLength, 'hann', true)
+  const reconstructedAudio = istft(adjustedStft, hopLength, null, 'hann', true)
 
   console.log('  ✓ Audio reconstructed')
 
-  // Normalize
-  const maxVal = Math.max(...reconstructedAudio.map(Math.abs))
-  const normalized = reconstructedAudio.map(sample => sample / (maxVal + 1e-8))
+  // Normalize (loop, not Math.max(...spread) — stack-safe on long audio)
+  let maxVal = 0
+  for (let i = 0; i < reconstructedAudio.length; i++) {
+    const a = Math.abs(reconstructedAudio[i])
+    if (a > maxVal) maxVal = a
+  }
+  const normalized = new Float32Array(reconstructedAudio.length)
+  for (let i = 0; i < reconstructedAudio.length; i++) {
+    normalized[i] = reconstructedAudio[i] / (maxVal + 1e-8)
+  }
 
-  return new Float32Array(normalized)
+  return normalized
 }
 
 // Utility functions

@@ -21,11 +21,13 @@ is a deliberate, documented divergence — not a gap we're hiding.
 | Spectral | centroid, bandwidth, rolloff, flatness, contrast, rms, zero_crossing_rate (descriptor math bit-exact) | `spectral_features.json` | Wave 4 |
 | MFCC | full pipeline, 8.7e-5 abs on dB scale | `mfcc.json` | Wave 4 |
 | Chroma | filters.chroma + chroma_stft incl. tuning estimation | `chroma.json` | Wave 4 |
+| Effects | trim/split (exact), preemphasis/deemphasis (5.96e-8), phase_vocoder (≤1e-3 of peak), time_stretch, pitch_shift | `effects.json`, `phase_vocoder.json` | Wave 5 |
+| Decompose | hpss incl. margin (1.6e-5; H+P≈S at margin=1), softmask | `hpss.json` | Wave 5 |
+| Sequence | dtw (bit-exact cost, exact path), match_intervals/match_events | `dtw_segment.json` | Wave 5 |
+| Segment | recurrence_matrix (exact), recurrence↔lag (exact shear), agglomerative (exact bounds) | `dtw_segment.json` | Wave 5 |
 
 ## Planned (fixture sets exist or land with their wave)
 
-- effects (trim/split/time_stretch), HPSS (Wave 5)
-- DTW, recurrence, segmentation (Wave 5)
 
 ## Exceptions (deliberate divergences)
 

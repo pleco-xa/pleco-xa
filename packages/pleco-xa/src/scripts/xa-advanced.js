@@ -15,6 +15,11 @@
  */
 
 import { stft as stftTransform, istft as istftTransform } from './xa-fft.js'
+import { hpss as hpssCanonical } from '../decompose/index.js'
+import {
+  phase_vocoder as phaseVocoderCanonical,
+  pitch_shift as pitchShiftCanonical,
+} from '../effects/index.js'
 
 /**
  * Custom error class for parameter validation
@@ -182,116 +187,14 @@ export function rms(y, frame_length = 2048, hop_length = 512, center = true) {
  * @returns {Object} {harmonic, percussive} components
  */
 export function hpss(S, kernel_size = 31, power = 2.0, mask = false) {
+  // SHIM (Wave 5A): delegates to the canonical librosa-parity HPSS in
+  // src/decompose/index.js (fixture-gated: hpss.json). The legacy local copy
+  // returned raw median-filtered spectrograms by default (not a decomposition
+  // of S) and used shrinking window boundaries instead of reflect.
   if (!S || S.length === 0) {
     throw new ParameterError('Spectrogram cannot be empty')
   }
-
-  const n_freq = S.length
-  const n_time = S[0].length
-
-  // Median filters
-  const H = median_filter_horizontal(S, kernel_size)
-  const P = median_filter_vertical(S, kernel_size)
-
-  if (!mask) return { harmonic: H, percussive: P }
-
-  // Soft masking - preallocate arrays
-  const H_mask = Array(n_freq)
-  const P_mask = Array(n_freq)
-
-  for (let i = 0; i < n_freq; i++) {
-    H_mask[i] = new Float32Array(n_time)
-    P_mask[i] = new Float32Array(n_time)
-
-    for (let j = 0; j < n_time; j++) {
-      const H_power = Math.pow(Math.abs(H[i][j]), power)
-      const P_power = Math.pow(Math.abs(P[i][j]), power)
-      const sum = H_power + P_power
-
-      if (sum > 1e-10) {
-        const invSum = 1 / sum
-        H_mask[i][j] = H_power * invSum
-        P_mask[i][j] = P_power * invSum
-      } else {
-        H_mask[i][j] = 0.5
-        P_mask[i][j] = 0.5
-      }
-    }
-  }
-
-  return { harmonic: H_mask, percussive: P_mask }
-}
-
-/**
- * Apply horizontal median filter (for harmonic component)
- * @private
- */
-function median_filter_horizontal(S, kernel_size) {
-  return S.map((row) => median_filter_1d(row, kernel_size))
-}
-
-/**
- * Apply vertical median filter (for percussive component)
- * @private
- */
-function median_filter_vertical(S, kernel_size) {
-  const n_freq = S.length
-  const n_time = S[0].length
-  const result = Array(n_freq)
-
-  for (let i = 0; i < n_freq; i++) {
-    result[i] = new Float32Array(n_time)
-  }
-
-  for (let j = 0; j < n_time; j++) {
-    const column = new Float32Array(n_freq)
-    for (let i = 0; i < n_freq; i++) {
-      column[i] = S[i][j]
-    }
-
-    const filtered = median_filter_1d(column, kernel_size)
-
-    for (let i = 0; i < n_freq; i++) {
-      result[i][j] = filtered[i]
-    }
-  }
-
-  return result
-}
-
-/**
- * 1D median filter
- * @private
- */
-function median_filter_1d(array, kernel_size) {
-  const half_kernel = Math.floor(kernel_size / 2)
-  const result = new Float32Array(array.length)
-
-  for (let i = 0; i < array.length; i++) {
-    const start = Math.max(0, i - half_kernel)
-    const end = Math.min(array.length, i + half_kernel + 1)
-
-    // Create a window slice for sorting
-    const window = array.slice(start, end)
-    result[i] = median(window)
-  }
-
-  return result
-}
-
-/**
- * Compute median of array
- * @private
- */
-function median(array) {
-  const sorted = Array.from(array).sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-
-  if (sorted.length % 2 === 0) {
-    return (sorted[mid - 1] + sorted[mid]) / 2
-  } else {
-    return sorted[mid]
-  }
+  return hpssCanonical(S, { kernel_size, power, mask })
 }
 
 // ============= PITCH SHIFTING =============
@@ -305,83 +208,32 @@ function median(array) {
  * @returns {Float32Array} Pitch-shifted audio
  */
 export function pitch_shift(y, sr, n_steps, bins_per_octave = 12) {
+  // SHIM (Wave 5A): delegates to the canonical librosa-parity pitch_shift
+  // (time_stretch → resample → fix_length) in src/effects/index.js. The
+  // legacy local copy phase-vocoded without the resample step (a duration
+  // change, not a pitch change) through a phase vocoder that never read the
+  // input phase.
   if (!y || y.length === 0) {
     throw new ParameterError('Audio signal cannot be empty')
   }
-
-  const hop_length = 512
-  const n_fft = 2048
-
-  // Compute STFT
-  const D = simple_stft(y, n_fft, hop_length)
-
-  // Shift ratio
-  const shift_ratio = Math.pow(2, n_steps / bins_per_octave)
-
-  // Phase vocoder pitch shift
-  const D_shifted = phase_vocoder(D, shift_ratio)
-
-  // Reconstruct signal
-  return simple_istft(D_shifted, hop_length)
+  return pitchShiftCanonical(y, sr, n_steps, { bins_per_octave })
 }
 
 /**
- * Phase vocoder for time/pitch manipulation
- * @param {Array} D - STFT matrix
- * @param {number} rate - Time stretch/compression rate
- * @returns {Array} Modified STFT matrix
+ * Phase vocoder for time-stretching an STFT matrix.
+ * SHIM (Wave 5A): delegates to the canonical librosa-parity implementation
+ * in src/effects/index.js (fixture-gated: phase_vocoder.json). The legacy
+ * local copy ignored the input phase entirely (magnitude-only robotization)
+ * and skipped magnitude interpolation.
+ * @param {Array} D - STFT matrix [freq][time] of {real, imag} bins
+ * @param {number} rate - Time stretch/compression rate (>1 faster)
+ * @returns {Array} Modified STFT matrix [freq][ceil(time/rate)]
  */
 export function phase_vocoder(D, rate) {
-  const n_freq = D.length
-  const n_time = D[0] ? D[0].length : 0
-  const hop_length = 512 // Default
-
-  if (n_time === 0) {
+  if (!D || D.length === 0 || !D[0] || D[0].length === 0) {
     throw new ParameterError('Empty STFT matrix')
   }
-
-  // Time stretch factor
-  const time_steps = Math.ceil(n_time / rate)
-  const D_stretched = Array(n_freq)
-
-  // Initialize output matrix
-  for (let k = 0; k < n_freq; k++) {
-    D_stretched[k] = Array(time_steps)
-    for (let t = 0; t < time_steps; t++) {
-      D_stretched[k][t] = { real: 0, imag: 0 }
-    }
-  }
-
-  // Phase advance per bin
-  const phase_advance = new Float32Array(n_freq)
-  for (let k = 0; k < n_freq; k++) {
-    phase_advance[k] = (2 * Math.PI * k * hop_length) / (n_freq * 2)
-  }
-
-  // Process each frequency bin
-  for (let k = 0; k < n_freq; k++) {
-    let phase_accumulator = 0
-
-    for (let t = 0; t < time_steps - 1; t++) {
-      const index = Math.floor(t * rate)
-      if (index >= n_time - 1) break
-
-      const bin = D[k][index]
-      const magnitude = Math.hypot(bin.real, bin.imag)
-
-      const cos_val = Math.cos(phase_accumulator)
-      const sin_val = Math.sin(phase_accumulator)
-
-      D_stretched[k][t] = {
-        real: magnitude * cos_val,
-        imag: magnitude * sin_val,
-      }
-
-      phase_accumulator += phase_advance[k]
-    }
-  }
-
-  return D_stretched
+  return phaseVocoderCanonical(D, rate)
 }
 
 // ============= MONOPHONIC PITCH DETECTION =============
@@ -576,30 +428,6 @@ export function find_peaks(signal, min_distance = 1, threshold = 0) {
   }
 
   return peaks
-}
-
-// ============= SIMPLIFIED STFT PLACEHOLDERS =============
-
-/**
- * STFT wrapper (no longer needs transpose - xa-fft.js now returns [freq][time])
- * @private
- */
-function simple_stft(y, n_fft, hop_length) {
-  // xa-fft.js now returns [freq][time] format (Librosa-compatible)
-  return stftTransform(y, n_fft, hop_length, null, 'hann', true, 'constant')
-}
-
-/**
- * ISTFT wrapper (no longer needs transpose - xa-fft.js now expects [freq][time])
- * @private
- */
-function simple_istft(D, hop_length) {
-  if (D.length === 0 || !D[0]) {
-    return new Float32Array(0)
-  }
-
-  // xa-fft.js now expects [freq][time] format (Librosa-compatible)
-  return istftTransform(D, hop_length, null, 'hann', true, null)
 }
 
 // ============= ADVANCED SPECTRUM FUNCTIONS =============

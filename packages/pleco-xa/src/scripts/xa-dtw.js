@@ -1,21 +1,39 @@
 /**
- * Dynamic Time Warping (DTW) for audio sequence comparison
- * Core algorithm for comparing musical sequences with optimal alignment
+ * Dynamic Time Warping (DTW) — compatibility shim.
+ *
+ * The librosa-faithful engine lives in src/sequence/dtw.js (recorded-step
+ * backtracking, appended custom steps, honored weights_add/weights_mul,
+ * subseq, absolute-radius Sakoe-Chiba band; fixture-gated against
+ * tools/parity/fixtures/dtw_segment.json). This module keeps the legacy
+ * positional call signature and result shape for existing consumers
+ * (dj-loop-analyzer), delegating the actual alignment to the engine.
+ *
+ * Removed (Wave 5B): `fastDTW` and `constrainedDTW`. constrainedDTW ignored
+ * its radius/path and called full dtw, so fastDTW was full DTW plus recursion
+ * overhead — a fabricated speedup. `isWithinBand` (the old normalized-
+ * coordinate band, which never matched librosa's geometry) is gone with it.
+ * Callers who want FastDTW semantics must implement a real constrained pass.
  */
 
+import { dtw as dtwCore } from '../sequence/dtw.js'
+
 /**
- * Dynamic Time Warping implementation
- * @param {Array} X - First sequence (2D array: features x time)
- * @param {Array} Y - Second sequence (2D array: features x time)
- * @param {string} metric - Distance metric ('euclidean' or 'cosine')
- * @param {Array} step_sizes_sigma - Step patterns [[1,1], [1,0], [0,1]]
- * @param {Array} weights_add - Additive weights for step patterns
- * @param {Array} weights_mul - Multiplicative weights for step patterns
- * @param {boolean} subseq - Subsequence matching
- * @param {boolean} backtrack - Whether to return optimal path
- * @param {Object} global_constraints - Global path constraints
- * @param {number} band_rad - Sakoe-Chiba band radius (0-1)
- * @returns {Object} DTW result with distance, cost matrix, and path
+ * Dynamic Time Warping (legacy signature).
+ *
+ * @param {Array} X - First sequence (2D: features x time)
+ * @param {Array} Y - Second sequence (2D: features x time)
+ * @param {string} metric - 'euclidean' | 'cosine' | 'manhattan' | 'sqeuclidean'
+ * @param {Array} step_sizes_sigma - custom steps (appended to librosa defaults)
+ * @param {Array} weights_add - additive step weights (honored)
+ * @param {Array} weights_mul - multiplicative step weights (honored)
+ * @param {boolean} subseq - subsequence matching (honored)
+ * @param {boolean} backtrack - whether to return the optimal path
+ * @param {boolean} global_constraints - Sakoe-Chiba band (librosa geometry)
+ * @param {number} band_rad - band radius as a fraction of min(N, M)
+ * @returns {Object} { distance, cost_matrix, path, normalized_distance }
+ *   `cost_matrix` is the (N, M) accumulated cost matrix (librosa layout —
+ *   no longer the padded (N+1, M+1) legacy matrix). `path` is start-to-end
+ *   ascending, as before.
  */
 export function dtw(
   X,
@@ -23,69 +41,31 @@ export function dtw(
   metric = 'euclidean',
   step_sizes_sigma = null,
   weights_add = null,
-  _weights_mul = null,
-  _subseq = false,
+  weights_mul = null,
+  subseq = false,
   backtrack = true,
   global_constraints = null,
   band_rad = 0.25,
 ) {
-  const n = X[0].length
-  const m = Y[0].length
+  const { D, wp } = dtwCore(X, Y, {
+    metric,
+    stepSizesSigma: step_sizes_sigma,
+    weightsAdd: weights_add,
+    weightsMul: weights_mul,
+    subseq,
+    backtrack,
+    globalConstraints: Boolean(global_constraints),
+    bandRad: band_rad,
+  })
 
-  // Initialize cost matrix
-  const D = Array(n + 1)
-    .fill(null)
-    .map(() => Array(m + 1).fill(Infinity))
-  D[0][0] = 0
-
-  // Step patterns (default is (1,1), (1,0), (0,1))
-  const steps = step_sizes_sigma || [
-    [1, 1],
-    [1, 0],
-    [0, 1],
-  ]
-  const weights = weights_add || [0, 0, 0]
-
-  // Calculate distance matrix
-  const C = computeCostMatrix(X, Y, metric)
-
-  // Fill cost matrix
-  for (let i = 1; i <= n; i++) {
-    for (let j = 1; j <= m; j++) {
-      // Check global constraints (Sakoe-Chiba band)
-      if (global_constraints && !isWithinBand(i, j, n, m, band_rad)) {
-        continue
-      }
-
-      const candidates = []
-      for (let s = 0; s < steps.length; s++) {
-        const [di, dj] = steps[s]
-        const prev_i = i - di
-        const prev_j = j - dj
-
-        if (prev_i >= 0 && prev_j >= 0) {
-          const cost = D[prev_i][prev_j] + weights[s] + C[i - 1][j - 1]
-          candidates.push(cost)
-        }
-      }
-
-      if (candidates.length > 0) {
-        D[i][j] = Math.min(...candidates)
-      }
-    }
-  }
-
-  // Backtrack to find path
-  let path = []
-  if (backtrack) {
-    path = findPath(D, steps)
-  }
+  const N = D.length
+  const M = D[0].length
 
   return {
-    distance: D[n][m],
+    distance: D[N - 1][M - 1],
     cost_matrix: D,
-    path: path,
-    normalized_distance: D[n][m] / (n + m), // Normalize by path length
+    path: backtrack ? wp.slice().reverse() : [],
+    normalized_distance: D[N - 1][M - 1] / (N + M),
   }
 }
 
@@ -122,142 +102,13 @@ export function computeCostMatrix(X, Y, metric = 'euclidean') {
           X.map((row) => row[i]),
           Y.map((row) => row[j]),
         )
+      } else {
+        throw new Error(`computeCostMatrix: unsupported metric '${metric}'`)
       }
     }
   }
 
   return C
-}
-
-/**
- * Check if position is within Sakoe-Chiba band constraint
- * @param {number} i - Row index
- * @param {number} j - Column index
- * @param {number} n - Total rows
- * @param {number} m - Total columns
- * @param {number} band_rad - Band radius (0-1)
- * @returns {boolean} Whether position is within band
- */
-export function isWithinBand(i, j, n, m, band_rad) {
-  const normalized_i = i / n
-  const normalized_j = j / m
-  return Math.abs(normalized_i - normalized_j) <= band_rad
-}
-
-/**
- * Backtrack to find optimal path through cost matrix
- * @param {Array} D - Cost matrix
- * @param {Array} steps - Step patterns
- * @returns {Array} Optimal path as array of [i, j] coordinates
- */
-export function findPath(D, steps) {
-  const path = []
-  let i = D.length - 1
-  let j = D[0].length - 1
-
-  path.push([i - 1, j - 1])
-
-  while (i > 0 || j > 0) {
-    const candidates = []
-
-    for (let s = 0; s < steps.length; s++) {
-      const [di, dj] = steps[s]
-      const prev_i = i - di
-      const prev_j = j - dj
-
-      if (prev_i >= 0 && prev_j >= 0 && D[prev_i][prev_j] !== Infinity) {
-        candidates.push({
-          cost: D[prev_i][prev_j],
-          i: prev_i,
-          j: prev_j,
-        })
-      }
-    }
-
-    if (candidates.length === 0) break
-
-    candidates.sort((a, b) => a.cost - b.cost)
-    i = candidates[0].i
-    j = candidates[0].j
-
-    if (i > 0 || j > 0) {
-      path.push([i - 1, j - 1])
-    }
-  }
-
-  return path.reverse()
-}
-
-/**
- * Fast DTW with early termination for real-time use
- * @param {Array} X - First sequence
- * @param {Array} Y - Second sequence
- * @param {number} radius - Search radius
- * @param {number} threshold - Early termination threshold
- * @returns {Object} DTW result
- */
-export function fastDTW(X, Y, radius = 5, threshold = Infinity) {
-  const n = X[0].length
-  const m = Y[0].length
-
-  if (n <= radius || m <= radius) {
-    return dtw(X, Y)
-  }
-
-  // Downsample sequences
-  const downsample_factor = 2
-  const X_down = downsample(X, downsample_factor)
-  const Y_down = downsample(Y, downsample_factor)
-
-  // Recursively compute DTW on downsampled sequences
-  const result_down = fastDTW(X_down, Y_down, radius, threshold)
-
-  // Project path back to original resolution
-  const path_projected = result_down.path.map(([i, j]) => [
-    Math.min(i * downsample_factor, n - 1),
-    Math.min(j * downsample_factor, m - 1),
-  ])
-
-  // Refine path with constrained DTW
-  return constrainedDTW(X, Y, path_projected, radius)
-}
-
-/**
- * Downsample sequence by factor
- * @param {Array} X - Input sequence
- * @param {number} factor - Downsampling factor
- * @returns {Array} Downsampled sequence
- */
-function downsample(X, factor) {
-  const n_features = X.length
-  const n_frames = X[0].length
-  const new_frames = Math.floor(n_frames / factor)
-
-  const X_down = Array(n_features)
-    .fill(null)
-    .map(() => new Array(new_frames))
-
-  for (let f = 0; f < n_features; f++) {
-    for (let t = 0; t < new_frames; t++) {
-      X_down[f][t] = X[f][t * factor]
-    }
-  }
-
-  return X_down
-}
-
-/**
- * Constrained DTW around a given path
- * @param {Array} X - First sequence
- * @param {Array} Y - Second sequence
- * @param {Array} path - Reference path
- * @param {number} radius - Constraint radius
- * @returns {Object} DTW result
- */
-function constrainedDTW(X, Y, _path, _radius) {
-  // Implementation would create a constrained search region
-  // around the given path with specified radius
-  return dtw(X, Y) // Simplified for now
 }
 
 /**

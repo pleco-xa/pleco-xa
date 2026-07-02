@@ -1,75 +1,52 @@
 /**
  * Audio filters for JavaScript
  * Preemphasis and deemphasis filtering
+ *
+ * SHIM (Wave 5A): preemphasis/deemphasis delegate to the canonical
+ * librosa-parity implementations in src/effects/index.js (fixture-gated:
+ * effects.json). The legacy local versions initialized zi=0 (librosa uses
+ * the lfilter state 2*y[0]-y[1]) and returned a zf convention incompatible
+ * with librosa block chaining — both repaired in the canonical module, so
+ * deemphasis(preemphasis(x)) now round-trips to x like librosa guarantees.
  */
+
+import {
+  preemphasis as preemphasisCanonical,
+  deemphasis as deemphasisCanonical,
+} from '../effects/index.js'
 
 /**
- * Apply first-order differencing filter (high-pass)
+ * Apply first-order differencing filter (high-pass): y[n] = x[n] - coef*x[n-1]
  * @param {Float32Array} y - Audio time series
  * @param {number} coef - Filter coefficient (typically 0.97)
- * @param {number|null} zi - Initial filter state
+ * @param {number|null} zi - Initial filter state (librosa default: 2*y[0]-y[1]);
+ *   chain non-overlapping blocks by passing the previous call's zf
  * @param {boolean} return_zf - Whether to return final filter state
- * @returns {Float32Array|Object} Filtered audio or object with audio and final state
+ * @returns {Float32Array|{y: Float32Array, zf: number}} Filtered audio, or {y, zf}
  */
 export function preemphasis(y, coef = 0.97, zi = null, return_zf = false) {
-  // Apply pre-emphasis filter: y[n] = x[n] - coef * x[n-1]
-  const y_out = new Float32Array(y.length)
-
-  // Initialize filter state
-  let z = zi !== null ? zi : 0
-
-  // Apply filter
-  for (let n = 0; n < y.length; n++) {
-    if (n === 0) {
-      y_out[n] = y[n] - coef * z
-      z = y[n]
-    } else {
-      y_out[n] = y[n] - coef * y[n - 1]
-    }
-  }
-
-  // Final filter state
-  const zf = y[y.length - 1]
-
   if (return_zf) {
-    return { y: y_out, zf: zf }
-  } else {
-    return y_out
+    const [y_out, zf] = preemphasisCanonical(y, { coef, zi, return_zf: true })
+    return { y: y_out, zf }
   }
+  return preemphasisCanonical(y, { coef, zi })
 }
 
 /**
- * Apply inverse of preemphasis filter (low-pass)
+ * Apply inverse of preemphasis filter (low-pass): x[n] = y[n] + coef*x[n-1]
  * @param {Float32Array} y - Audio time series
  * @param {number} coef - Filter coefficient (typically 0.97)
- * @param {number|null} zi - Initial filter state
+ * @param {number|null} zi - Initial filter state; when null, librosa's
+ *   extrapolation correction is applied so preemphasis round-trips exactly
  * @param {boolean} return_zf - Whether to return final filter state
- * @returns {Float32Array|Object} Filtered audio or object with audio and final state
+ * @returns {Float32Array|{y: Float32Array, zf: number}} Filtered audio, or {y, zf}
  */
 export function deemphasis(y, coef = 0.97, zi = null, return_zf = false) {
-  // Apply de-emphasis filter: y[n] = x[n] + coef * y[n-1]
-  const y_out = new Float32Array(y.length)
-
-  // Initialize filter state
-  let z = zi !== null ? zi : 0
-
-  // Apply filter
-  for (let n = 0; n < y.length; n++) {
-    if (n === 0) {
-      y_out[n] = y[n] + coef * z
-    } else {
-      y_out[n] = y[n] + coef * y_out[n - 1]
-    }
-  }
-
-  // Final filter state
-  const zf = y_out[y_out.length - 1]
-
   if (return_zf) {
-    return { y: y_out, zf: zf }
-  } else {
-    return y_out
+    const [y_out, zf] = deemphasisCanonical(y, { coef, zi, return_zf: true })
+    return { y: y_out, zf }
   }
+  return deemphasisCanonical(y, { coef, zi })
 }
 
 /**

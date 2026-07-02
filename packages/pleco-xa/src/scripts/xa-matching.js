@@ -1,14 +1,32 @@
 /**
- * Matching Functions Module for JavaScript
- * Functions for matching intervals and events with high precision
- * Based on librosa's matching algorithms for time-series alignment
+ * Matching Functions Module — compatibility shim.
+ *
+ * The librosa-faithful engines live in src/sequence/matching.js
+ * (matchIntervals / matchEvents, ports of librosa.util.match_intervals /
+ * match_events).
+ *
+ * CRITICAL repair (Wave 5B): the legacy implementation stored sorted VALUES
+ * through `Uint32Array.map` (typed-array map preserves the integer element
+ * type), silently flooring fractional interval boundaries and event times
+ * to unsigned integers before every binary search — all matching in seconds
+ * was integer-quantized. The engine keeps values in Float64Array; this shim
+ * only adapts calling conventions.
+ *
+ * The bottom-level `match_events` / `match_intervals` exports (re-exported by
+ * pleco-audio.js) now follow librosa semantics: constraint violations THROW
+ * (the legacy loose ports returned -1 sentinels instead).
  */
 
 import { debugLog } from './debug.js'
+import {
+  matchIntervals as matchIntervalsCore,
+  matchEvents as matchEventsCore,
+} from '../sequence/matching.js'
 
 /**
  * Musical Event and Interval Matcher Class
- * Handles precise matching between time-based musical events
+ * Thin wrapper around the librosa-faithful engine, kept for API
+ * compatibility (plus the pleco-specific accuracy helpers below).
  */
 export class Matcher {
   constructor() {
@@ -22,238 +40,8 @@ export class Matcher {
   }
 
   /**
-   * Validate interval array format
-   * @private
-   * @param {Array<Array<number>>} intervals - Array of [start, end] pairs
-   * @throws {ParameterError} If intervals are invalid
-   */
-  _validIntervals(intervals) {
-    if (!Array.isArray(intervals)) {
-      throw new this.ParameterError('Intervals must be an array')
-    }
-
-    for (let i = 0; i < intervals.length; i++) {
-      if (!Array.isArray(intervals[i]) || intervals[i].length !== 2) {
-        throw new this.ParameterError(
-          `Interval ${i} must be a 2-element array [start, end]`,
-        )
-      }
-      if (
-        typeof intervals[i][0] !== 'number' ||
-        typeof intervals[i][1] !== 'number'
-      ) {
-        throw new this.ParameterError(
-          `Interval ${i} must contain numeric values`,
-        )
-      }
-      if (intervals[i][0] > intervals[i][1]) {
-        throw new this.ParameterError(
-          `Invalid interval ${i}: start (${intervals[i][0]}) > end (${intervals[i][1]})`,
-        )
-      }
-    }
-  }
-
-  /**
-   * Compute Jaccard similarity between two intervals
-   * @private
-   * @param {Array<number>} intA - First interval [start, end]
-   * @param {Array<number>} intB - Second interval [start, end]
-   * @returns {number} Jaccard similarity score (0-1)
-   */
-  _jaccard(intA, intB) {
-    // Find intersection
-    const intersectionStart = Math.max(intA[0], intB[0])
-    const intersectionEnd = Math.min(intA[1], intB[1])
-    const intersection = Math.max(0, intersectionEnd - intersectionStart)
-
-    // Find union
-    const unionStart = Math.min(intA[0], intB[0])
-    const unionEnd = Math.max(intA[1], intB[1])
-    const union = unionEnd - unionStart
-
-    if (union > 0) {
-      return intersection / union
-    }
-
-    // Both intervals are points at the same location
-    return intA[0] === intB[0] ? 1.0 : 0.0
-  }
-
-  /**
-   * Find the best Jaccard match from query to candidates
-   * @private
-   * @param {Array<number>} query - Query interval
-   * @param {Array<Array<number>>} intervalsTo - Target intervals
-   * @param {Set<number>} candidates - Candidate indices
-   * @returns {number} Index of best match
-   */
-  _matchIntervalOverlaps(query, intervalsTo, candidates) {
-    let bestScore = -1
-    let bestIdx = -1
-
-    for (const idx of candidates) {
-      const score = this._jaccard(query, intervalsTo[idx])
-      if (score > bestScore) {
-        bestScore = score
-        bestIdx = idx
-      }
-    }
-
-    return bestIdx
-  }
-
-  /**
-   * Binary search implementation similar to numpy's searchsorted
-   * @private
-   * @param {Array<number>} arr - Sorted array
-   * @param {number} value - Value to search for
-   * @param {string} side - 'left' or 'right'
-   * @returns {number} Insertion index
-   */
-  _searchSorted(arr, value, side = 'left') {
-    let left = 0
-    let right = arr.length
-
-    if (side === 'left') {
-      while (left < right) {
-        const mid = Math.floor((left + right) / 2)
-        if (arr[mid] < value) {
-          left = mid + 1
-        } else {
-          right = mid
-        }
-      }
-    } else {
-      // side === 'right'
-      while (left < right) {
-        const mid = Math.floor((left + right) / 2)
-        if (arr[mid] <= value) {
-          left = mid + 1
-        } else {
-          right = mid
-        }
-      }
-    }
-
-    return left
-  }
-
-  /**
-   * Core interval matching algorithm with efficient candidate filtering
-   * @private
-   * @param {Array<Array<number>>} intervalsFrom - Source intervals
-   * @param {Array<Array<number>>} intervalsTo - Target intervals
-   * @param {boolean} strict - Whether to require overlapping intervals
-   * @returns {Uint32Array} Mapping from source to target intervals
-   */
-  _matchIntervalsCore(intervalsFrom, intervalsTo, strict = true) {
-    const n = intervalsFrom.length
-    const m = intervalsTo.length
-
-    // Create index arrays for sorting
-    const startIndex = new Uint32Array(m)
-    const endIndex = new Uint32Array(m)
-    for (let i = 0; i < m; i++) {
-      startIndex[i] = i
-      endIndex[i] = i
-    }
-
-    // Sort indices by start and end times
-    startIndex.sort((a, b) => intervalsTo[a][0] - intervalsTo[b][0])
-    endIndex.sort((a, b) => intervalsTo[a][1] - intervalsTo[b][1])
-
-    // Get sorted start and end values for binary search
-    const startSorted = startIndex.map((i) => intervalsTo[i][0])
-    const endSorted = endIndex.map((i) => intervalsTo[i][1])
-
-    // Pre-compute search results for all queries
-    const searchEnds = new Uint32Array(n)
-    const searchStarts = new Uint32Array(n)
-    for (let i = 0; i < n; i++) {
-      searchEnds[i] = this._searchSorted(
-        startSorted,
-        intervalsFrom[i][1],
-        'right',
-      )
-      searchStarts[i] = this._searchSorted(
-        endSorted,
-        intervalsFrom[i][0],
-        'left',
-      )
-    }
-
-    const output = new Uint32Array(n)
-
-    for (let i = 0; i < n; i++) {
-      const query = intervalsFrom[i]
-
-      // Find candidates that potentially overlap with query
-      const afterQuery = searchEnds[i]
-      const beforeQuery = searchStarts[i]
-
-      // Create candidate set using set intersection
-      const candidates = new Set()
-
-      // Add intervals that start before query ends
-      for (let j = 0; j < afterQuery; j++) {
-        candidates.add(startIndex[j])
-      }
-
-      // Keep only those that also end after query starts
-      const finalCandidates = new Set()
-      for (let j = beforeQuery; j < m; j++) {
-        if (candidates.has(endIndex[j])) {
-          finalCandidates.add(endIndex[j])
-        }
-      }
-
-      if (finalCandidates.size > 0) {
-        // Find best overlap among candidates
-        output[i] = this._matchIntervalOverlaps(
-          query,
-          intervalsTo,
-          finalCandidates,
-        )
-      } else if (strict) {
-        throw new this.ParameterError(
-          `Unable to match interval [${query[0]}, ${query[1]}] with strict=true. No overlapping intervals found.`,
-        )
-      } else {
-        // Find the closest disjoint interval
-        let distBefore = Infinity
-        let distAfter = Infinity
-        let idxBefore = -1
-        let idxAfter = -1
-
-        // Check interval before query
-        if (searchStarts[i] > 0) {
-          idxBefore = endIndex[searchStarts[i] - 1]
-          distBefore = query[0] - intervalsTo[idxBefore][1]
-        }
-
-        // Check interval after query
-        if (searchEnds[i] < m) {
-          idxAfter = startIndex[searchEnds[i]]
-          distAfter = intervalsTo[idxAfter][0] - query[1]
-        }
-
-        // Choose closest
-        if (idxBefore === -1) {
-          output[i] = idxAfter
-        } else if (idxAfter === -1) {
-          output[i] = idxBefore
-        } else {
-          output[i] = distBefore <= distAfter ? idxBefore : idxAfter
-        }
-      }
-    }
-
-    return output
-  }
-
-  /**
    * Match one set of time intervals to another based on maximum overlap
+   * (librosa.util.match_intervals semantics, full float precision).
    * @param {Array<Array<number>>} intervalsFrom - Source intervals [[start, end], ...]
    * @param {Array<Array<number>>} intervalsTo - Target intervals [[start, end], ...]
    * @param {boolean} strict - If true, intervals must overlap to match
@@ -261,36 +49,20 @@ export class Matcher {
    * @throws {ParameterError} If inputs are invalid or no match found in strict mode
    */
   matchIntervals(intervalsFrom, intervalsTo, strict = true) {
-    if (intervalsFrom.length === 0 || intervalsTo.length === 0) {
-      throw new this.ParameterError('Attempting to match empty interval list')
-    }
-
-    // Validate intervals
-    this._validIntervals(intervalsFrom)
-    this._validIntervals(intervalsTo)
-
     try {
-      const result = this._matchIntervalsCore(
-        intervalsFrom,
-        intervalsTo,
-        strict,
-      )
+      const result = matchIntervalsCore(intervalsFrom, intervalsTo, { strict })
       debugLog(
         `🎯 Matched ${intervalsFrom.length} intervals with ${strict ? 'strict' : 'relaxed'} matching`,
       )
       return result
     } catch (error) {
-      if (error instanceof this.ParameterError) {
-        throw new this.ParameterError(
-          `Unable to match intervals with strict=${strict}: ${error.message}`,
-        )
-      }
-      throw error
+      throw new this.ParameterError(error.message)
     }
   }
 
   /**
    * Match one set of discrete events to another using nearest neighbor
+   * (librosa.util.match_events semantics, full float precision).
    * @param {Array<number>} eventsFrom - Source events (times, samples, or frame indices)
    * @param {Array<number>} eventsTo - Target events
    * @param {boolean} left - Allow matching to events on the left
@@ -299,142 +71,15 @@ export class Matcher {
    * @throws {ParameterError} If inputs are invalid
    */
   matchEvents(eventsFrom, eventsTo, left = true, right = true) {
-    if (eventsFrom.length === 0 || eventsTo.length === 0) {
-      throw new this.ParameterError('Attempting to match empty event list')
-    }
-
-    // Convert to arrays and validate
-    const fromArray = Array.from(eventsFrom).map(Number)
-    const toArray = Array.from(eventsTo).map(Number)
-
-    // Check for NaN values
-    if (fromArray.some(isNaN) || toArray.some(isNaN)) {
-      throw new this.ParameterError('Event arrays cannot contain NaN values')
-    }
-
-    // Validation checks
-    if (!left && !right) {
-      const allContained = fromArray.every((e) => toArray.includes(e))
-      if (!allContained) {
-        throw new this.ParameterError(
-          'Cannot match events with left=right=false and events_from is not contained in events_to',
-        )
-      }
-    }
-
-    if (!left && Math.max(...toArray) < Math.max(...fromArray)) {
-      throw new this.ParameterError(
-        'Cannot match events with left=false and max(events_to) < max(events_from)',
+    try {
+      const result = matchEventsCore(eventsFrom, eventsTo, { left, right })
+      debugLog(
+        `🎯 Matched ${eventsFrom.length} events with left=${left}, right=${right}`,
       )
+      return result
+    } catch (error) {
+      throw new this.ParameterError(error.message)
     }
-
-    if (!right && Math.min(...toArray) > Math.min(...fromArray)) {
-      throw new this.ParameterError(
-        'Cannot match events with right=false and min(events_to) > min(events_from)',
-      )
-    }
-
-    const result = this._matchEventsHelper(fromArray, toArray, left, right)
-    debugLog(
-      `🎯 Matched ${fromArray.length} events with left=${left}, right=${right}`,
-    )
-    return result
-  }
-
-  /**
-   * Core event matching algorithm
-   * @private
-   */
-  _matchEventsHelper(eventsFrom, eventsTo, left, right) {
-    const n = eventsFrom.length
-    const m = eventsTo.length
-
-    // Create index arrays for sorting
-    const fromIdx = new Uint32Array(n)
-    const toIdx = new Uint32Array(m)
-
-    for (let i = 0; i < n; i++) fromIdx[i] = i
-    for (let i = 0; i < m; i++) toIdx[i] = i
-
-    // Sort indices by event values
-    fromIdx.sort((a, b) => eventsFrom[a] - eventsFrom[b])
-    toIdx.sort((a, b) => eventsTo[a] - eventsTo[b])
-
-    // Get sorted events
-    const sortedFrom = fromIdx.map((i) => eventsFrom[i])
-    const sortedTo = toIdx.map((i) => eventsTo[i])
-
-    // Find insertion points for each source event
-    const insertionPoints = new Uint32Array(n)
-    for (let i = 0; i < n; i++) {
-      insertionPoints[i] = this._searchSorted(sortedTo, sortedFrom[i], 'left')
-    }
-
-    const output = new Int32Array(n)
-
-    // Process each event
-    for (let ind = 0; ind < n; ind++) {
-      let insertionPoint = insertionPoints[ind]
-      const eventValue = sortedFrom[ind]
-
-      // Prevent out of bounds
-      if (insertionPoint === m) {
-        insertionPoint = m - 1
-      }
-
-      let leftIdx = -1
-      let rightIdx = -1
-      let leftDiff = Infinity
-      let rightDiff = Infinity
-      let midDiff = Infinity
-
-      // Calculate distances to potential matches
-      if (insertionPoint < m) {
-        midDiff = Math.abs(sortedTo[insertionPoint] - eventValue)
-      }
-
-      // Check left neighbor
-      if (left && insertionPoint > 0) {
-        leftIdx = insertionPoint - 1
-        leftDiff = Math.abs(sortedTo[leftIdx] - eventValue)
-      }
-
-      // Check right neighbor
-      if (right && insertionPoint < m - 1) {
-        rightIdx = insertionPoint + 1
-        rightDiff = Math.abs(sortedTo[rightIdx] - eventValue)
-      }
-
-      // Determine best match based on constraints and distances
-      let bestMatch = insertionPoint
-
-      if (
-        left &&
-        leftIdx >= 0 &&
-        ((!right && sortedTo[insertionPoint] > eventValue) ||
-          (leftDiff < rightDiff && leftDiff < midDiff) ||
-          (rightIdx === -1 && leftDiff < midDiff))
-      ) {
-        bestMatch = leftIdx
-      } else if (
-        right &&
-        rightIdx >= 0 &&
-        rightDiff < midDiff &&
-        rightDiff < leftDiff
-      ) {
-        bestMatch = rightIdx
-      }
-
-      output[ind] = toIdx[bestMatch]
-    }
-
-    // Undo sorting to restore original order
-    const solutions = new Int32Array(n)
-    for (let i = 0; i < n; i++) {
-      solutions[fromIdx[i]] = output[i]
-    }
-
-    return solutions
   }
 
   /**
@@ -544,182 +189,67 @@ export function quickMatchEvents(sourceEvents, targetEvents) {
  * @param {Array<number>} onsets - Onset times in seconds
  * @param {number} tolerance - Maximum allowed error in seconds
  * @returns {Object} Matching result with accuracy metrics
+ * @throws {Error} when the underlying matching cannot be performed
+ *   (empty inputs, NaN times) — no silent { matchRate: 0 } fallback
  */
 export function matchBeatsToOnsets(beats, onsets, tolerance = 0.1) {
   const matcher = new Matcher()
 
-  try {
-    const mapping = matcher.matchEvents(beats, onsets, true, true)
-    const accuracy = matcher.calculateMatchingAccuracy(beats, onsets, mapping)
+  const mapping = matcher.matchEvents(beats, onsets, true, true)
+  const accuracy = matcher.calculateMatchingAccuracy(beats, onsets, mapping)
 
-    // Filter matches within tolerance
-    const validMatches = []
-    for (let i = 0; i < beats.length; i++) {
-      const error = Math.abs(beats[i] - onsets[mapping[i]])
-      if (error <= tolerance) {
-        validMatches.push({
-          beatIndex: i,
-          onsetIndex: mapping[i],
-          beatTime: beats[i],
-          onsetTime: onsets[mapping[i]],
-          error: error,
-        })
-      }
+  // Filter matches within tolerance
+  const validMatches = []
+  for (let i = 0; i < beats.length; i++) {
+    const error = Math.abs(beats[i] - onsets[mapping[i]])
+    if (error <= tolerance) {
+      validMatches.push({
+        beatIndex: i,
+        onsetIndex: mapping[i],
+        beatTime: beats[i],
+        onsetTime: onsets[mapping[i]],
+        error: error,
+      })
     }
+  }
 
-    return {
-      mapping: mapping,
-      accuracy: accuracy,
-      validMatches: validMatches,
-      matchRate: validMatches.length / beats.length,
-    }
-  } catch (error) {
-    console.error('Beat to onset matching failed:', error)
-    return { mapping: [], accuracy: null, validMatches: [], matchRate: 0 }
+  return {
+    mapping: mapping,
+    accuracy: accuracy,
+    validMatches: validMatches,
+    matchRate: validMatches.length / beats.length,
   }
 }
 
 /**
  * Match one set of events to another
- * Port of librosa.util.match.match_events
- *
- * Matches events from `events_from` to the closest events in `events_to`
- * using nearest-neighbor search with boundary conditions
+ * (librosa.util.match_events semantics — full precision, throws on
+ * constraint violations; the legacy -1 sentinels are gone)
  *
  * @param {Array<number>} events_from - Source event times
  * @param {Array<number>} events_to - Target event times to match against
- * @param {boolean} left - Include left boundary (events before first target)
- * @param {boolean} right - Include right boundary (events after last target)
- * @returns {Array<number>} Indices into events_to for each event in events_from
+ * @param {boolean} left - Allow matches left of the source event
+ * @param {boolean} right - Allow matches right of the source event
+ * @returns {Int32Array} Indices into events_to for each event in events_from
  *
  * @example
- * match_events([0.5, 1.5, 2.5], [0, 1, 2, 3])  // [0, 1, 2]
+ * match_events([0.5, 1.5, 2.5], [0, 1, 2, 3])  // [1, 2, 3] (librosa tie handling)
  */
 export function match_events(events_from, events_to, left = true, right = true) {
-  if (!Array.isArray(events_from) || !Array.isArray(events_to)) {
-    throw new TypeError('events_from and events_to must be arrays')
-  }
-
-  const n_from = events_from.length
-  const n_to = events_to.length
-
-  if (n_to === 0) {
-    throw new Error('events_to cannot be empty')
-  }
-
-  const matches = new Array(n_from)
-
-  for (let i = 0; i < n_from; i++) {
-    const event = events_from[i]
-    let best_idx = 0
-    let min_dist = Infinity
-
-    // Find closest event in events_to
-    for (let j = 0; j < n_to; j++) {
-      const dist = Math.abs(event - events_to[j])
-      if (dist < min_dist) {
-        min_dist = dist
-        best_idx = j
-      }
-    }
-
-    // Handle boundary conditions
-    if (!left && event < events_to[0]) {
-      // Event before first target and left boundary not allowed
-      matches[i] = -1
-    } else if (!right && event > events_to[n_to - 1]) {
-      // Event after last target and right boundary not allowed
-      matches[i] = -1
-    } else {
-      matches[i] = best_idx
-    }
-  }
-
-  return matches
+  return matchEventsCore(events_from, events_to, { left, right })
 }
 
 /**
  * Match one set of time intervals to another
- * Port of librosa.util.match.match_intervals
- *
- * Matches intervals using Jaccard similarity (intersection over union)
- * Each interval in `intervals_from` is matched to the best-overlapping
- * interval in `intervals_to`, or -1 if no overlap meets the threshold
+ * (librosa.util.match_intervals semantics — Jaccard-scored, full precision,
+ * strict mode throws when a query is disjoint from every target; the legacy
+ * -1 sentinels are gone)
  *
  * @param {Array<Array<number>>} intervals_from - Source intervals [[start, end], ...]
  * @param {Array<Array<number>>} intervals_to - Target intervals to match against
- * @param {boolean} strict - If true, require at least some overlap (Jaccard > 0)
- * @returns {Array<number>} Indices into intervals_to for each interval in intervals_from
- *
- * @example
- * match_intervals([[0, 1], [1, 2]], [[0, 0.5], [0.5, 1.5], [2, 3]])
- * // Returns [1, 1] - first interval matches best with second target
+ * @param {boolean} strict - If true, require overlap (throws otherwise)
+ * @returns {Uint32Array} Indices into intervals_to for each source interval
  */
 export function match_intervals(intervals_from, intervals_to, strict = true) {
-  if (!Array.isArray(intervals_from) || !Array.isArray(intervals_to)) {
-    throw new TypeError('intervals_from and intervals_to must be arrays')
-  }
-
-  const n_from = intervals_from.length
-  const n_to = intervals_to.length
-
-  if (n_to === 0) {
-    throw new Error('intervals_to cannot be empty')
-  }
-
-  // Validate intervals
-  for (const interval of intervals_from) {
-    if (!Array.isArray(interval) || interval.length !== 2) {
-      throw new Error('Each interval must be [start, end]')
-    }
-    if (interval[0] > interval[1]) {
-      throw new Error('Interval start must be <= end')
-    }
-  }
-
-  for (const interval of intervals_to) {
-    if (!Array.isArray(interval) || interval.length !== 2) {
-      throw new Error('Each interval must be [start, end]')
-    }
-    if (interval[0] > interval[1]) {
-      throw new Error('Interval start must be <= end')
-    }
-  }
-
-  const matches = new Array(n_from)
-
-  for (let i = 0; i < n_from; i++) {
-    const [from_start, from_end] = intervals_from[i]
-    let best_idx = -1
-    let max_jaccard = 0
-
-    for (let j = 0; j < n_to; j++) {
-      const [to_start, to_end] = intervals_to[j]
-
-      // Compute Jaccard similarity (intersection over union)
-      const intersection_start = Math.max(from_start, to_start)
-      const intersection_end = Math.min(from_end, to_end)
-      const intersection = Math.max(0, intersection_end - intersection_start)
-
-      const union_start = Math.min(from_start, to_start)
-      const union_end = Math.max(from_end, to_end)
-      const union = union_end - union_start
-
-      const jaccard = union > 0 ? intersection / union : 0
-
-      if (jaccard > max_jaccard) {
-        max_jaccard = jaccard
-        best_idx = j
-      }
-    }
-
-    // Apply strict condition if requested
-    if (strict && max_jaccard === 0) {
-      matches[i] = -1
-    } else {
-      matches[i] = best_idx
-    }
-  }
-
-  return matches
+  return matchIntervalsCore(intervals_from, intervals_to, { strict })
 }
