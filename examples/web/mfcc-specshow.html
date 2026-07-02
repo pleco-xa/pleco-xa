@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>feature/mfcc.js + scripts/xa-display.js — chirp mel spectrogram, MFCC heatmap, specshow/waveshow</title>
+</head>
+<body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
+  <h2>feature/mfcc.js + scripts/xa-display.js — chirp → mel → MFCC → specshow</h2>
+  <p style="max-width:90ch">
+    A 3 s linear chirp 200 → 4000 Hz plus a 0.5 s steady 1 kHz tail at sr=22050 goes through
+    <code>feature.melspectrogram</code> (n_mels=128) → <code>convert.power_to_db</code> →
+    <code>specshow</code> (magma), with the MFCC(13) matrix and <code>waveshow</code> below.
+    Before the tier-2 repair, <code>specshow(melspectrogram(y))</code> threw
+    <code>'cmap: data contains no valid finite values'</code> on the package's own
+    Array&lt;Float32Array&gt; format (Array.prototype.flat does not flatten typed-array rows).
+    Numeric asserts were node-verified against dist before this page was written
+    (rho 0.9998, steady bin 38, mfcc 13×151, NoteFormatter A4).
+  </p>
+  <div id="badges"></div>
+  <h3>mel spectrogram (specshow, magma) — rising chirp ridge + steady 1 kHz tail</h3>
+  <canvas id="spec" width="900" height="360"></canvas>
+  <h3>MFCC(13) heatmap (specshow)</h3>
+  <canvas id="mfcc" width="900" height="180"></canvas>
+  <h3>waveform (waveshow)</h3>
+  <canvas id="wave" width="900" height="160"></canvas>
+  <script type="module">
+    import {
+      feature, convert, specshow, waveshow, NoteFormatter,
+    } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const sr = 22050
+    const hop = 512
+    const f0 = 200, f1 = 4000, T = 3
+    const nChirp = T * sr
+    const nTail = Math.round(0.5 * sr)
+    const y = new Float32Array(nChirp + nTail)
+    for (let i = 0; i < nChirp; i++) {
+      const t = i / sr
+      y[i] = 0.5 * Math.sin(2 * Math.PI * (f0 * t + ((f1 - f0) / (2 * T)) * t * t))
+    }
+    for (let i = 0; i < nTail; i++) y[nChirp + i] = 0.5 * Math.sin((2 * Math.PI * 1000 * i) / sr)
+
+    /* ── feature/mfcc.js proofs ─────────────────────────────────────────── */
+    const M = feature.melspectrogram(y, { sr })
+    const nMels = M.length
+    const nT = M[0].length
+    const frameTime = (t) => (t * hop) / sr
+    const argmaxBin = (t) => {
+      let a = 0
+      for (let f = 1; f < nMels; f++) if (M[f][t] > M[a][t]) a = f
+      return a
+    }
+
+    // (1) chirp frames: per-frame argmax mel bin tracks time (Spearman rho > 0.95)
+    const idx = [], bins = []
+    for (let t = 0; t < nT; t++) {
+      if (frameTime(t) >= 0.2 && frameTime(t) <= 2.8) { idx.push(t); bins.push(argmaxBin(t)) }
+    }
+    const rank = (arr) => {
+      const s = arr.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0])
+      const r = new Array(arr.length)
+      let i = 0
+      while (i < s.length) {
+        let j = i
+        while (j + 1 < s.length && s[j + 1][0] === s[i][0]) j++
+        for (let k = i; k <= j; k++) r[s[k][1]] = (i + j) / 2 + 1
+        i = j + 1
+      }
+      return r
+    }
+    const rx = rank(idx), ry = rank(bins)
+    const mean = (a) => a.reduce((p, c) => p + c, 0) / a.length
+    const mx = mean(rx), my = mean(ry)
+    let num = 0, dx = 0, dy = 0
+    for (let i = 0; i < rx.length; i++) {
+      num += (rx[i] - mx) * (ry[i] - my); dx += (rx[i] - mx) ** 2; dy += (ry[i] - my) ** 2
+    }
+    const rho = num / Math.sqrt(dx * dy)
+    badge('chirp argmax mel bin monotone: Spearman rho > 0.95', rho > 0.95, `rho ${rho.toFixed(4)}`)
+
+    // (2) steady 1 kHz tail: peak mel bin exactly 38 (slaney grid, hz_to_mel(1000)=15)
+    const steady = new Set()
+    for (let t = 0; t < nT; t++) {
+      if (frameTime(t) >= 3.1 && frameTime(t) <= 3.4) steady.add(argmaxBin(t))
+    }
+    badge('steady 1 kHz frames peak at mel bin 38 exactly', steady.size === 1 && steady.has(38),
+      `bins {${[...steady].join(',')}}`)
+
+    // (3) MFCC shape 13 x n_frames
+    const C = feature.mfcc(y, { sr, n_mfcc: 13 })
+    badge('mfcc shape 13 x n_frames', C.length === 13 && C[0].length === nT, `${C.length}x${C[0].length}`)
+
+    /* ── scripts/xa-display.js proofs (post typed-array-flatten repair) ───── */
+    const Mdb = convert.power_to_db(M)
+    let ctx = null, specError = null
+    try {
+      ctx = specshow(Mdb, { canvas: document.getElementById('spec'), sr, hopLength: hop, yAxis: 'mel', cmap: 'magma' })
+    } catch (e) { specError = e }
+    badge('specshow(power_to_db(melspectrogram(y))) returns a live 2D context (was: throw)',
+      ctx instanceof CanvasRenderingContext2D, specError ? String(specError.message).slice(0, 60) : 'ctx OK')
+
+    if (ctx) {
+      // Pixel probe: chirp cell at t=1.5s must be warmer (higher magma R) than
+      // an off-band cell in the same column. Replicates specshow's layout math
+      // (drawAxes: marginLeft 60, marginTop 20, marginRight 10, marginBottom 50).
+      const canvas = document.getElementById('spec')
+      const [mL, mR, mT, mB] = [60, 10, 20, 50]
+      const cellW = (canvas.width - mL - mR) / nT
+      const cellH = (canvas.height - mT - mB) / nMels
+      const tProbe = Math.round((1.5 * sr) / hop)
+      const fOn = argmaxBin(tProbe)
+      const fOff = (fOn + 60) % nMels
+      const px = (f, t) => ctx.getImageData(
+        Math.round(mL + (t + 0.5) * cellW), Math.round(mT + (nMels - 1 - f + 0.5) * cellH), 1, 1).data
+      const on = px(fOn, tProbe), off = px(fOff, tProbe)
+      badge('chirp cell warmer than off-band cell at t=1.5s (magma R)', on[0] > off[0] + 50,
+        `R on-ridge ${on[0]} vs off-band ${off[0]}`)
+    }
+
+    badge("NoteFormatter.call(69) == 'A4'", new NoteFormatter({}).call(69) === 'A4',
+      new NoteFormatter({}).call(69))
+
+    const mfccCtx = specshow(C, { canvas: document.getElementById('mfcc'), sr, hopLength: hop, xAxis: 'time' })
+    const waveCtx = waveshow(y, { canvas: document.getElementById('wave'), sr })
+    badge('mfcc heatmap + waveshow render (live contexts)',
+      mfccCtx instanceof CanvasRenderingContext2D && waveCtx instanceof CanvasRenderingContext2D)
+  </script>
+</body>
+</html>

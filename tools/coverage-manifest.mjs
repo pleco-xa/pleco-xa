@@ -19,9 +19,10 @@ let corpus = ''
 for (const dir of ['examples/node', 'examples/web']) {
   const p = join(root, dir)
   if (!existsSync(p)) continue
-  for (const f of readdirSync(p)) {
-    if (f.startsWith('_')) continue
-    corpus += readFileSync(join(p, f), 'utf8') + '\n'
+  for (const f of readdirSync(p, { withFileTypes: true })) {
+    if (f.name.startsWith('_') || !f.isFile()) continue
+    if (!/\.(mjs|js|html)$/.test(f.name)) continue
+    corpus += readFileSync(join(p, f.name), 'utf8') + '\n'
   }
 }
 

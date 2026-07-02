@@ -23,10 +23,17 @@ export function createLoopBuffer({
   channels = 1,
   loopable = false,
 }) {
-  const ctx = new AudioContext({ sampleRate })
+  // Tier-2 proof-of-work repair (2026-07-02): this previously newed up a live
+  // AudioContext({sampleRate}) purely to call createBuffer and never closed it
+  // — leaking one context per call (browsers cap concurrent contexts). An
+  // AudioBuffer can be constructed directly, no context needed.
   const segmentLength = Math.floor(sampleRate * loopLengthSeconds)
   const totalLength = segmentLength * repeats
-  const buffer = ctx.createBuffer(channels, totalLength, sampleRate)
+  const buffer = new AudioBuffer({
+    numberOfChannels: channels,
+    length: totalLength,
+    sampleRate,
+  })
 
   for (let ch = 0; ch < channels; ch++) {
     const data = buffer.getChannelData(ch)

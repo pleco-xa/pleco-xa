@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — HPSS margins</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 76ch; }
+    canvas { border: 1px solid #333; margin: 2px 6px 2px 0; }
+    .lbl { color: #999; font-size: 12px; margin: 2px 0 8px; }
+    button { font: 14px system-ui; margin: 4px 2px; padding: 6px 12px; }
+    table { border-collapse: collapse; font: 13px monospace; margin: 8px 0; }
+    td, th { border: 1px solid #333; padding: 3px 8px; }
+  </style>
+</head>
+<body>
+  <h2>plot_hprss — HPSS margins: pull the sine out of the clicks</h2>
+  <p>
+    A sustained 440 Hz sine (harmonic) + 8 Hz click train (percussive), STFT
+    1024/256, <code>decompose.hpss</code> at margins 1/2/4/8. Per-margin
+    spectrogram rows show mixture / harmonic / percussive — the horizontal
+    440 Hz line must live in H, the vertical click stripes in P. Badges assert
+    the margin-1 identity max|S−(H+P)| &lt; 1e-5, energy capture (H keeps
+    &gt;90% of the 440 Hz bin with &lt;10% of click energy, and vice versa),
+    and that H's click-leak share drops below −30 dB by margin 4. A/B buttons
+    play the istft'd components against the mix. Numerics node-verified.
+  </p>
+  <div id="badges"></div>
+  <table id="tbl"><tr><th>margin</th><th>H: 440 Hz kept</th><th>H: click kept</th><th>P: click kept</th><th>H click-leak share</th></tr></table>
+  <div id="panels"></div>
+  <div>
+    <button id="playMix">Play mix</button>
+    <button id="playH">Play harmonic (margin 2)</button>
+    <button id="playP">Play percussive (margin 2)</button>
+  </div>
+
+  <script type="module">
+    import { stft, istft, decompose } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawSpectrogram } from './_badge.js'
+
+    const sr = 22050
+    const N = sr // 1 s
+    const y = new Float32Array(N)
+    for (let i = 0; i < N; i++) y[i] = 0.6 * Math.sin((2 * Math.PI * 440 * i) / sr)
+    let seed = 77
+    const lcg = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+    const clickTimes = []
+    for (let t = 0.0625; t < 1; t += 0.125) {
+      clickTimes.push(t)
+      const s0 = Math.round(t * sr)
+      for (let i = 0; i < Math.round(0.003 * sr); i++) {
+        if (s0 + i < N) y[s0 + i] += 0.8 * (lcg() * 2 - 1) * Math.exp(-i / (0.0005 * sr))
+      }
+    }
+
+    const n_fft = 1024, hop = 256
+    const C = stft(y, n_fft, hop)
+    const nF = C.length, nT = C[0].length
+    const S = Array.from({ length: nF }, (_, f) =>
+      Float64Array.from({ length: nT }, (_, t) => Math.hypot(C[f][t].real, C[f][t].imag)))
+
+    const b440 = Math.round((440 * n_fft) / sr)
+    const clickFrames = clickTimes.map((t) => Math.min(Math.round((t * sr) / hop), nT - 1))
+    const rowEnergy = (M, f) => { let s = 0; for (let t = 0; t < nT; t++) s += M[f][t] * M[f][t]; return s }
+    const clickEnergy = (M) => {
+      let s = 0
+      for (const fr of clickFrames) {
+        for (let f = 0; f < nF; f++) {
+          if (Math.abs(f - b440) <= 3) continue
+          s += M[f][fr] * M[f][fr]
+        }
+      }
+      return s
+    }
+
+    const panels = document.getElementById('panels')
+    const tbl = document.getElementById('tbl')
+    const results = {}
+    for (const margin of [1, 2, 4, 8]) {
+      const { harmonic: H, percussive: P } = decompose.hpss(S, { margin })
+      results[margin] = { H, P }
+
+      const row = document.createElement('div')
+      for (const M of [S, H, P]) {
+        const c = document.createElement('canvas')
+        c.width = 260
+        c.height = 130
+        drawSpectrogram(c, M.map((r) => Array.from(r)))
+        row.appendChild(c)
+      }
+      panels.appendChild(row)
+      const lbl = document.createElement('div')
+      lbl.className = 'lbl'
+      lbl.textContent = `margin ${margin}: mixture | harmonic | percussive`
+      panels.appendChild(lbl)
+
+      const h440 = rowEnergy(H, b440) / rowEnergy(S, b440)
+      const hClick = clickEnergy(H) / clickEnergy(S)
+      const pClick = clickEnergy(P) / clickEnergy(S)
+      const leakH = 10 * Math.log10(clickEnergy(H) / (clickEnergy(H) + clickEnergy(P)))
+      results[margin].stats = { h440, hClick, pClick, leakH }
+      const tr = document.createElement('tr')
+      for (const cell of [
+        String(margin),
+        `${(h440 * 100).toFixed(1)}%`,
+        `${(hClick * 100).toFixed(2)}%`,
+        `${(pClick * 100).toFixed(1)}%`,
+        `${leakH.toFixed(1)} dB`,
+      ]) {
+        const td = document.createElement('td')
+        td.textContent = cell
+        tr.appendChild(td)
+      }
+      tbl.appendChild(tr)
+    }
+
+    // margin=1 parity identity
+    const { H, P } = results[1]
+    let maxDev = 0
+    for (let f = 0; f < nF; f++) {
+      for (let t = 0; t < nT; t++) maxDev = Math.max(maxDev, Math.abs(S[f][t] - (H[f][t] + P[f][t])))
+    }
+    badge('margin=1: max|S − (H+P)| < 1e-5 (parity identity)', maxDev < 1e-5,
+      maxDev.toExponential(2))
+
+    const s1 = results[1].stats
+    badge('harmonic keeps >90% of 440 Hz-bin energy with <10% of click energy',
+      s1.h440 > 0.9 && s1.hClick < 0.1,
+      `${(s1.h440 * 100).toFixed(1)}% / ${(s1.hClick * 100).toFixed(2)}%`)
+    badge('percussive keeps >90% of click energy', s1.pClick > 0.9,
+      `${(s1.pClick * 100).toFixed(1)}%`)
+    badge("H's click-leak share drops below −30 dB by margin 4",
+      results[4].stats.leakH < -30, `${results[4].stats.leakH.toFixed(1)} dB`)
+
+    // ── audible A/B via istft of the margin-2 components ────────────────────
+    function playMag(mag) {
+      // reapply the mixture phase, istft, play
+      const D = Array.from({ length: nF }, (_, f) =>
+        Array.from({ length: nT }, (_, t) => {
+          const c = C[f][t]
+          const m = Math.hypot(c.real, c.imag) || 1e-12
+          return { real: (c.real / m) * mag[f][t], imag: (c.imag / m) * mag[f][t] }
+        }))
+      const out = istft(D, hop)
+      const actx = new AudioContext({ sampleRate: sr })
+      const buf = actx.createBuffer(1, out.length, sr)
+      buf.copyToChannel(Float32Array.from(out), 0)
+      const src = actx.createBufferSource()
+      src.buffer = buf
+      src.connect(actx.destination)
+      src.start()
+    }
+    document.getElementById('playMix').onclick = () => playMag(S)
+    document.getElementById('playH').onclick = () => playMag(results[2].H)
+    document.getElementById('playP').onclick = () => playMag(results[2].P)
+  </script>
+</body>
+</html>

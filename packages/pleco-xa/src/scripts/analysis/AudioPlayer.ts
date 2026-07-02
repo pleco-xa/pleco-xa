@@ -166,14 +166,24 @@ export class AudioPlayer {
     try {
       this._createSource()
 
-      const startTime = this._isPaused ? this._pauseTime : 0
-      const offset = this._loop ? this._loop.start : startTime
-      const duration = this._loop
-        ? this._loop.end - this._loop.start
-        : undefined
+      // Tier-2 repair (2026-07-02): the wall-clock reference tracks the
+      // ACTUAL start offset, so getCurrentTime() is correct from the first
+      // loop cycle (the legacy code anchored the clock at 0 while the audio
+      // started at loop.start, making early timeupdates read below the loop).
+      // Resuming from pause inside a loop now continues at the paused
+      // position instead of silently restarting at loop.start.
+      let offset = this._isPaused
+        ? this._pauseTime
+        : this._loop
+          ? this._loop.start
+          : 0
+      if (this._loop) {
+        offset = Math.max(this._loop.start, Math.min(offset, this._loop.end))
+      }
+      const duration = this._loop ? this._loop.end - offset : undefined
 
       this._source.start(0, offset, duration)
-      this._startTime = this.audioContext.currentTime - startTime
+      this._startTime = this.audioContext.currentTime - offset
       this._isPlaying = true
       this._isPaused = false
 
@@ -412,6 +422,11 @@ export class AudioPlayer {
    */
   _stop() {
     if (this._source) {
+      // Detach the ended handler BEFORE stopping: onended fires
+      // asynchronously, so a stop-and-restart (seek/setLoop while playing)
+      // would otherwise see _isPlaying === true again and trigger a
+      // _handleTrackEnd restart storm.
+      this._source.onended = null
       try {
         this._source.stop()
       } catch (e) {

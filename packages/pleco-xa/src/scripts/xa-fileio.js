@@ -5,11 +5,19 @@
  */
 
 /**
- * Stream audio in fixed-length buffers using Web Audio API
+ * Chunked audio reader (NOT true streaming — honesty note, 2026-07-02).
  *
- * Provides a generator-like interface for processing audio in chunks,
- * useful for real-time analysis or processing of long audio files.
- * Uses Web Audio API's ScriptProcessorNode or AudioWorklet for streaming.
+ * The whole source is decoded up front via decodeAudioData, then yielded in
+ * fixed-size sample windows: each block is `blockLength` SAMPLES and the
+ * window advances by `hopLength` samples, so blockLength > hopLength yields
+ * OVERLAPPING blocks. This does NOT match librosa.stream's contract (whose
+ * block_length counts FRAMES of frameLength/hopLength each and which reads
+ * incrementally). Memory use is O(file), not O(block). For live input use
+ * createMediaStreamProcessor instead.
+ *
+ * With blockLength === hopLength the blocks are non-overlapping and lossless:
+ * ceil(N / blockLength) blocks whose concatenation reproduces the decoded
+ * source exactly (proof: examples/web/file-io.html).
  *
  * @param {string|File|Blob|MediaStream|HTMLMediaElement} source - Audio source
  * @param {Object} options - Streaming options

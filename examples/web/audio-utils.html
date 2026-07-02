@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — audio-utils: loop buffer builder</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 12px 0; border: 1px solid #333; }
+  button, a.dl { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; text-decoration: none; display: inline-block; }
+  button:hover, a.dl:hover { background: #37474f; }
+</style>
+</head>
+<body>
+<h1>scripts/audio-utils.js — loop buffer: synth, measure, loop, export</h1>
+<p>
+  <code>createLoopBuffer</code> builds a 4×0.5 s 440 Hz sine loop buffer
+  (post-repair: constructs the AudioBuffer directly — no more leaked live
+  AudioContext per call). Metric badges are asserted against sine theory:
+  RMS 1/√2, peak 1.0, ZCR 2f/sr. The export badge encodes the buffer through
+  <code>exportBufferAsWav</code> (io/wav tier) and re-decodes it in-page with
+  <code>decodeWav</code>. Loop markers come from
+  <code>defineMultipleLoopPoints</code>. Metric math node-verified 2026-07-02
+  with a duck-typed buffer (rms 0.70711, peak 0.9999998, zcr 0.019944).
+</p>
+<div id="badges"></div>
+<canvas id="wave" width="720" height="140"></canvas>
+<div id="controls">
+  <button id="loop">⟳ play seamless loop</button>
+  <button id="stop">■ stop</button>
+</div>
+
+<script type="module">
+import {
+  createLoopBuffer, exportBufferAsWav, computeRMS, computePeak,
+  computeZeroCrossingRate, defineMultipleLoopPoints, decodeWav,
+} from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawWave } from './_badge.js'
+
+const sr = 44100
+const { buffer, loopStart, loopEnd } = createLoopBuffer({
+  loopLengthSeconds: 0.5, repeats: 4, sampleRate: sr, loopable: true,
+})
+
+// waveform + loop-point markers
+const canvas = document.getElementById('wave')
+drawWave(canvas, buffer.getChannelData(0))
+const ctx2d = canvas.getContext('2d')
+ctx2d.strokeStyle = '#ffb300'
+for (const { loopStart: s } of defineMultipleLoopPoints(buffer, 0.5, 4)) {
+  const x = (s / buffer.duration) * canvas.width
+  ctx2d.beginPath(); ctx2d.moveTo(x, 0); ctx2d.lineTo(x, canvas.height); ctx2d.stroke()
+}
+
+// (1) metric badges vs sine theory
+const rms = computeRMS(buffer)
+badge('computeRMS ≈ 1/√2 (±0.01)', Math.abs(rms - Math.SQRT1_2) <= 0.01, rms.toFixed(5))
+const peak = computePeak(buffer)
+badge('computePeak == 1.0 (±0.001, off-grid sine sampling)', Math.abs(peak - 1) <= 0.001, peak.toFixed(7))
+const zcr = computeZeroCrossingRate(buffer)
+const zcrTheory = (2 * 440) / sr
+badge('computeZeroCrossingRate ≈ 2f/sr (±2%)', Math.abs(zcr - zcrTheory) <= 0.02 * zcrTheory, `${zcr.toFixed(6)} vs ${zcrTheory.toFixed(6)}`)
+
+// (2) buffer length + loop-point contract
+badge('buffer length == 4 × floor(0.5·sr), loop 0→2 s',
+  buffer.length === 4 * Math.floor(0.5 * sr) && loopStart === 0 && loopEnd === 2,
+  `len ${buffer.length}, loop [${loopStart}, ${loopEnd}]`)
+
+// (3) export → re-decode roundtrip (16-bit quantization bound)
+const blob = exportBufferAsWav(buffer)
+const { channels, sampleRate } = decodeWav(await blob.arrayBuffer())
+const src = buffer.getChannelData(0)
+let maxErr = 0
+for (let i = 0; i < src.length; i++) maxErr = Math.max(maxErr, Math.abs(channels[0][i] - src[i]))
+badge('export roundtrip OK (decodeWav, maxErr ≤ 1/32767)',
+  sampleRate === sr && channels[0].length === src.length && maxErr <= 1 / 32767,
+  `sr ${sampleRate}, maxErr ${maxErr.toExponential(2)}`)
+
+// download link for the exported WAV
+const a = document.createElement('a')
+a.href = URL.createObjectURL(blob)
+a.download = 'pleco-loop-440.wav'
+a.className = 'dl'
+a.textContent = '⬇ download exported WAV'
+document.getElementById('controls').appendChild(a)
+
+// (4) seamless loop playback via AudioBufferSourceNode + returned loop points
+let audioCtx = null
+let sourceNode = null
+document.getElementById('loop').onclick = () => {
+  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()
+  if (sourceNode) { try { sourceNode.stop() } catch {} }
+  sourceNode = audioCtx.createBufferSource()
+  sourceNode.buffer = buffer
+  sourceNode.loop = true
+  sourceNode.loopStart = loopStart
+  sourceNode.loopEnd = loopEnd
+  sourceNode.connect(audioCtx.destination)
+  sourceNode.start()
+}
+document.getElementById('stop').onclick = () => { if (sourceNode) { try { sourceNode.stop() } catch {} sourceNode = null } }
+</script>
+</body>
+</html>

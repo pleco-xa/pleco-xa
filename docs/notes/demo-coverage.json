@@ -1,20 +1,22 @@
 {
- "generated": "2026-07-02T22:53:13.289Z",
- "total": 260,
- "coveredOrLedgered": 65,
- "pct": "25.0",
+ "generated": "2026-07-02T23:26:19.494Z",
+ "total": 333,
+ "coveredOrLedgered": 183,
+ "pct": "55.0",
  "uncovered": [
-  "AudioPlayer",
   "BeatTracker",
+  "ChromaFormatter",
+  "TimeFormatter",
   "applyHannWindow",
-  "applyLiveDoubleSpeed",
   "applyLiveHalfSpeed",
   "applyOperationEnhanced",
-  "applyQuantumOp",
-  "beat_track",
+  "audioio.autocorrelate",
+  "audioio.getDuration",
+  "audioio.getSamplerate",
+  "audioio.lpc",
+  "audioio.toMono",
   "blackman_window",
   "bpm.analyzeTempogram",
-  "bpm.analyzeWithProgress",
   "bpm.computeFourierTempogram",
   "bpm.computeOnsetStrength",
   "bpm.computeSimpleFFT",
@@ -22,12 +24,8 @@
   "bpm.computeTempoFrequencies",
   "bpm.estimateConstrainedTempo",
   "bpm.estimateGlobalTempo",
-  "buildQuantumOpList",
-  "buildQuantumSequence",
   "checkBufferSafety",
-  "computePeak",
-  "computeRMS",
-  "computeZeroCrossingRate",
+  "cmap",
   "convert.A4_to_tuning",
   "convert.A_weighting",
   "convert.B_weighting",
@@ -35,14 +33,12 @@
   "convert.D_weighting",
   "convert.Z_weighting",
   "convert.b_weighting",
-  "convert.blocks_to_frames",
   "convert.blocks_to_samples",
   "convert.blocks_to_time",
   "convert.c_weighting",
   "convert.cqt_frequencies",
   "convert.d_weighting",
   "convert.db_to_power",
-  "convert.fft_frequencies",
   "convert.fourier_tempo_frequencies",
   "convert.frames_to_samples",
   "convert.frequency_weighting",
@@ -55,7 +51,6 @@
   "convert.note_to_midi",
   "convert.octs_to_hz",
   "convert.perceptual_weighting",
-  "convert.power_to_db",
   "convert.samples_like",
   "convert.samples_to_frames",
   "convert.samples_to_time",
@@ -66,89 +61,68 @@
   "convert.tuning_to_A4",
   "convert.z_weighting",
   "createAudioBlob",
-  "createFluxAnalyzer",
   "createInteractiveRenderer",
-  "createLoopBuffer",
-  "createRmsMeter",
   "debugLog",
-  "decompose.hpss",
   "decompose.optimizeEqCurves",
   "decompose.processAudioToFingerprints",
   "decompose.reconstructVocal",
-  "defineMultipleLoopPoints",
   "detectBPM",
-  "drawWaveform",
-  "effects.harmonic",
-  "effects.hpss",
-  "effects.percussive",
   "effects.phase_vocoder",
-  "effects.pitch_shift",
-  "effects.remix",
-  "effects.time_stretch",
-  "effects.trim",
-  "executeOperation",
-  "exportBufferAsWav",
-  "fastBPMDetect",
-  "fastLoopAnalysis",
   "feature.ParameterError",
   "feature.chroma_stft",
   "feature.dctBasis",
   "feature.estimate_tuning",
   "feature.foldLogSpectrumToChroma",
   "feature.logFrequencySpectrum",
-  "feature.melspectrogram",
-  "feature.mfcc",
   "feature.mfccFromLogMel",
   "feature.piptrackPeaks",
-  "feature.pitch_tuning",
   "feature.spectral_bandwidth",
   "feature.spectral_centroid",
   "feature.spectral_contrast",
   "feature.spectral_flatness",
   "feature.spectral_rolloff",
   "feature.zero_crossing_rate",
-  "fft_frequencies",
+  "file.createAudioContext",
+  "file.createVisualization",
+  "file.exampleAudio",
+  "file.exampleInfo",
+  "file.isWebAudioSupported",
+  "file.listExamples",
+  "file.loadFile",
+  "file.saveAudio",
+  "fileio.cite",
+  "fileio.createMediaStreamProcessor",
+  "fileio.find_files",
   "filters.mel_filterbank",
   "findAllZeroCrossings",
   "findAudioStart",
   "findMusicalLoop",
   "findZeroCrossing",
   "fix_frames",
-  "generateChaotic",
-  "generateFibonacci",
-  "generatePrimeRhythm",
-  "generateWaveform",
   "getTimebasedWaveform",
   "getWaveformRange",
   "glitchBurst",
   "hamming_window",
   "hann_window",
-  "ifft",
-  "initAudioProcessor",
+  "intervals.__harmonic_distance",
+  "intervals._crystal_tie_break",
+  "intervals.interval_frequencies",
   "isDebugEnabled",
   "isLargeOperation",
-  "istft",
   "liveSpeedController.currentSpeed",
   "liveSpeedController.isActive",
   "liveSpeedController.originalBuffer",
   "liveSpeedController.speedBuffer",
-  "liveSpeedController.audioContext",
-  "liveSpeedController.audioProcessor",
-  "loadAudioFile",
   "loadFile",
   "loop.DynamicZeroCrossing",
   "loop.STRATEGIES",
   "loop.analyzeLoopPoints",
-  "loop.detect",
-  "loop.fastLoopAnalysis",
   "loop.fastOnsetLoopAnalysis",
-  "loop.findPreciseLoop",
   "loop.loopAnalysis",
   "loop.musicalLoopAnalysis",
   "loop.normalizedCrossCorrelation",
   "loop.recurrenceLoop",
   "loop.xaLoopAnalysis",
-  "magnitude",
   "notation.__bo_fold",
   "notation.__fifth_search",
   "notation.__mode_to_key",
@@ -166,48 +140,34 @@
   "notation.midi_to_svara_h",
   "notation.note_to_svara_c",
   "notation.note_to_svara_h",
-  "phase",
   "playQuantumOps",
-  "playback.closeGapLeft",
   "playback.closeGapRight",
-  "playback.createBufferLike",
-  "playback.detectGap",
-  "playback.doubleSpeedQuantzLoop",
   "playback.doubleSpeedUnquantzLoop",
-  "playback.halfSpeedLoop",
   "playback.halfSpeedQuantzLoop",
   "playback.revealFirstHalf",
   "playback.revealHiddenHalf",
-  "playback.reverseSection",
   "polar_to_complex",
-  "power",
-  "quickTempo",
   "randomLocal",
-  "randomSequence",
-  "resetLiveSpeed",
-  "rqa",
-  "segment.agglomerative",
   "segment.crossSimilarity",
-  "segment.lagToRecurrence",
-  "segment.recurrenceMatrix",
-  "segment.recurrenceToLag",
-  "sequence.dtw",
   "sequence.dtwBacktracking",
-  "sequence.rqa",
+  "sequence.transition_cycle",
+  "sequence.transition_local",
   "setDebug",
-  "startBeatGlitch",
-  "stft",
-  "sync",
   "warnIfNoMp3Support"
  ],
  "rows": [
   {
    "member": "AudioPlayer",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "BeatTracker",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "ChromaFormatter",
    "covered": false,
    "ledgered": null
   },
@@ -222,8 +182,23 @@
    "ledgered": null
   },
   {
+   "member": "NoteFormatter",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "RHYTHM_VOCAB",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "RealtimeSpectrumAnalyzer",
    "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "TimeFormatter",
+   "covered": false,
    "ledgered": null
   },
   {
@@ -242,13 +217,18 @@
    "ledgered": null
   },
   {
+   "member": "analyze_groove",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "applyHannWindow",
    "covered": false,
    "ledgered": null
   },
   {
    "member": "applyLiveDoubleSpeed",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -263,12 +243,102 @@
   },
   {
    "member": "applyQuantumOp",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.autocorrelate",
    "covered": false,
    "ledgered": null
   },
   {
-   "member": "beat_track",
+   "member": "audioio.chirp",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.clicks",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.default",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.getDuration",
    "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.getSamplerate",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.load",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.lpc",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.muCompress",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.muExpand",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.play",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.resample",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.stop",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.toMono",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.tone",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "audioio.zeroCrossings",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "beatTrack",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "beat_sync",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "beat_track",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -283,7 +353,7 @@
   },
   {
    "member": "bpm.analyzeWithProgress",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -322,13 +392,18 @@
    "ledgered": null
   },
   {
+   "member": "buf_to_float",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "buildQuantumOpList",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "buildQuantumSequence",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -342,18 +417,28 @@
    "ledgered": null
   },
   {
-   "member": "computePeak",
+   "member": "cmap",
    "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "computePeak",
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "computeRMS",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "computeZeroCrossingRate",
-   "covered": false,
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "compute_tempogram",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -403,7 +488,7 @@
   },
   {
    "member": "convert.blocks_to_frames",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -443,7 +528,7 @@
   },
   {
    "member": "convert.fft_frequencies",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -538,7 +623,7 @@
   },
   {
    "member": "convert.power_to_db",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -598,7 +683,7 @@
   },
   {
    "member": "createFluxAnalyzer",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -608,12 +693,12 @@
   },
   {
    "member": "createLoopBuffer",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "createRmsMeter",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -633,7 +718,7 @@
   },
   {
    "member": "decompose.hpss",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -658,7 +743,12 @@
   },
   {
    "member": "defineMultipleLoopPoints",
-   "covered": false,
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "delta_features",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -672,13 +762,18 @@
    "ledgered": null
   },
   {
+   "member": "detect_tempo_multiples",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "doubleLoop",
    "covered": true,
    "ledgered": null
   },
   {
    "member": "drawWaveform",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -688,17 +783,17 @@
   },
   {
    "member": "effects.harmonic",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "effects.hpss",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "effects.percussive",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -708,7 +803,7 @@
   },
   {
    "member": "effects.pitch_shift",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -718,7 +813,7 @@
   },
   {
    "member": "effects.remix",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -728,12 +823,12 @@
   },
   {
    "member": "effects.time_stretch",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "effects.trim",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -743,22 +838,32 @@
   },
   {
    "member": "executeOperation",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "exportBufferAsWav",
-   "covered": false,
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "extractTempo",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "f0_harmonics",
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "fastBPMDetect",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "fastLoopAnalysis",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -793,12 +898,12 @@
   },
   {
    "member": "feature.melspectrogram",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "feature.mfcc",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -813,7 +918,7 @@
   },
   {
    "member": "feature.pitch_tuning",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -858,7 +963,82 @@
   },
   {
    "member": "fft_frequencies",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "file.cache",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "file.createAudioContext",
    "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "file.createVisualization",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "file.example",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "file.exampleAudio",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "file.exampleBuffer",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "file.exampleInfo",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "file.isWebAudioSupported",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "file.listExamples",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "file.loadFile",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "file.saveAudio",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "fileio.cite",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "fileio.createMediaStreamProcessor",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "fileio.find_files",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "fileio.stream",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -887,6 +1067,16 @@
    "ledgered": null
   },
   {
+   "member": "findDownbeatPhase",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "findFirstDownbeat",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "findKickSnareHit",
    "covered": true,
    "ledgered": null
@@ -899,6 +1089,11 @@
   {
    "member": "findZeroCrossing",
    "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "find_tempo_candidates",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -918,22 +1113,22 @@
   },
   {
    "member": "generateChaotic",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "generateFibonacci",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "generatePrimeRhythm",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "generateWaveform",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -982,13 +1177,58 @@
    "ledgered": null
   },
   {
+   "member": "harmonic_product_spectrum",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "ifft",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "initAudioProcessor",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "intervals.IntervalConstructor",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "intervals.__harmonic_distance",
    "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "intervals._crystal_tie_break",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "intervals.compareTuningSystems",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "intervals.generateFrequencies",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "intervals.interval_frequencies",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "intervals.plimit_intervals",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "intervals.pythagorean_intervals",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1003,7 +1243,7 @@
   },
   {
    "member": "istft",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1028,12 +1268,12 @@
   },
   {
    "member": "liveSpeedController.audioContext",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "liveSpeedController.audioProcessor",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1043,7 +1283,7 @@
   },
   {
    "member": "loadAudioFile",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1083,12 +1323,12 @@
   },
   {
    "member": "loop.detect",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "loop.fastLoopAnalysis",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1098,7 +1338,7 @@
   },
   {
    "member": "loop.findPreciseLoop",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1138,7 +1378,27 @@
   },
   {
    "member": "magnitude",
-   "covered": false,
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "mel_to_audio",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "mel_to_stft",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "mfcc_to_audio",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "mfcc_to_mel",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1267,8 +1527,13 @@
    "ledgered": null
   },
   {
+   "member": "peakPick",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "phase",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1283,7 +1548,7 @@
   },
   {
    "member": "playback.closeGapLeft",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1293,17 +1558,17 @@
   },
   {
    "member": "playback.createBufferLike",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "playback.detectGap",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "playback.doubleSpeedQuantzLoop",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1313,7 +1578,7 @@
   },
   {
    "member": "playback.halfSpeedLoop",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1333,7 +1598,12 @@
   },
   {
    "member": "playback.reverseSection",
-   "covered": false,
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "plp",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1343,12 +1613,12 @@
   },
   {
    "member": "power",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "quickTempo",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1363,7 +1633,7 @@
   },
   {
    "member": "randomSequence",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1383,7 +1653,7 @@
   },
   {
    "member": "resetLiveSpeed",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1398,12 +1668,17 @@
   },
   {
    "member": "rqa",
-   "covered": false,
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "salience",
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "segment.agglomerative",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1413,22 +1688,22 @@
   },
   {
    "member": "segment.lagToRecurrence",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "segment.recurrenceMatrix",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "segment.recurrenceToLag",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "sequence.dtw",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1448,7 +1723,37 @@
   },
   {
    "member": "sequence.rqa",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "sequence.transition_cycle",
    "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "sequence.transition_local",
+   "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "sequence.transition_loop",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "sequence.transition_uniform",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "sequence.viterbi",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "sequence.viterbi_discriminative",
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1462,23 +1767,28 @@
    "ledgered": null
   },
   {
+   "member": "specshow",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "spectrogram",
    "covered": true,
    "ledgered": null
   },
   {
    "member": "startBeatGlitch",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "stft",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "sync",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1492,8 +1802,18 @@
    "ledgered": null
   },
   {
+   "member": "valid_audio",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "warnIfNoMp3Support",
    "covered": false,
+   "ledgered": null
+  },
+  {
+   "member": "waveshow",
+   "covered": true,
    "ledgered": null
   },
   {

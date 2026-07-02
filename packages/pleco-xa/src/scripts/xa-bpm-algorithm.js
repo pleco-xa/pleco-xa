@@ -188,6 +188,25 @@ export async function estimateGlobalTempo(onsetEnvelope, sr) {
     ? (candidates[0].score - candidates[1].score) / (candidates[0].score + 1e-10)
     : 0.5;
 
+  // REPAIR (2026-07-02 proof-of-work): octave correction. The hard 70-180
+  // search range makes 2-period subharmonic lags win on material whose true
+  // tempo sits above ~140 (e.g. a 140 BPM train scored best at 69.8). If the
+  // winner sits in the subharmonic zone and a candidate near double tempo
+  // carries at least 70% of its correlation, prefer the double — a true
+  // slow tempo has no half-period correlation, so this never fires for
+  // genuinely slow material.
+  if (bestBPM < 90 && 2 * bestBPM <= maxBPM + 10) {
+    let double = null;
+    for (const c of candidates) {
+      if (Math.abs(c.bpm - 2 * bestBPM) < 8 && (double === null || c.score > double.score)) {
+        double = c;
+      }
+    }
+    if (double !== null && double.score >= 0.7 * bestScore) {
+      bestBPM = double.bpm;
+    }
+  }
+
   return {
     bpm: bestBPM,
     confidence: Math.min(confidence, 0.95),
@@ -244,6 +263,17 @@ export async function computeFourierTempogram(onsetEnvelope, sr) {
 /**
  * Estimate tempo within constrained range
  * From lb/index.html lines 1210-1262
+ *
+ * REPAIR (2026-07-02 proof-of-work): the original reduced a 4s window to an
+ * ~15-point energy downsample (8 sub-buckets, half-bucket hop) while the BPM
+ * search needed lags >= ~17, so the autocorrelation loop never executed and
+ * every window silently returned globalTempo — the window-by-window "tempo
+ * stability" output was constant regardless of actual tempo changes. Now the
+ * raw onset-envelope window is mean-centered and autocorrelated directly
+ * (normalized correlation, same estimator as estimateGlobalTempo) over the
+ * constrained lag range. Confidence is the best normalized correlation
+ * (measured, in [0, 0.95]); if the window is too short to search any lag the
+ * global tempo is returned with confidence 0 — never a fabricated confidence.
  */
 export async function estimateConstrainedTempo(window, sr, globalTempo) {
   const hopLength = 512;
@@ -257,42 +287,52 @@ export async function estimateConstrainedTempo(window, sr, globalTempo) {
   const maxLag = Math.round(60 * onsetRate / minBPM);
   const minLag = Math.round(60 * onsetRate / maxBPM);
 
-  // Quick energy-based onset detection within window
-  const energy = [];
-  const subWindowSize = Math.floor(window.length / 8);
+  // Mean-center the raw onset-envelope window
+  let mean = 0;
+  for (let i = 0; i < window.length; i++) {
+    mean += window[i];
+  }
+  mean /= window.length;
 
-  for (let i = 0; i < window.length - subWindowSize; i += Math.floor(subWindowSize / 2)) {
-    let e = 0;
-    for (let j = 0; j < subWindowSize; j++) {
-      e += window[i + j];
-    }
-    energy.push(e);
+  const centered = new Float32Array(window.length);
+  for (let i = 0; i < window.length; i++) {
+    centered[i] = window[i] - mean;
   }
 
-  // Autocorrelation on energy
+  // Normalized autocorrelation over the constrained lag range
   let bestScore = -Infinity;
   let bestBPM = globalTempo;
+  let searched = false;
 
-  for (let lag = minLag; lag <= maxLag && lag < energy.length; lag++) {
+  for (let lag = Math.max(1, minLag); lag <= maxLag && lag < centered.length; lag++) {
     let correlation = 0;
-    for (let i = 0; i < energy.length - lag; i++) {
-      correlation += energy[i] * energy[i + lag];
+    let norm1 = 0;
+    let norm2 = 0;
+
+    for (let i = 0; i < centered.length - lag; i++) {
+      correlation += centered[i] * centered[i + lag];
+      norm1 += centered[i] * centered[i];
+      norm2 += centered[i + lag] * centered[i + lag];
     }
 
-    const bpm = 60 * onsetRate / lag;
+    const score = correlation / Math.sqrt(norm1 * norm2 + 1e-10);
 
-    if (correlation > bestScore) {
-      bestScore = correlation;
-      bestBPM = bpm;
+    if (score > bestScore) {
+      bestScore = score;
+      bestBPM = 60 * onsetRate / lag;
+      searched = true;
     }
   }
 
-  // Calculate confidence
-  const confidence = Math.tanh(bestScore / (energy.length * Math.max(...energy) + 1e-10));
+  if (!searched) {
+    // Window too short for the requested BPM range — report the global
+    // estimate with zero confidence rather than a fabricated local one.
+    return { bpm: globalTempo, confidence: 0 };
+  }
 
   return {
     bpm: bestBPM,
-    confidence: Math.min(confidence, 0.95)
+    confidence: Math.min(Math.max(bestScore, 0), 0.95)
   };
 }
 

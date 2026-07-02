@@ -171,11 +171,15 @@ export function viterbi_discriminative(
     p_state = new Array(n_states).fill(1.0 / n_states)
   }
 
-  // Convert discriminative probabilities to generative
+  // Convert discriminative probabilities to (proportional) likelihoods by
+  // Bayes' rule: P(obs | state) ∝ P(state | obs) / P(state) — librosa
+  // viterbi_discriminative subtracts log p_state. (Repaired 2026-07-02: the
+  // legacy code MULTIPLIED by the prior, which inverts the correction for any
+  // non-uniform p_state; identical decode under the uniform default.)
   const gen_prob = prob.map((row, i) =>
     row.map(p => {
       const p_clipped = Math.max(Math.min(p, 1 - 1e-10), 1e-10)
-      return p_clipped * p_state[i]
+      return p_clipped / p_state[i]
     })
   )
 

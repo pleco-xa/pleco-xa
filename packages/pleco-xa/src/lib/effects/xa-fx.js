@@ -42,17 +42,21 @@ export function stutter(loop, buffer, repeats = 3) {
 /**
  * Simple variable-delay phaser effect with LFO
  * Creates obvious sweeping comb-filter notches
+ *
+ * Wave-6 injection convention (tier-2 repair, 2026-07-02): parameters are an
+ * explicit options argument — the legacy window.phaserParams global-bus read
+ * crashed in Node/workers ('window is not defined').
+ *
  * @param {Object} loop - Loop bounds {startSample, endSample}
  * @param {AudioBuffer} buffer - Audio buffer to process
- * @param {number} depth - Wet/dry mix (0-1, default 1.0)
+ * @param {number} depth - Legacy mix argument (kept for call compatibility; use params.wetMix)
+ * @param {Object} [params] - { minDelay, maxDelay, wetMix }
  * @returns {Object} {buffer, loop}
  */
-export function phase(loop, buffer, depth = 1.0) {
+export function phase(loop, buffer, depth = 1.0, params = {}) {
   const sampleRate = buffer.sampleRate;
   const numChannels = buffer.numberOfChannels;
 
-  // Get parameters from window.phaserParams (set by keyboard controller)
-  const params = window.phaserParams || {};
   const lfoRate = 0.3; // LFO frequency in Hz (sweep speed)
   const minDelay = params.minDelay || 0.0005; // 0.5ms minimum delay
   const maxDelay = params.maxDelay || 0.005; // 5ms maximum delay

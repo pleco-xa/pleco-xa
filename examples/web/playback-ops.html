@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — playback/ops</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    button { font: 14px system-ui; margin: 2px; padding: 6px 12px; }
+    p { max-width: 76ch; }
+    canvas { display: block; margin: 6px 0; background: #111; }
+    .lbl { color: #999; font: 12px monospace; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>playback/ops — pure buffer ops invariant table</h2>
+  <p>
+    Same asserts as <code>examples/node/playback-ops.mjs</code> (node-verified,
+    8/8): a 1 s 440 Hz sine with loop {0.25, 0.5} through
+    <code>halfSpeedLoop</code> / <code>doubleSpeedQuantzLoop</code> /
+    <code>reverseSection</code> / <code>detectGap</code> /
+    <code>closeGapLeft</code>, plus the invalid-loop throw. The waveforms
+    below are drawn at a FIXED samples-per-pixel scale, so the
+    half-speed-stretched loop region (tinted) is visibly twice as wide as the
+    original's. Audition buttons rebuild the ops with
+    <code>ctx.createBuffer</code> injected as the factory — proving the ops
+    produce genuine AudioBuffers when a browser caller asks for them.
+  </p>
+  <div id="badges"></div>
+
+  <div class="lbl">original (1 s) — loop region tinted</div>
+  <canvas id="orig" width="880" height="90"></canvas>
+  <div class="lbl">halfSpeedLoop output (1.25 s) — stretched loop region tinted (2× wider)</div>
+  <canvas id="stretched" width="1100" height="90"></canvas>
+
+  <div>
+    <button id="playOrig">Play original</button>
+    <button id="playHalf">Play halfSpeedLoop</button>
+    <button id="playDbl">Play doubleSpeedQuantz</button>
+    <button id="stopBtn">Stop</button>
+  </div>
+
+  <script type="module">
+    import { playback } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const {
+      createBufferLike, halfSpeedLoop, doubleSpeedQuantzLoop,
+      reverseSection, detectGap, closeGapLeft,
+    } = playback
+
+    const sr = 44100
+    const loop = { start: 0.25, end: 0.5 } // samples [11025, 22050)
+
+    const sine = createBufferLike(1, sr, sr)
+    {
+      const d = sine.getChannelData(0)
+      for (let i = 0; i < sr; i++) d[i] = Math.sin((2 * Math.PI * 440 * i) / sr)
+    }
+
+    // ─── the node-verified invariant table, as badges ───────────────────────
+    const half = halfSpeedLoop(sine, loop)
+    badge('halfSpeedLoop length == 44100 + 11025 == 55125', half.length === 55125, `${half.length}`)
+
+    const dbl = doubleSpeedQuantzLoop(sine, loop)
+    badge('doubleSpeedQuantzLoop length == 38587', dbl.buffer.length === 38587, `${dbl.buffer.length}`)
+    badge('doubleSpeedQuantzLoop newLoopEnd == 16537/38587', dbl.newLoopEnd === 16537 / 38587, dbl.newLoopEnd.toFixed(4))
+
+    {
+      const rev2 = reverseSection(reverseSection(sine, 11025, 22050), 11025, 22050)
+      const a = sine.getChannelData(0)
+      const b = rev2.getChannelData(0)
+      let maxDiff = 0
+      for (let i = 0; i < sr; i++) maxDiff = Math.max(maxDiff, Math.abs(b[i] - a[i]))
+      badge('reverseSection twice → bit-identical (maxDiff 0)', maxDiff === 0, `${maxDiff}`)
+
+      let inputIntact = true
+      for (let i = 0; i < sr; i++) {
+        if (a[i] !== Math.fround(Math.sin((2 * Math.PI * 440 * i) / sr))) { inputIntact = false; break }
+      }
+      badge('reverseSection never mutates its input', inputIntact)
+    }
+
+    const gapBuf = createBufferLike(1, sr, sr)
+    {
+      const g = gapBuf.getChannelData(0)
+      for (let i = 0; i < sr; i++) g[i] = i >= 22050 && i < 33075 ? 0 : 0.1
+    }
+    const gap = detectGap(gapBuf, loop)
+    badge(
+      'detectGap → exactly {22050, 33075, 11025}',
+      !!gap && gap.start === 22050 && gap.end === 33075 && gap.size === 11025,
+      JSON.stringify(gap),
+    )
+    const closed = closeGapLeft(gapBuf, loop)
+    badge('closeGapLeft length == 44100 − 11025 == 33075', closed.buffer.length === 33075, `${closed.buffer.length}`)
+
+    let threw = false
+    try { halfSpeedLoop(sine, { start: 0.5, end: 0.4 }) } catch { threw = true }
+    badge('loop {start:0.5, end:0.4} throws', threw)
+
+    // ─── waveforms at fixed samples-per-pixel (stretch visibly doubles) ─────
+    const SPP = 50 // samples per pixel
+    function drawFixedScale(canvas, buf, regionStart, regionLen) {
+      const ctx = canvas.getContext('2d')
+      const { width: w, height: h } = canvas
+      ctx.fillStyle = '#111'; ctx.fillRect(0, 0, w, h)
+      const d = buf.getChannelData(0)
+      const px = Math.min(w, Math.ceil(buf.length / SPP))
+      // loop-region tint
+      ctx.fillStyle = 'rgba(255,167,38,0.25)'
+      ctx.fillRect(regionStart / SPP, 0, regionLen / SPP, h)
+      ctx.strokeStyle = '#4fc3f7'; ctx.beginPath()
+      for (let x = 0; x < px; x++) {
+        let mn = 1, mx = -1
+        for (let i = x * SPP; i < (x + 1) * SPP && i < buf.length; i++) {
+          if (d[i] < mn) mn = d[i]
+          if (d[i] > mx) mx = d[i]
+        }
+        ctx.moveTo(x + 0.5, h / 2 - mx * h * 0.45)
+        ctx.lineTo(x + 0.5, h / 2 - mn * h * 0.45)
+      }
+      ctx.stroke()
+    }
+    drawFixedScale(document.getElementById('orig'), sine, 11025, 11025)
+    drawFixedScale(document.getElementById('stretched'), half, 11025, 22050)
+
+    // ─── audition: same ops with ctx.createBuffer injected as factory ───────
+    let ctx = null
+    let src = null
+    const ensureCtx = () => (ctx ??= new AudioContext({ sampleRate: sr }))
+    const stop = () => { try { src?.stop() } catch {} src = null }
+    let factoryProven = false
+
+    function playBuf(buf) {
+      stop()
+      src = ctx.createBufferSource()
+      src.buffer = buf
+      src.connect(ctx.destination)
+      src.start()
+    }
+    function toAudioBuffer(shim) {
+      const b = ensureCtx().createBuffer(shim.numberOfChannels, shim.length, shim.sampleRate)
+      for (let c = 0; c < shim.numberOfChannels; c++) b.copyToChannel(shim.getChannelData(c), c)
+      return b
+    }
+    const factory = (ch, len, rate) => ensureCtx().createBuffer(ch, len, rate)
+
+    document.getElementById('playOrig').onclick = () => playBuf(toAudioBuffer(sine))
+    document.getElementById('playHalf').onclick = () => {
+      const out = halfSpeedLoop(sine, loop, { createBuffer: factory })
+      if (!factoryProven) {
+        factoryProven = true
+        badge(
+          'injected ctx.createBuffer factory → genuine AudioBuffer, length 55125',
+          out instanceof AudioBuffer && out.length === 55125,
+          `${out.constructor.name}(${out.length})`,
+        )
+      }
+      playBuf(out)
+    }
+    document.getElementById('playDbl').onclick = () =>
+      playBuf(doubleSpeedQuantzLoop(sine, loop, { createBuffer: factory }).buffer)
+    document.getElementById('stopBtn').onclick = stop
+  </script>
+</body>
+</html>

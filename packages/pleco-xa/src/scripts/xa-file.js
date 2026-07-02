@@ -13,6 +13,7 @@
  */
 
 import { debugLog } from './debug.js'
+import { encodeWav } from '../io/wav.js'
 
 /**
  * Custom error class for file operation errors
@@ -374,10 +375,17 @@ export async function loadFile(file, audioContext = null) {
 
 /**
  * Save audio data as downloadable file
- * @param {Float32Array} audioData - Audio samples
+ *
+ * Tier-2 proof-of-work repair (2026-07-02): the private _encodeWAV here was
+ * one of the three divergent encoders that src/io/wav.js explicitly replaced;
+ * saveAudio now delegates to io/wav.encodeWav and returns the Blob so callers
+ * can verify the roundtrip (proof: examples/web/file-io.html).
+ *
+ * @param {Float32Array} audioData - Audio samples (mono)
  * @param {number} sampleRate - Sample rate
  * @param {string} filename - Output filename
  * @param {string} format - Audio format ('wav', 'ogg')
+ * @returns {Blob} The encoded WAV Blob (also offered as a download)
  */
 export function saveAudio(
   audioData,
@@ -389,8 +397,11 @@ export function saveAudio(
     throw new FileError('Only WAV format is currently supported')
   }
 
-  // Create WAV file
-  const wavData = _encodeWAV(audioData, sampleRate)
+  // Create WAV file via the ONE canonical codec (io/wav.js)
+  const wavData = encodeWav(
+    [audioData instanceof Float32Array ? audioData : Float32Array.from(audioData)],
+    sampleRate,
+  )
 
   // Create download link
   const blob = new Blob([wavData], { type: 'audio/wav' })
@@ -407,6 +418,8 @@ export function saveAudio(
 
   // Clean up
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+  return blob
 }
 
 /**
@@ -455,11 +468,17 @@ export function cache() {
 
 /**
  * Create audio visualization data
+ *
+ * Tier-2 proof-of-work repair (2026-07-02): sampleRate was hard-coded to
+ * 22050 in the return value regardless of the actual audio; it is now an
+ * explicit parameter.
+ *
  * @param {Float32Array} audioData - Audio samples
  * @param {number} points - Number of visualization points
+ * @param {number} sampleRate - Sample rate of audioData (default: 22050)
  * @returns {Object} Visualization data
  */
-export function createVisualization(audioData, points = 1000) {
+export function createVisualization(audioData, points = 1000, sampleRate = 22050) {
   const downsample = Math.max(1, Math.floor(audioData.length / points))
   const times = []
   const amplitudes = []
@@ -470,51 +489,12 @@ export function createVisualization(audioData, points = 1000) {
     amplitudes.push(sample)
   }
 
-  return { times, amplitudes, sampleRate: 22050 }
+  return { times, amplitudes, sampleRate }
 }
 
 // ============= Private Helper Functions =============
-
-/**
- * Encode audio data as WAV file
- * @private
- */
-function _encodeWAV(audioData, sampleRate) {
-  const length = audioData.length
-  const arrayBuffer = new ArrayBuffer(44 + length * 2)
-  const view = new DataView(arrayBuffer)
-
-  // WAV header
-  const writeString = (offset, string) => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i))
-    }
-  }
-
-  writeString(0, 'RIFF')
-  view.setUint32(4, 36 + length * 2, true)
-  writeString(8, 'WAVE')
-  writeString(12, 'fmt ')
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true)
-  view.setUint16(22, 1, true)
-  view.setUint32(24, sampleRate, true)
-  view.setUint32(28, sampleRate * 2, true)
-  view.setUint16(32, 2, true)
-  view.setUint16(34, 16, true)
-  writeString(36, 'data')
-  view.setUint32(40, length * 2, true)
-
-  // Convert float samples to 16-bit PCM
-  let offset = 44
-  for (let i = 0; i < length; i++) {
-    const sample = Math.max(-1, Math.min(1, audioData[i]))
-    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true)
-    offset += 2
-  }
-
-  return arrayBuffer
-}
+// (the divergent private _encodeWAV was removed 2026-07-02 — saveAudio now
+// delegates to the canonical src/io/wav.js encodeWav)
 
 /**
  * Utility function to check if Web Audio API is available

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — xa-audio-core: load → draw → loop</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
+  button:hover { background: #37474f; }
+  canvas { display: block; margin: 10px 0; border: 1px solid #333; }
+  #status { font-family: monospace; color: #9ad; }
+</style>
+</head>
+<body>
+<h1>scripts/xa-audio-core.js — demo audio core: load → draw → loop</h1>
+<p>
+  One page exercising all three exports together on the 15 s golden WAV:
+  <code>loadAudioFile</code> (with its URL cache), <code>drawWaveform</code>
+  (loop overlay {0.25, 0.5}), and <code>initAudioProcessor</code> playing the
+  native looped region. Badges: loop duration exactly 0.25 × duration
+  (3.750 s for the 15 s file), 20/20 playhead samples inside [0.25, 0.5],
+  cache identity (second load returns the === same AudioBuffer), and pixel
+  probes proving the loop markers paint at x = 0.25·width and 0.5·width.
+</p>
+<div id="badges"></div>
+<p id="status">press run</p>
+<canvas id="wave" width="800" height="160"></canvas>
+<div>
+  <button id="run">▶ run proof (plays the looped region)</button>
+  <button id="stop">■ stop</button>
+</div>
+
+<script type="module">
+import { initAudioProcessor, loadAudioFile, drawWaveform } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge } from './_badge.js'
+
+const URL_WAV = '../../apps/demo/public/audio/Drive%20Through%20Beat.wav'
+const status = document.getElementById('status')
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const LOOP = { start: 0.25, end: 0.5 }
+let processor = null
+
+document.getElementById('stop').onclick = () => { processor?.stop(); status.textContent = 'stopped' }
+
+document.getElementById('run').onclick = async () => {
+  status.textContent = 'loading…'
+  const first = await loadAudioFile(URL_WAV)
+  const second = await loadAudioFile(URL_WAV)
+  badge('cache proof: second loadAudioFile(same URL) returns the IDENTICAL AudioBuffer (===)',
+    second.audioBuffer === first.audioBuffer)
+
+  const buffer = first.audioBuffer
+  status.textContent = `loaded ${buffer.duration.toFixed(3)} s`
+
+  // ── waveform + loop-marker pixel probes ──────────────────────────────────
+  drawWaveform(buffer, 'wave', LOOP)
+  const canvas = document.getElementById('wave')
+  const g = canvas.getContext('2d')
+  const probe = (x) => g.getImageData(x, 4, 1, 1).data // y=4: above the waveform
+  const isGold = ([r, gr, b]) => r > 150 && gr > 120 && b < 80
+  const p1 = probe(Math.round(LOOP.start * canvas.width))
+  const p2 = probe(Math.round(LOOP.end * canvas.width))
+  const p3 = probe(Math.round(0.75 * canvas.width))
+  badge('loop marker painted at x = 0.25·width', isGold(p1), `rgb(${p1[0]},${p1[1]},${p1[2]})`)
+  badge('loop marker painted at x = 0.5·width', isGold(p2), `rgb(${p2[0]},${p2[1]},${p2[2]})`)
+  badge('no marker outside the loop (x = 0.75·width)', !isGold(p3), `rgb(${p3[0]},${p3[1]},${p3[2]})`)
+
+  // ── native looped playback ───────────────────────────────────────────────
+  processor = initAudioProcessor()
+  processor.setLoopPoints(LOOP.start, LOOP.end)
+  await processor.play(buffer)
+
+  const expected = (LOOP.end - LOOP.start) * buffer.duration
+  badge(`getLoopDuration() === 0.25 × duration ± 1 ms (${expected.toFixed(3)} s)`,
+    Math.abs(processor.getLoopDuration() - expected) <= 0.001,
+    processor.getLoopDuration().toFixed(4) + ' s')
+
+  status.textContent = 'sampling playhead 20× over 3 s…'
+  let inBounds = 0
+  const samples = []
+  for (let k = 0; k < 20; k++) {
+    await sleep(150)
+    const pos = processor.getCurrentPosition()
+    samples.push(pos.toFixed(3))
+    if (pos >= LOOP.start && pos <= LOOP.end) inBounds++
+  }
+  badge('getCurrentPosition() ∈ [0.25, 0.5] for 20/20 samples over 3 s',
+    inBounds === 20, `${inBounds}/20`)
+  status.textContent = `playhead samples: ${samples.join(' ')} — still looping (press stop)`
+}
+</script>
+</body>
+</html>

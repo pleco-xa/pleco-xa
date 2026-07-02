@@ -1,10 +1,24 @@
 // Enhanced algorithmic sequence operations
+//
+// Loop-bounds invariant (tier-2 proof-of-work repair, 2026-07-02): every op
+// preserves 0 <= startSample < endSample <= buffer.length. The legacy
+// versions wrapped 'move'/'phase' with independent modulos (full-width loops
+// mapped to {0,0}, wrapped loops could get end < start) and let repeated
+// half/fractal/stutter collapse to zero width. Repairs: clamped no-wrap
+// move, circular fixed-width phase shift, and a minimum-width floor —
+// shrinks that would produce a loop narrower than 1 sample are refused
+// (the loop is returned unchanged) instead of emitting a degenerate state.
+// Acceptance harness: examples/node/algorithmic-sequences.mjs (0/800 fuzz).
 import { detectLoop, halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop } from '../core/index.js';
 
 // Enhanced operations with musical parameters
 export function stutterLoop(loop, buffer, repeats = 4) {
     const originalLength = loop.endSample - loop.startSample;
     const stutterLength = Math.floor(originalLength / repeats);
+    if (stutterLength < 1) {
+        // Minimum-width floor: refuse shrinks that would collapse the loop
+        return { ...loop, op: `stutter${repeats}` };
+    }
     return {
         startSample: loop.startSample,
         endSample: loop.startSample + stutterLength,
@@ -15,6 +29,8 @@ export function stutterLoop(loop, buffer, repeats = 4) {
 export function fractalSlice(loop, depth = 3) {
     let currentLoop = {...loop};
     for (let i = 0; i < depth; i++) {
+        // Minimum-width floor: halving below 2 samples would hit zero width
+        if (currentLoop.endSample - currentLoop.startSample < 2) break;
         currentLoop = halfLoop(currentLoop);
     }
     return {
@@ -26,9 +42,15 @@ export function fractalSlice(loop, depth = 3) {
 export function phaseShift(loop, buffer, amount = 0.5) {
     const length = loop.endSample - loop.startSample;
     const shift = Math.floor(length * amount);
+    // Circular displacement of the FIXED-WIDTH window: startSample wraps
+    // within [0, buffer.length - length] so the loop never straddles the
+    // buffer end (the old independent modulo on start/end could wrap end
+    // below start, or map a full-width loop to {0,0}).
+    const span = buffer.length - length;
+    const startSample = span > 0 ? (loop.startSample + shift) % (span + 1) : 0;
     return {
-        startSample: (loop.startSample + shift) % buffer.length,
-        endSample: (loop.endSample + shift) % buffer.length,
+        startSample,
+        endSample: startSample + length,
         op: `phase${amount}`
     };
 }
@@ -118,16 +140,21 @@ export function executeOperation(action, buffer, loop) {
     
     switch(action) {
         case 'half':
-            newLoop = halfLoop(newLoop);
+            // Minimum-width floor: only halve when the result stays >= 1 sample
+            if (newLoop.endSample - newLoop.startSample >= 2) {
+                newLoop = halfLoop(newLoop);
+            }
             break;
         case 'double':
             newLoop = doubleLoop(newLoop, buffer.length);
             break;
-        case 'move':
+        case 'move': {
+            // Clamped no-wrap move (core moveForward): advancing past the
+            // buffer end parks the loop flush against it instead of wrapping
             const duration = newLoop.endSample - newLoop.startSample;
-            newLoop.startSample = (newLoop.startSample + duration) % buffer.length;
-            newLoop.endSample = (newLoop.endSample + duration) % buffer.length;
+            newLoop = moveForward(newLoop, duration, buffer.length);
             break;
+        }
         case 'reverse':
             newBuffer = reverseBufferSection(buffer, newLoop.startSample, newLoop.endSample);
             break;

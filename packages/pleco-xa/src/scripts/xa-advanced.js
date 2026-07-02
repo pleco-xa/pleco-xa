@@ -493,9 +493,11 @@ export function griffinlim(
     angles = Array(n_freq).fill(null).map(() => Array(n_frames).fill(0))
   }
 
-  // Create initial complex spectrogram
+  // Create initial complex spectrogram.
+  // Array.from (NOT row.map): magnitude rows are typically Float32Array and
+  // TypedArray.map would coerce the {real, imag} objects to NaN.
   let S_complex = S.map((row, i) =>
-    row.map((mag, j) => ({
+    Array.from(row, (mag, j) => ({
       real: mag * Math.cos(angles[i][j]),
       imag: mag * Math.sin(angles[i][j])
     }))
@@ -506,8 +508,10 @@ export function griffinlim(
 
   // Iterative phase refinement
   for (let iter = 0; iter < n_iter; iter++) {
-    // Inverse STFT
-    const y = istftTransform(S_complex, hop_length, win_length, n_fft, window, center, dtype, length)
+    // Inverse STFT — istft signature is (D, hop_length, win_length, window,
+    // center, length); the old 8-arg call shifted n_fft into window and
+    // center=true into length, slicing the output to 1 sample.
+    const y = istftTransform(S_complex, hop_length, win_length, window, center, length)
 
     // Apply momentum
     let y_final = y
@@ -516,12 +520,13 @@ export function griffinlim(
     }
     y_prev = y.slice()
 
-    // Forward STFT
-    const S_est = stftTransform(y_final, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+    // Forward STFT — stft has no dtype parameter; passing it shifted
+    // pad_mode out of the arg list entirely.
+    const S_est = stftTransform(y_final, n_fft, hop_length, win_length, window, center, pad_mode)
 
-    // Update phase while keeping original magnitude
+    // Update phase while keeping original magnitude (Array.from — see above)
     S_complex = S.map((row, i) =>
-      row.map((mag, j) => {
+      Array.from(row, (mag, j) => {
         const est = S_est[i] && S_est[i][j] ? S_est[i][j] : { real: 0, imag: 0 }
         const phase = Math.atan2(est.imag, est.real)
         return {
@@ -532,8 +537,8 @@ export function griffinlim(
     )
   }
 
-  // Final inverse STFT
-  return istftTransform(S_complex, hop_length, win_length, n_fft, window, center, dtype, length)
+  // Final inverse STFT (same corrected arg order as the loop above)
+  return istftTransform(S_complex, hop_length, win_length, window, center, length)
 }
 
 /**
@@ -784,7 +789,7 @@ export function reassigned_spectrogram(
 
   // Compute base spectrogram if not provided
   if (S === null) {
-    S = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+    S = stftTransform(y, n_fft, hop_length, win_length, window, center, pad_mode)
   }
 
   const n_freq = S.length
@@ -955,14 +960,14 @@ export function __reassign_frequencies(
 
   // Compute standard STFT if not provided
   if (S === null) {
-    S = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+    S = stftTransform(y, n_fft, hop_length, win_length, window, center, pad_mode)
   }
 
   // Compute STFT with derivative window for frequency reassignment
   // For frequency reassignment, we need to compute the phase derivative
   // This is approximated using finite differences in the frequency domain
   // NOTE: This is a simplified implementation - full Librosa version uses derivative window
-  const S_dh = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+  const S_dh = stftTransform(y, n_fft, hop_length, win_length, window, center, pad_mode)
 
   const n_freq = S.length
   const n_frames = S[0].length
@@ -1037,14 +1042,14 @@ export function __reassign_times(
 
   // Compute standard STFT if not provided
   if (S === null) {
-    S = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+    S = stftTransform(y, n_fft, hop_length, win_length, window, center, pad_mode)
   }
 
   // Compute STFT with time-weighted window for time reassignment
   // For time reassignment, we need to compute the group delay
   // This is approximated using finite differences in the time domain
   // NOTE: This is simplified - full Librosa version uses time-weighted window
-  const S_th = stftTransform(y, n_fft, hop_length, win_length, window, center, dtype, pad_mode)
+  const S_th = stftTransform(y, n_fft, hop_length, win_length, window, center, pad_mode)
 
   const n_freq = S.length
   const n_frames = S[0].length
@@ -1125,7 +1130,7 @@ export function _spectrogram(
 
   // Compute STFT if not provided
   if (S === null) {
-    S = stftTransform(y, n_fft, hop_length, win_length, window, center, null, pad_mode)
+    S = stftTransform(y, n_fft, hop_length, win_length, window, center, pad_mode)
   } else {
     // Infer n_fft from S shape
     n_fft = 2 * (S.length - 1)

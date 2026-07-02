@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — streaming/analyzers: chunk-size invariance</title>
+<style>
+  body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
+  canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
+  code { color: #8fd }
+</style>
+</head>
+<body>
+<h2>streaming/analyzers — environment-blind streaming meters</h2>
+<p>
+  The same worker-safe analyzers proven in <code>examples/node/streaming-meters.mjs</code>, run
+  in the browser: a 0.5-amp 440Hz sine is pushed into <code>createRmsMeter</code> monolithically
+  and as seeded-random 37&ndash;1999-sample chunks (every RMS within 1% of 0.5/&radic;2, both runs
+  bitwise-identical); a 0.05&rarr;0.8 amplitude step at sample 16384 goes into
+  <code>createFluxAnalyzer</code> (argmax flux within &plusmn;1 frame of the first window
+  containing the step; first frame flux exactly 0). The flux curve is drawn as chunks stream in.
+</p>
+<div id="badges"></div>
+<canvas id="flux" width="820" height="160"></canvas>
+
+<script type="module">
+import { createRmsMeter, createFluxAnalyzer } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge } from './_badge.js'
+
+const sr = 44100
+
+// (a) RMS chunk-size invariance — identical asserts to the node proof
+const y = new Float32Array(2 * sr)
+for (let i = 0; i < y.length; i++) y[i] = 0.5 * Math.sin((2 * Math.PI * 440 * i) / sr)
+
+const rmsMono = createRmsMeter().push(y)
+
+let seed = 12345
+const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+const chunkedMeter = createRmsMeter()
+const rmsChunked = []
+let off = 0
+while (off < y.length) {
+  const size = 37 + Math.floor(rand() * (1999 - 37 + 1))
+  rmsChunked.push(...chunkedMeter.push(y.subarray(off, Math.min(off + size, y.length))))
+  off += size
+}
+
+const expected = 0.5 / Math.SQRT2
+let maxRelErr = 0
+for (const v of rmsMono) maxRelErr = Math.max(maxRelErr, Math.abs(v - expected) / expected)
+const identical = rmsMono.length === rmsChunked.length && rmsMono.every((v, i) => v === rmsChunked[i])
+badge('every emitted RMS within 1% of 0.5/sqrt(2)', maxRelErr <= 0.01, `maxRelErr=${(maxRelErr * 100).toFixed(3)}%`)
+badge('chunked run bitwise-identical to monolithic', identical, `${rmsChunked.length}/${rmsMono.length} frames`)
+
+// (b) flux step localization, streamed chunk-by-chunk with a live curve
+const nFft = 2048, hop = 512, step = 16384
+const s = new Float32Array(2 * sr)
+for (let i = 0; i < s.length; i++) s[i] = (i < step ? 0.05 : 0.8) * Math.sin((2 * Math.PI * 440 * i) / sr)
+
+const analyzer = createFluxAnalyzer()
+const flux = []
+const cv = document.getElementById('flux'), ctx = cv.getContext('2d')
+const totalFrames = Math.floor((s.length - nFft) / hop) + 1
+
+function draw() {
+  ctx.fillStyle = '#111'; ctx.fillRect(0, 0, cv.width, cv.height)
+  let max = 1e-12; for (const v of flux) if (v > max) max = v
+  ctx.strokeStyle = '#4fc3f7'; ctx.beginPath()
+  for (let i = 0; i < flux.length; i++) {
+    const x = (i / (totalFrames - 1)) * cv.width
+    const yy = cv.height - 8 - (flux[i] / max) * (cv.height - 28)
+    i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy)
+  }
+  ctx.stroke()
+  ctx.fillStyle = '#888'; ctx.font = '11px monospace'
+  ctx.fillText(`spectral flux — ${flux.length}/${totalFrames} frames streamed`, 8, cv.height - 8)
+}
+
+let pos = 0
+const timer = setInterval(() => {
+  if (pos >= s.length) {
+    clearInterval(timer)
+    let argmax = 0
+    for (let i = 1; i < flux.length; i++) if (flux[i] > flux[argmax]) argmax = i
+    const expectedFrame = Math.floor((step - nFft) / hop) + 1
+    badge('flux argmax within +/-1 of first frame containing the step', Math.abs(argmax - expectedFrame) <= 1, `argmax=${argmax}, expected=${expectedFrame}±1`)
+    badge('first frame reports flux exactly 0', flux[0] === 0, `flux[0]=${flux[0]}`)
+    draw()
+    return
+  }
+  const size = 2048
+  flux.push(...analyzer.push(s.subarray(pos, Math.min(pos + size, s.length))))
+  pos += size
+  draw()
+}, 16)
+</script>
+</body>
+</html>
