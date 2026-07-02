@@ -14,11 +14,12 @@ is a deliberate, documented divergence — not a gap we're hiding.
 | Frequencies | fft_frequencies | `fft_frequencies.json` | Wave 1 |
 | Conversions | hz_to_mel / mel_to_hz (slaney + htk), hz_to_midi / midi_to_hz, amplitude/power↔db, frames/time/samples conversions | `conversions.json` | Wave 1 |
 | Weighting | A/B/C/D frequency weighting (exact IEC constants) | `weighting.json` | Wave 1 |
+| Mel | mel filterbank (slaney + htk), melspectrogram | `mel_filterbank.json`, `melspectrogram.json` | Wave 2 |
+| Rhythm | onset_strength (log-power-mel), tempo (bit-exact), beat_track (exact frames) | `onset_strength.json`, `tempo_beats.json` | Wave 2 |
 
 ## Planned (fixture sets exist or land with their wave)
 
-- Mel filterbank + melspectrogram + MFCC (`mel_filterbank.json` committed; specs land Wave 4)
-- onset_strength, tempo, beat_track (Wave 2)
+- MFCC (Wave 4)
 - chroma, spectral descriptors (Wave 4)
 - effects (trim/split/time_stretch), HPSS (Wave 5)
 - DTW, recurrence, segmentation (Wave 5)
