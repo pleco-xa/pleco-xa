@@ -4,6 +4,8 @@
  */
 
 import { fft as fftTransform, hann_window } from './xa-fft.js'
+import { melspectrogram } from './xa-mel.js'
+import { power_to_db } from './xa-convert.js'
 
 /**
  * FFT wrapper to convert from xa-fft complex object format to flat array format
@@ -113,31 +115,174 @@ export function computeSpectralFlux(stft) {
 }
 
 /**
- * Python‑style onset_strength() wrapper.
- * Accepts either a pre‑computed STFT **or** a 1‑D audio signal.
- *
- * @param {Float32Array|Array} y_or_stft  1‑D PCM signal **or** STFT array
- * @param {Object} [opts]
- *   @param {number} [opts.sr=22050]            sample‑rate (Hz) if y is audio
- *   @param {number} [opts.hop_length=512]      hop‑length used for STFT
- *   @param {number} [opts.frame_length=2048]   frame length for STFT
- * @returns {Float32Array}  onset strength envelope
+ * Sliding maximum filter along the frequency axis (rows of S).
+ * Mirrors scipy.ndimage.maximum_filter1d(S, size, axis=-2, mode='reflect').
+ * @param {Array<Float32Array|Array>} S - Spectrogram [freq][time]
+ * @param {number} size - Filter size in frequency bins
+ * @returns {Array<Float32Array>} Max-filtered spectrogram [freq][time]
  */
+function maximumFilterFreq(S, size) {
+  const nFreq = S.length
+  const nFrames = S[0] ? S[0].length : 0
+  const half = Math.floor(size / 2)
+  // scipy 'reflect' boundary: (d c b a | a b c d | d c b a)
+  const reflect = (i) => {
+    const period = 2 * nFreq
+    let k = ((i % period) + period) % period
+    return k < nFreq ? k : period - 1 - k
+  }
+  const out = Array(nFreq)
+    .fill(null)
+    .map(() => new Float32Array(nFrames))
+  for (let f = 0; f < nFreq; f++) {
+    for (let t = 0; t < nFrames; t++) {
+      let m = -Infinity
+      for (let w = f - half; w < f - half + size; w++) {
+        const v = S[reflect(w)][t]
+        if (v > m) m = v
+      }
+      out[f][t] = m
+    }
+  }
+  return out
+}
 
-export function onset_strength(y_or_stft, opts = {}) {
-  const { hop_length = 512, frame_length = 2048 } = opts
+/**
+ * Port of librosa.onset.onset_strength() (librosa 0.11.0 semantics).
+ *
+ * S = power_to_db(melspectrogram(y, sr, n_fft, hop_length, fmax=sr/2))
+ * onset_env[t] = mean_f max(0, S[f, t] - ref[f, t - lag])
+ * padded left by lag + n_fft // (2 * hop_length) frames (center=true),
+ * then trimmed to the frame count of S.
+ *
+ * Accepts either librosa-style positional args `(y, sr, hop_length)` or an
+ * options object `(y, { sr, hop_length, ... })`.
+ *
+ * @param {Float32Array|Array} y - 1-D audio signal (or null if opts.S given)
+ * @param {Object|number} [opts] - Options object, or sr as a number
+ *   @param {number} [opts.sr=22050]         sample rate (Hz)
+ *   @param {Array}  [opts.S=null]           pre-computed LOG-POWER spectrogram [freq][time]
+ *   @param {number} [opts.n_fft=2048]       FFT size for the mel spectrogram
+ *   @param {number} [opts.hop_length=512]   hop length
+ *   @param {number} [opts.lag=1]            time lag for the difference
+ *   @param {number} [opts.max_size=1]       frequency-local max filter size (1 = off)
+ *   @param {Array}  [opts.ref=null]         pre-computed reference spectrum
+ *   @param {boolean} [opts.detrend=false]   remove DC via lfilter([1,-1],[1,-0.99])
+ *   @param {boolean} [opts.center=true]     compensate for centered STFT frames
+ *   @param {number} [opts.n_mels=128]       mel bands for the default feature
+ *   @param {number} [opts.fmin=0]           lowest mel frequency
+ *   @param {number} [opts.fmax=sr/2]        highest mel frequency (librosa default)
+ *   @param {boolean} [opts.htk=false]       HTK mel scale
+ * @param {number} [maybeHop] - hop_length when called positionally (y, sr, hop)
+ * @returns {Float32Array} onset strength envelope
+ */
+export function onset_strength(y, opts = {}, maybeHop) {
+  // Support the legacy/librosa positional call style: onset_strength(y, sr, hop_length)
+  if (typeof opts === 'number') {
+    opts = { sr: opts }
+    if (typeof maybeHop === 'number') opts.hop_length = maybeHop
+  }
 
-  // Detect whether we were given a 1‑D Float32Array (raw audio)
-  const isAudio =
-    (typeof Float32Array !== 'undefined' &&
-      y_or_stft instanceof Float32Array) ||
-    (Array.isArray(y_or_stft) && typeof y_or_stft[0] === 'number')
+  const {
+    sr = 22050,
+    S: S_in = null,
+    n_fft = 2048,
+    hop_length = 512,
+    frame_length, // legacy alias for n_fft
+    lag = 1,
+    max_size = 1,
+    ref = null,
+    detrend = false,
+    center = true,
+    n_mels = 128,
+    fmin = 0,
+    fmax = 0.5 * sr, // librosa: kwargs.setdefault('fmax', 0.5 * sr)
+    htk = false,
+  } = opts
 
-  const stft = isAudio
-    ? computeSTFT(y_or_stft, frame_length, hop_length) // raw audio → STFT
-    : y_or_stft // already an STFT
+  const fft_size = typeof frame_length === 'number' ? frame_length : n_fft
 
-  return computeSpectralFlux(stft)
+  if (!Number.isInteger(lag) || lag < 1) {
+    throw new Error(`lag=${lag} must be a positive integer`)
+  }
+  if (!Number.isInteger(max_size) || max_size < 1) {
+    throw new Error(`max_size=${max_size} must be a positive integer`)
+  }
+
+  let S = S_in
+  if (S === null) {
+    if (y === null || y === undefined) {
+      throw new Error('Either y or opts.S must be provided')
+    }
+    // Log-power mel spectrogram (librosa default feature)
+    const melspec = melspectrogram(
+      y,
+      sr,
+      null, // S
+      fft_size,
+      hop_length,
+      null, // win_length
+      'hann',
+      center,
+      'constant',
+      2.0, // power
+      n_mels,
+      fmin,
+      fmax,
+      'slaney',
+      htk,
+    )
+    S = power_to_db(melspec) // ref=1.0, amin=1e-10, top_db=80 (librosa defaults)
+  }
+
+  const nFreq = S.length
+  const nFrames = S[0] ? S[0].length : 0
+
+  // Reference spectrum: identity unless max filtering is requested
+  let refS = ref
+  if (refS === null) {
+    refS = max_size === 1 ? S : maximumFilterFreq(S, max_size)
+  } else if (refS.length !== nFreq || (refS[0] && refS[0].length !== nFrames)) {
+    throw new Error('Reference spectrum shape must match input spectrum')
+  }
+
+  // Rectified difference at the given lag, averaged over frequency bins
+  const rawLen = Math.max(0, nFrames - lag)
+  const raw = new Float64Array(rawLen)
+  for (let t = 0; t < rawLen; t++) {
+    let sum = 0
+    for (let f = 0; f < nFreq; f++) {
+      const d = S[f][t + lag] - refS[f][t]
+      if (d > 0) sum += d
+    }
+    raw[t] = sum / nFreq
+  }
+
+  // Compensate for lag (and framing effects when center=true)
+  let pad_width = lag
+  if (center) {
+    pad_width += Math.floor(fft_size / (2 * hop_length))
+  }
+
+  let env = new Float64Array(pad_width + rawLen)
+  env.set(raw, pad_width)
+
+  // Remove the DC component: scipy.signal.lfilter([1, -1], [1, -0.99], env)
+  if (detrend) {
+    const filtered = new Float64Array(env.length)
+    let prevX = 0
+    let prevY = 0
+    for (let i = 0; i < env.length; i++) {
+      filtered[i] = env[i] - prevX + 0.99 * prevY
+      prevX = env[i]
+      prevY = filtered[i]
+    }
+    env = filtered
+  }
+
+  // Trim to match the input duration
+  const outLen = center ? Math.min(env.length, nFrames) : env.length
+  return Float32Array.from(env.subarray(0, outLen))
 }
 
 /**
@@ -280,17 +425,18 @@ export function onset_strength_multi(
     const results = []
 
     for (let c = 0; c < n_channels; c++) {
-      const channel_strength = onset_strength(
-        {S: S[c]},
-        {
-          sr,
-          lag,
-          max_size,
-          detrend,
-          center,
-          ...kwargs
-        }
-      )
+      const channel_strength = onset_strength(null, {
+        sr,
+        S: S[c],
+        n_fft,
+        hop_length,
+        lag,
+        max_size,
+        ref,
+        detrend,
+        center,
+        ...kwargs,
+      })
       results.push(channel_strength)
     }
 
@@ -304,9 +450,10 @@ export function onset_strength_multi(
     hop_length,
     lag,
     max_size,
+    ref,
     detrend,
     center,
-    ...kwargs
+    ...kwargs,
   })
 
   return [single_channel]

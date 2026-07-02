@@ -146,3 +146,55 @@ if __name__ == "__main__":
     gen_stft()
     gen_istft_roundtrip()
     print("done")
+
+
+# ---------------- Wave 2: rhythm ----------------
+
+def _click_signal(bpm, dur=3.0):
+    times = np.arange(0, dur, 60.0 / bpm)
+    return librosa.clicks(times=times, sr=SR, click_duration=0.05, length=int(dur * SR)).astype(np.float32)
+
+
+def gen_melspectrogram():
+    cases = []
+    for name, y in (("click120", _click_signal(120.0)), ("sine440", signals()["sine440"][: SR // 2])):
+        S = librosa.feature.melspectrogram(y=y, sr=SR, n_fft=2048, hop_length=512, n_mels=128)
+        cases.append({
+            "input": {"signal": name, "y": f32(y), "sr": SR, "n_fft": 2048, "hop_length": 512, "n_mels": 128},
+            "expected_shape": list(S.shape),
+            "expected": f32(S.ravel()),
+        })
+    write("melspectrogram", "librosa.feature.melspectrogram", {}, cases)
+
+
+def gen_onset_strength():
+    cases = []
+    for name, y in (("click120", _click_signal(120.0)), ("click99", _click_signal(99.0))):
+        env = librosa.onset.onset_strength(y=y, sr=SR)
+        cases.append({
+            "input": {"signal": name, "y": f32(y), "sr": SR},
+            "expected": f32(env),
+        })
+    write("onset_strength", "librosa.onset.onset_strength", {}, cases)
+
+
+def gen_tempo_beats():
+    cases = []
+    for name, bpm in (("click120", 120.0), ("click99", 99.0)):
+        y = _click_signal(bpm)
+        env = librosa.onset.onset_strength(y=y, sr=SR)
+        t = librosa.feature.tempo(onset_envelope=env, sr=SR)
+        tempo_est, beats = librosa.beat.beat_track(onset_envelope=env, sr=SR, units="frames")
+        cases.append({
+            "input": {"signal": name, "true_bpm": bpm, "y": f32(y), "sr": SR},
+            "expected_tempo": float(np.atleast_1d(t)[0]),
+            "expected_beat_tempo": float(np.atleast_1d(tempo_est)[0]),
+            "expected_beats": np.asarray(beats).tolist(),
+        })
+    write("tempo_beats", "librosa.feature.tempo + librosa.beat.beat_track", {}, cases)
+
+
+gen_melspectrogram()
+gen_onset_strength()
+gen_tempo_beats()
+print("rhythm fixtures done")

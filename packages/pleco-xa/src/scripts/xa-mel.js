@@ -22,61 +22,53 @@ export function mel_filterbank(
   n_mels = 128,
   fmin = 0,
   fmax = null,
-  norm = 'slaney',  // Fixed: was boolean, now matches Librosa (default 'slaney')
+  norm = 'slaney',
   htk = false,
 ) {
   if (fmax === null) {
     fmax = sr / 2
   }
 
-  // Compute mel frequencies (use htk parameter)
+  // Center freqs of each FFT bin: rfftfreq(n_fft, 1/sr) = k * sr / n_fft
+  const n_freq_bins = Math.floor(1 + n_fft / 2)
+  const fftfreqs = new Float64Array(n_freq_bins)
+  for (let k = 0; k < n_freq_bins; k++) {
+    fftfreqs[k] = (k * sr) / n_fft
+  }
+
+  // 'Center freqs' of mel bands - uniformly spaced between limits (n_mels + 2 points)
   const mel_min = hz_to_mel(fmin, htk)
   const mel_max = hz_to_mel(fmax, htk)
-  const mel_points = linspace(mel_min, mel_max, n_mels + 2)
-  const hz_points = mel_points.map((mel) => mel_to_hz(mel, htk))
+  const mel_f = linspace(mel_min, mel_max, n_mels + 2).map((mel) =>
+    mel_to_hz(mel, htk),
+  )
 
-  // Convert to FFT bin numbers
-  const bin_points = hz_points.map((hz) => Math.floor(((n_fft + 1) * hz) / sr))
+  // fdiff[i] = mel_f[i+1] - mel_f[i]
+  const fdiff = new Float64Array(n_mels + 1)
+  for (let i = 0; i < n_mels + 1; i++) {
+    fdiff[i] = mel_f[i + 1] - mel_f[i]
+  }
 
-  // Create filterbank matrix
-  const n_freq_bins = Math.floor(1 + n_fft / 2)
   const filterbank = Array(n_mels)
     .fill(null)
     .map(() => new Float32Array(n_freq_bins))
 
   for (let i = 0; i < n_mels; i++) {
-    const start = bin_points[i]
-    const center = bin_points[i + 1]
-    const end = bin_points[i + 2]
+    // Slaney-style area normalization: 2 / (mel_f[i+2] - mel_f[i])
+    const enorm =
+      norm === 'slaney' || norm === true ? 2.0 / (mel_f[i + 2] - mel_f[i]) : 1.0
 
-    // Rising edge
-    for (let j = start; j < center && j < n_freq_bins; j++) {
-      if (center > start) {
-        filterbank[i][j] = (j - start) / (center - start)
-      }
+    for (let j = 0; j < n_freq_bins; j++) {
+      // Continuous triangular ramps over the FFT bin center frequencies
+      // (librosa filters.mel: lower = -ramps[i]/fdiff[i], upper = ramps[i+2]/fdiff[i+1])
+      const lower = (fftfreqs[j] - mel_f[i]) / fdiff[i]
+      const upper = (mel_f[i + 2] - fftfreqs[j]) / fdiff[i + 1]
+      const weight = Math.max(0, Math.min(lower, upper))
+      filterbank[i][j] = weight * enorm
     }
 
-    // Falling edge
-    for (let j = center; j < end && j < n_freq_bins; j++) {
-      if (end > center) {
-        filterbank[i][j] = (end - j) / (end - center)
-      }
-    }
-
-    // Apply normalization
-    // 'slaney': area normalization (default) - each filter integrates to 1
-    // number: L-norm normalization
-    // null: no normalization
-    if (norm === 'slaney' || norm === true) {  // Support old boolean for compatibility
-      // Area normalization - sum to 1
-      const sum = filterbank[i].reduce((a, b) => a + b, 0)
-      if (sum > 0) {
-        for (let j = 0; j < n_freq_bins; j++) {
-          filterbank[i][j] /= sum
-        }
-      }
-    } else if (typeof norm === 'number' && norm !== null) {
-      // L-norm normalization
+    if (typeof norm === 'number') {
+      // Unit l_p norm per filter (librosa util.normalize semantics)
       let norm_sum = 0
       for (let j = 0; j < n_freq_bins; j++) {
         norm_sum += Math.pow(Math.abs(filterbank[i][j]), norm)
@@ -88,7 +80,7 @@ export function mel_filterbank(
         }
       }
     }
-    // If norm === null, no normalization
+    // norm === null / undefined / 'none' / false: triangles peak at 1.0
   }
 
   return filterbank
