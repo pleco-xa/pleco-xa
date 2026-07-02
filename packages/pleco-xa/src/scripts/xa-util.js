@@ -573,8 +573,14 @@ function sliceAxis(arr, axis, start, end) {
   if (axis === 0) {
     return arr.slice(start, end)
   }
-  // For other axes, would need more complex slicing
-  throw new ParameterError('Multi-axis slicing not fully implemented')
+  if (axis === 1) {
+    // 2D [rows][time]: slice each row along the time axis. NOTE: returns
+    // COPIES — librosa's zero-copy stride view does not transfer to JS.
+    // Repaired 2026-07-02 (Tier-1 proof-of-work): frame() on a spectrogram
+    // previously threw here, so 2D patch extraction never worked.
+    return arr.map((row) => row.slice(start, end))
+  }
+  throw new ParameterError('Slicing beyond 2 dimensions is not implemented')
 }
 
 function padArray1D(arr, leftPad, rightPad, mode, constantValue) {

@@ -9,6 +9,8 @@
  * @author PlecoXA Audio Analysis
  */
 
+import { stft } from './xa-fft.js'
+
 /**
  * Spectrum visualization configuration
  * @typedef {Object} SpectrumRenderOptions
@@ -61,16 +63,25 @@ export class RealtimeSpectrumAnalyzer {
       ...options,
     }
 
-    // Create analyser node
-    this.analyser = audioContext.createAnalyser()
-    this.analyser.fftSize = this.options.fftSize
-    this.analyser.smoothingTimeConstant = this.options.smoothing
-    this.analyser.minDecibels = this.options.minDb
-    this.analyser.maxDecibels = this.options.maxDb
+    // Create the analyser node when the context provides one (live Web Audio
+    // use). Static helpers (renderStaticSpectrum) pass a plain { sampleRate }
+    // context and inject precomputed frequencyData instead — no live path.
+    if (audioContext && typeof audioContext.createAnalyser === 'function') {
+      this.analyser = audioContext.createAnalyser()
+      this.analyser.fftSize = this.options.fftSize
+      this.analyser.smoothingTimeConstant = this.options.smoothing
+      this.analyser.minDecibels = this.options.minDb
+      this.analyser.maxDecibels = this.options.maxDb
+    } else {
+      this.analyser = null
+    }
 
     // Analysis data arrays
-    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount)
-    this.timeData = new Uint8Array(this.analyser.frequencyBinCount)
+    const binCount = this.analyser
+      ? this.analyser.frequencyBinCount
+      : this.options.fftSize / 2
+    this.frequencyData = new Uint8Array(binCount)
+    this.timeData = new Uint8Array(binCount)
 
     // Animation state
     this.isRunning = false
@@ -93,6 +104,11 @@ export class RealtimeSpectrumAnalyzer {
    */
   start() {
     if (this.isRunning) return
+    if (!this.analyser) {
+      throw new Error(
+        'RealtimeSpectrumAnalyzer.start() requires a real AudioContext (none was provided)',
+      )
+    }
 
     this.isRunning = true
     this.render()
@@ -115,6 +131,7 @@ export class RealtimeSpectrumAnalyzer {
    */
   updateOptions(newOptions) {
     this.options = { ...this.options, ...newOptions }
+    if (!this.analyser) return
 
     // Update analyser properties
     if (newOptions.fftSize) {
@@ -406,33 +423,43 @@ export async function renderStaticSpectrum(canvas, audioBuffer, options = {}) {
     style: 'bars',
     color: '#00ff88',
     logScale: true,
+    minDb: -100,
+    maxDb: -10,
     windowFunction: 'hann',
     ...options,
   }
 
-  // Create offline context for analysis
-  const offlineContext = new OfflineAudioContext(
-    1,
-    audioBuffer.length,
-    audioBuffer.sampleRate,
-  )
-  const source = offlineContext.createBufferSource()
-  const analyser = offlineContext.createAnalyser()
+  // Compute the average magnitude spectrum with the FFT tier (xa-fft).
+  // The previous OfflineAudioContext + AnalyserNode approach was unsound:
+  // getByteFrequencyData after startRendering() reflects only the final
+  // render quantum, and the analyser was never pulled by a destination.
+  let channelData = audioBuffer.getChannelData(0)
+  if (channelData.length < opts.fftSize) {
+    const padded = new Float32Array(opts.fftSize)
+    padded.set(channelData)
+    channelData = padded
+  }
+  const hop = Math.floor(opts.fftSize / 2)
+  const S = stft(channelData, opts.fftSize, hop, null, 'hann', false)
+  const numBins = opts.fftSize / 2 // AnalyserNode-style bin count (Nyquist dropped)
+  const numFrames = S[0]?.length || 0
 
-  analyser.fftSize = opts.fftSize
-  analyser.smoothingTimeConstant = 0
-
-  source.buffer = audioBuffer
-  source.connect(analyser)
-
-  // Get FFT data
-  const frequencyData = new Uint8Array(analyser.frequencyBinCount)
-  const timeData = new Uint8Array(analyser.frequencyBinCount)
-
-  // Trigger analysis
-  source.start()
-  await offlineContext.startRendering()
-  analyser.getByteFrequencyData(frequencyData)
+  // Average power per bin across frames, then map dBFS -> bytes the way
+  // AnalyserNode does: [minDb, maxDb] -> [0, 255], clamped.
+  // Normalization: full-scale sine ~ 0 dBFS (hann coherent gain compensated).
+  const frequencyData = new Uint8Array(numBins)
+  const norm = 2 / (opts.fftSize * 0.5)
+  for (let f = 0; f < numBins; f++) {
+    let power = 0
+    for (let t = 0; t < numFrames; t++) {
+      const { real, imag } = S[f][t]
+      power += real * real + imag * imag
+    }
+    const mag = Math.sqrt(power / Math.max(numFrames, 1)) * norm
+    const db = 20 * Math.log10(Math.max(mag, 1e-10))
+    const byte = Math.round((255 * (db - opts.minDb)) / (opts.maxDb - opts.minDb))
+    frequencyData[f] = Math.max(0, Math.min(255, byte))
+  }
 
   // Render to canvas
   const ctx = canvas.getContext('2d')
@@ -441,7 +468,7 @@ export async function renderStaticSpectrum(canvas, audioBuffer, options = {}) {
 
   ctx.clearRect(0, 0, width, height)
 
-  // Create analyzer instance for rendering
+  // Create analyzer instance for rendering (analyser-less static mode)
   const tempAnalyzer = new RealtimeSpectrumAnalyzer(
     canvas,
     { sampleRate: audioBuffer.sampleRate },
@@ -450,19 +477,21 @@ export async function renderStaticSpectrum(canvas, audioBuffer, options = {}) {
   tempAnalyzer.frequencyData = frequencyData
 
   switch (opts.style) {
-    case 'bars':
-      tempAnalyzer.renderBars()
-      break
     case 'line':
       tempAnalyzer.renderLine()
       break
     case 'filled':
       tempAnalyzer.renderFilled()
       break
+    default:
+      tempAnalyzer.renderBars()
   }
 
   // Calculate analysis results
-  const peakIndex = frequencyData.indexOf(Math.max(...frequencyData))
+  let peakIndex = 0
+  for (let f = 1; f < numBins; f++) {
+    if (frequencyData[f] > frequencyData[peakIndex]) peakIndex = f
+  }
   const peakFrequency =
     (peakIndex / frequencyData.length) * (audioBuffer.sampleRate / 2)
 
@@ -516,40 +545,24 @@ export async function createSpectrogram(canvas, audioBuffer, options = {}) {
 
   const channelData = audioBuffer.getChannelData(0)
   const sampleRate = audioBuffer.sampleRate
-  const numFrames =
-    Math.floor((channelData.length - opts.fftSize) / opts.hopLength) + 1
   const numBins = opts.fftSize / 2
 
-  // Create spectrogram data
+  // Hann-windowed STFT via the FFT tier (xa-fft) — replaces the previous
+  // hand-rolled O(n_fft^2) per-frame DFT that hung on even short clips.
+  // center=false preserves the legacy frame count:
+  // numFrames == floor((len - fftSize) / hop) + 1.
+  const S = stft(channelData, opts.fftSize, opts.hopLength, null, 'hann', false)
+  const numFrames = S[0]?.length || 0
+
+  // Create spectrogram data (dB magnitude, [frame][bin] like before)
   const spectrogramData = new Array(numFrames)
-
   for (let frame = 0; frame < numFrames; frame++) {
-    const start = frame * opts.hopLength
-    const frameData = channelData.slice(start, start + opts.fftSize)
-
-    // Apply window function (Hann window)
-    for (let i = 0; i < frameData.length; i++) {
-      const windowValue =
-        0.5 * (1 - Math.cos((2 * Math.PI * i) / (frameData.length - 1)))
-      frameData[i] *= windowValue
-    }
-
-    // Simple FFT approximation (magnitude spectrum)
     const spectrum = new Float32Array(numBins)
     for (let bin = 0; bin < numBins; bin++) {
-      let real = 0
-      let imag = 0
-
-      for (let n = 0; n < frameData.length; n++) {
-        const angle = (-2 * Math.PI * bin * n) / frameData.length
-        real += frameData[n] * Math.cos(angle)
-        imag += frameData[n] * Math.sin(angle)
-      }
-
+      const { real, imag } = S[bin][frame]
       const magnitude = Math.sqrt(real * real + imag * imag)
       spectrum[bin] = 20 * Math.log10(Math.max(magnitude, 1e-10))
     }
-
     spectrogramData[frame] = spectrum
   }
 

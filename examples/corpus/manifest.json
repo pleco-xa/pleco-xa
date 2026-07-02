@@ -1,0 +1,46 @@
+[
+  {
+    "key": "tone-440",
+    "file": "tone-440.wav",
+    "sr": 22050,
+    "durationSec": 2,
+    "truth": {
+      "type": "tone",
+      "freqHz": 440
+    }
+  },
+  {
+    "key": "chirp-110-880",
+    "file": "chirp-110-880.wav",
+    "sr": 22050,
+    "durationSec": 2,
+    "truth": {
+      "type": "chirp",
+      "fminHz": 110,
+      "fmaxHz": 880
+    }
+  },
+  {
+    "key": "click-track-120bpm",
+    "file": "click-track-120bpm.wav",
+    "sr": 22050,
+    "durationSec": 10,
+    "truth": {
+      "type": "clicks",
+      "bpm": 120,
+      "count": 20,
+      "intervalSec": 0.5
+    }
+  },
+  {
+    "key": "am-noise",
+    "file": "am-noise.wav",
+    "sr": 22050,
+    "durationSec": 8,
+    "truth": {
+      "type": "am-noise",
+      "amRateHz": 3,
+      "envelopePeaks": 24
+    }
+  }
+]

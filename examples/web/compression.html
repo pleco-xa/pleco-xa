@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — compression: pitch-changing vs pitch-preserving</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
+  button:hover { background: #37474f; }
+  table { border-collapse: collapse; margin: 12px 0; font-family: monospace; }
+  td, th { border: 1px solid #444; padding: 4px 12px; text-align: right; }
+</style>
+</head>
+<body>
+<h1>scripts/compression.js — two compressors, one tone</h1>
+<p>
+  A 1 s 440 Hz tone is shortened to 0.8× by both tiers.
+  <code>pitchBasedCompress</code> is an honest record-speed resample — pitch and
+  tempo move together, so the tone must measure ≈550 Hz (440 ÷ 0.8).
+  <code>tempoBasedCompress</code> is a real phase-vocoder time stretch — same
+  length, but the tone must still measure ≈440 Hz. Badges assert the exact
+  length contract (17640 samples) and the measured zero-crossing pitch of each
+  output; the buttons make the difference audible. The same asserts run
+  headless in <code>examples/node/compression.mjs</code>.
+</p>
+<div id="badges"></div>
+<table id="results"><tr><th>signal</th><th>length</th><th>measured pitch</th></tr></table>
+<div id="controls"></div>
+
+<script type="module">
+import { pitchBasedCompress, tempoBasedCompress } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge } from './_badge.js'
+
+const SR = 22050
+const F0 = 440
+const RATIO = 0.8
+
+const ctx = new (window.AudioContext || window.webkitAudioContext)()
+const input = ctx.createBuffer(1, SR, SR)
+{
+  const d = input.getChannelData(0)
+  for (let i = 0; i < SR; i++) d[i] = Math.sin((2 * Math.PI * F0 * i) / SR)
+}
+
+function zcPitch(y, sr) {
+  let zc = 0
+  for (let i = 1; i < y.length; i++) {
+    if ((y[i - 1] < 0 && y[i] >= 0) || (y[i - 1] >= 0 && y[i] < 0)) zc++
+  }
+  return zc / (2 * (y.length / sr))
+}
+
+const row = (name, buf, hz) => {
+  document.getElementById('results').insertAdjacentHTML('beforeend',
+    `<tr><td>${name}</td><td>${buf.length}</td><td>${hz.toFixed(1)} Hz</td></tr>`)
+}
+const playButton = (name, buf) => {
+  const b = document.createElement('button')
+  b.textContent = `▶ ${name}`
+  b.onclick = async () => {
+    await ctx.resume()
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    src.connect(ctx.destination)
+    src.start()
+  }
+  document.getElementById('controls').appendChild(b)
+}
+
+const pitchOut = await pitchBasedCompress(input, RATIO)
+const tempoOut = await tempoBasedCompress(input, RATIO)
+
+const inHz = zcPitch(input.getChannelData(0), SR)
+const pitchHz = zcPitch(pitchOut.getChannelData(0), SR)
+const tempoHz = zcPitch(tempoOut.getChannelData(0), SR)
+
+row('original (440 Hz, 1 s)', input, inHz)
+row('pitchBasedCompress 0.8× (record speed)', pitchOut, pitchHz)
+row('tempoBasedCompress 0.8× (phase vocoder)', tempoOut, tempoHz)
+
+// Same assertions as examples/node/compression.mjs
+badge('pitchBasedCompress length == 17640 (0.8 × 22050)', pitchOut.length === 17640, String(pitchOut.length))
+badge('tempoBasedCompress length == 17640', tempoOut.length === 17640, String(tempoOut.length))
+badge('record-speed pitch == 550 Hz ± 2% (pitch CHANGES)', Math.abs(pitchHz - 550) <= 11, `${pitchHz.toFixed(1)} Hz`)
+badge('phase-vocoder pitch == 440 Hz ± 1% (pitch PRESERVED)', Math.abs(tempoHz - 440) <= 4.4, `${tempoHz.toFixed(1)} Hz`)
+
+playButton('original', input)
+playButton('record-speed 0.8× (higher pitch)', pitchOut)
+playButton('phase-vocoder 0.8× (same pitch)', tempoOut)
+</script>
+</body>
+</html>

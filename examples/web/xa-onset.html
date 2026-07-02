@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — xa-onset: click-train onset detection</title>
+<style>
+  body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
+  canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
+  code { color: #8fd }
+</style>
+</head>
+<body>
+<h2>xa-onset — onset envelope + detected onsets vs known click positions</h2>
+<p>
+  A synthetic 10s click train at 120 BPM (20 clicks every 0.5s, sr=22050) is analyzed with
+  <code>onset_strength()</code> and <code>onsetDetect()</code>. Proofs: the envelope has exactly
+  <code>ceil(len/hop)</code> frames, 19–20 of the 20 clicks are recovered, the median inter-onset
+  interval is within one hop (23.2ms) of 0.500s, and every detected onset lands within 100ms
+  (one uncentered n_fft window) of a true click. Orange ticks mark detected onsets on the
+  onset-strength envelope below the waveform. Same asserts as <code>examples/node/xa-onset.mjs</code>.
+</p>
+<div id="badges"></div>
+<canvas id="wave" width="820" height="120"></canvas>
+<canvas id="env" width="820" height="140"></canvas>
+
+<script type="module">
+import { onset_strength, onsetDetect } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawWave } from './_badge.js'
+
+const sr = 22050, dur = 10, hop = 512
+const y = new Float32Array(sr * dur)
+const clicks = []
+for (let t = 0; t < dur; t += 0.5) {
+  clicks.push(t)
+  const s0 = Math.round(t * sr)
+  for (let i = 0; i < Math.round(0.005 * sr); i++) {
+    y[s0 + i] += Math.sin((2 * Math.PI * 1000 * i) / sr) * Math.exp(-i / (0.001 * sr))
+  }
+}
+
+const env = onset_strength(y, { sr })
+const { onsetTimes } = onsetDetect(y, sr)
+
+badge('onset_strength frames == ceil(len/hop)', env.length === Math.ceil(y.length / hop), `${env.length}/${Math.ceil(y.length / hop)}`)
+badge('onset count 19-20 for 20 clicks', onsetTimes.length >= 19 && onsetTimes.length <= 20, `n=${onsetTimes.length}`)
+
+const iois = onsetTimes.slice(1).map((t, i) => t - onsetTimes[i]).sort((a, b) => a - b)
+const medianIOI = iois[Math.floor(iois.length / 2)]
+badge('median inter-onset interval ~ 0.500s (±1 hop)', Math.abs(medianIOI - 0.5) <= hop / sr, `${medianIOI.toFixed(4)}s`)
+
+const maxDelta = Math.max(...onsetTimes.map((t) => Math.min(...clicks.map((c) => Math.abs(t - c)))))
+badge('every onset within 100ms of a true click', maxDelta <= 0.1, `max delta ${maxDelta.toFixed(4)}s`)
+
+// Waveform
+drawWave(document.getElementById('wave'), y)
+
+// Onset-strength envelope (line) with detected-onset ticks
+const cv = document.getElementById('env'), ctx = cv.getContext('2d')
+const { width: w, height: h } = cv
+ctx.fillStyle = '#111'; ctx.fillRect(0, 0, w, h)
+let maxE = 1e-12; for (const v of env) if (v > maxE) maxE = v
+ctx.strokeStyle = '#4fc3f7'; ctx.beginPath()
+for (let i = 0; i < env.length; i++) {
+  const x = (i / (env.length - 1)) * w
+  const yy = h - 6 - (env[i] / maxE) * (h - 24)
+  i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy)
+}
+ctx.stroke()
+ctx.strokeStyle = '#ffb74d'
+for (const t of onsetTimes) {
+  const x = (t / dur) * w
+  ctx.beginPath(); ctx.moveTo(x, 4); ctx.lineTo(x, 18); ctx.stroke()
+}
+ctx.fillStyle = '#888'; ctx.font = '11px monospace'
+ctx.fillText('onset strength envelope — orange ticks = detected onsets', 8, h - 8)
+</script>
+</body>
+</html>

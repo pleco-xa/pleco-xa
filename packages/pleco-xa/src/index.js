@@ -30,6 +30,17 @@ export * as bpm from './scripts/xa-bpm-algorithm.js'
 // Onset detection (librosa-parity onset_strength; fixture-gated: onset_strength.json)
 export { onset_strength, onsetDetect } from './scripts/xa-onset.js'
 
+// Transient snap: kick+snare hit finder for beat-driven material (returns
+// null honestly when no strong transient is found).
+export { findKickSnareHit } from './scripts/kick-snare-detector.js'
+
+// Musical timing: loop-length vs BPM alignment scoring (pure function).
+export { calculateBeatAlignment } from './scripts/musical-timing.js'
+
+// Pitch: YIN fundamental-frequency estimator (verified on known tones).
+// pyin is intentionally NOT exported until it is a real pYIN (HMM/Viterbi).
+export { yin } from './scripts/xa-pitch.js'
+
 // Streaming analyzers (worker-safe, incremental push API)
 export { createRmsMeter, createFluxAnalyzer } from './streaming/analyzers.js'
 
@@ -48,6 +59,22 @@ export * as feature from './feature/index.js'
 // Filter banks (filters.chroma port + re-exported parity-gated
 // get_window / mel_filterbank)
 export * as filters from './filters/index.js'
+
+// Music notation & scale theory — librosa.core.notation port. Tier-1
+// proof-of-work repairs (2026-07-02): slot-aware mela_to_svara, circle-of-
+// fifths key_to_notes (unknown keys throw), kafi thaat, exact fifths_to_note.
+// Proof: examples/node/notation.mjs.
+export * as notation from './scripts/xa-notation.js'
+
+// Time compression — record-speed (pitch-changing resample) vs phase-vocoder
+// (pitch-preserving) tiers, measured against each other in
+// examples/node/compression.mjs + examples/web/compression.html.
+export { pitchBasedCompress, tempoBasedCompress } from './scripts/compression.js'
+
+// Framing utilities promoted for ML patch pipelines (librosa.util.frame /
+// sync / fix_frames). NOTE divergence: frame() COPIES each frame — librosa's
+// zero-copy stride view does not transfer to JS. Proof: examples/node/patch-generation.mjs.
+export { frame, sync, fix_frames } from './scripts/xa-util.js'
 
 // Loop detection (flagship — Wave 3 consolidated namespace).
 // loop.detect(buffer, { strategy }) is THE public API; the top-level
@@ -100,6 +127,18 @@ export {
 export {
   createSpectrogram, renderStaticSpectrum, RealtimeSpectrumAnalyzer,
 } from './scripts/SpectrumAnalyzer.js'
+
+// Waveform visualization: env-blind data extraction (duck-typed
+// { getChannelData, length, sampleRate, duration } buffers — no Web Audio
+// required) plus the canvas renderers that consume it.
+export {
+  getWaveformPeaks, getStereoWaveformPeaks, getTimebasedWaveform,
+  getWaveformRange, analyzeWaveform,
+} from './scripts/analysis/WaveformData.ts'
+export {
+  renderWaveform, renderStereoWaveform, addLoopRegions,
+  createInteractiveRenderer,
+} from './scripts/WaveformRenderer.js'
 
 // Browser WAV Blob helper (wraps the WAV encode tier for <audio> playback).
 export { createAudioBlob } from './scripts/xa-wav-encoder.js'

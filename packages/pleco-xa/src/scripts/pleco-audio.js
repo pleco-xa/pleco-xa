@@ -27,12 +27,12 @@ export { f0_harmonics, interp_harmonics, salience, harmonic_product_spectrum, ha
 // Interval theory and tuning systems
 export { interval_frequencies, plimit_intervals, pythagorean_intervals, IntervalConstructor } from './xa-intervals.js'
 
-// Filter banks and window functions
-export {
-  constant_q, wavelet, mel, chroma, diagonal_filter, get_window, window_sumsquare,
-  constant_q_lengths, cq_to_chroma, mr_frequencies, semitone_filterbank,
-  wavelet_lengths, window_bandwidth
-} from './xa-filters.js'
+// Filter banks and window functions. The unverified marathon filterbank
+// family (constant_q / wavelet / window_sumsquare / cq_to_chroma /
+// semitone_filterbank / diagonal_filter / …) was retired in the Tier-1
+// proof-of-work pass; mel / chroma / get_window now delegate to the
+// fixture-gated canon (see scripts/xa-filters.js header).
+export { mel, chroma, get_window } from './xa-filters.js'
 
 // Mel-frequency analysis
 export { melspectrogram, mfcc, mel_filterbank, dct, idct, delta_features, lifter_mfcc, power_to_db } from './xa-mel.js'

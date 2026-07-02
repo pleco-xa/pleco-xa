@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>filters/index.js — chroma filterbank Gaussian bumps</title>
+</head>
+<body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
+  <h2>filters/index.js — chroma filterbank Gaussian bumps</h2>
+  <p style="max-width:80ch">
+    <code>filters.chroma({sr:22050, n_fft:2048})</code> rendered as a 12 × 1025 heatmap
+    (the librosa gallery "chroma filterbank" plot): each row is a pitch class (C at the
+    bottom, base_c grid), x-axis is FFT bin frequency 0 → 11025 Hz. You should see the
+    Gaussian pitch-class bumps repeating each octave and the octave-dominance envelope
+    fading the extremes. Proofs: the pitch class with the most weight at the FFT bin
+    nearest 440 Hz must be 9 (A), and every column's L2 norm must be ≤ 1 + 1e-6
+    (per-bin norm=2 column normalization, then dominance weighting only ever shrinks it).
+  </p>
+  <div id="badges"></div>
+  <div>
+    <canvas id="heatmap" width="1025" height="240" style="width:100%;max-width:1025px;image-rendering:pixelated"></canvas>
+    <div style="font:12px monospace;color:#888">x: 0 Hz → 11025 Hz (1025 FFT bins) · y: pitch class B (top) → C (bottom)</div>
+  </div>
+  <script type="module">
+    import { filters } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawSpectrogram } from './_badge.js'
+
+    const sr = 22050
+    const n_fft = 2048
+    const C = filters.chroma({ sr, n_fft })
+
+    badge('shape 12 x 1025', C.length === 12 && C.every((r) => r.length === 1025),
+      `${C.length} x ${C[0].length}`)
+
+    // FFT bin nearest 440 Hz; its heaviest pitch class must be A (index 9 on the base-C grid)
+    const bin440 = Math.round((440 * n_fft) / sr)
+    let argmax = -1
+    let best = -Infinity
+    for (let c = 0; c < C.length; c++) {
+      if (C[c][bin440] > best) { best = C[c][bin440]; argmax = c }
+    }
+    badge('argmax pitch class at bin nearest 440 Hz == 9 (A)', argmax === 9,
+      `bin ${bin440} (${((bin440 * sr) / n_fft).toFixed(1)} Hz) -> class ${argmax}, weight ${best.toFixed(3)}`)
+
+    // Column L2 norms: norm=2 normalizes each FFT-bin column across the 12 classes,
+    // then octave-dominance weighting multiplies by exp(-…) <= 1, so no column may exceed 1.
+    let maxL2 = 0
+    for (let j = 0; j < C[0].length; j++) {
+      let s = 0
+      for (let c = 0; c < C.length; c++) s += C[c][j] * C[c][j]
+      maxL2 = Math.max(maxL2, Math.sqrt(s))
+    }
+    badge('every column L2 norm <= 1 + 1e-6', maxL2 <= 1 + 1e-6, `max ${maxL2.toFixed(6)}`)
+
+    drawSpectrogram(document.getElementById('heatmap'), C)
+  </script>
+</body>
+</html>
