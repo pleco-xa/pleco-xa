@@ -1,0 +1,162 @@
+---
+/** LoopPlayer - file upload and playback controls */
+interface Props {
+  autoPlay?: boolean
+  class?: string
+}
+
+const { autoPlay = false, class: className = '' } = Astro.props
+---
+
+<div class={`pleco-loop-player ${className}`} data-autoplay={autoPlay.toString()}>
+  <div class="loop-upload">
+    <input type="file" id="loopFileInput" accept="audio/*" />
+    <label for="loopFileInput" tabindex="0">Load Loop</label>
+  </div>
+
+  <div class="loop-controls" id="loopControls" style="display: none;">
+    <button id="playLoop">Play</button>
+    <button id="stopLoop">Stop</button>
+  </div>
+
+  <slot />
+</div>
+
+<style>
+  .pleco-loop-player {
+    background: #111;
+    padding: 15px;
+    border-radius: 8px;
+    color: #fff;
+  }
+
+  .loop-upload input[type='file'] { display: none; }
+
+  .loop-upload label {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #0066cc;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+
+  .loop-upload label.error {
+    background: #b00020;
+  }
+
+  .loop-controls {
+    display: flex;
+    gap: 10px;
+  }
+
+  .loop-controls button {
+    padding: 8px 16px;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .loop-controls button:hover { background: #555; }
+</style>
+
+<script>
+  import { LoopPlayer } from '@pleco/scripts/LoopPlayer.js'
+
+  // Create AudioContext once at the module level for better performance
+  let audioContext = null;
+  let player = null;
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const elements = {
+      fileInput: document.getElementById('loopFileInput'),
+      controls: document.getElementById('loopControls'),
+      playBtn: document.getElementById('playLoop'),
+      stopBtn: document.getElementById('stopLoop')
+    }
+    const uploadLabel = document.querySelector('label[for="loopFileInput"]')
+
+    if (uploadLabel) {
+      uploadLabel.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          elements.fileInput?.click()
+        }
+      })
+    }
+    
+    const autoPlay = document.querySelector('.pleco-loop-player')?.dataset.autoplay === 'true'
+
+    async function loadAudio(file) {
+      try {
+        // Show loading indicator
+        elements.fileInput.disabled = true;
+        elements.fileInput.nextElementSibling.textContent = "Loading...";
+        
+        // Create AudioContext only once
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+            latencyHint: 'interactive',
+            sampleRate: 44100
+          });
+        }
+        
+        // Use a more efficient approach to load audio
+        const reader = new FileReader();
+        
+        reader.onload = async (e) => {
+          try {
+            const arrayBuffer = e.target.result as ArrayBuffer;
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            player = new LoopPlayer(audioBuffer, audioContext);
+            player.setLoopPoints(0, audioBuffer.duration);
+
+            elements.controls.style.display = 'flex';
+            elements.fileInput.disabled = false;
+            elements.fileInput.nextElementSibling.textContent = "Load Loop";
+            
+            if (autoPlay) await player.play();
+          } catch (decodeError) {
+            console.error('Audio decoding failed:', decodeError);
+            elements.fileInput.disabled = false;
+            const btn = elements.fileInput.nextElementSibling;
+            if (btn) {
+              btn.classList.add('error');
+              btn.setAttribute('title', 'Unsupported format');
+              btn.textContent = 'Load Loop';
+              setTimeout(() => {
+                btn.classList.remove('error');
+                btn.removeAttribute('title');
+              }, 5000);
+            }
+          }
+        };
+        
+        reader.onerror = (err) => {
+          console.error('FileReader error:', err);
+          elements.fileInput.disabled = false;
+          elements.fileInput.nextElementSibling.textContent = "Load Loop (Error - Try Again)";
+        };
+        
+        // Start reading the file
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        console.error('LoopPlayer component failed:', error);
+        elements.fileInput.disabled = false;
+        elements.fileInput.nextElementSibling.textContent = "Load Loop";
+      }
+    }
+
+    elements.fileInput?.addEventListener('change', e => {
+      const file = e.target.files && e.target.files[0]
+      if (file) loadAudio(file)
+    })
+
+    elements.playBtn?.addEventListener('click', () => player?.play())
+    elements.stopBtn?.addEventListener('click', () => player?.stop())
+  })
+</script>

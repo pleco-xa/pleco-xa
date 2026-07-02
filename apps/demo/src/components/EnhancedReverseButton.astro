@@ -1,0 +1,122 @@
+---
+interface Props {
+  audioBufferVar?: string;
+  ctxVar?: string;
+  applyLoopVar?: string;
+}
+const { audioBufferVar = 'currentAudioBuffer', ctxVar = 'audioContext', applyLoopVar = 'applyLoop' } = Astro.props
+
+---
+
+<button
+  class="loop-btn"
+  id="enhancedReverseBtn"
+  data-buffer-var={audioBufferVar}
+  data-ctx-var={ctxVar}
+  data-apply-loop-var={applyLoopVar}
+>
+  🔄 Enhanced Reverse
+</button>
+
+<script>
+  import { detectLoop } from '@pleco/core/index.js';
+  import { enqueueToast } from '@pleco/scripts/ui/toastQueue.js';
+  import { 
+    applyOperationEnhanced, 
+    checkBufferSafety, 
+    isLargeOperation 
+  } from '@pleco/scripts/enhanced-audio-ops.js';
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('enhancedReverseBtn');
+    btn?.addEventListener('click', async () => {
+      const buffer = window[btn.dataset.bufferVar];
+      const ctx = window[btn.dataset.ctxVar];
+      const applyLoop = window[btn.dataset.applyLoopVar];
+      
+      if (!buffer || !ctx || typeof applyLoop !== 'function') {
+        enqueueToast('❌ No audio loaded');
+        return;
+      }
+      
+      try {
+        // Get current loop from audio processor or detect it
+        let loop;
+        if (window.audioProcessor && window.audioProcessor.getLoopPoints) {
+          const loopPoints = window.audioProcessor.getLoopPoints();
+          loop = {
+            startSample: Math.floor(loopPoints.start * buffer.length),
+            endSample: Math.floor(loopPoints.end * buffer.length)
+          };
+        } else {
+          loop = detectLoop(buffer);
+        }
+        
+        // Safety check
+        const safety = checkBufferSafety(buffer, loop);
+        console.log('🔍 Buffer safety check:', safety);
+        
+        if (!safety.safe) {
+          enqueueToast(`❌ Unsafe operation: ${safety.issues[0]}`);
+          console.error('Safety issues:', safety.issues);
+          return;
+        }
+        
+        // Check if this is a large operation
+        const isLarge = isLargeOperation(buffer, loop, 'reverse');
+        
+        if (isLarge) {
+          enqueueToast(`⚠️ Large reverse operation (${safety.loopDuration.toFixed(1)}s) - processing...`);
+        } else {
+          enqueueToast('🔄 Reversing loop section...');
+        }
+        
+        // Progress tracking for large operations
+        let progressToast = null;
+        
+        const result = await applyOperationEnhanced('reverse', buffer, loop, (progress, message) => {
+          if (isLarge) {
+            if (progressToast) {
+              // Update existing toast would go here if we had that capability
+              console.log(`📊 ${message}`);
+            } else {
+              progressToast = true;
+              enqueueToast(`📊 ${message}`);
+            }
+          }
+        });
+        
+        // Apply the result
+        window.currentAudioBuffer = result;
+        
+        // Update the UI
+        if (window.audioProcessor) {
+          // Reload the buffer in the audio processor
+          window.audioProcessor.loadBuffer(result);
+        }
+        
+        // Apply to the loop system
+        applyLoop(result, loop, 'reverse', undefined);
+        
+        // Update waveform if available
+        if (window.drawWaveform) {
+          const displayLoop = {
+            start: loop.startSample / buffer.length,
+            end: loop.endSample / buffer.length
+          };
+          window.drawWaveform(result, 'waveformCanvas', displayLoop);
+        }
+        
+        if (isLarge) {
+          enqueueToast('✅ Large reverse operation completed successfully');
+        } else {
+          enqueueToast('✅ Loop section reversed');
+        }
+        
+      } catch (error) {
+        console.error('❌ Enhanced reverse failed:', error);
+        enqueueToast(`❌ Reverse failed: ${error.message}`);
+      }
+    });
+  });
+</script>

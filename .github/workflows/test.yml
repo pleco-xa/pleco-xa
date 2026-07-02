@@ -19,35 +19,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - run: npm ci
 
-      # Install Jest as a dev dependency if not already present
-      - run: npm install --save-dev jest
+      - name: Test (vitest)
+        run: npm run test
 
-      - name: Run Jest with coverage
-        run: npx jest --coverage
+      - name: Build library
+        run: npm run build:lib
 
-      # Upload Jest coverage to Codecov
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Node import smoke (catches top-level DOM access)
+        run: node --input-type=module -e "import('./packages/pleco-xa/dist/pleco-xa.js').then(m => console.log('exports:', Object.keys(m).length))"
 
-      # Optionally, upload the coverage as a downloadable artifact as well
-      - name: Upload Jest coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: jest-coverage
-          path: coverage/
-
-      - run: npm run build
+      - name: Build demo (consumer e2e)
+        run: npm run build -w @pleco-xa/demo
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: apps/demo/dist
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:

@@ -75,3 +75,9 @@ librosa/
 
 # lb BPM detector for testing
 lb/
+
+# local-only
+.amp/
+.oracle/
+LibrosaDemo-PR1/
+.DS_Store

@@ -1,0 +1,56 @@
+{
+  "name": "pleco-xa",
+  "version": "2.0.0-alpha.0",
+  "type": "module",
+  "description": "Browser-native audio analysis engine: musical timing, BPM/beat tracking, spectral features, and intelligent loop detection",
+  "license": "MIT",
+  "author": "Cameron Brooks",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brookcs3/pleco-xa.git"
+  },
+  "homepage": "https://github.com/brookcs3/pleco-xa#readme",
+  "bugs": {
+    "url": "https://github.com/brookcs3/pleco-xa/issues"
+  },
+  "keywords": [
+    "audio",
+    "audio-analysis",
+    "web-audio",
+    "bpm",
+    "beat-tracking",
+    "loop-detection",
+    "mir",
+    "music",
+    "dsp",
+    "spectrogram"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "main": "./dist/pleco-xa.js",
+  "module": "./dist/pleco-xa.js",
+  "exports": {
+    ".": "./dist/pleco-xa.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "jsdom": "^26.1.0",
+    "rollup": "^4.24.0",
+    "rollup-plugin-esbuild": "^6.2.1",
+    "vitest": "^3.1.4"
+  }
+}
