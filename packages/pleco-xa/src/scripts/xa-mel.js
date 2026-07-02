@@ -4,6 +4,7 @@
  */
 
 import { stft, magnitude } from './xa-fft.js'
+import { mfccFromLogMel } from '../feature/dct.js'
 
 /**
  * Create Mel filterbank matrix
@@ -261,12 +262,20 @@ export function melspectrogram(
 }
 
 /**
- * Compute Mel-Frequency Cepstral Coefficients (MFCCs) - Librosa-compatible
+ * Compute Mel-Frequency Cepstral Coefficients (MFCCs) - Librosa-compatible.
+ *
+ * Wave-4: delegates to the fixture-verified feature/mfcc.js pipeline
+ * (power_to_db instead of the old natural log, cached ortho DCT-II basis
+ * instead of per-frame O(N²) recomputation; gated by
+ * tools/parity/fixtures/mfcc.json).
+ *
  * @param {Float32Array} y - Audio signal (optional if S provided)
  * @param {number} sr - Sample rate
- * @param {Array} S - Pre-computed mel spectrogram [n_mels][n_frames] (optional)
+ * @param {Array} S - Pre-computed mel POWER spectrogram [n_mels][n_frames]
+ *   (this shim's historical semantics: dB conversion is applied for you;
+ *   feature/mfcc.js takes a log-power mel spectrogram like librosa)
  * @param {number} n_mfcc - Number of MFCCs to return
- * @param {number} dct_type - DCT type (1, 2, or 3)
+ * @param {number} dct_type - DCT type (only 2 is supported)
  * @param {string|null} norm - DCT normalization ('ortho' or null)
  * @param {number} lifter - Liftering coefficient (0 = no liftering)
  * @param {number} n_fft - FFT size
@@ -304,75 +313,19 @@ export function mfcc(
   mel_norm = 'slaney',
   htk = false,
 ) {
-  let mel_spec
-
-  if (S !== null) {
-    // Use pre-computed mel spectrogram
-    mel_spec = S
-  } else if (y !== null) {
-    // Compute Mel spectrogram with all parameters
-    mel_spec = melspectrogram(
-      y,
-      sr,
-      null, // S
-      n_fft,
-      hop_length,
-      win_length,
-      window,
-      center,
-      pad_mode,
-      power,
-      n_mels,
-      fmin,
-      fmax,
-      mel_norm,
-      htk,
+  // Historical shim semantics: S here is a mel POWER spectrogram
+  let melSpec = S
+  if (melSpec === null) {
+    if (y === null) {
+      throw new Error('Either y or S must be provided')
+    }
+    melSpec = melspectrogram(
+      y, sr, null, n_fft, hop_length, win_length, window,
+      center, pad_mode, power, n_mels, fmin, fmax, mel_norm, htk,
     )
-  } else {
-    throw new Error('Either y or S must be provided')
   }
-
-  const n_mel_bands = mel_spec.length
-  const n_frames = mel_spec[0] ? mel_spec[0].length : 0
-
-  // Log compression
-  const log_mel = mel_spec.map((mel_band) =>
-    mel_band.map((val) => Math.log(Math.max(1e-10, val))),
-  )
-
-  // DCT (Discrete Cosine Transform)
-  const mfcc_matrix = Array(n_mfcc)
-    .fill(null)
-    .map(() => new Float32Array(n_frames))
-
-  for (let t = 0; t < n_frames; t++) {
-    // Extract frame
-    const frame = log_mel.map((band) => band[t])
-
-    // Apply DCT with specified type and normalization
-    const dct_coeffs = dct(frame, dct_type, norm)
-
-    // Keep first n_mfcc coefficients
-    for (let i = 0; i < n_mfcc && i < dct_coeffs.length; i++) {
-      mfcc_matrix[i][t] = dct_coeffs[i]
-    }
-  }
-
-  // Apply liftering if requested
-  if (lifter > 0) {
-    const lifter_weights = new Array(n_mfcc)
-    for (let i = 0; i < n_mfcc; i++) {
-      lifter_weights[i] = 1 + (lifter / 2) * Math.sin((Math.PI * i) / lifter)
-    }
-
-    for (let i = 0; i < n_mfcc; i++) {
-      for (let t = 0; t < n_frames; t++) {
-        mfcc_matrix[i][t] *= lifter_weights[i]
-      }
-    }
-  }
-
-  return mfcc_matrix
+  const logMel = power_to_db(melSpec)
+  return mfccFromLogMel(logMel, { n_mfcc, dct_type, norm, lifter })
 }
 
 /**
@@ -566,10 +519,11 @@ export function lifter_mfcc(mfcc_matrix, L = 22) {
   const n_mfcc = mfcc_matrix.length
   const n_frames = mfcc_matrix[0].length
 
-  // Compute liftering weights
+  // Compute liftering weights — librosa indexing: sin(pi * (i + 1) / L)
+  // (the old sin(pi * i / L) was an off-by-one that left c0 unweighted)
   const lifter_weights = new Array(n_mfcc)
   for (let i = 0; i < n_mfcc; i++) {
-    lifter_weights[i] = 1 + (L / 2) * Math.sin((Math.PI * i) / L)
+    lifter_weights[i] = 1 + (L / 2) * Math.sin((Math.PI * (i + 1)) / L)
   }
 
   // Apply liftering
@@ -642,8 +596,12 @@ export function extract_mel_features(y, sr = 22050) {
   const n_mfcc = 13
   const n_mels = 40
 
-  // Compute MFCC features
-  const mfcc_features = mfcc(y, sr, n_mfcc, 2048, 512, n_mels)
+  // Compute MFCC features (positional args aligned with mfcc's signature —
+  // the old call passed n_mfcc where S belongs and silently produced garbage)
+  const mfcc_features = mfcc(
+    y, sr, null, n_mfcc, 2, 'ortho', 0, 2048, 512,
+    null, 'hann', true, 'constant', 2.0, n_mels,
+  )
   const mfcc_delta = delta_features(mfcc_features)
   const mfcc_delta2 = delta_features(mfcc_delta)
 

@@ -163,7 +163,7 @@ const {
   import { fastLoopAnalysis } from '@pleco/scripts/xa-loop.js'
   import { LoopPlayer } from '@pleco/scripts/LoopPlayer.js'
   import { computeRMS } from '@pleco/scripts/audio-utils.js'
-  import { spectralCentroid } from '@pleco/scripts/xa-spectral.js'
+  import { spectral_centroid } from '@pleco/feature/spectral.js'
 
   let currentPlayer = null
 
@@ -269,15 +269,17 @@ const {
           }
 
           if (spectralInfo) {
-            const spectralCentroidValues = spectralCentroid({
-              y: audioBuffer.getChannelData(0),
-              sr: audioBuffer.sampleRate,
-            })
-            // Compute mean if array, or use directly if single value
-            const spectralCentroidValue = Array.isArray(spectralCentroidValues)
-              ? spectralCentroidValues.reduce((sum, val) => sum + val, 0) /
-                spectralCentroidValues.length
-              : spectralCentroidValues
+            const spectralCentroidValues = spectral_centroid(
+              audioBuffer.getChannelData(0),
+              { sr: audioBuffer.sampleRate },
+            )
+            // Mean over the per-frame centroid array
+            let centroidSum = 0
+            for (const val of spectralCentroidValues) centroidSum += val
+            const spectralCentroidValue =
+              spectralCentroidValues.length > 0
+                ? centroidSum / spectralCentroidValues.length
+                : 0
             const rms = computeRMS(audioBuffer)
             spectralInfo.innerHTML = `
               <div>Spectral Centroid: ${spectralCentroidValue.toFixed(0)} Hz</div>

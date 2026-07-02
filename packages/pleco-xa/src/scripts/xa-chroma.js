@@ -1,21 +1,39 @@
 /**
- * Chroma feature extraction for JavaScript
- * Pitch class profiles for harmonic analysis and key detection
+ * xa-chroma.js — LEGACY SHIM over the fixture-verified feature/ namespace
+ * (Wave 4 consolidation).
+ *
+ * chroma_stft now delegates to feature/chroma.js: librosa's Gaussian
+ * filters.chroma matrix over a power spectrogram with per-frame inf-norm
+ * (gated by tools/parity/fixtures/chroma.json). The old nearest-semitone
+ * hard binning survives only as the explicitly-named fast variant
+ * stft_to_chroma.
+ *
+ * HONESTY NOTE — "CQT": the old constant_q_transform was never a constant-Q
+ * transform (nearest-FFT-bin sampling of one big FFT per hop). It lives on
+ * in feature/chroma.js under its honest name logFrequencySpectrum; the old
+ * export names delegate there.
+ *
+ * New code should import from src/feature/ directly.
  */
 
-import { fft } from './xa-onset.js'
+import {
+  chroma_stft as featureChromaStft,
+  logFrequencySpectrum,
+  foldLogSpectrumToChroma,
+} from '../feature/chroma.js'
 
 /**
- * Compute chroma features using Constant-Q Transform
+ * Chroma features from a log-frequency spectrum (formerly "CQT chroma").
+ * Delegates to logFrequencySpectrum + foldLogSpectrumToChroma.
  * @param {Float32Array} y - Audio time series
  * @param {number} sr - Sample rate
- * @param {number} hop_length - Number of audio samples between successive frames
+ * @param {number} hop_length - Hop between frames
  * @param {number|null} fmin - Minimum frequency (C1 = 32.7 Hz if null)
- * @param {number} n_chroma - Number of chroma bins (12 for standard chromatic scale)
+ * @param {number} n_chroma - Number of chroma bins
  * @param {number} tuning - Tuning deviation in cents
  * @param {number} n_octaves - Number of octaves to analyze
- * @param {number} bins_per_octave - Number of bins per octave (12 for semitones)
- * @returns {Array} Chroma feature matrix (n_chroma x n_frames)
+ * @param {number} bins_per_octave - Must equal n_chroma (fold constraint)
+ * @returns {Array<Float32Array>} [n_chroma][n_frames]
  */
 export function chroma_cqt(
   y,
@@ -27,31 +45,31 @@ export function chroma_cqt(
   n_octaves = 7,
   bins_per_octave = 12,
 ) {
-  // Compute CQT
-  const cqt = constant_q_transform(
+  const logSpec = logFrequencySpectrum(
     y,
     sr,
     hop_length,
     fmin,
     n_octaves * bins_per_octave,
     tuning,
+    bins_per_octave,
   )
-
-  // Convert to chroma
-  const chroma = cqt_to_chroma(cqt, n_chroma, bins_per_octave)
-
-  return chroma
+  return foldLogSpectrumToChroma(logSpec, n_chroma, bins_per_octave)
 }
 
 /**
- * Compute chroma features using Short-Time Fourier Transform
+ * Chromagram from STFT — now librosa-parity via feature/chroma.js
+ * (Gaussian filterbank matmul + per-frame inf-norm; the old version used
+ * hard nearest-semitone binning and no frame centering).
  * @param {Float32Array} y - Audio time series
  * @param {number} sr - Sample rate
  * @param {number} hop_length - Hop length
  * @param {number} n_fft - FFT window size
  * @param {number} n_chroma - Number of chroma bins
- * @param {number} tuning - Tuning deviation in cents
- * @returns {Array} Chroma feature matrix
+ * @param {number|null} tuning - Tuning in fractional chroma bins
+ *   (0.0 default preserves this shim's historical signature; pass null to
+ *   estimate from the signal like librosa)
+ * @returns {Array<Float64Array>} [n_chroma][n_frames]
  */
 export function chroma_stft(
   y,
@@ -61,33 +79,14 @@ export function chroma_stft(
   n_chroma = 12,
   tuning = 0.0,
 ) {
-  // Compute STFT
-  const stft_result = computeSTFT(y, n_fft, hop_length)
-
-  // Convert to magnitude spectrum
-  const magnitude_spectra = stft_result.map((frame) => {
-    const magnitudes = new Float32Array(frame.length / 2)
-    for (let i = 0; i < magnitudes.length; i++) {
-      const real = frame[i * 2]
-      const imag = frame[i * 2 + 1]
-      magnitudes[i] = Math.sqrt(real * real + imag * imag)
-    }
-    return magnitudes
-  })
-
-  // Convert to chroma
-  return stft_to_chroma(magnitude_spectra, sr, n_fft, n_chroma, tuning)
+  return featureChromaStft(y, { sr, hop_length, n_fft, n_chroma, tuning })
 }
 
 /**
- * Constant-Q Transform implementation
- * @param {Float32Array} y - Audio time series
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @param {number|null} fmin - Minimum frequency
- * @param {number} n_bins - Number of CQT bins
- * @param {number} tuning - Tuning deviation
- * @returns {Array} CQT matrix
+ * DEPRECATED NAME — this is NOT a constant-Q transform. Delegates to
+ * feature/chroma.js logFrequencySpectrum (nearest-FFT-bin sampling at
+ * log-spaced frequencies).
+ * @returns {Array<Float32Array>} time-major [n_frames][n_bins]
  */
 export function constant_q_transform(
   y,
@@ -97,49 +96,26 @@ export function constant_q_transform(
   n_bins = 84,
   tuning = 0.0,
 ) {
-  if (fmin === null) {
-    fmin = 32.7 // C1
-  }
-
-  // Apply tuning
-  fmin *= Math.pow(2, tuning / 1200)
-
-  const n_fft = Math.pow(2, Math.ceil(Math.log2((4 * sr) / fmin)))
-  const frames = []
-
-  // Frame the signal
-  for (let i = 0; i <= y.length - n_fft; i += hop_length) {
-    const frame = y.slice(i, i + n_fft)
-    frames.push(frame)
-  }
-
-  // Compute CQT for each frame
-  const cqt = frames.map((frame) => {
-    const spectrum = fft(frame)
-    return mapToCQTBins(spectrum, sr, fmin, n_bins, n_fft)
-  })
-
-  return cqt
+  return logFrequencySpectrum(y, sr, hop_length, fmin, n_bins, tuning, 12)
 }
 
 /**
- * Map FFT spectrum to Constant-Q bins
- * @param {Array} spectrum - FFT spectrum (complex values)
+ * Map an interleaved FFT spectrum ([re0, im0, re1, im1, ...]) to
+ * log-frequency bins by nearest-bin sampling (legacy helper for the
+ * xa-onset.fft output format).
+ * @param {Float32Array} spectrum - Interleaved complex FFT output
  * @param {number} sr - Sample rate
  * @param {number} fmin - Minimum frequency
- * @param {number} n_bins - Number of CQT bins
+ * @param {number} n_bins - Number of log-frequency bins
  * @param {number} n_fft - FFT size
- * @returns {Float32Array} CQT bins
+ * @returns {Float32Array} log-frequency magnitude bins
  */
 export function mapToCQTBins(spectrum, sr, fmin, n_bins, n_fft) {
   const cqt_bins = new Float32Array(n_bins)
   const freq_resolution = sr / n_fft
 
   for (let k = 0; k < n_bins; k++) {
-    // Frequency for this CQT bin (logarithmic spacing)
     const f_k = fmin * Math.pow(2, k / 12)
-
-    // Map to FFT bin
     const bin_idx = Math.round(f_k / freq_resolution)
 
     if (bin_idx < spectrum.length / 2) {
@@ -153,48 +129,26 @@ export function mapToCQTBins(spectrum, sr, fmin, n_bins, n_fft) {
 }
 
 /**
- * Convert CQT to chroma features
- * @param {Array} cqt - CQT matrix (frames x bins)
- * @param {number} n_chroma - Number of chroma bins
- * @param {number} bins_per_octave - Bins per octave in CQT
- * @returns {Array} Chroma matrix (n_chroma x n_frames)
+ * Fold a time-major log-frequency spectrum into chroma classes.
+ * Delegates to feature/chroma.js foldLogSpectrumToChroma, which (unlike the
+ * old silent version) throws when bins_per_octave !== n_chroma.
+ * @returns {Array<Float32Array>} [n_chroma][n_frames]
  */
-export function cqt_to_chroma(cqt, n_chroma = 12, _bins_per_octave = 12) {
-  const n_frames = cqt.length
-  const chroma = Array(n_chroma)
-    .fill(null)
-    .map(() => new Float32Array(n_frames))
-
-  for (let t = 0; t < n_frames; t++) {
-    // Sum across octaves for each chroma class
-    for (let bin = 0; bin < cqt[t].length; bin++) {
-      const chroma_bin = bin % n_chroma
-      chroma[chroma_bin][t] += Math.pow(cqt[t][bin], 2)
-    }
-
-    // Normalize each frame
-    let sum = 0
-    for (let c = 0; c < n_chroma; c++) {
-      sum += chroma[c][t]
-    }
-    if (sum > 0) {
-      for (let c = 0; c < n_chroma; c++) {
-        chroma[c][t] = Math.sqrt(chroma[c][t]) / Math.sqrt(sum)
-      }
-    }
-  }
-
-  return chroma
+export function cqt_to_chroma(cqt, n_chroma = 12, bins_per_octave = 12) {
+  return foldLogSpectrumToChroma(cqt, n_chroma, bins_per_octave)
 }
 
 /**
- * Convert STFT magnitude spectra to chroma
- * @param {Array} magnitude_spectra - Array of magnitude spectra
+ * FAST VARIANT (not librosa parity): fold magnitude spectra into chroma by
+ * hard nearest-semitone binning with sqrt-energy-share normalization.
+ * Kept as an explicitly-named approximation; feature/chroma.js chroma_stft
+ * is the parity path.
+ * @param {Array} magnitude_spectra - time-major magnitude spectra
  * @param {number} sr - Sample rate
  * @param {number} n_fft - FFT size
  * @param {number} n_chroma - Number of chroma bins
- * @param {number} tuning - Tuning deviation
- * @returns {Array} Chroma matrix
+ * @param {number} tuning - Tuning deviation in cents
+ * @returns {Array<Float32Array>} [n_chroma][n_frames]
  */
 export function stft_to_chroma(
   magnitude_spectra,
@@ -266,7 +220,7 @@ export function freq_to_chroma(freq) {
 }
 
 /**
- * Compute chroma vector from a single spectrum
+ * Compute chroma vector from a single spectrum (fast variant, not parity)
  * @param {Float32Array} spectrum - Magnitude spectrum
  * @param {number} sr - Sample rate
  * @param {number} tuning - Tuning deviation
@@ -355,40 +309,6 @@ export function chroma_energy(chroma) {
   }
 
   return energy
-}
-
-/**
- * Simple STFT computation for chroma (reused from other modules)
- * @param {Float32Array} y - Audio signal
- * @param {number} n_fft - FFT size
- * @param {number} hop_length - Hop length
- * @returns {Array} STFT frames
- */
-function computeSTFT(y, n_fft = 2048, hop_length = 512) {
-  const numFrames = Math.floor((y.length - n_fft) / hop_length) + 1
-  const stft = []
-
-  // Pre-compute Hann window
-  const window = new Float32Array(n_fft)
-  for (let i = 0; i < n_fft; i++) {
-    window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (n_fft - 1)))
-  }
-
-  for (let i = 0; i < numFrames; i++) {
-    const start = i * hop_length
-    const frame = new Float32Array(n_fft)
-
-    // Apply windowing
-    for (let j = 0; j < n_fft && start + j < y.length; j++) {
-      frame[j] = y[start + j] * window[j]
-    }
-
-    // Compute FFT
-    const fftResult = fft(frame)
-    stft.push(fftResult)
-  }
-
-  return stft
 }
 
 // Note names for reference

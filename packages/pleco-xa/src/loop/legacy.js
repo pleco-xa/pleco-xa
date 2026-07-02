@@ -21,7 +21,7 @@ import {
   findAllZeroCrossings,
   applyHannWindow,
 } from '../scripts/audio-utils.js'
-import { spectralCentroid } from '../scripts/xa-spectral.js'
+import { spectral_centroid } from '../feature/spectral.js'
 import { spectrogram } from '../scripts/xa-fft.js'
 import { clamp01 } from './score.js'
 import { debugLog } from '../scripts/debug.js'
@@ -47,7 +47,9 @@ export async function loopAnalysis(audioBuffer, useReference = false) {
   const rms = computeRMS(audioBuffer)
   const peak = computePeak(audioBuffer)
   const spectrum = spectrogram(audioData)
-  const spectralCentroidVal = spectralCentroid({ y: audioData, sr: sampleRate })
+  const spectralCentroidVal = Array.from(
+    spectral_centroid(audioData, { sr: sampleRate }),
+  )
   const zeroCrossingRate = computeZeroCrossingRate(audioBuffer)
   const loopPts = await fastOnsetLoopAnalysis(audioBuffer, bpmData)
 
@@ -175,10 +177,9 @@ export async function xaLoopAnalysis(audioBuffer) {
   // Step 2: Core stats
   const rms = computeRMS(audioBuffer)
   const peak = computePeak(audioBuffer)
-  const spectralCentroidVal = spectralCentroid({
-    y: audioData,
-    sr: audioBuffer.sampleRate,
-  })
+  const spectralCentroidVal = Array.from(
+    spectral_centroid(audioData, { sr: audioBuffer.sampleRate }),
+  )
   const zeroCrossingRate = computeZeroCrossingRate(audioBuffer)
 
   debugLog('Core stats computed:', {

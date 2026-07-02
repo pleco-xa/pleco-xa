@@ -1,114 +1,62 @@
 /**
- * Librosa-style feature extraction and normalization for JavaScript
- * Audio feature computation and processing utilities
+ * xa-features.js — LEGACY SHIM over the fixture-verified feature/ namespace.
+ *
+ * History (Wave 4 consolidation): the spectral functions here called
+ * require('./librosa-fft.js') — CommonJS in an ES module AND a file that no
+ * longer exists — so centroid/bandwidth/rolloff/contrast were dead on
+ * arrival. They now delegate to feature/spectral.js (librosa 0.11.0
+ * numerics, gated by tools/parity/fixtures/spectral_features.json).
+ *
+ * Signature note: the old positional signatures are preserved. Two behavior
+ * changes come with correctness:
+ *  - rms/zero_crossing_rate now center-pad like librosa (center=true).
+ *  - spectral_contrast now returns n_bands + 1 rows (librosa includes the
+ *    [0, fmin] band) instead of the old n_bands.
+ *
+ * New code should import from src/feature/ directly.
  */
 
+import {
+  spectral_centroid as featureCentroid,
+  spectral_bandwidth as featureBandwidth,
+  spectral_rolloff as featureRolloff,
+  spectral_contrast as featureContrast,
+  rms as featureRms,
+  zero_crossing_rate as featureZcr,
+} from '../feature/spectral.js'
+
 /**
- * Zero Crossing Rate - measure of signal changes
- * @param {Float32Array} y - Audio signal
- * @param {number} frame_length - Frame size
- * @param {number} hop_length - Hop size
- * @param {boolean} center - Whether to center frames
- * @returns {Array} Zero crossing rate per frame
+ * Zero crossing rate per frame (librosa-parity via feature/spectral.js).
+ * @returns {Float64Array} fraction of zero crossings per frame
  */
 export function zero_crossing_rate(
   y,
   frame_length = 2048,
   hop_length = 512,
-  _center = true,
+  center = true,
 ) {
-  const zcr = []
-
-  for (let i = 0; i <= y.length - frame_length; i += hop_length) {
-    const frame = y.slice(i, i + frame_length)
-    let crossings = 0
-
-    for (let j = 1; j < frame.length; j++) {
-      if (
-        (frame[j] >= 0 && frame[j - 1] < 0) ||
-        (frame[j] < 0 && frame[j - 1] >= 0)
-      ) {
-        crossings++
-      }
-    }
-
-    zcr.push(crossings / frame_length)
-  }
-
-  return zcr
+  return featureZcr(y, { frame_length, hop_length, center })
 }
 
 /**
- * RMS Energy - root mean square energy of signal
- * @param {Float32Array} y - Audio signal
- * @param {number} frame_length - Frame size
- * @param {number} hop_length - Hop size
- * @param {boolean} center - Whether to center frames
- * @returns {Array} RMS energy per frame
+ * RMS energy per frame (librosa-parity via feature/spectral.js).
+ * @returns {Float64Array} RMS per frame
  */
-export function rms(y, frame_length = 2048, hop_length = 512, _center = true) {
-  const rms_values = []
-
-  for (let i = 0; i <= y.length - frame_length; i += hop_length) {
-    const frame = y.slice(i, i + frame_length)
-    const sum = frame.reduce((acc, val) => acc + val * val, 0)
-    rms_values.push(Math.sqrt(sum / frame_length))
-  }
-
-  return rms_values
+export function rms(y, frame_length = 2048, hop_length = 512, center = true) {
+  return featureRms(y, { frame_length, hop_length, center })
 }
 
 /**
- * Spectral Centroid - brightness of sound
- * @param {Float32Array} y - Audio signal
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @param {number} n_fft - FFT size
- * @returns {Array} Spectral centroid per frame
+ * Spectral centroid per frame (librosa-parity via feature/spectral.js).
+ * @returns {Float64Array} centroid (Hz) per frame
  */
-export function spectral_centroid(
-  y,
-  sr = 22050,
-  hop_length = 512,
-  n_fft = 2048,
-) {
-  // Import STFT functions
-  const { stft, magnitude, fft_frequencies } = require('./librosa-fft.js')
-
-  // Compute magnitude spectrogram
-  const stft_matrix = stft(y, n_fft, hop_length)
-  const mag_spec = stft_matrix.map((frame) => magnitude(frame))
-
-  // Get frequency bins
-  const freqs = fft_frequencies(sr, n_fft)
-
-  // Compute centroid for each frame
-  const centroids = []
-
-  for (let t = 0; t < mag_spec.length; t++) {
-    let weighted_sum = 0
-    let magnitude_sum = 0
-
-    for (let f = 0; f < mag_spec[t].length; f++) {
-      weighted_sum += freqs[f] * mag_spec[t][f]
-      magnitude_sum += mag_spec[t][f]
-    }
-
-    const centroid = magnitude_sum > 0 ? weighted_sum / magnitude_sum : 0
-    centroids.push(centroid)
-  }
-
-  return centroids
+export function spectral_centroid(y, sr = 22050, hop_length = 512, n_fft = 2048) {
+  return featureCentroid(y, { sr, hop_length, n_fft })
 }
 
 /**
- * Spectral Bandwidth - spread of frequencies
- * @param {Float32Array} y - Audio signal
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @param {number} n_fft - FFT size
- * @param {number} p - Norm order (default 2)
- * @returns {Array} Spectral bandwidth per frame
+ * Spectral bandwidth per frame (librosa-parity via feature/spectral.js).
+ * @returns {Float64Array} bandwidth per frame
  */
 export function spectral_bandwidth(
   y,
@@ -117,50 +65,14 @@ export function spectral_bandwidth(
   n_fft = 2048,
   p = 2,
 ) {
-  const { stft, magnitude, fft_frequencies } = require('./librosa-fft.js')
-
-  // Compute magnitude spectrogram
-  const stft_matrix = stft(y, n_fft, hop_length)
-  const mag_spec = stft_matrix.map((frame) => magnitude(frame))
-
-  // Get frequency bins
-  const freqs = fft_frequencies(sr, n_fft)
-
-  // Compute centroid first
-  const centroids = spectral_centroid(y, sr, hop_length, n_fft)
-
-  // Compute bandwidth
-  const bandwidths = []
-
-  for (let t = 0; t < mag_spec.length; t++) {
-    let weighted_deviation = 0
-    let magnitude_sum = 0
-    const centroid = centroids[t]
-
-    for (let f = 0; f < mag_spec[t].length; f++) {
-      const deviation = Math.abs(freqs[f] - centroid)
-      weighted_deviation += Math.pow(deviation, p) * mag_spec[t][f]
-      magnitude_sum += mag_spec[t][f]
-    }
-
-    const bandwidth =
-      magnitude_sum > 0
-        ? Math.pow(weighted_deviation / magnitude_sum, 1 / p)
-        : 0
-    bandwidths.push(bandwidth)
-  }
-
-  return bandwidths
+  return featureBandwidth(y, { sr, hop_length, n_fft, p })
 }
 
 /**
- * Spectral Rolloff - frequency below which X% of energy is contained
- * @param {Float32Array} y - Audio signal
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @param {number} n_fft - FFT size
- * @param {number} roll_percent - Rolloff percentage (0-1)
- * @returns {Array} Spectral rolloff per frame
+ * Spectral rolloff per frame (librosa-parity via feature/spectral.js).
+ * Note: librosa computes rolloff on the magnitude spectrogram (power=1);
+ * the old power-squared variant here was a divergence and is gone.
+ * @returns {Float64Array} rolloff frequency (Hz) per frame
  */
 export function spectral_rolloff(
   y,
@@ -169,50 +81,12 @@ export function spectral_rolloff(
   n_fft = 2048,
   roll_percent = 0.85,
 ) {
-  const { stft, magnitude, fft_frequencies } = require('./librosa-fft.js')
-
-  // Compute power spectrogram
-  const stft_matrix = stft(y, n_fft, hop_length)
-  const power_spec = stft_matrix.map((frame) => {
-    const mag = magnitude(frame)
-    return mag.map((m) => m * m)
-  })
-
-  // Get frequency bins
-  const freqs = fft_frequencies(sr, n_fft)
-
-  // Compute rolloff for each frame
-  const rolloffs = []
-
-  for (let t = 0; t < power_spec.length; t++) {
-    const total_energy = power_spec[t].reduce((a, b) => a + b, 0)
-    const threshold = total_energy * roll_percent
-
-    let cumulative_energy = 0
-    let rolloff_freq = 0
-
-    for (let f = 0; f < power_spec[t].length; f++) {
-      cumulative_energy += power_spec[t][f]
-      if (cumulative_energy >= threshold) {
-        rolloff_freq = freqs[f]
-        break
-      }
-    }
-
-    rolloffs.push(rolloff_freq)
-  }
-
-  return rolloffs
+  return featureRolloff(y, { sr, hop_length, n_fft, roll_percent })
 }
 
 /**
- * Spectral Contrast - difference between peaks and valleys in spectrum
- * @param {Float32Array} y - Audio signal
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @param {number} n_fft - FFT size
- * @param {number} n_bands - Number of frequency bands
- * @returns {Array} Spectral contrast matrix (n_bands x n_frames)
+ * Spectral contrast (librosa-parity via feature/spectral.js).
+ * @returns {Array<Float64Array>} [n_bands + 1][n_frames]
  */
 export function spectral_contrast(
   y,
@@ -221,52 +95,7 @@ export function spectral_contrast(
   n_fft = 2048,
   n_bands = 6,
 ) {
-  const { stft, magnitude } = require('./librosa-fft.js')
-
-  // Compute magnitude spectrogram
-  const stft_matrix = stft(y, n_fft, hop_length)
-  const mag_spec = stft_matrix.map((frame) => magnitude(frame))
-
-  // Define frequency bands (octave-based)
-  const fmin = 200 // Start from 200 Hz
-  const band_edges = []
-  for (let i = 0; i <= n_bands; i++) {
-    band_edges.push(fmin * Math.pow(2, i))
-  }
-
-  // Convert to bin indices
-  const bin_edges = band_edges.map((freq) =>
-    Math.min(Math.floor((freq * n_fft) / sr), mag_spec[0].length - 1),
-  )
-
-  // Compute contrast for each frame and band
-  const n_frames = mag_spec.length
-  const contrast = Array(n_bands)
-    .fill(null)
-    .map(() => new Float32Array(n_frames))
-
-  for (let t = 0; t < n_frames; t++) {
-    for (let b = 0; b < n_bands; b++) {
-      const start_bin = bin_edges[b]
-      const end_bin = bin_edges[b + 1]
-
-      if (start_bin < end_bin) {
-        const band_spec = mag_spec[t].slice(start_bin, end_bin)
-
-        // Sort to find peaks and valleys
-        const sorted = [...band_spec].sort((a, b) => a - b)
-        const valley = sorted[Math.floor(sorted.length * 0.1)] // 10th percentile
-        const peak = sorted[Math.floor(sorted.length * 0.9)] // 90th percentile
-
-        contrast[b][t] =
-          peak > 0
-            ? Math.log(Math.max(peak, 1e-10) / Math.max(valley, 1e-10))
-            : 0
-      }
-    }
-  }
-
-  return contrast
+  return featureContrast(y, { sr, hop_length, n_fft, n_bands })
 }
 
 /**
@@ -332,15 +161,23 @@ export function normalize_features(features, norm = 'l2', axis = 0) {
     }
   } else if (norm === 'max') {
     // Max normalization
-    const max_val = Math.max(...features.flat().map(Math.abs))
+    let max_val = 0
+    for (const feature of features) {
+      for (const val of feature) max_val = Math.max(max_val, Math.abs(val))
+    }
     return features.map((feature) =>
       feature.map((val) => (max_val > 0 ? val / max_val : 0)),
     )
   } else if (norm === 'minmax') {
     // Min-max normalization (0-1 scaling)
-    const flat_values = features.flat()
-    const min_val = Math.min(...flat_values)
-    const max_val = Math.max(...flat_values)
+    let min_val = Infinity
+    let max_val = -Infinity
+    for (const feature of features) {
+      for (const val of feature) {
+        if (val < min_val) min_val = val
+        if (val > max_val) max_val = val
+      }
+    }
     const range = max_val - min_val
 
     return features.map((feature) =>
@@ -382,12 +219,18 @@ export function compute_feature_stats(features) {
       feature.reduce((acc, val) => acc + (val - mean) ** 2, 0) / n_frames
     stats.std[f] = Math.sqrt(variance)
 
-    // Min and Max
-    stats.min[f] = Math.min(...feature)
-    stats.max[f] = Math.max(...feature)
+    // Min and Max (loop, not spread: long frames overflow the arg stack)
+    let mn = Infinity
+    let mx = -Infinity
+    for (const val of feature) {
+      if (val < mn) mn = val
+      if (val > mx) mx = val
+    }
+    stats.min[f] = mn
+    stats.max[f] = mx
 
     // Median
-    const sorted = [...feature].sort((a, b) => a - b)
+    const sorted = Array.from(feature).sort((a, b) => a - b)
     stats.median[f] = sorted[Math.floor(n_frames / 2)]
 
     // Skewness (third moment)
@@ -445,33 +288,34 @@ export function smooth_features(features, window_size = 5) {
 /**
  * Polynomial detrending for features
  * @param {Array} feature - Single feature vector
- * @param {number} degree - Polynomial degree
+ * @param {number} degree - Polynomial degree (only 1 is implemented)
  * @returns {Array} Detrended feature
  */
 export function detrend_feature(feature, degree = 1) {
   const n = feature.length
   const x = Array.from({ length: n }, (_, i) => i)
 
-  // Fit polynomial (simplified for linear case)
-  if (degree === 1) {
-    const sumX = x.reduce((a, b) => a + b, 0)
-    const sumY = feature.reduce((a, b) => a + b, 0)
-    const sumXY = x.reduce((acc, xi, i) => acc + xi * feature[i], 0)
-    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0)
-
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
-    const intercept = (sumY - slope * sumX) / n
-
-    // Remove trend
-    return feature.map((val, i) => val - (slope * i + intercept))
+  if (degree !== 1) {
+    throw new Error(
+      `detrend_feature: degree=${degree} is not implemented (linear only)`,
+    )
   }
 
-  // For higher degrees, return original (would need full polynomial fitting)
-  return feature
+  const sumX = x.reduce((a, b) => a + b, 0)
+  const sumY = feature.reduce((a, b) => a + b, 0)
+  const sumXY = x.reduce((acc, xi, i) => acc + xi * feature[i], 0)
+  const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0)
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+  const intercept = (sumY - slope * sumX) / n
+
+  // Remove trend
+  return feature.map((val, i) => val - (slope * i + intercept))
 }
 
 /**
- * Extract comprehensive audio features
+ * Extract comprehensive audio features (now functional: the old version
+ * died on require('./librosa-fft.js')).
  * @param {Float32Array} y - Audio signal
  * @param {number} sr - Sample rate
  * @returns {Object} Comprehensive feature set
@@ -494,58 +338,5 @@ export function extract_comprehensive_features(y, sr = 22050) {
     // Summary statistics
     duration: y.length / sr,
     sample_rate: sr,
-  }
-}
-
-/**
- * Stencil to compute zero crossings
- *
- * Computes whether a zero crossing occurs in a local window.
- *
- * @param {Float32Array} x - 2-element array [x_{i-1}, x_i]
- * @param {number} threshold - Threshold for zero crossing detection
- * @param {boolean} zero_pos - Count zeros as positive
- * @returns {number} 1 if zero crossing, 0 otherwise
- */
-function _zc_stencil(x, threshold, zero_pos) {
-  if (x.length !== 2) {
-    throw new Error('Stencil requires exactly 2 points')
-  }
-
-  const x_prev = x[0]
-  const x_curr = x[1]
-
-  // Check for sign change
-  if (zero_pos) {
-    // Count zero crossings including zero as positive
-    return ((x_prev < -threshold && x_curr >= threshold) ||
-            (x_prev > threshold && x_curr <= -threshold)) ? 1 : 0
-  } else {
-    // Strict sign change
-    return ((x_prev < -threshold && x_curr > threshold) ||
-            (x_prev > threshold && x_curr < -threshold)) ? 1 : 0
-  }
-}
-
-/**
- * Vectorized wrapper for zero crossing stencil
- *
- * Applies zero crossing detection across an entire array.
- *
- * @param {Float32Array} x - Input array
- * @param {number} threshold - Threshold for zero crossing detection
- * @param {boolean} zero_pos - Count zeros as positive
- * @param {Float32Array} y - Output array (modified in-place)
- */
-function _zc_wrapper(x, threshold, zero_pos, y) {
-  const n = x.length
-
-  if (y.length !== n - 1) {
-    throw new Error('Output array must have length n-1')
-  }
-
-  for (let i = 0; i < n - 1; i++) {
-    const stencil = new Float32Array([x[i], x[i + 1]])
-    y[i] = _zc_stencil(stencil, threshold, zero_pos)
   }
 }

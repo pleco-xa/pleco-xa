@@ -10,7 +10,7 @@ import { analyze_groove } from './xa-tempo.js'
 import { tempo, beat_track } from './xa-beat-tracker.js'
 import { onset_strength } from './xa-onset.js'
 import { debugLog } from './debug.js'
-import { spectralCentroid } from './xa-spectral.js'
+import { spectral_centroid } from '../feature/spectral.js'
 
 /**
  * Complete DJ Loop Analyzer Class
@@ -101,10 +101,9 @@ export class DJLoopAnalyzer {
 
     // Spectral features
     const onset_env = onset_strength(audioData, { sr: sampleRate })
-    const spectral_cent = spectralCentroid({
-      y: Array.from(audioData),
-      sr: sampleRate,
-    })
+    const spectral_cent = Array.from(
+      spectral_centroid(audioData, { sr: sampleRate }),
+    )
 
     // Musical key detection
     const key_result = this.estimateKey(chroma)

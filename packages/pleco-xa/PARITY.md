@@ -16,11 +16,14 @@ is a deliberate, documented divergence — not a gap we're hiding.
 | Weighting | A/B/C/D frequency weighting (exact IEC constants) | `weighting.json` | Wave 1 |
 | Mel | mel filterbank (slaney + htk), melspectrogram | `mel_filterbank.json`, `melspectrogram.json` | Wave 2 |
 | Rhythm | onset_strength (log-power-mel), tempo (bit-exact), beat_track (exact frames) | `onset_strength.json`, `tempo_beats.json` | Wave 2 |
+| Structure | sequence.rqa (exact path agreement) | `rqa.json` | Wave 3 |
+| Loop (pleco-unique) | loop.detect() — self-golden loop points, ±10 ms gate | `loop_goldens.json` | Wave 3 |
+| Spectral | centroid, bandwidth, rolloff, flatness, contrast, rms, zero_crossing_rate (descriptor math bit-exact) | `spectral_features.json` | Wave 4 |
+| MFCC | full pipeline, 8.7e-5 abs on dB scale | `mfcc.json` | Wave 4 |
+| Chroma | filters.chroma + chroma_stft incl. tuning estimation | `chroma.json` | Wave 4 |
 
 ## Planned (fixture sets exist or land with their wave)
 
-- MFCC (Wave 4)
-- chroma, spectral descriptors (Wave 4)
 - effects (trim/split/time_stretch), HPSS (Wave 5)
 - DTW, recurrence, segmentation (Wave 5)
 

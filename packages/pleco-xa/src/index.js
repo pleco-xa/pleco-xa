@@ -39,6 +39,16 @@ export { encodeWav, decodeWav } from './io/wav.js'
 // Conversions (fixture-validated vs librosa 0.11.0)
 export * as convert from './scripts/xa-convert.js'
 
+// Spectral features — Wave 4 consolidated namespace (fixture-gated:
+// spectral_features.json, mfcc.json, chroma.json). ONE implementation per
+// feature; the legacy xa-spectral/xa-features/xa-audio-features/xa-chroma
+// modules are shims that delegate here.
+export * as feature from './feature/index.js'
+
+// Filter banks (filters.chroma port + re-exported parity-gated
+// get_window / mel_filterbank)
+export * as filters from './filters/index.js'
+
 // Loop detection (flagship — Wave 3 consolidated namespace).
 // loop.detect(buffer, { strategy }) is THE public API; the top-level
 // fastLoopAnalysis export is kept (delegating) for demo compatibility.
