@@ -144,8 +144,24 @@ function medianFilterColumns(evecs, n, kCols, win) {
  * Structural segmentation of a beat/frame-synchronous feature matrix by
  * Laplacian spectral clustering (McFee & Ellis, 2014).
  *
- * @param {number[][]|Float32Array[]|Float64Array[]} features2d
- *   Feature matrix, rows = features, columns = frames (librosa d×n layout).
+ * Two input forms:
+ *
+ *   - **Single feature stack** — `laplacianSegmentation(features2d, opts)`:
+ *     the same d×n matrix drives BOTH the recurrence graph and the path graph.
+ *     Convenient when one representation must serve both roles.
+ *
+ *   - **Two-feature form (exact librosa parity)** —
+ *     `laplacianSegmentation({ recurrenceFeatures, pathFeatures }, opts)`:
+ *     the recurrence affinity Rf is built from `recurrenceFeatures` and the
+ *     sequential path graph R_path from `pathFeatures`, matching
+ *     `plot_segmentation.py` which uses CQT (`Csync`) for repetition and MFCC
+ *     (`Msync`) for local continuity. Both matrices must share the same number
+ *     of frames (columns); their feature-row counts may differ.
+ *
+ * @param {(number[][]|Float32Array[]|Float64Array[]|
+ *          {recurrenceFeatures: number[][], pathFeatures: number[][]})} features
+ *   A single d×n feature matrix (rows = features, columns = frames), or an
+ *   object carrying separate `recurrenceFeatures` and `pathFeatures` matrices.
  * @param {Object} [options]
  * @param {number} [options.k=5]     Number of segments / spectral components.
  * @param {number} [options.width=3] Recurrence-matrix width band (links with
@@ -157,9 +173,36 @@ function medianFilterColumns(evecs, n, kCols, win) {
  *   ascending list of internal segment-onset frames
  *   (`1 + where(segmentIds[:-1] ≠ segmentIds[1:])`).
  */
-export function laplacianSegmentation(features2d, { k = 5, width = 3, mu = 0.5 } = {}) {
-  const frames = toFrameVectors(features2d)
+export function laplacianSegmentation(features, { k = 5, width = 3, mu = 0.5 } = {}) {
+  // Resolve the two input forms. The two-feature object form is detected by the
+  // presence of the recurrenceFeatures/pathFeatures keys (not an array).
+  let recurrenceFeatures = features
+  let pathFeatures = features
+  if (
+    features &&
+    !Array.isArray(features) &&
+    !ArrayBuffer.isView(features) &&
+    (features.recurrenceFeatures !== undefined || features.pathFeatures !== undefined)
+  ) {
+    if (features.recurrenceFeatures === undefined || features.pathFeatures === undefined) {
+      throw new Error(
+        'laplacianSegmentation: the two-feature form requires BOTH ' +
+          '{ recurrenceFeatures, pathFeatures }',
+      )
+    }
+    recurrenceFeatures = features.recurrenceFeatures
+    pathFeatures = features.pathFeatures
+  }
+
+  const frames = toFrameVectors(pathFeatures)
   const n = frames.length
+  const recurrenceFrameCount = toFrameVectors(recurrenceFeatures).length
+  if (recurrenceFrameCount !== n) {
+    throw new Error(
+      `laplacianSegmentation: recurrenceFeatures has ${recurrenceFrameCount} frames but ` +
+        `pathFeatures has ${n}; both must share the same number of frames (columns)`,
+    )
+  }
 
   if (!Number.isInteger(k) || k < 1) {
     throw new Error(`laplacianSegmentation: k=${k} must be a positive integer`)
@@ -171,8 +214,9 @@ export function laplacianSegmentation(features2d, { k = 5, width = 3, mu = 0.5 }
     throw new Error(`laplacianSegmentation: mu=${mu} must lie in [0, 1]`)
   }
 
-  // 1) Weighted recurrence affinity (S_rep) + 2) time-lag diagonal median filter.
-  const R = recurrenceMatrix(features2d, { width, mode: 'affinity', sym: true })
+  // 1) Weighted recurrence affinity (S_rep, from recurrenceFeatures) +
+  //    2) time-lag diagonal median filter.
+  const R = recurrenceMatrix(recurrenceFeatures, { width, mode: 'affinity', sym: true })
   const Rf = timelagMedianFilter(R, 7)
 
   // 3) Sequential path matrix (S_loc): σ = median successive squared distance.

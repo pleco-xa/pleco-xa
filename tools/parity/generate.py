@@ -454,3 +454,52 @@ gen_cluster()
 gen_sequence_extra()
 gen_pcen()
 print("missing-pieces fixtures done")
+
+
+def gen_laplacian_seg_twofeat():
+    """librosa plot_segmentation spectral-clustering half on CONTROLLED two-feature
+    input (not CQT), so pleco's laplacianSegmentation({recurrenceFeatures,
+    pathFeatures}) can cross-check boundaries against librosa's own primitives."""
+    import scipy.linalg, scipy.sparse.csgraph, scipy.ndimage
+    from sklearn.cluster import KMeans
+    rng = np.random.default_rng(19)
+    n, k = 45, 3
+    # 3 sections of 15 frames; sections 0 & 2 share a repetition signature (ABA),
+    # section 1 distinct — recurrence sees the repeat, path sees smooth continuity.
+    sig = {0: np.array([1., 0, 0, 1, 0]), 1: np.array([0, 1., 1, 0, 0]), 2: np.array([1., 0, 0, 1, 0])}
+    rec = np.zeros((5, n)); pth = np.zeros((4, n))
+    for t in range(n):
+        s = t // 15
+        rec[:, t] = sig[s] + rng.standard_normal(5) * 0.05
+        pth[:, t] = np.array([s, np.sin(t * 0.3), np.cos(t * 0.2), s * 0.5]) + rng.standard_normal(4) * 0.02
+
+    # --- librosa/scipy/sklearn pipeline (plot_segmentation.py spectral half) ---
+    R = librosa.segment.recurrence_matrix(rec, width=3, mode='affinity', sym=True)
+    df = librosa.segment.timelag_filter(scipy.ndimage.median_filter)
+    Rf = df(R, size=(1, 7))
+    # path graph from pathFeatures
+    dist = np.sum(np.diff(pth, axis=1) ** 2, axis=0)
+    sigma = np.median(dist)
+    Rpath = np.zeros((n, n))
+    for i in range(n - 1):
+        w = np.exp(-dist[i] / sigma); Rpath[i, i + 1] = w; Rpath[i + 1, i] = w
+    A = 0.5 * Rf + 0.5 * Rpath
+    A = (A + A.T) / 2
+    L = scipy.sparse.csgraph.laplacian(A, normed=True)
+    _, evecs = scipy.linalg.eigh(L)
+    evecs = scipy.ndimage.median_filter(evecs, size=(9, 1))
+    Cnorm = np.cumsum(evecs ** 2, axis=1) ** 0.5
+    X = evecs[:, :k] / Cnorm[:, k - 1:k]
+    seg_ids = KMeans(n_clusters=k, n_init=10, random_state=0).fit_predict(X)
+    bounds = (1 + np.flatnonzero(seg_ids[:-1] != seg_ids[1:])).tolist()
+
+    write("laplacian_seg", "librosa plot_segmentation (two-feature, controlled)", {}, [{
+        "input": {"recurrenceFeatures": rec.ravel().tolist(), "rec_shape": [5, n],
+                  "pathFeatures": pth.ravel().tolist(), "path_shape": [4, n], "k": k, "width": 3, "mu": 0.5},
+        "expected_boundaries": bounds,
+        "expected_nsegments": int(len(set(seg_ids))),
+    }])
+
+
+gen_laplacian_seg_twofeat()
+print("laplacian-seg two-feature fixture done")

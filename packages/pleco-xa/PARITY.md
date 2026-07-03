@@ -29,7 +29,7 @@ is a deliberate, documented divergence — not a gap we're hiding.
 | Clustering | kmeans (Lloyd + k-means++; exact labels, inertia bit-exact vs sklearn) | `cluster.json` | Missing-pieces |
 | Sequence (viterbi) | viterbi_discriminative (exact path), transition_uniform/loop/cycle/local (exact; fixed inverted transition_cycle) | `sequence_extra.json` | Missing-pieces |
 | PCEN | per-channel energy normalization (bit-exact to librosa, 9e-8) | `pcen.json` | Missing-pieces |
-| Laplacian segmentation | McFee-Ellis spectral clustering (exact boundaries on known-structure input) | synthetic | Missing-pieces |
+| Laplacian segmentation | McFee-Ellis spectral clustering — single-feature (synthetic) + two-feature form exact vs librosa primitives pipeline | `laplacian_seg.json` | Missing-pieces |
 
 ## Planned (fixture sets exist or land with their wave)
 
