@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — vocal separation on REAL Orphans stems (REPET-SIM vs fingerprint)</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  h2 { font-size: 0.98rem; color: #9ad; margin: 18px 0 2px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 4px 0; border: 1px solid #333; width: 100%; height: auto; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 6px 12px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #eee; cursor: pointer; }
+  button:hover { background: #37474f; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  table { border-collapse: collapse; font: 13px monospace; margin: 8px 0; }
+  td, th { border: 1px solid #444; padding: 4px 10px; text-align: right; }
+  th { color: #9ad; }
+  .note { color: #fc8; }
+  .row { border: 1px solid #2b2b2b; border-radius: 8px; padding: 8px 12px; margin: 10px 0; background: #141414; }
+  .metric { font: 13px monospace; color: #cde; margin: 4px 0; }
+  .win { color: #7fd67f; }
+  .lose { color: #e07f7f; }
+  #status { color: #fc8; font: 13px monospace; }
+</style>
+</head>
+<body>
+<h1>vocal separation on the REAL Orphans master — REPET-SIM (unsupervised) vs pleco fingerprint (supervised)</h1>
+<p>
+  Input is Cameron's real <code>orphans-mix.wav</code> (22.05 kHz mono, 16 s),
+  decoded with the package's own <code>decodeWav</code>. The ground truth is the
+  real stems: <code>orphans-vocals.wav</code> (isolated vocal) and
+  <code>orphans-instrumental.wav</code> (summed non-vocal stems). The master is
+  the sample-exact sum of the stems and the stems are mutually decorrelated, so
+  a time-domain Pearson correlation of each estimate against each stem is an
+  honest recovery metric — a working vocal estimate must correlate
+  <b>higher</b> with the true vocal than with the true instrumental.
+</p>
+<p>
+  <b>A. REPET-SIM</b> (librosa gallery recipe, unsupervised):
+  <code>decompose.nn_filter(|STFT|, median, cosine, width=2 s)</code> →
+  element-min with S → <code>decompose.softmask</code> (margins 2/10, power 2)
+  → istft with mix phase.
+  <b>B. fingerprint</b> (pleco flagship, <span class="note">supervised — handed
+  the true vocal's fingerprints</span>): <code>processAudioToFingerprints</code>
+  → <code>optimizeEqCurves</code> → <code>reconstructVocal</code>.
+</p>
+<p class="note">
+  Honest scoreboard (node spot-run 2026-07-02, deterministic — the web page
+  recomputes the identical numbers): the raw mix is instrumental-dominated
+  (corr voc 0.335 / ins 0.947 — the vocal is buried). Both separators flip that
+  ordering, but the supervised fingerprint wins vocal fidelity by a clear margin
+  (corr voc 0.744 vs REPET 0.438), while REPET's background still retains ~65 %
+  of the true instrumental energy. Gate = the fingerprint's vocal-vs-instrumental
+  ordering; REPET's numbers are reported, not hidden.
+</p>
+<div id="status">decoding stems and running both separators…</div>
+<div id="badges"></div>
+
+<h2>full scoreboard (all measured against the REAL stems)</h2>
+<div id="scoreboard"></div>
+
+<h2>reference ground truth (audition)</h2>
+<div id="refButtons"></div>
+
+<div class="row">
+  <h2>row 1 — mixture (the real master, what both separators see)</h2>
+  <div id="mixButtons"></div>
+  <div class="metric" id="mixMetric"></div>
+  <canvas id="specMix" width="860" height="170"></canvas>
+</div>
+
+<div class="row">
+  <h2>row 2 — estimated vocal (foreground)</h2>
+  <div id="vocalButtons"></div>
+  <div class="metric" id="vocalMetric"></div>
+  <canvas id="specVocal" width="860" height="170"></canvas>
+</div>
+
+<div class="row">
+  <h2>row 3 — estimated background (REPET-SIM backing)</h2>
+  <div id="bgButtons"></div>
+  <div class="metric" id="bgMetric"></div>
+  <canvas id="specBg" width="860" height="170"></canvas>
+</div>
+
+<script type="module">
+import { decompose, stft, istft, decodeWav } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawSpectrogram } from './_badge.js'
+
+const { nn_filter, softmask, processAudioToFingerprints, optimizeEqCurves, reconstructVocal } = decompose
+
+const setStatus = (t) => { document.getElementById('status').textContent = t }
+
+// ── decode the real master + stems (same decodeWav as the node twin) ──────────
+const AUDIO = '../../apps/demo/public/audio/'
+async function loadMono(name) {
+  const resp = await fetch(AUDIO + name)
+  if (!resp.ok) throw new Error(`fetch ${name}: ${resp.status}`)
+  return decodeWav(await resp.arrayBuffer())
+}
+const [mixW, vocW, insW] = await Promise.all([
+  loadMono('orphans-mix.wav'), loadMono('orphans-vocals.wav'), loadMono('orphans-instrumental.wav'),
+])
+const SR = mixW.sampleRate
+const mix = mixW.channels[0]
+const voc = vocW.channels[0]
+const ins = insW.channels[0]
+const N = Math.min(mix.length, voc.length, ins.length)
+
+const N_FFT = 2048
+const HOP = 1024
+
+// ── metrics ──────────────────────────────────────────────────────────────────
+const corr = (a, b) => {
+  const n = Math.min(a.length, b.length, N)
+  let sa = 0, sb = 0
+  for (let k = 0; k < n; k++) { sa += a[k]; sb += b[k] }
+  const ma = sa / n, mb = sb / n
+  let num = 0, da = 0, db = 0
+  for (let k = 0; k < n; k++) { const x = a[k] - ma, y = b[k] - mb; num += x * y; da += x * x; db += y * y }
+  return num / Math.sqrt(da * db)
+}
+const projSDR = (est, ref) => {
+  const n = Math.min(est.length, ref.length, N)
+  let dot = 0, rr = 0
+  for (let k = 0; k < n; k++) { dot += est[k] * ref[k]; rr += ref[k] * ref[k] }
+  const a = dot / rr
+  let pe = 0, re = 0
+  for (let k = 0; k < n; k++) { const p = a * ref[k]; pe += p * p; const r = est[k] - p; re += r * r }
+  return 10 * Math.log10(pe / re)
+}
+
+// ── A. REPET-SIM (unsupervised) ───────────────────────────────────────────────
+setStatus('A. REPET-SIM: nn_filter (median/cosine self-similarity) → softmask…')
+await new Promise((r) => setTimeout(r, 0))
+const D = stft(mix, N_FFT, HOP)
+const S_full = D.map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
+const nF = S_full.length, nT = S_full[0].length
+const widthFrames = Math.round((2 * SR) / HOP)
+const S_filter = nn_filter(S_full, { aggregate: 'median', metric: 'cosine', width: widthFrames })
+for (let f = 0; f < nF; f++) for (let t = 0; t < nT; t++) S_filter[f][t] = Math.min(S_full[f][t], S_filter[f][t])
+const margin_i = 2, margin_v = 10, power = 2
+const S_minus = S_full.map((row, f) => Float64Array.from(row, (v, t) => v - S_filter[f][t]))
+const mask_i = softmask(S_filter, S_minus.map((row) => row.map((v) => margin_i * v)), { power })
+const mask_v = softmask(S_minus, S_filter.map((row) => row.map((v) => margin_v * v)), { power })
+const applyMask = (mask) => D.map((row, f) => row.map((c, t) => ({ real: c.real * mask[f][t], imag: c.imag * mask[f][t] })))
+const repetVocal = istft(applyMask(mask_v), HOP, null, 'hann', true, N)
+const repetBackg = istft(applyMask(mask_i), HOP, null, 'hann', true, N)
+
+// ── B. fingerprint (supervised: target = true vocal stem) ─────────────────────
+setStatus('B. fingerprint: processAudioToFingerprints → optimizeEqCurves (100 iters) → reconstructVocal…')
+await new Promise((r) => setTimeout(r, 0))
+const mockBuf = (d) => ({ getChannelData: () => d, sampleRate: SR, length: d.length })
+const silent = console.log
+console.log = () => {} // hush the library's phase banners
+const vocalFp = processAudioToFingerprints(mockBuf(voc), N_FFT, HOP)
+const mixFp = processAudioToFingerprints(mockBuf(mix), N_FFT, HOP)
+let maxMag = 0
+for (const row of mixFp.magnitudeSpec) for (const v of row) if (v > maxMag) maxMag = v
+const LR = 0.5 / (maxMag * maxMag) // full-batch GD stability bound: lr < 1/max(|STFT|)²
+const eq = optimizeEqCurves(vocalFp.fingerprints, mixFp.fingerprints, mixFp.magnitudeSpec, mixFp.numWindows, SR, 100, LR)
+const fpVocal = reconstructVocal(mixFp.stftResult, eq, SR, N_FFT, HOP)
+console.log = silent
+
+// ── correlations ──────────────────────────────────────────────────────────────
+const cMixV = corr(mix, voc), cMixI = corr(mix, ins)
+const cRpV = corr(repetVocal, voc), cRpI = corr(repetVocal, ins)
+const cRbV = corr(repetBackg, voc), cRbI = corr(repetBackg, ins)
+const cFpV = corr(fpVocal, voc), cFpI = corr(fpVocal, ins)
+let bgE = 0, insE = 0
+for (let k = 0; k < N; k++) { bgE += repetBackg[k] ** 2; insE += ins[k] ** 2 }
+const bgRetain = (100 * bgE) / insE
+
+// ── badges (proof gates) ──────────────────────────────────────────────────────
+badge('GATE fingerprint: corr(vocal,voc) > corr(vocal,ins)',
+  cFpV - cFpI > 0.1, `${cFpV.toFixed(3)} vs ${cFpI.toFixed(3)} (gap ${(cFpV - cFpI).toFixed(3)})`)
+badge('fingerprint lifts the buried vocal: corr(vocal,voc) > corr(mix,voc)',
+  cFpV > cMixV, `${cFpV.toFixed(3)} > ${cMixV.toFixed(3)}`)
+badge('fingerprint beats REPET on vocal fidelity: corr_fp(voc) > corr_repet(voc)',
+  cFpV > cRpV, `${cFpV.toFixed(3)} > ${cRpV.toFixed(3)}`)
+badge('fingerprint SDR-proxy: projSDR(vocal→voc) > projSDR(vocal→ins)',
+  projSDR(fpVocal, voc) > projSDR(fpVocal, ins),
+  `${projSDR(fpVocal, voc).toFixed(2)} > ${projSDR(fpVocal, ins).toFixed(2)} dB`)
+badge('REPET-SIM vocal also flips the ordering here: corr(vocal,voc) > corr(vocal,ins)',
+  cRpV > cRpI, `${cRpV.toFixed(3)} vs ${cRpI.toFixed(3)}`)
+badge('REPET-SIM background carries the backing: corr(bg,ins) > corr(bg,voc)',
+  cRbI > cRbV, `${cRbI.toFixed(3)} vs ${cRbV.toFixed(3)}`)
+
+// ── scoreboard ────────────────────────────────────────────────────────────────
+{
+  const rows = [
+    ['source', 'corr → true vocal', 'corr → true instrumental', 'projSDR voc / ins (dB)'],
+    ['raw mixture (instrumental-dominated)', cMixV.toFixed(4), cMixI.toFixed(4), '—'],
+    ['A. REPET-SIM vocal (foreground)', cRpV.toFixed(4), cRpI.toFixed(4), `${projSDR(repetVocal, voc).toFixed(2)} / ${projSDR(repetVocal, ins).toFixed(2)}`],
+    ['A. REPET-SIM background', cRbV.toFixed(4), cRbI.toFixed(4), '—'],
+    ['B. fingerprint vocal (supervised)', cFpV.toFixed(4), cFpI.toFixed(4), `${projSDR(fpVocal, voc).toFixed(2)} / ${projSDR(fpVocal, ins).toFixed(2)}`],
+    ['REPET bg retains of true instrumental energy', '—', `${bgRetain.toFixed(1)} %`, '—'],
+  ]
+  const table = document.createElement('table')
+  rows.forEach((cells, i) => {
+    const tr = document.createElement('tr')
+    cells.forEach((text, j) => {
+      const cell = document.createElement(i === 0 ? 'th' : 'td')
+      cell.textContent = text
+      if (j === 0) cell.style.textAlign = 'left'
+      tr.appendChild(cell)
+    })
+    table.appendChild(tr)
+  })
+  document.getElementById('scoreboard').appendChild(table)
+}
+
+// ── per-row correlation metric lines (safe DOM, no innerHTML) ─────────────────
+// Appends: "<label>: <winner-colored a> vs <b> <tail>"
+const metricLine = (elId, label, a, b, aWins, tail) => {
+  const el = document.getElementById(elId)
+  el.appendChild(document.createTextNode(`${label}: `))
+  const strong = document.createElement('span')
+  strong.className = aWins ? 'win' : 'lose'
+  strong.textContent = a.toFixed(3)
+  el.appendChild(strong)
+  el.appendChild(document.createTextNode(` vs ${b.toFixed(3)}${tail}`))
+}
+metricLine('mixMetric', 'raw corr(mix, true instrumental)', cMixI, cMixV, true,
+  ' (true vocal) — the vocal is buried under the backing')
+metricLine('vocalMetric', 'fingerprint corr(vocal, true vocal)', cFpV, cFpI, cFpV > cFpI,
+  ` (true instrumental) — REPET vocal ${cRpV.toFixed(3)} vs ${cRpI.toFixed(3)}`)
+metricLine('bgMetric', 'REPET corr(background, true instrumental)', cRbI, cRbV, cRbI > cRbV,
+  ` (true vocal) — retains ${bgRetain.toFixed(1)}% of the instrumental energy`)
+
+// ── spectrograms (rows 0..220 ≈ 0–2.4 kHz at 22.05 kHz / 2048) ───────────────
+const magOf = (sig) => stft(sig, N_FFT, HOP).map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
+const crop = (M) => M.slice(0, 220)
+drawSpectrogram(document.getElementById('specMix'), crop(S_full))
+drawSpectrogram(document.getElementById('specVocal'), crop(magOf(fpVocal)))
+drawSpectrogram(document.getElementById('specBg'), crop(magOf(repetBackg)))
+
+// ── audition ──────────────────────────────────────────────────────────────────
+let actx = null
+function play(data) {
+  actx = actx || new AudioContext({ sampleRate: SR })
+  if (actx.state === 'suspended') actx.resume()
+  const buf = actx.createBuffer(1, data.length, SR)
+  buf.getChannelData(0).set(data)
+  const src = actx.createBufferSource()
+  src.buffer = buf
+  src.connect(actx.destination)
+  src.start()
+}
+const addButtons = (containerId, specs) => {
+  const c = document.getElementById(containerId)
+  for (const [label, data] of specs) {
+    const b = document.createElement('button')
+    b.textContent = label
+    b.onclick = () => play(data)
+    c.appendChild(b)
+  }
+}
+addButtons('refButtons', [['play TRUE vocal stem', voc], ['play TRUE instrumental stem', ins]])
+addButtons('mixButtons', [['play mixture', mix]])
+addButtons('vocalButtons', [['play fingerprint vocal (B)', fpVocal], ['play REPET-SIM vocal (A)', repetVocal]])
+addButtons('bgButtons', [['play REPET-SIM background', repetBackg]])
+
+setStatus(`done — ${mixFp.numWindows} STFT windows, LR ${LR.toExponential(2)}. Fingerprint vocal corr ${cFpV.toFixed(3)} (voc) vs ${cFpI.toFixed(3)} (ins).`)
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@
 import { intervals } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
-const { pythagorean_intervals, plimit_intervals, generateFrequencies, compareTuningSystems, IntervalConstructor } = intervals
+const { pythagorean_intervals, plimit_intervals, generateFrequencies, compareTuningSystems, IntervalConstructor, interval_frequencies } = intervals
 
 // (1) Pythagorean: pure 3:2 fifth exact at degree 7
 const py = pythagorean_intervals(12)
@@ -46,5 +46,19 @@ const thirdDev = cmp.equal.cents[4] - cmp.ji5.cents[4]
 console.log(`\nequal-vs-just deviations: fifth ${fifthDev.toFixed(1)}c (famous -2c), major third ${thirdDev.toFixed(1)}c (famous +14c)`)
 checkTrue('equal fifth is ~2c FLAT of just 3:2', Math.abs(fifthDev - -1.955) < 0.1, `${fifthDev.toFixed(2)}c`)
 checkTrue('equal major third is ~14c SHARP of just 5/4', Math.abs(thirdDev - 13.686) < 0.1, `${thirdDev.toFixed(2)}c`)
+
+// (6) interval_frequencies: tile an interval set across octaves from fmin.
+// Explicit ratios [1, 1.25, 1.5] at 3 bins/octave, fmin 100 → octave 0 is
+// 100/125/150, octave 1 doubles to 200/250/300 (hand-verifiable, and matching
+// librosa.interval_frequencies' octave-tiling math).
+check('interval_frequencies(6,100,[1,1.25,1.5],bpo=3) tiles octaves exactly',
+  Array.from(interval_frequencies(6, 100, [1, 1.25, 1.5], 3, 0.0, true)),
+  [100, 125, 150, 200, 250, 300])
+{
+  const f = interval_frequencies(12, 55, Array.from(pythagorean_intervals(12)))
+  check('interval_frequencies bin 0 == fmin (55 Hz)', f[0], 55)
+  checkTrue('interval_frequencies pure-fifth bin 7 == 55 × 3/2 == 82.5 Hz',
+    Math.abs(f[7] - 82.5) < 1e-4, f[7].toFixed(4))
+}
 
 summary('xa-intervals: tuning-system golden ratios')

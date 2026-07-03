@@ -10,7 +10,7 @@
 import { sequence } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
-const { dtw } = sequence
+const { dtw, dtwBacktracking } = sequence
 
 // X: 2-dim strictly-monotonic ramp features, 40 frames (librosa layout d×N)
 const N = 40
@@ -87,5 +87,17 @@ check('subseq: min over D[last row] (embedded verbatim → 0)', minLast, 0)
 check('subseq: matched window ends at column OFFSET+N−1', minCol, OFFSET + N - 1)
 check('subseq: path start pair [0, OFFSET] (librosa end-to-start order)',
   r3.wp[r3.wp.length - 1], [0, OFFSET])
+
+// ── dtwBacktracking: standalone backtrack reproduces dtw's internal wp ──────
+// Ask dtw for the recorded step matrix, then re-derive the path with the
+// public backtracker — it must be bit-identical to the wp dtw returned.
+const rSteps = dtw(X, Y, { returnSteps: true })
+const wp2 = dtwBacktracking(rSteps.steps)
+checkTrue('dtwBacktracking(steps) reproduces dtw wp exactly',
+  JSON.stringify(wp2) === JSON.stringify(rSteps.wp),
+  `${wp2.length} pairs`)
+checkTrue('dtwBacktracking path ends at the origin [0,0]',
+  wp2[wp2.length - 1][0] === 0 && wp2[wp2.length - 1][1] === 0,
+  JSON.stringify(wp2[wp2.length - 1]))
 
 summary('sequence/dtw — known-warp cost/path goldens + subsequence offset')

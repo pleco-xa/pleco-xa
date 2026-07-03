@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — laplacian_segmentation: McFee-Ellis spectral clustering on real structure</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  h2 { font-size: 0.95rem; color: #9ad; margin: 16px 0 2px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 4px 0; border: 1px solid #333; max-width: 100%; }
+  .note { color: #fc8; }
+  .legend { font: 13px monospace; margin: 6px 0; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; margin: 0 4px 0 12px; }
+  table { border-collapse: collapse; font: 13px monospace; margin: 8px 0; }
+  td, th { border: 1px solid #444; padding: 3px 10px; text-align: right; }
+  th { color: #9ad; }
+</style>
+</head>
+<body>
+<h1>laplacian_segmentation — McFee &amp; Ellis (2014) spectral clustering, the REAL method</h1>
+<p>
+  The upgraded sibling of <code>plot-segmentation</code>. That page stops at
+  <code>recurrence + agglomerative</code> (the contiguous, bottom-up Ward slice).
+  This one runs the full librosa gallery recipe
+  (<code>docs/examples/plot_segmentation.py</code>), now that every primitive
+  exists in pleco:
+</p>
+<p>
+  <code>beat_track</code> → beat-synchronous <code>feature.chroma_stft</code> +
+  <code>feature.mfcc</code> stack → <code>segment.laplacianSegmentation(k)</code>
+  = recurrence affinity → time-lag median filter → normalized graph Laplacian
+  (<code>linalg.laplacian</code>) → symmetric eigensolver (<code>linalg.eigh</code>)
+  → <code>cluster.kmeans</code>. Its superpower over the agglomerative sibling:
+  <b>a section that RETURNS later gets the SAME label</b> even across a gap —
+  contiguous clustering can never express that.
+</p>
+<p class="note">
+  Proof design (honest — there is no ground-truth boundary fixture for real
+  audio): the <b>synthetic 3-block control</b> below is the hard pass/fail gate —
+  its boundaries MUST land exactly on the planted structure [20, 40]. The
+  <b>real orphans-mix.wav</b> result is the qualitative display; every badge on
+  it asserts only what is verifiable from the output (k distinct labels,
+  strictly-increasing internal boundaries, adjacent segments differ, bit-identical
+  on re-run, and a genuinely recurring section). Feature rows are z-scored so the
+  large-magnitude MFCCs and the [0,1] chroma contribute comparably (librosa uses
+  CQT for recurrence and MFCC for the path separately; pleco's single-matrix API
+  needs one balanced stack — documented divergence).
+</p>
+<div id="badges"></div>
+
+<h2>real audio — beat-synchronous z-scored feature stack (12 chroma over 13 MFCC), segment overlay + boundaries</h2>
+<div class="legend" id="legend"></div>
+<canvas id="featMap" width="880" height="300"></canvas>
+
+<h2>recurrence affinity matrix — the RETURNING section lights up as an off-diagonal block</h2>
+<canvas id="recMap" width="420" height="420"></canvas>
+
+<h2>segment table (label, start, end)</h2>
+<div id="table"></div>
+
+<script type="module">
+import { decodeWav, beat_track, feature, sync, segment, convert } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge } from './_badge.js'
+
+const { laplacianSegmentation, recurrenceMatrix } = segment
+const HOP = 512
+const K = 3
+const COLORS = ['#4fc3f7', '#fb8c00', '#ab47bc', '#66bb6a', '#ef5350', '#ffca28']
+
+// ── z-score each feature row (zero-mean / unit-variance) ────────────────────
+const zscore = (mat) => mat.map((row) => {
+  let m = 0
+  for (const v of row) m += v
+  m /= row.length
+  let s = 0
+  for (const v of row) s += (v - m) ** 2
+  s = Math.sqrt(s / row.length) || 1
+  return Float64Array.from(row, (v) => (v - m) / s)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Part 1 — SYNTHETIC 3-BLOCK CONTROL (hard pass/fail gate)
+// Same known-structure matrix as tests/segment-laplacian.test.js: three
+// contiguous 20-frame blocks; the true onsets are [20, 40].
+// ─────────────────────────────────────────────────────────────────────────────
+function mulberry32(seed) {
+  let a = seed >>> 0
+  return function () {
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+{
+  const d = 12, perBlock = 20, blocks = 3, noise = 0.01
+  const rng = mulberry32(1)
+  const n = perBlock * blocks
+  const step = Math.floor(d / blocks)
+  const feats = Array.from({ length: d }, () => new Float64Array(n))
+  for (let t = 0; t < n; t++) {
+    const b = Math.floor(t / perBlock)
+    const active = b * step
+    for (let f = 0; f < d; f++) feats[f][t] = (f === active ? 1 : 0) + noise * (rng() - 0.5)
+  }
+  const { segmentIds, boundaries } = laplacianSegmentation(feats, { k: 3 })
+  badge('SYNTHETIC GATE: 3-block control recovers boundaries [20, 40] (±2) with 3 labels',
+    boundaries.length === 2 &&
+      Math.abs(boundaries[0] - 20) <= 2 && Math.abs(boundaries[1] - 40) <= 2 &&
+      new Set(segmentIds).size === 3,
+    `[${boundaries}], ${new Set(segmentIds).size} labels`)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Part 2 — REAL STRUCTURED AUDIO: orphans-mix.wav (16 s, verse/chorus material)
+// ─────────────────────────────────────────────────────────────────────────────
+const resp = await fetch('../../apps/demo/public/audio/orphans-mix.wav')
+const { channels, sampleRate: sr } = decodeWav(await resp.arrayBuffer())
+const y = channels[0]
+
+const { tempo, beats } = beat_track(y, sr)
+const beatArr = Array.from(beats)
+badge('beat_track finds a plausible beat grid (≥ 24 beats over 16 s)',
+  beatArr.length >= 24, `${tempo.toFixed(2)} BPM, ${beatArr.length} beats`)
+
+const chroma = feature.chroma_stft(y, { sr })
+const mfcc = feature.mfcc(y, { sr, n_mfcc: 13 })
+const nFrames = chroma[0].length
+const segBounds = [0, ...beatArr, nFrames]
+const Csync = sync(chroma, segBounds)
+const Msync = sync(mfcc, segBounds)
+const nCols = Csync[0].length
+
+const featZ = [...zscore(Csync), ...zscore(Msync)] // 25 × nCols
+const { segmentIds, boundaries } = laplacianSegmentation(featZ, { k: K })
+
+// ── verifiable badges (no ground-truth boundaries invented) ──────────────────
+badge(`exactly k=${K} distinct labels produced`, new Set(segmentIds).size === K,
+  `${new Set(segmentIds).size}`)
+
+let incr = true
+for (let i = 1; i < boundaries.length; i++) if (!(boundaries[i] > boundaries[i - 1])) incr = false
+badge('boundaries strictly increasing & internal (0 < b < n_segments)',
+  incr && boundaries.length > 0 && boundaries[0] > 0 && boundaries[boundaries.length - 1] < nCols,
+  `[${boundaries}] of ${nCols}`)
+
+let adj = true
+for (const b of boundaries) if (segmentIds[b - 1] === segmentIds[b]) adj = false
+badge('every boundary separates two different labels (adjacent segments differ)', adj)
+
+const rerun = laplacianSegmentation(featZ, { k: K })
+badge('deterministic: same seed → bit-identical segmentIds + boundaries',
+  JSON.stringify(Array.from(segmentIds)) === JSON.stringify(Array.from(rerun.segmentIds)) &&
+    JSON.stringify(boundaries) === JSON.stringify(rerun.boundaries))
+
+// contiguous runs → prove a section RECURS across ≥2 non-adjacent segments
+const edges = [0, ...boundaries, nCols]
+const runs = []
+for (let i = 0; i < edges.length - 1; i++) runs.push({ label: segmentIds[edges[i]], c0: edges[i], c1: edges[i + 1] })
+const runsPerLabel = new Map()
+for (const r of runs) runsPerLabel.set(r.label, (runsPerLabel.get(r.label) || 0) + 1)
+const recurring = [...runsPerLabel.entries()].find(([, c]) => c >= 2)
+badge('a section RECURS: some label owns ≥2 non-adjacent segments (McFee-Ellis headline)',
+  !!recurring, recurring ? `label ${recurring[0]} ×${recurring[1]}` : 'none')
+
+// ── legend (label → color, mark recurring) — safe DOM, no innerHTML ──────────
+{
+  const el = document.getElementById('legend')
+  el.appendChild(document.createTextNode('segments: '))
+  for (let lbl = 0; lbl < K; lbl++) {
+    const sw = document.createElement('span')
+    sw.className = 'swatch'
+    sw.style.background = COLORS[lbl % COLORS.length]
+    el.appendChild(sw)
+    const recurs = (runsPerLabel.get(lbl) || 0) >= 2
+    el.appendChild(document.createTextNode(`label ${lbl}${recurs ? ' ↩ recurs' : ''}`))
+  }
+}
+
+// ── feature heatmap + colored segment overlay + boundary lines ───────────────
+{
+  const cv = document.getElementById('featMap')
+  const ctx = cv.getContext('2d')
+  const { width: w, height: h } = cv
+  const barH = 22
+  const plotH = h - barH - 6
+  const nRows = featZ.length
+  ctx.fillStyle = '#111'
+  ctx.fillRect(0, 0, w, h)
+
+  // symmetric amplitude for a diverging blue→black→orange ramp on z-scores
+  let vmin = Infinity, vmax = -Infinity
+  for (const row of featZ) for (const v of row) { if (v < vmin) vmin = v; if (v > vmax) vmax = v }
+  const amp = Math.max(Math.abs(vmin), Math.abs(vmax)) || 1
+  const cellW = w / nCols
+  const cellH = plotH / nRows
+  for (let c = 0; c < nCols; c++) {
+    for (let r = 0; r < nRows; r++) {
+      const t = Math.max(-1, Math.min(1, featZ[r][c] / amp)) // [-1,1]
+      let R, G, B
+      if (t >= 0) { R = Math.round(255 * t); G = Math.round(150 * t); B = Math.round(40 * t) }
+      else { const u = -t; R = Math.round(40 * u); G = Math.round(120 * u); B = Math.round(230 * u) }
+      ctx.fillStyle = `rgb(${R},${G},${B})`
+      // rows top→bottom: chroma (0..11) then mfcc (12..24)
+      ctx.fillRect(c * cellW, r * cellH, cellW + 0.6, cellH + 0.6)
+    }
+  }
+  // chroma / mfcc divider
+  ctx.strokeStyle = '#666'
+  ctx.setLineDash([2, 2])
+  const divY = 12 * cellH
+  ctx.beginPath(); ctx.moveTo(0, divY); ctx.lineTo(w, divY); ctx.stroke()
+  ctx.setLineDash([])
+
+  // colored segment overlay bar (recurring label reuses its color → visible return)
+  for (const r of runs) {
+    ctx.fillStyle = COLORS[r.label % COLORS.length]
+    ctx.fillRect(r.c0 * cellW, plotH + 4, (r.c1 - r.c0) * cellW - 1.5, barH)
+  }
+  // boundary lines through the heatmap
+  ctx.strokeStyle = '#fff'
+  ctx.setLineDash([5, 3])
+  for (const b of boundaries) {
+    const x = b * cellW
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, plotH); ctx.stroke()
+  }
+  ctx.setLineDash([])
+}
+
+// ── recurrence affinity matrix (the returning block off-diagonal) ────────────
+{
+  const R = recurrenceMatrix(featZ, { mode: 'affinity', metric: 'euclidean', sym: true, width: 3 })
+  const cv = document.getElementById('recMap')
+  const ctx = cv.getContext('2d')
+  const { width: w, height: h } = cv
+  ctx.fillStyle = '#111'
+  ctx.fillRect(0, 0, w, h)
+  let vmax = 1e-12
+  for (const row of R) for (const v of row) if (v > vmax) vmax = v
+  const cell = w / nCols
+  for (let i = 0; i < nCols; i++) {
+    for (let j = 0; j < nCols; j++) {
+      const v = R[i][j] / vmax
+      if (v <= 0) continue
+      ctx.fillStyle = `rgb(${Math.round(255 * v)},${Math.round(180 * v)},${Math.round(80 * v)})`
+      ctx.fillRect(j * cell, i * cell, cell + 0.6, cell + 0.6)
+    }
+  }
+  // overlay boundary grid
+  ctx.strokeStyle = '#4fc3f7'
+  for (const b of boundaries) {
+    const p = b * cell
+    ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, h); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(w, p); ctx.stroke()
+  }
+}
+
+// ── segment table ────────────────────────────────────────────────────────────
+{
+  const colTime = (col) => convert.frames_to_time(segBounds[col], sr, HOP)
+  const rows = [['seg', 'label', 'start s', 'end s', 'beats', '']]
+  runs.forEach((r, i) => rows.push([
+    String(i), String(r.label), colTime(r.c0).toFixed(2), colTime(r.c1).toFixed(2),
+    String(r.c1 - r.c0), (runsPerLabel.get(r.label) >= 2 ? '↩ recurs' : ''),
+  ]))
+  const table = document.createElement('table')
+  rows.forEach((cells, i) => {
+    const tr = document.createElement('tr')
+    for (const text of cells) {
+      const cell = document.createElement(i === 0 ? 'th' : 'td')
+      cell.textContent = text
+      tr.appendChild(cell)
+    }
+    table.appendChild(tr)
+  })
+  document.getElementById('table').appendChild(table)
+  const seq = document.createElement('div')
+  seq.className = 'legend'
+  seq.textContent = `label sequence: [${Array.from(segmentIds).join('')}]`
+  document.getElementById('table').appendChild(seq)
+}
+</script>
+</body>
+</html>

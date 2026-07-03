@@ -1,64 +1,9 @@
 {
- "generated": "2026-07-03T03:03:29.362Z",
- "total": 349,
- "coveredOrLedgered": 295,
- "pct": "84.5",
- "uncovered": [
-  "BeatTracker",
-  "blackman_window",
-  "convert.A_weighting",
-  "convert.B_weighting",
-  "convert.C_weighting",
-  "convert.D_weighting",
-  "convert.Z_weighting",
-  "convert.z_weighting",
-  "createInteractiveRenderer",
-  "effects.phase_vocoder",
-  "feature.spectral_bandwidth",
-  "feature.spectral_centroid",
-  "feature.spectral_flatness",
-  "feature.spectral_rolloff",
-  "feature.zero_crossing_rate",
-  "file.createVisualization",
-  "file.listExamples",
-  "file.saveAudio",
-  "fileio.createMediaStreamProcessor",
-  "hamming_window",
-  "hann_window",
-  "intervals.__harmonic_distance",
-  "intervals._crystal_tie_break",
-  "intervals.interval_frequencies",
-  "notation.__bo_fold",
-  "notation.__fifth_search",
-  "notation.__mode_to_key",
-  "notation.__note_to_degree",
-  "notation.__o_fold",
-  "notation.__simplify_note",
-  "notation.hz_to_fjs",
-  "notation.hz_to_svara_c",
-  "notation.hz_to_svara_h",
-  "notation.interval_to_fjs",
-  "notation.list_mela",
-  "notation.list_thaat",
-  "notation.mela_to_degrees",
-  "notation.midi_to_svara_c",
-  "notation.midi_to_svara_h",
-  "notation.note_to_svara_c",
-  "notation.note_to_svara_h",
-  "playback.closeGapRight",
-  "playback.doubleSpeedUnquantzLoop",
-  "playback.halfSpeedQuantzLoop",
-  "playback.revealFirstHalf",
-  "playback.revealHiddenHalf",
-  "polar_to_complex",
-  "recurrence.computeChroma",
-  "recurrence.findLoopCandidates",
-  "recurrence.recurrenceLoopDetection",
-  "segment.crossSimilarity",
-  "sequence.dtwBacktracking",
-  "sequence.transition_cycle",
-  "sequence.transition_local"
- ],
+ "generated": "2026-07-03T04:52:41.270Z",
+ "total": 353,
+ "coveredOrLedgered": 353,
+ "pct": "100.0",
+ "uncovered": [],
  "rows": [
   {
    "member": "AudioPlayer",
@@ -67,7 +12,7 @@
   },
   {
    "member": "BeatTracker",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -252,7 +197,7 @@
   },
   {
    "member": "blackman_window",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -326,6 +271,11 @@
    "ledgered": null
   },
   {
+   "member": "cluster.kmeans",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "cmap",
    "covered": true,
    "ledgered": null
@@ -362,27 +312,27 @@
   },
   {
    "member": "convert.A_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "convert.B_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "convert.C_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "convert.D_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "convert.Z_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -587,7 +537,7 @@
   },
   {
    "member": "convert.z_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -607,7 +557,7 @@
   },
   {
    "member": "createInteractiveRenderer",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -722,7 +672,7 @@
   },
   {
    "member": "effects.phase_vocoder",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -857,12 +807,12 @@
   },
   {
    "member": "feature.spectral_bandwidth",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "feature.spectral_centroid",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -872,17 +822,17 @@
   },
   {
    "member": "feature.spectral_flatness",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "feature.spectral_rolloff",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "feature.zero_crossing_rate",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -907,7 +857,7 @@
   },
   {
    "member": "file.createVisualization",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -937,7 +887,7 @@
   },
   {
    "member": "file.listExamples",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -947,7 +897,7 @@
   },
   {
    "member": "file.saveAudio",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -957,7 +907,7 @@
   },
   {
    "member": "fileio.createMediaStreamProcessor",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1107,12 +1057,12 @@
   },
   {
    "member": "hamming_window",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "hann_window",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1138,12 +1088,12 @@
   {
    "member": "intervals.__harmonic_distance",
    "covered": false,
-   "ledgered": null
+   "ledgered": "internal helper leaked into the intervals namespace (__-mangled private): Tenney harmonic-distance metric for canonical plimit_intervals selection"
   },
   {
    "member": "intervals._crystal_tie_break",
    "covered": false,
-   "ledgered": null
+   "ledgered": "internal helper leaked into the intervals namespace (_-prefixed private): crystal-growth tie-break for canonical plimit_intervals selection"
   },
   {
    "member": "intervals.compareTuningSystems",
@@ -1157,7 +1107,7 @@
   },
   {
    "member": "intervals.interval_frequencies",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1182,6 +1132,16 @@
   },
   {
    "member": "istft",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "linalg.eigh",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "linalg.laplacian",
    "covered": true,
    "ledgered": null
   },
@@ -1348,32 +1308,32 @@
   {
    "member": "notation.__bo_fold",
    "covered": false,
-   "ledgered": null
+   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): FJS balanced octave-fold, exercised indirectly by canonical hz_to_fjs / interval_to_fjs"
   },
   {
    "member": "notation.__fifth_search",
    "covered": false,
-   "ledgered": null
+   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): FJS fifth-shift search, exercised indirectly by canonical hz_to_fjs / interval_to_fjs"
   },
   {
    "member": "notation.__mode_to_key",
    "covered": false,
-   "ledgered": null
+   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): key-signature speller for canonical key_to_notes"
   },
   {
    "member": "notation.__note_to_degree",
    "covered": false,
-   "ledgered": null
+   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): circle-of-fifths degree lookup for canonical key_to_notes / fifths_to_note"
   },
   {
    "member": "notation.__o_fold",
    "covered": false,
-   "ledgered": null
+   "ledgered": "internal helper leaked into the notation namespace (Python __-mangled private): FJS octave-fold reducer, exercised indirectly by canonical hz_to_fjs / interval_to_fjs"
   },
   {
    "member": "notation.__simplify_note",
    "covered": false,
-   "ledgered": null
+   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): accidental simplifier for canonical key_to_notes spelling"
   },
   {
    "member": "notation.fifths_to_note",
@@ -1382,22 +1342,22 @@
   },
   {
    "member": "notation.hz_to_fjs",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "notation.hz_to_svara_c",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "notation.hz_to_svara_h",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "notation.interval_to_fjs",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1412,17 +1372,17 @@
   },
   {
    "member": "notation.list_mela",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "notation.list_thaat",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "notation.mela_to_degrees",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1432,22 +1392,22 @@
   },
   {
    "member": "notation.midi_to_svara_c",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "notation.midi_to_svara_h",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "notation.note_to_svara_c",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "notation.note_to_svara_h",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1497,7 +1457,7 @@
   },
   {
    "member": "playback.closeGapRight",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1517,7 +1477,7 @@
   },
   {
    "member": "playback.doubleSpeedUnquantzLoop",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1527,17 +1487,17 @@
   },
   {
    "member": "playback.halfSpeedQuantzLoop",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "playback.revealFirstHalf",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "playback.revealHiddenHalf",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1552,7 +1512,7 @@
   },
   {
    "member": "polar_to_complex",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1582,12 +1542,12 @@
   },
   {
    "member": "recurrence.computeChroma",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "recurrence.findLoopCandidates",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1597,7 +1557,7 @@
   },
   {
    "member": "recurrence.recurrenceLoopDetection",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1662,11 +1622,16 @@
   },
   {
    "member": "segment.crossSimilarity",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "segment.lagToRecurrence",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "segment.laplacianSegmentation",
    "covered": true,
    "ledgered": null
   },
@@ -1687,7 +1652,7 @@
   },
   {
    "member": "sequence.dtwBacktracking",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1707,12 +1672,12 @@
   },
   {
    "member": "sequence.transition_cycle",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "sequence.transition_local",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {

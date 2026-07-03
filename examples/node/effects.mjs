@@ -9,7 +9,7 @@
  * xa-processing delegate here).
  * Web twin: examples/web/effects.html (same asserts + audible playback).
  */
-import { effects, stft } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { effects, stft, istft } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
 const SR = 22050
@@ -146,5 +146,23 @@ for (let i = 0; i < M; i++) {
 const corr = dot / Math.sqrt(ea * eb)
 checkTrue('remix([B,A]) default snap correlates > 0.99 with independently-snapped reference',
   corr > 0.99, corr.toFixed(5))
+
+// ── (7) phase_vocoder: the STFT-domain time-stretch primitive time_stretch wraps
+// Stretching the STFT of a 440 Hz tone at rate 2 halves the frame count while
+// keeping the frequency-bin count, and istft still measures 440 Hz (phase
+// vocoding stretches TIME, not pitch). Failure paths throw.
+const D = stft(tone, 2048, 512)
+const fastD = effects.phase_vocoder(D, 2.0)
+check('phase_vocoder(D, 2.0) keeps freq bins (1025)', fastD.length, D.length)
+check('phase_vocoder(D, 2.0) frames == ceil(nFrames/2)', fastD[0].length, Math.ceil(D[0].length / 2))
+check('phase_vocoder(D, 0.5) frames == nFrames/0.5', effects.phase_vocoder(D, 0.5)[0].length, Math.ceil(D[0].length / 0.5))
+check('istft(phase_vocoder(D,2)) still measures 440 Hz ± 2% (TIME stretched, pitch kept)',
+  zcPitch(istft(fastD, 512), SR, 2048, istft(fastD, 512).length - 2048), 440, 8.8)
+let pvThrew = false
+try { effects.phase_vocoder([], 2) } catch { pvThrew = true }
+checkTrue('phase_vocoder([]) throws on empty STFT', pvThrew)
+let pvThrew2 = false
+try { effects.phase_vocoder(D, 0) } catch { pvThrew2 = true }
+checkTrue('phase_vocoder(D, 0) throws on non-positive rate', pvThrew2)
 
 summary('effects/index.js — librosa.effects parity: trim/split/preemph/stretch/shift/hpss/remix')

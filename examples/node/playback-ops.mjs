@@ -18,7 +18,9 @@ import { check, checkTrue, summary } from './_harness.mjs'
 
 const {
   createBufferLike, halfSpeedLoop, doubleSpeedQuantzLoop,
-  reverseSection, detectGap, closeGapLeft,
+  reverseSection, detectGap, closeGapLeft, closeGapRight,
+  halfSpeedQuantzLoop, doubleSpeedUnquantzLoop,
+  revealFirstHalf, revealHiddenHalf,
 } = playback
 
 const sr = 44100
@@ -66,6 +68,71 @@ const gap = detectGap(gapBuf, loop)
 check('detectGap → exactly {start:22050, end:33075, size:11025}', gap, { start: 22050, end: 33075, size: 11025 })
 const closed = closeGapLeft(gapBuf, loop)
 check('closeGapLeft length == input − gap.size == 33075', closed.buffer.length, sr - gap.size)
+check('closeGapLeft preserves the normalized loop end (0.5)', closed.newLoopEnd, 0.5)
+
+// ─── closeGapRight: same shortening, but RESCALES the loop end ──────────────
+// newLoopEnd = 0.5 × (33075 / 44100) == 0.375 (content after the gap keeps its
+// absolute position relative to the loop end, so the normalized end shrinks).
+const closedR = closeGapRight(gapBuf, loop)
+check('closeGapRight length == 33075', closedR.buffer.length, sr - gap.size)
+check('closeGapRight RESCALES loop end to 0.5 × 33075/44100 == 0.375', closedR.newLoopEnd, 0.375)
+check('closeGapRight gapSize == 11025', closedR.gapSize, gap.size)
+
+// ─── halfSpeedQuantzLoop: masks to the loop window (track length unchanged) ─
+const hq = halfSpeedQuantzLoop(sine, loop)
+check('halfSpeedQuantzLoop keeps track length (44100)', hq.length, sr)
+{
+  const s = sine.getChannelData(0), h = hq.getChannelData(0)
+  let outMax = 0
+  for (let i = 0; i < sr; i++) if (i < 11025 || i >= 22050) outMax = Math.max(outMax, Math.abs(h[i] - s[i]))
+  check('halfSpeedQuantzLoop leaves everything OUTSIDE the loop window untouched', outMax, 0)
+}
+
+// ─── doubleSpeedUnquantzLoop: in-place compress; fractal preserves layers ───
+// A loop near the end (start 0.6, end 0.95) leaves too little room for a full
+// glitch tail, so fractal mode writes only the first half — differing from the
+// non-fractal path — while both keep the track length and pre-loop content.
+const loopEnd = { start: 0.6, end: 0.95 }
+const duF = doubleSpeedUnquantzLoop(sine, loopEnd, { fractal: true })
+const duN = doubleSpeedUnquantzLoop(sine, loopEnd, { fractal: false })
+check('doubleSpeedUnquantzLoop keeps track length (44100)', duF.length, sr)
+{
+  const a = duF.getChannelData(0), b = duN.getChannelData(0), s = sine.getChannelData(0)
+  let diff = 0, preMax = 0
+  const st = Math.floor(0.6 * sr)
+  for (let i = 0; i < sr; i++) {
+    if (Math.abs(a[i] - b[i]) > 1e-7) diff++
+    if (i < st) preMax = Math.max(preMax, Math.abs(a[i] - s[i]))
+  }
+  checkTrue('fractal mode differs from non-fractal (matryoshka half-write)', diff > 1000, `${diff} samples differ`)
+  check('doubleSpeedUnquantzLoop leaves pre-loop content untouched', preMax, 0)
+}
+
+// ─── revealHiddenHalf / revealFirstHalf: toggle a half-speed-quantz nudge ───
+// revealFirstHalf reconstructs the CURRENT loop window (all but the last
+// boundary sample), revealHiddenHalf swaps in the DIFFERENT second half; both
+// preserve everything outside the loop window.
+{
+  const cur = halfSpeedQuantzLoop(sine, loop)
+  const rf = revealFirstHalf(cur, sine, loop)
+  const rh = revealHiddenHalf(cur, sine, loop)
+  const c = cur.getChannelData(0), fd = rf.getChannelData(0), hd = rh.getChannelData(0)
+  let rfSame = 0, rhDiff = 0, rfOut = 0, rhOut = 0
+  for (let i = 0; i < sr; i++) {
+    if (i >= 11025 && i < 22050) {
+      if (Math.abs(fd[i] - c[i]) < 1e-6) rfSame++
+      if (Math.abs(hd[i] - c[i]) > 1e-6) rhDiff++
+    } else {
+      rfOut = Math.max(rfOut, Math.abs(fd[i] - c[i]))
+      rhOut = Math.max(rhOut, Math.abs(hd[i] - c[i]))
+    }
+  }
+  check('revealFirstHalf length unchanged', rf.length, sr)
+  checkTrue('revealFirstHalf reconstructs the current loop window (≥ 11024/11025)', rfSame >= 11024, `${rfSame}/11025`)
+  checkTrue('revealHiddenHalf swaps in a DIFFERENT loop window', rhDiff > 5000, `${rhDiff} samples differ`)
+  check('revealFirstHalf leaves content outside the loop window untouched', rfOut, 0)
+  check('revealHiddenHalf leaves content outside the loop window untouched', rhOut, 0)
+}
 
 // ─── invalid loop throws immediately ────────────────────────────────────────
 let threw = false

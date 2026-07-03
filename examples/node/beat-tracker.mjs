@@ -7,7 +7,7 @@
  * 0.500s, and quickTempo lands in the SAME lag bin with a measured confidence > 0.
  * Same asserts as examples/web/beat-tracker.html.
  */
-import { beat_track, quickTempo } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { beat_track, quickTempo, BeatTracker } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
 const sr = 22050, dur = 10, hop = 512
@@ -34,5 +34,24 @@ checkTrue('median inter-beat interval within 1 hop (23.2ms) of 0.500s', Math.abs
 checkTrue('quickTempo lands in the SAME lag bin as tempo', Math.abs(q.bpm - bpm) < 1e-9, `quick=${q.bpm.toFixed(4)} vs parity=${bpm.toFixed(4)}`)
 checkTrue('quickTempo confidence measured > 0', q.confidence > 0, `conf=${q.confidence.toFixed(4)}`)
 check('quickTempo tier tag', q.tier, 'quick')
+
+// ── BeatTracker class: stateful wrapper (onset → tempo → beats, tempo hint) ─
+const bt = new BeatTracker()
+checkTrue('new BeatTracker() starts with no tempo hint', bt.tempoHint === null)
+const env = bt.onsetStrength(y, sr, hop)
+check('onsetStrength(10 s, hop 512) == 431 frames', env.length, 431)
+checkTrue('onsetStrength envelope is all-finite', env.every(Number.isFinite))
+checkTrue('tempoEstimation(env) within one lag bin of 120 BPM',
+  Math.abs(bt.tempoEstimation(env) - 120) <= 7, `${bt.tempoEstimation(env).toFixed(2)} BPM`)
+checkTrue('beatTrack() (no hint) estimates within one lag bin of 120',
+  Math.abs(bt.beatTrack({ y, sr }).tempo - 120) <= 7)
+
+bt.setTempo(120)
+check('setTempo(120) → beatTrack honors the hint exactly', bt.beatTrack({ y, sr }).tempo, 120)
+bt.setTempo(null)
+checkTrue('setTempo(null) clears the hint', bt.tempoHint === null)
+let btThrew = false
+try { bt.setTempo(-5) } catch { btThrew = true }
+checkTrue('setTempo(-5) throws (bpm must be strictly positive)', btThrew)
 
 summary('xa-beat-tracker: canonical beat engine on a 120 BPM click train')

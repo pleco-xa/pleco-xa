@@ -13,7 +13,7 @@
 import { segment } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
-const { recurrenceMatrix, recurrenceToLag, lagToRecurrence, agglomerative } = segment
+const { recurrenceMatrix, recurrenceToLag, lagToRecurrence, agglomerative, crossSimilarity } = segment
 
 // ── deterministic A-B-A features (12 dims × 60 frames, librosa layout) ──────
 const D = 12
@@ -79,6 +79,18 @@ for (let i = 0; i < T; i++) {
   for (let j = 0; j < T; j++) if (R2[i][j] !== R[i][j]) rtExact = false
 }
 checkTrue('lagToRecurrence(recurrenceToLag(R)) reproduces R bit-exactly', rtExact)
+
+// ── crossSimilarity: match repeated frames across two sequences ────────────
+// 2-feature × 4-frame pattern where f0==f3 and f1==f2. Self cross-similarity
+// (connectivity, k=2) must connect exactly those equal-frame pairs — a
+// hand-verifiable golden matrix (columns = queries, rows = reference frames).
+const XS = [[1, 0, 0, 1], [0, 1, 1, 0]]
+const CS = crossSimilarity(XS, XS, { mode: 'connectivity', k: 2 }).map((r) => Array.from(r))
+check('crossSimilarity connects equal frames (f0↔f3, f1↔f2)', CS,
+  [[1, 0, 0, 1], [0, 1, 1, 0], [0, 1, 1, 0], [1, 0, 0, 1]])
+// cross of two DIFFERENT-length sequences returns an n_ref × n matrix
+const CS2 = crossSimilarity(XS, [[1, 0], [0, 1]], { mode: 'connectivity', k: 1 })
+check('crossSimilarity(4 frames, 2 ref frames) shape == 2 × 4', [CS2.length, CS2[0].length], [2, 4])
 
 // Ward agglomerative boundaries land exactly on the planted structure
 check('agglomerative(data, 3) boundaries', Array.from(agglomerative(data, 3)), [0, 20, 40])

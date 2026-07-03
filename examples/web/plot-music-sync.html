@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>plot_music_sync — align two performances via DTW</title>
+  <style>
+    body { font: 14px system-ui; background: #181818; color: #ddd; margin: 20px; }
+    p { max-width: 92ch; }
+    h2 { margin-bottom: 4px; }
+    canvas { image-rendering: pixelated; border: 1px solid #333; margin: 4px 0; }
+    .lbl { color: #8a8a8a; font: 12px monospace; margin-top: 8px; }
+    .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+    button { font: 13px system-ui; padding: 6px 12px; margin-right: 8px; }
+    code { color: #b5cea8; }
+  </style>
+</head>
+<body>
+  <h2>plot_music_sync — DTW aligns a performance with its 1.25× time-stretched twin</h2>
+  <p>
+    Librosa's music-sync gallery page aligns a slow and a fast recording of the
+    same lick and eyeballs the warping path. Here the warp factor is <em>known</em>,
+    so the alignment is self-verifying: the first 8&nbsp;s of
+    <code>orphans-mix.wav</code> (mono 22050) is stretched by exactly
+    <code>1.25×</code> with the parity-gated phase vocoder
+    (<code>effects.time_stretch</code>), both takes are chroma-featurized
+    (<code>feature.chroma_stft</code>), and the two chroma sequences are aligned
+    with <code>sequence.dtw</code> (cosine metric — same as the librosa example).
+    A uniform 1.25× stretch <strong>must</strong> yield a warping path that is a
+    straight line of slope&nbsp;1.25 in (X-frame, Y-frame) space; the badges
+    assert exactly that (slope ±10%, R²&nbsp;&gt;&nbsp;0.99), plus monotonicity,
+    pinned endpoints, and that the aligned frames are far more similar than
+    random pairs. Same asserts as <code>examples/node/plot-music-sync.mjs</code>
+    (node-verified against dist).
+  </p>
+  <div id="badges"></div>
+  <p>
+    <button id="playX" disabled>▶ original (X)</button>
+    <button id="playY" disabled>▶ stretched 1.25× (Y)</button>
+    <span id="status">loading audio…</span>
+  </p>
+
+  <div class="row">
+    <div>
+      <div class="lbl">Chroma of X — original (12 × N<sub>x</sub> frames), y bottom→top: C C# D D# E F F# G G# A A# B</div>
+      <canvas id="chromaX" width="640" height="150"></canvas>
+      <div class="lbl">Chroma of Y — stretched 1.25× (12 × N<sub>y</sub> frames), same pitch-class axis</div>
+      <canvas id="chromaY" width="640" height="150"></canvas>
+    </div>
+    <div>
+      <div class="lbl">Accumulated cost matrix D with warping path (cyan)<br>x = Y-frame (stretched), y = X-frame (original)</div>
+      <canvas id="cost" width="440" height="550"></canvas>
+    </div>
+  </div>
+
+  <script type="module">
+    import { effects, feature, sequence, decodeWav } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawSpectrogram } from './_badge.js'
+
+    const STRETCH = 1.25
+    const SEG_SECONDS = 8
+    const status = document.getElementById('status')
+
+    // ── Load a real audio segment ─────────────────────────────────────────────
+    const resp = await fetch('../../apps/demo/public/audio/orphans-mix.wav')
+    const { channels, sampleRate } = decodeWav(await resp.arrayBuffer())
+    const N = Math.min(channels[0].length, Math.round(SEG_SECONDS * sampleRate))
+    const y = channels[0].slice(0, N)
+    status.textContent = 'aligning…'
+
+    // ── Manufacture the known warp + chroma-featurize both takes ──────────────
+    const yStretch = effects.time_stretch(y, STRETCH)
+    const X = feature.chroma_stft(y, { sr: sampleRate })
+    const Y = feature.chroma_stft(yStretch, { sr: sampleRate })
+    const Nx = X[0].length
+    const Ny = Y[0].length
+
+    // ── DTW alignment (cosine metric) ─────────────────────────────────────────
+    const { D, wp } = sequence.dtw(X, Y, { metric: 'cosine' })
+    const startPair = wp[wp.length - 1] // librosa order: last entry is the start
+    const endPair = wp[0]               // first entry is the end
+
+    // ── Geometric proof: least-squares slope + R² of the path ─────────────────
+    let n = wp.length, sj = 0, si = 0, sjj = 0, sji = 0
+    for (const [i, j] of wp) { sj += j; si += i; sjj += j * j; sji += j * i }
+    const slope = (n * sji - sj * si) / (n * sjj - sj * sj)
+    const intercept = (si - slope * sj) / n
+    let ssRes = 0, ssTot = 0
+    const meanI = si / n
+    for (const [i, j] of wp) { const pred = slope * j + intercept; ssRes += (i - pred) ** 2; ssTot += (i - meanI) ** 2 }
+    const r2 = 1 - ssRes / ssTot
+
+    let monotonic = true
+    for (let k = wp.length - 1; k > 0; k--) {
+      const [i0, j0] = wp[k], [i1, j1] = wp[k - 1]
+      if (i1 < i0 || j1 < j0 || (i1 - i0) + (j1 - j0) < 1) { monotonic = false; break }
+    }
+
+    // ── Alignment quality: aligned frames vs random pairs (cosine distance) ───
+    const cosDist = (A, ca, B, cb) => {
+      let dot = 0, na = 0, nb = 0
+      for (let c = 0; c < A.length; c++) { const a = A[c][ca], b = B[c][cb]; dot += a * b; na += a * a; nb += b * b }
+      const denom = Math.sqrt(na) * Math.sqrt(nb)
+      return denom > 0 ? 1 - dot / denom : 1
+    }
+    let pathCost = 0
+    for (const [i, j] of wp) pathCost += cosDist(X, i, Y, j)
+    const pathMean = pathCost / wp.length
+    let seed = 12345
+    const lcg = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+    let baseSum = 0
+    for (let s = 0; s < 2000; s++) baseSum += cosDist(X, Math.floor(lcg() * Nx), Y, Math.floor(lcg() * Ny))
+    const baseMean = baseSum / 2000
+
+    // ── Badges (same asserts as the node twin) ────────────────────────────────
+    badge('warp-path slope ≈ 1.25 (±10%)', Math.abs(slope - STRETCH) <= STRETCH * 0.1, `slope ${slope.toFixed(4)}`)
+    badge('path is a straight line — R² > 0.99', r2 > 0.99, `R² ${r2.toFixed(5)}`)
+    badge('endpoints (0,0) → (Nx−1, Ny−1)',
+      startPair[0] === 0 && startPair[1] === 0 && endPair[0] === Nx - 1 && endPair[1] === Ny - 1,
+      `(${startPair}) → (${endPair})`)
+    badge('warp path is monotonic', monotonic, `${wp.length} points`)
+    badge('aligned-frame cost ≪ random-pair cost', pathMean < 0.5 * baseMean,
+      `path ${pathMean.toFixed(4)} vs random ${baseMean.toFixed(4)}`)
+    badge('measured chroma-frame ratio Nx/Ny ≈ 1.25', Math.abs(Nx / Ny - STRETCH) <= STRETCH * 0.1,
+      `Nx/Ny ${(Nx / Ny).toFixed(4)} (Nx=${Nx}, Ny=${Ny})`)
+
+    // ── Chromagrams ───────────────────────────────────────────────────────────
+    drawSpectrogram(document.getElementById('chromaX'), X)
+    drawSpectrogram(document.getElementById('chromaY'), Y)
+
+    // ── Cost matrix D + warp path overlay ─────────────────────────────────────
+    // drawSpectrogram maps mag2d[f][t] → pixel: f (row) to y (flipped), t (col)
+    // to x. So path point (i, j) sits at x = w·j/(Ny−1), y = h·(1 − i/(Nx−1)).
+    const cost = document.getElementById('cost')
+    drawSpectrogram(cost, D)
+    const ctx = cost.getContext('2d')
+    const w = cost.width, h = cost.height
+    ctx.strokeStyle = '#4fecec'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    for (let k = wp.length - 1; k >= 0; k--) {
+      const [i, j] = wp[k]
+      const px = (j / (Ny - 1)) * w
+      const py = (1 - i / (Nx - 1)) * h
+      k === wp.length - 1 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)
+    }
+    ctx.stroke()
+
+    status.textContent = `done — slope ${slope.toFixed(4)}, R² ${r2.toFixed(5)}, path ${wp.length} frames`
+
+    // ── Audible proof: hear the original vs the stretched take ────────────────
+    const play = (data) => {
+      const actx = new AudioContext({ sampleRate })
+      const buf = actx.createBuffer(1, data.length, sampleRate)
+      buf.getChannelData(0).set(data)
+      const src = actx.createBufferSource()
+      src.buffer = buf
+      src.connect(actx.destination)
+      src.start()
+      src.onended = () => actx.close()
+    }
+    const bx = document.getElementById('playX'), by = document.getElementById('playY')
+    bx.disabled = by.disabled = false
+    bx.onclick = () => play(y)
+    by.onclick = () => play(yStretch)
+  </script>
+</body>
+</html>

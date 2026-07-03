@@ -31,7 +31,13 @@ const ledger = existsSync(ledgerPath) ? JSON.parse(readFileSync(ledgerPath, 'utf
 
 const rows = members.map((m) => {
   const short = m.includes('.') ? m.split('.')[1] : m
-  const used = new RegExp(`[^\\w.]${short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\(|[{,\\s]${short}[,}\\s]`).test(corpus)
+  const esc = short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const used = new RegExp(
+    `(^|[^\\w.])${esc}\\s*\\(` +   // bare call:        foo(
+    `|\\.${esc}\\s*\\(` +          // namespaced call:  ns.foo(
+    `|\\.${esc}\\b` +             // namespaced ref:   ns.foo
+    `|[{,\\s]${esc}[,}\\s:]`,     // destructure/ref:  { foo }  , foo
+  ).test(corpus)
   const ledgered = ledger[m] || null
   return { member: m, covered: used, ledgered }
 })

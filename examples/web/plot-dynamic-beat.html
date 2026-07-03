@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — plot-dynamic-beat: beat tracking through a tempo change</title>
+<style>
+  body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
+  canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
+  code { color: #8fd }
+  button { font: 14px system-ui; padding: 6px 14px; margin: 8px 4px 8px 0; border-radius: 6px; border: 1px solid #555; background: #2a2a2a; color: #ddd; cursor: pointer }
+  button:hover { background: #3a3a3a }
+  .legend { font: 11px monospace; color: #999; margin: 2px 0 10px }
+  .r { color: #ef5350 } .b { color: #42a5f5 }
+</style>
+</head>
+<body>
+<h2>plot-dynamic-beat — beat tracking through a 90→140 BPM tempo switch</h2>
+<p>
+  librosa's <code>plot_dynamic_beat</code> in the browser. A click track (5&nbsp;ms decaying 1&nbsp;kHz
+  bursts, sr=22050) plays <b>90&nbsp;BPM for 4&nbsp;s, then 140&nbsp;BPM for 4&nbsp;s</b>. Two trackers
+  run on it. The <span class="r">static</span> tracker takes one scalar
+  <code>tempo()</code> for the whole clip, so its beats keep a single spacing and over-detect in the
+  slow half. The <span class="b">dynamic</span> tracker takes the per-frame
+  <code>tempo(aggregate:null)</code> curve, feeds it to <code>beat_track(bpm=array)</code>, and its
+  beat spacing bends with the music — the inter-beat interval drops from ~0.667&nbsp;s to
+  ~0.429&nbsp;s exactly at the switch. Prior width matters: this narrow 90–140 range needs the
+  default <code>std_bpm=1</code> (librosa's snare-accelerate demo uses 4 for its 30–240 span; here
+  the wide prior would collapse 140&nbsp;BPM onto its 70&nbsp;BPM subharmonic). Same asserts as
+  <code>examples/node/plot-dynamic-beat.mjs</code>.
+</p>
+<div id="badges"></div>
+<canvas id="wave" width="820" height="150"></canvas>
+<div class="legend"><span class="r">red ticks (top) = static beats</span> &nbsp;|&nbsp; <span class="b">blue ticks (bottom) = dynamic beats</span> &nbsp;|&nbsp; grey dashed = tempo switch</div>
+<canvas id="tempo" width="820" height="150"></canvas>
+<div class="legend"><span class="b">blue line = dynamic per-frame tempo</span> &nbsp;|&nbsp; <span class="r">red line = static scalar tempo</span></div>
+<button id="playStatic">Play with STATIC beat beeps</button>
+<button id="playDynamic">Play with DYNAMIC beat beeps</button>
+
+<script type="module">
+import { beat_track, tempo, onset_strength } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawWave } from './_badge.js'
+
+const sr = 22050, hop = 512, hopT = hop / sr
+const BPM_SLOW = 90, BPM_FAST = 140, SWITCH = 4.0, DUR = 8.0
+const IBI_SLOW = 60 / BPM_SLOW, IBI_FAST = 60 / BPM_FAST
+const GUARD = 0.3, TRANSITION = 0.5
+
+// ---- synthesize the two-tempo click track (phase-continuous switch) --------
+const clickTimes = []
+for (let t = 0; t < DUR - 1e-6; ) {
+  clickTimes.push(t)
+  t += t < SWITCH - 1e-6 ? IBI_SLOW : IBI_FAST
+}
+const y = new Float32Array(Math.round(sr * DUR))
+const burst = Math.round(0.005 * sr)
+for (const ct of clickTimes) {
+  const s0 = Math.round(ct * sr)
+  for (let i = 0; i < burst && s0 + i < y.length; i++) {
+    y[s0 + i] += Math.sin((2 * Math.PI * 1000 * i) / sr) * Math.exp(-i / (0.001 * sr))
+  }
+}
+
+const median = (a) => { const s = [...a].sort((x, y) => x - y); const n = s.length; return n % 2 ? s[(n - 1) / 2] : 0.5 * (s[n / 2 - 1] + s[n / 2]) }
+const ibisOf = (beats) => beats.slice(1).map((b, i) => b - beats[i])
+
+// ---- static vs dynamic trackers -------------------------------------------
+const staticRes = beat_track(y, sr, { units: 'time', trim: false })
+const staticBeats = staticRes.beats
+const staticIbis = ibisOf(staticBeats)
+
+const scalarTempo = tempo(y, { sr })                                   // number (aggregate='mean')
+const dynTempo = tempo(y, { sr, aggregate: null, startBpm: 120, stdBpm: 1 }) // per-frame Float64Array
+const env = onset_strength(y, { sr, hop_length: hop, aggregate: 'median' })
+const dynRes = beat_track(y, sr, { units: 'time', trim: false, bpm: dynTempo })
+const dynBeats = dynRes.beats
+const dynIbis = ibisOf(dynBeats)
+
+const switchFrame = Math.round((SWITCH * sr) / hop)
+const dyn1 = median(Array.from(dynTempo.slice(0, switchFrame)))
+const dyn2 = median(Array.from(dynTempo.slice(switchFrame)))
+
+const beforeIbis = [], afterIbis = []
+for (let i = 0; i < dynIbis.length; i++) {
+  if (dynBeats[i + 1] <= SWITCH - GUARD) beforeIbis.push(dynIbis[i])
+  else if (dynBeats[i] >= SWITCH + GUARD) afterIbis.push(dynIbis[i])
+}
+const ibiBefore = median(beforeIbis), ibiAfter = median(afterIbis)
+
+const nearestClickHops = (t) => Math.min(...clickTimes.map((c) => Math.abs(c - t))) / hopT
+const steadyOffsets = dynBeats.filter((b) => Math.abs(b - SWITCH) >= TRANSITION).map(nearestClickHops)
+const maxSteadyOffset = Math.max(...steadyOffsets), medSteadyOffset = median(steadyOffsets)
+
+const clicksSlow = clickTimes.filter((c) => c < SWITCH).length
+const staticSlow = staticBeats.filter((b) => b < SWITCH).length
+const dynSlowSteady = dynBeats.filter((b) => b < SWITCH - TRANSITION).length
+const clicksSlowSteady = clickTimes.filter((c) => c < SWITCH - TRANSITION).length
+
+// ---- badges (subset of the node proofs) -----------------------------------
+badge('tempo(aggregate:null) is a per-frame array, not a scalar', dynTempo.length === env.length && dynTempo.length > 100, `length=${dynTempo.length}`)
+badge('dynamic tempo halves within a lag bin of 90 / 140 BPM', dyn1 >= 85 && dyn1 <= 95 && dyn2 >= 135 && dyn2 <= 150, `${dyn1.toFixed(1)} → ${dyn2.toFixed(1)} BPM`)
+badge('dynamic IBI before switch within 1 hop of 0.667s', Math.abs(ibiBefore - IBI_SLOW) <= hopT, `${ibiBefore.toFixed(4)}s`)
+badge('dynamic IBI after switch within 1 hop of 0.429s', Math.abs(ibiAfter - IBI_FAST) <= hopT, `${ibiAfter.toFixed(4)}s`)
+badge('IBI drop across the switch > 0.2s', ibiBefore - ibiAfter > 0.2, `Δ=${(ibiBefore - ibiAfter).toFixed(4)}s`)
+badge('steady dynamic beats land on clicks (max < 1.5 hop)', maxSteadyOffset < 1.5, `max=${maxSteadyOffset.toFixed(2)} hop`)
+badge('dynamic matches clicks in slow steady region', dynSlowSteady === clicksSlowSteady, `dyn=${dynSlowSteady} clicks=${clicksSlowSteady}`)
+badge('static over-detects in the slow section (surplus)', staticSlow > clicksSlow, `static=${staticSlow} vs clicks=${clicksSlow}`)
+
+// ---- waveform with static (red, top) + dynamic (blue, bottom) beat ticks ---
+const cv = document.getElementById('wave')
+drawWave(cv, y)
+const ctx = cv.getContext('2d')
+const xOf = (t) => (t / DUR) * cv.width
+// tempo-switch marker
+ctx.strokeStyle = '#666'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1
+ctx.beginPath(); ctx.moveTo(xOf(SWITCH), 0); ctx.lineTo(xOf(SWITCH), cv.height); ctx.stroke(); ctx.setLineDash([])
+ctx.lineWidth = 2
+ctx.strokeStyle = '#ef5350'
+for (const t of staticBeats) { const x = xOf(t); ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x, 34); ctx.stroke() }
+ctx.strokeStyle = '#42a5f5'
+for (const t of dynBeats) { const x = xOf(t); ctx.beginPath(); ctx.moveTo(x, cv.height - 34); ctx.lineTo(x, cv.height - 2); ctx.stroke() }
+
+// ---- tempo curve: dynamic per-frame line + static scalar line -------------
+const tc = document.getElementById('tempo')
+const tctx = tc.getContext('2d')
+tctx.fillStyle = '#111'; tctx.fillRect(0, 0, tc.width, tc.height)
+const BPM_MIN = 60, BPM_MAX = 180
+const yOf = (bpm) => tc.height - ((bpm - BPM_MIN) / (BPM_MAX - BPM_MIN)) * tc.height
+const xTempo = (t) => (t / DUR) * tc.width
+// gridlines + labels at 60/90/120/140/180
+tctx.strokeStyle = '#2a2a2a'; tctx.fillStyle = '#777'; tctx.font = '10px monospace'
+for (const g of [60, 90, 120, 140, 180]) {
+  const yy = yOf(g); tctx.beginPath(); tctx.moveTo(0, yy); tctx.lineTo(tc.width, yy); tctx.stroke()
+  tctx.fillText(g + '', 2, yy - 2)
+}
+// tempo switch marker
+tctx.strokeStyle = '#666'; tctx.setLineDash([4, 4])
+tctx.beginPath(); tctx.moveTo(xTempo(SWITCH), 0); tctx.lineTo(xTempo(SWITCH), tc.height); tctx.stroke(); tctx.setLineDash([])
+// static scalar tempo (red horizontal)
+tctx.strokeStyle = '#ef5350'; tctx.lineWidth = 1.5
+tctx.beginPath(); tctx.moveTo(0, yOf(scalarTempo)); tctx.lineTo(tc.width, yOf(scalarTempo)); tctx.stroke()
+// dynamic per-frame tempo (blue)
+tctx.strokeStyle = '#42a5f5'; tctx.lineWidth = 1.5; tctx.beginPath()
+for (let f = 0; f < dynTempo.length; f++) {
+  const x = (f / (dynTempo.length - 1)) * tc.width
+  const yy = yOf(Math.max(BPM_MIN, Math.min(BPM_MAX, dynTempo[f])))
+  f ? tctx.lineTo(x, yy) : tctx.moveTo(x, yy)
+}
+tctx.stroke()
+
+// ---- audible A/B: click track with beeps on static vs dynamic beats -------
+function play(beats, freq) {
+  const ac = new AudioContext()
+  const buf = ac.createBuffer(1, y.length, sr)
+  buf.getChannelData(0).set(y)
+  const src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination)
+  const t0 = ac.currentTime + 0.05
+  for (const t of beats) {
+    const osc = ac.createOscillator(), g = ac.createGain()
+    osc.frequency.value = freq
+    g.gain.setValueAtTime(0.3, t0 + t)
+    g.gain.exponentialRampToValueAtTime(1e-4, t0 + t + 0.06)
+    osc.connect(g).connect(ac.destination)
+    osc.start(t0 + t); osc.stop(t0 + t + 0.08)
+  }
+  src.start(t0)
+}
+document.getElementById('playStatic').onclick = () => play(staticBeats, 660)
+document.getElementById('playDynamic').onclick = () => play(dynBeats, 990)
+</script>
+</body>
+</html>

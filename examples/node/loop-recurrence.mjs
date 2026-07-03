@@ -23,7 +23,7 @@
  * stackMemory(10, 3) windows share raw audio up to lag 27, so anything
  * narrower lets the alignment path hug the self-overlap diagonal.
  */
-import { loop } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { loop, recurrence } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
 // ── synthesis: 2.0 s harmonic period × 4, ornamented final bar ────────────
@@ -101,5 +101,17 @@ for (const c of resRqa.details.candidates) {
       `${(c.loopEnd - c.loopStart).toFixed(4).padStart(12)} | ${c.confidence.toFixed(4)}`,
   )
 }
+
+// ── direct recurrence.recurrenceLoopDetection (the primitive loop.detect wraps) ─
+// Calling the recurrence engine directly (not through the loop.detect facade)
+// recovers the same 2.0 s period with a diagnostics/candidates payload.
+const direct = await recurrence.recurrenceLoopDetection(buffer, {})
+check('recurrence.recurrenceLoopDetection recovers 2.0 s ± 0.1 directly',
+  direct.loopEnd - direct.loopStart, PERIOD, 0.1)
+checkTrue('direct detection confidence in (0, 1]',
+  direct.confidence > 0 && direct.confidence <= 1, direct.confidence.toFixed(4))
+checkTrue('direct detection surfaces candidates + diagnostics',
+  Array.isArray(direct.candidates) && direct.diagnostics != null,
+  Object.keys(direct).join(','))
 
 summary('loop/recurrence.js — tempo-free period recovery + RQA lag')

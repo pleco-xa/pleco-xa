@@ -22,7 +22,7 @@
 import { feature, sequence } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
-const { viterbi, viterbi_discriminative, transition_loop, transition_uniform } = sequence
+const { viterbi, viterbi_discriminative, transition_loop, transition_uniform, transition_cycle, transition_local } = sequence
 
 const sr = 22050
 const hop = 512
@@ -92,5 +92,22 @@ check('viterbi toy decode [0,1,1]',
 check('viterbi_discriminative divides by p_state (librosa Bayes correction)',
   viterbi_discriminative([[0.8, 0.6], [0.2, 0.4]], transition_uniform(2), [0.9, 0.1]).join(','),
   '1,1')
+
+// ── transition-matrix constructors (librosa.sequence parity) ────────────────
+// transition_cycle(n, p): each state self-loops with prob p and advances to
+// the next (mod n) with 1−p. Rows are stochastic.
+check('transition_cycle(3, 0.5) == librosa golden',
+  transition_cycle(3, 0.5), [[0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5]])
+checkTrue('transition_cycle rows sum to 1',
+  transition_cycle(4, 0.3).every((r) => Math.abs(r.reduce((a, b) => a + b, 0) - 1) < 1e-12))
+
+// transition_local(n, width, 'triangle'): banded, triangle-weighted, row-
+// normalized locality. 5 states, width 3 → the librosa golden band.
+check('transition_local(5, 3, triangle) == librosa golden',
+  transition_local(5, 3).map((r) => r.map((x) => +x.toFixed(4))),
+  [[0.6667, 0.3333, 0, 0, 0], [0.25, 0.5, 0.25, 0, 0], [0, 0.25, 0.5, 0.25, 0],
+    [0, 0, 0.25, 0.5, 0.25], [0, 0, 0, 0.3333, 0.6667]])
+checkTrue('transition_local rows sum to 1',
+  transition_local(6, 3).every((r) => Math.abs(r.reduce((a, b) => a + b, 0) - 1) < 1e-12))
 
 summary('plot_viterbi — smoothing vs thresholding + prior-repair goldens')

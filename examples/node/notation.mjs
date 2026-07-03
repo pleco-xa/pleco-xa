@@ -17,6 +17,9 @@ import { check, checkTrue, summary } from './_harness.mjs'
 
 const {
   mela_to_svara, key_to_notes, key_to_degrees, thaat_to_degrees, fifths_to_note,
+  list_mela, list_thaat, mela_to_degrees,
+  hz_to_svara_c, hz_to_svara_h, midi_to_svara_c, midi_to_svara_h,
+  note_to_svara_c, note_to_svara_h, hz_to_fjs, interval_to_fjs,
 } = notation
 
 // ── mela_to_svara (ASCII rows: librosa unicode=False goldens) ───────────────
@@ -72,5 +75,41 @@ check("fifths_to_note('G', -3) — librosa docstring golden",
 check("fifths_to_note('C', -1)", fifths_to_note('C', -1, false), 'F')
 check("fifths_to_note('F#', 1) — accidental-bearing unison",
   fifths_to_note('F#', 1, false), 'C#')
+
+// ── raga catalogs: list_mela / list_thaat / mela_to_degrees ────────────────
+const melas = list_mela()
+check('list_mela() enumerates all 72 melakarta', Object.keys(melas).length, 72)
+check("list_mela()['kanakangi'] == 1 (first mela)", melas.kanakangi, 1)
+check("list_mela()['kharaharapriya'] == 22", melas.kharaharapriya, 22)
+check('list_thaat() — the 10 Hindustani thaats (librosa order)', list_thaat(),
+  ['bilaval', 'khamaj', 'kafi', 'asavari', 'bhairavi', 'kalyan', 'marva', 'poorvi', 'todi', 'bhairav'])
+check('mela_to_degrees(22) == [0,2,3,5,7,9,10] (librosa golden)',
+  mela_to_degrees(22), [0, 2, 3, 5, 7, 9, 10])
+check('mela_to_degrees by name == by number', mela_to_degrees('kharaharapriya'), mela_to_degrees(22))
+let melaThrew = false
+try { mela_to_degrees(73) } catch { melaThrew = true }
+checkTrue('mela_to_degrees(73) throws (valid range is 1..72)', melaThrew)
+
+// ── svara spelling: note/hz/midi → Carnatic (mela-aware) & Hindustani ───────
+// Carnatic on exact kharaharapriya (22) scale degrees — matches librosa 0.11.
+check('note_to_svara_c(mela 22 scale) == [S,R2,G2,M1,P,D2,N2] (librosa parity)',
+  note_to_svara_c(['C4', 'D4', 'Eb4', 'F4', 'G4', 'A4', 'Bb4'], 'C4', 22, true, true, false),
+  ['S', 'R2', 'G2', 'M1', 'P', 'D2', 'N2'])
+check('note_to_svara_h(major scale) == [S,R,G,M,P,D,N]',
+  note_to_svara_h(['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'], 'C4'),
+  ['S', 'R', 'G', 'M', 'P', 'D', 'N'])
+check("hz_to_svara_c([440], Sa=261.63, mela 22) == ['D₂'] (librosa parity)",
+  hz_to_svara_c([440], 261.63, 22), ['D₂'])
+check("hz_to_svara_h([440], Sa=261.63) == ['D'] (librosa parity)",
+  hz_to_svara_h([440], 261.63), ['D'])
+check("midi_to_svara_c([69], Sa=60, mela 22) == ['D₂'] (A4 over C4, librosa parity)",
+  midi_to_svara_c([69], 60, 22), ['D₂'])
+check("midi_to_svara_h([69], Sa=60) == ['D']", midi_to_svara_h([69], 60), ['D'])
+
+// ── FJS (simplified Functional Just System): fifth→G, third→E, octave→C ─────
+check("hz_to_fjs(440) == 'A4'", hz_to_fjs(440), 'A4')
+check('hz_to_fjs([220,330,440]) == [A3,E4,A4]', hz_to_fjs([220, 330, 440]), ['A3', 'E4', 'A4'])
+check('interval_to_fjs([3/2,5/4,2], unison C) == [G,E,C] (P5, M3, octave)',
+  interval_to_fjs([3 / 2, 5 / 4, 2], 'C', undefined, false), ['G', 'E', 'C'])
 
 summary('scripts/xa-notation.js — post-repair goldens vs librosa 0.11')
