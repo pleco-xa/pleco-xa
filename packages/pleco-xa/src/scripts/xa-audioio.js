@@ -1,4 +1,4 @@
-/* webLibrosa.js — High‑performance, browser‑ready port of key librosa IO, DSP & utility routines.
+/* xa-audioio.js — High‑performance, browser‑ready IO, DSP & utility routines.
  *
  * Now includes playback functionality via Web Audio API.
  *

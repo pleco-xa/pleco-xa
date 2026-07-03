@@ -1,16 +1,16 @@
 /**
- * tutorial — The librosa quickstart, pleco-native: same beats, both runtimes.
+ * tutorial — the quickstart, pleco-native: same beats, both runtimes.
  *
- * Quickstart half (bit-exact parity claim): the pinned librosa 0.11.0 fixture
+ * Quickstart half (bit-exact parity claim): the pinned reference fixture
  * signal (tools/parity/fixtures/tempo_beats.json, click120) is encoded to a
  * 16-bit WAV, decoded back with io/wav decodeWav, and run through beat_track —
- * tempo AND beat frames must EXACTLY equal the fixture's librosa values, even
+ * tempo AND beat frames must EXACTLY equal the fixture's pinned values, even
  * through PCM quantization. Beat times printed via convert.frames_to_time.
  *
  * Advanced half: effects.hpss (waveform tier) → beat_track(percussive) →
  * feature.mfcc + promoted delta_features, beat-synchronously aggregated with
  * the promoted util sync (explicit [0, …beats, T] boundaries — pleco's sync
- * aggregates BETWEEN consecutive boundaries; the librosa pad=True endpoints
+ * aggregates BETWEEN consecutive boundaries; the pad=True endpoints
  * are supplied by hand). tutorial.html reruns the same asserts as badges.
  */
 import {
@@ -27,14 +27,14 @@ const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')).cases[0]
 const sr = fixture.input.sr
 const y0 = Float32Array.from(fixture.input.y)
 console.log(`fixture: ${fixture.input.signal} (${fixture.input.true_bpm} BPM truth), ` +
-  `librosa tempo ${fixture.expected_tempo}, beats [${fixture.expected_beats}]`)
+  `fixture tempo ${fixture.expected_tempo}, beats [${fixture.expected_beats}]`)
 
-// ── quickstart: WAV round trip → beat_track, bit-exact vs librosa ───────────
+// ── quickstart: WAV round trip → beat_track, bit-exact vs fixture ───────────
 const { channels, sampleRate } = decodeWav(encodeWav([y0], sr))
 check('decoded sample rate', sampleRate, sr)
 const { tempo, beats } = beat_track(channels[0], sampleRate)
-check('tempo EXACTLY equals the pinned librosa fixture value', tempo, fixture.expected_tempo)
-check('beat frames EXACTLY equal the pinned librosa fixture', Array.from(beats), fixture.expected_beats)
+check('tempo EXACTLY equals the pinned fixture value', tempo, fixture.expected_tempo)
+check('beat frames EXACTLY equal the pinned fixture', Array.from(beats), fixture.expected_beats)
 
 const beatTimes = Array.from(beats, (b) => convert.frames_to_time(b, sr, 512))
 console.log(`tempo ${tempo.toFixed(2)} BPM — first 4 beat times: ` +
@@ -82,4 +82,4 @@ mean /= b2 - b1
 check('sync segment [beat1, beat2) == fround(exact mean of mfcc frames)',
   Msync[0][1], Math.fround(mean))
 
-summary('tutorial — quickstart bit-exact vs librosa fixture + advanced pipeline')
+summary('tutorial — quickstart bit-exact vs fixture + advanced pipeline')

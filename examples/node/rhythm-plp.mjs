@@ -7,7 +7,7 @@
  * (b) beat_sync exactness: beat_sync([1..8], [0,4,8], 'mean') === [2.5, 6.5],
  *     aggregate 'max' === [4, 8], and a 2D two-feature-row case is exact per row.
  * NOTE: plp here is a windowed-autocorrelation pulse-strength approximation, NOT
- * librosa's Fourier-tempogram PLP (documented on the barrel export).
+ * a full Fourier-tempogram PLP (documented on the barrel export).
  */
 import { plp, beat_sync } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'

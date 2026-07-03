@@ -1,7 +1,7 @@
 /**
  * Proof: plot_pcen_stream — streaming PCEN: block-wise == whole file.
  *
- * librosa's pcen_stream gallery example: process a long file in fixed-size
+ * A streaming PCEN pattern: process a long file in fixed-size
  * frame blocks, carrying the PCEN smoother's filter state (zi/zf) across
  * blocks, and prove the block-wise result equals the one-shot result.
  *
@@ -12,9 +12,9 @@
  * proves the carry actually matters — without it, block seams diverge.
  *
  * HONEST DIVERGENCE NOTE (also on the index.js export): pleco's pcen is a
- * real PCEN but not librosa-parity — smoother coefficient exp(-1/t_frames)
- * vs librosa's sqrt steady-state formula, and warmup starts from state 0
- * where librosa seeds lfilter_zi with frame 0. The streaming contract proven
+ * real PCEN with its own smoother coefficient exp(-1/t_frames) rather than a
+ * sqrt steady-state formula, and warmup starts from state 0 rather than
+ * seeding lfilter_zi with frame 0. The streaming contract proven
  * here is independent of those constants.
  */
 import fs from 'node:fs'

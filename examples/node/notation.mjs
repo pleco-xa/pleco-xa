@@ -1,7 +1,7 @@
 /**
- * scripts/xa-notation.js — post-repair notation golden table vs librosa 0.11.
+ * scripts/xa-notation.js — post-repair notation golden table.
  *
- * Every expected value below is a librosa golden. The four repaired bugs this
+ * Every expected value below is a reference golden. The four repaired bugs this
  * table gates:
  *   1. mela_to_svara is now SLOT-AWARE (degree 3 is G2 in the Ga slot, not R3;
  *      degree 10 is N2 in the Ni slot, not D3) — mela 22 previously returned
@@ -22,14 +22,14 @@ const {
   note_to_svara_c, note_to_svara_h, hz_to_fjs, interval_to_fjs,
 } = notation
 
-// ── mela_to_svara (ASCII rows: librosa unicode=False goldens) ───────────────
+// ── mela_to_svara (ASCII rows: unicode=False goldens) ───────────────────────
 check('mela_to_svara(22 kharaharapriya)', mela_to_svara(22, true, false),
   ['S', 'R2', 'G2', 'M1', 'P', 'D2', 'N2'])
 check('mela_to_svara(1 kanakangi)', mela_to_svara(1, true, false),
   ['S', 'R1', 'G1', 'M1', 'P', 'D1', 'N1'])
 check('mela_to_svara(65 mechakalyani)', mela_to_svara(65, true, false),
   ['S', 'R2', 'G3', 'M2', 'P', 'D2', 'N3'])
-check('mela_to_svara(22) unicode subscripts (librosa default)',
+check('mela_to_svara(22) unicode subscripts (default)',
   mela_to_svara(22), ['S', 'R₂', 'G₂', 'M₁', 'P', 'D₂', 'N₂'])
 check('mela_to_svara(22) full names', mela_to_svara(22, false, false),
   ['Sa', 'Ri2', 'Ga2', 'Ma1', 'Pa', 'Dha2', 'Ni2'])
@@ -48,8 +48,8 @@ try { key_to_notes('H:maj') } catch { threw = true }
 checkTrue('key_to_notes throws on unknown key (silent C:maj fallback repaired)', threw)
 check("key_to_degrees('C:maj') sanity", key_to_degrees('C:maj'), [0, 2, 4, 5, 7, 9, 11])
 
-// ── thaat_to_degrees: all 10 thaats vs librosa THAAT_MAP ────────────────────
-const LIBROSA_THAAT = {
+// ── thaat_to_degrees: all 10 thaats vs the reference THAAT_MAP ───────────────
+const THAAT_GOLDENS = {
   bilaval: [0, 2, 4, 5, 7, 9, 11],
   khamaj: [0, 2, 4, 5, 7, 9, 10],
   kafi: [0, 2, 3, 5, 7, 9, 10], // the repaired row (was duplicating asavari)
@@ -61,7 +61,7 @@ const LIBROSA_THAAT = {
   todi: [0, 1, 3, 6, 7, 8, 11],
   bhairav: [0, 1, 4, 5, 7, 8, 11],
 }
-for (const [thaat, degrees] of Object.entries(LIBROSA_THAAT)) {
+for (const [thaat, degrees] of Object.entries(THAAT_GOLDENS)) {
   check(`thaat_to_degrees('${thaat}')`, thaat_to_degrees(thaat), degrees)
 }
 
@@ -70,7 +70,7 @@ check('fifths_to_note C +1..+12', Array.from({ length: 12 }, (_, i) => fifths_to
   ['G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#', 'E#', 'B#'])
 check("fifths_to_note('B', 1) — boundary regression (was 'F')",
   fifths_to_note('B', 1, false), 'F#')
-check("fifths_to_note('G', -3) — librosa docstring golden",
+check("fifths_to_note('G', -3) — circle-of-fifths golden",
   fifths_to_note('G', -3, false), 'Bb')
 check("fifths_to_note('C', -1)", fifths_to_note('C', -1, false), 'F')
 check("fifths_to_note('F#', 1) — accidental-bearing unison",
@@ -81,9 +81,9 @@ const melas = list_mela()
 check('list_mela() enumerates all 72 melakarta', Object.keys(melas).length, 72)
 check("list_mela()['kanakangi'] == 1 (first mela)", melas.kanakangi, 1)
 check("list_mela()['kharaharapriya'] == 22", melas.kharaharapriya, 22)
-check('list_thaat() — the 10 Hindustani thaats (librosa order)', list_thaat(),
+check('list_thaat() — the 10 Hindustani thaats (canonical order)', list_thaat(),
   ['bilaval', 'khamaj', 'kafi', 'asavari', 'bhairavi', 'kalyan', 'marva', 'poorvi', 'todi', 'bhairav'])
-check('mela_to_degrees(22) == [0,2,3,5,7,9,10] (librosa golden)',
+check('mela_to_degrees(22) == [0,2,3,5,7,9,10] (reference golden)',
   mela_to_degrees(22), [0, 2, 3, 5, 7, 9, 10])
 check('mela_to_degrees by name == by number', mela_to_degrees('kharaharapriya'), mela_to_degrees(22))
 let melaThrew = false
@@ -91,18 +91,18 @@ try { mela_to_degrees(73) } catch { melaThrew = true }
 checkTrue('mela_to_degrees(73) throws (valid range is 1..72)', melaThrew)
 
 // ── svara spelling: note/hz/midi → Carnatic (mela-aware) & Hindustani ───────
-// Carnatic on exact kharaharapriya (22) scale degrees — matches librosa 0.11.
-check('note_to_svara_c(mela 22 scale) == [S,R2,G2,M1,P,D2,N2] (librosa parity)',
+// Carnatic on exact kharaharapriya (22) scale degrees.
+check('note_to_svara_c(mela 22 scale) == [S,R2,G2,M1,P,D2,N2]',
   note_to_svara_c(['C4', 'D4', 'Eb4', 'F4', 'G4', 'A4', 'Bb4'], 'C4', 22, true, true, false),
   ['S', 'R2', 'G2', 'M1', 'P', 'D2', 'N2'])
 check('note_to_svara_h(major scale) == [S,R,G,M,P,D,N]',
   note_to_svara_h(['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'], 'C4'),
   ['S', 'R', 'G', 'M', 'P', 'D', 'N'])
-check("hz_to_svara_c([440], Sa=261.63, mela 22) == ['D₂'] (librosa parity)",
+check("hz_to_svara_c([440], Sa=261.63, mela 22) == ['D₂']",
   hz_to_svara_c([440], 261.63, 22), ['D₂'])
-check("hz_to_svara_h([440], Sa=261.63) == ['D'] (librosa parity)",
+check("hz_to_svara_h([440], Sa=261.63) == ['D']",
   hz_to_svara_h([440], 261.63), ['D'])
-check("midi_to_svara_c([69], Sa=60, mela 22) == ['D₂'] (A4 over C4, librosa parity)",
+check("midi_to_svara_c([69], Sa=60, mela 22) == ['D₂'] (A4 over C4)",
   midi_to_svara_c([69], 60, 22), ['D₂'])
 check("midi_to_svara_h([69], Sa=60) == ['D']", midi_to_svara_h([69], 60), ['D'])
 
@@ -112,4 +112,4 @@ check('hz_to_fjs([220,330,440]) == [A3,E4,A4]', hz_to_fjs([220, 330, 440]), ['A3
 check('interval_to_fjs([3/2,5/4,2], unison C) == [G,E,C] (P5, M3, octave)',
   interval_to_fjs([3 / 2, 5 / 4, 2], 'C', undefined, false), ['G', 'E', 'C'])
 
-summary('scripts/xa-notation.js — post-repair goldens vs librosa 0.11')
+summary('scripts/xa-notation.js — post-repair notation goldens')

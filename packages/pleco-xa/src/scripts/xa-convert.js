@@ -1,7 +1,6 @@
 /**
- * Port of librosa.core.convert
  * Unit conversion and time/frequency transformations
- * Librosa-compatible conversion utilities for JavaScript
+ * Conversion utilities for JavaScript
  */
 
 /**
@@ -183,7 +182,7 @@ export function midi_to_note(midi, octave = true, cents = false) {
  * @returns {number|Array} MIDI note number(s)
  */
 export function note_to_midi(note, round_midi = true) {
-  // Leading note name is case-insensitive, matching librosa's note_to_midi
+  // Leading note name is case-insensitive
   const note_pattern = /^([A-Ga-g])(#|b)?(-?\d+)$/
 
   const convertSingle = (n) => {
@@ -625,8 +624,8 @@ export function blocks_to_time(blocks, block_length, hop_length, sr) {
 
 /**
  * Compute the frequencies (in BPM) corresponding to LAG-tempogram bins.
- * Port of librosa.convert.tempo_frequencies: bin k is autocorrelation lag k,
- * so bpm[k] = 60 * sr / (hop_length * k), and bin 0 (lag 0) is +Infinity.
+ * Lag-tempogram bin k is autocorrelation lag k, so
+ * bpm[k] = 60 * sr / (hop_length * k), and bin 0 (lag 0) is +Infinity.
  *
  * Tier-3 repair (2026-07-02): the previous body computed a LINEAR Fourier
  * frequency grid (fourier_tempo_frequencies math with a fabricated
@@ -662,7 +661,7 @@ export function times_like(X, sr = 22050, hop_length = 512, n_fft = null, axis =
   if (typeof X === 'number') {
     n_frames = X
   } else if (isArrayLike(X)) {
-    // Assume [freq x time] format (Librosa default)
+    // Assume [freq x time] format (default)
     n_frames = X[0] ? X[0].length : 0
   } else {
     throw new Error('X must be a number or array')
@@ -875,7 +874,7 @@ export function multi_frequency_weighting(frequencies, kinds = ['Z', 'A', 'C'], 
   });
 }
 
-// Librosa-faithful public aliases: librosa.core.convert exports these as
+// Public capitalized aliases for the weighting functions:
 // A_weighting, B_weighting, C_weighting, D_weighting, Z_weighting
 export const A_weighting = a_weighting
 export const B_weighting = b_weighting

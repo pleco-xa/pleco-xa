@@ -1,8 +1,8 @@
 /**
- * filters/ — librosa.filters ports (fixture-verified) + re-exports of the
+ * filters/ — filter-bank builders (fixture-verified) + re-exports of the
  * parity-gated window and mel filterbank builders.
  *
- * chroma() is a faithful port of librosa 0.11.0 filters.chroma:
+ * chroma() builds the filters.chroma bank:
  * Gaussian pitch-class bumps over log-frequency bins, binwidth-adaptive,
  * octave-dominance (octwidth) Gaussian weighting, tuning shift and base-C roll.
  *
@@ -21,7 +21,7 @@ function rint(x) {
 }
 
 /**
- * Chroma filter bank (librosa.filters.chroma).
+ * Chroma filter bank.
  * Projects FFT bins onto n_chroma pitch classes via Gaussian bumps.
  *
  * @param {Object} options

@@ -1,7 +1,7 @@
 /**
  * Proof: scripts/xa-beat-tracker.js — canonical beat engine: click train in, beat grid out.
  * A synthetic 10s click train at 120 BPM (5ms decaying 1kHz bursts every 0.5s, sr=22050)
- * goes through the librosa-parity beat_track() and the explicit quick tier quickTempo().
+ * goes through the parity-tier beat_track() and the explicit quick tier quickTempo().
  * Proofs: tempo lands in one of the two lag bins bracketing 120 BPM (117.45 / 123.05 at
  * hop=512), 18-21 beats over 10s, median inter-beat interval within one hop (23.2ms) of
  * 0.500s, and quickTempo lands in the SAME lag bin with a measured confidence > 0.

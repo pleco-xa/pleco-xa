@@ -22,8 +22,7 @@
 <p>
   The upgraded sibling of <code>plot-segmentation</code>. That page stops at
   <code>recurrence + agglomerative</code> (the contiguous, bottom-up Ward slice).
-  This one runs the full librosa gallery recipe
-  (<code>docs/examples/plot_segmentation.py</code>), now that every primitive
+  This one runs the full spectral-clustering recipe, now that every primitive
   exists in pleco:
 </p>
 <p>
@@ -43,8 +42,8 @@
   it asserts only what is verifiable from the output (k distinct labels,
   strictly-increasing internal boundaries, adjacent segments differ, bit-identical
   on re-run, and a genuinely recurring section). Feature rows are z-scored so the
-  large-magnitude MFCCs and the [0,1] chroma contribute comparably (librosa uses
-  CQT for recurrence and MFCC for the path separately; pleco's single-matrix API
+  large-magnitude MFCCs and the [0,1] chroma contribute comparably (the canonical
+  method uses CQT for recurrence and MFCC for the path separately; pleco's single-matrix API
   needs one balanced stack — documented divergence).
 </p>
 <div id="badges"></div>

@@ -6,7 +6,7 @@
  * monotonic magnitude ramp — __cqt_response multiplied TIME-domain wavelets
  * element-wise against STFT FREQUENCY bins (category error), resample() was
  * called positionally against an options-object signature (silent no-op),
- * and stft() got 8 positional args. Repair (2026-07-02): librosa-shaped
+ * and stft() got 8 positional args. Repair (2026-07-02): a proper
  * frequency-domain filter basis (wavelet → pad_center → ×lengths/n_fft →
  * FFT → non-negative bins) dotted with stft(y, n_fft, hop, window='ones'),
  * scale=true now DIVIDES by sqrt(lengths).
@@ -21,10 +21,10 @@
  *
  * Honest-fail surface (NOT minimally repairable, now throws instead of
  * returning garbage): icqt (previous body overlap-added the analysis basis —
- * not librosa's dual frame — through an O(N²) IDFT) and griffinlim_cqt
+ * not the correct dual frame — through an O(N²) IDFT) and griffinlim_cqt
  * (depends on icqt). Asserted to throw. pseudo_cqt / vqt / hybrid_cqt were
  * repaired to the same fft-basis path and cross-checked here (same peak bin)
- * but remain OFF the curated surface pending librosa fixtures.
+ * but remain OFF the curated surface pending reference fixtures.
  */
 import { cqt } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import {

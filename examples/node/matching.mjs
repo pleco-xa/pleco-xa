@@ -12,10 +12,10 @@ import { check, checkTrue, summary } from './_harness.mjs'
 
 const { matchEvents, matchIntervals } = sequence
 
-// (1) The documented librosa tie-handling golden: each event matches the
-// nearest target, ties resolving per librosa's exact middle/left/right logic.
+// (1) The documented tie-handling golden: each event matches the
+// nearest target, ties resolving per the exact middle/left/right logic.
 check(
-  'matchEvents([0.5,1.5,2.5], [0,1,2,3]) — librosa tie golden',
+  'matchEvents([0.5,1.5,2.5], [0,1,2,3]) — tie golden',
   Array.from(matchEvents([0.5, 1.5, 2.5], [0, 1, 2, 3])),
   [1, 2, 3],
 )

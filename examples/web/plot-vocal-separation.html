@@ -19,7 +19,7 @@
 </style>
 </head>
 <body>
-<h1>plot_vocal_separation — librosa's REPET-SIM (nn_filter) vs pleco's fingerprint method, on a real vocal mix</h1>
+<h1>plot_vocal_separation — REPET-SIM (nn_filter) vs pleco's fingerprint method, on a real vocal mix</h1>
 <p>
   Input is a real 16 s excerpt of <code>Orphans</code> (mono, 22.05 kHz) — a full
   band mix with sung vocals. This run has <b>true ground truth</b>: the isolated
@@ -28,7 +28,7 @@
   only the mixture.
 </p>
 <p>
-  <b>A. REPET-SIM</b> (librosa gallery recipe, <b>unsupervised</b>):
+  <b>A. REPET-SIM</b> (repetition-based separation, <b>unsupervised</b>):
   <code>decompose.nn_filter(|STFT|, median, cosine, width=2 s)</code> →
   element-min with S → <code>decompose.softmask</code> (margins 2/10, power 2)
   → istft with the mixture phase. It models the <i>repeating</i> background and
@@ -83,7 +83,7 @@ const D = stft(mixture, N_FFT, HOP)
 const S_full = D.map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
 const nF = S_full.length, nT = S_full[0].length
 
-const widthFrames = Math.round((2 * SR) / HOP) // librosa: width = time_to_frames(2 s)
+const widthFrames = Math.round((2 * SR) / HOP) // width = time_to_frames(2 s)
 const S_filter = nn_filter(S_full, { aggregate: 'median', metric: 'cosine', width: widthFrames })
 for (let f = 0; f < nF; f++) for (let t = 0; t < nT; t++) S_filter[f][t] = Math.min(S_full[f][t], S_filter[f][t])
 

@@ -1,7 +1,6 @@
 /**
- * Port of librosa.effects
  * Audio effects and transformations
- * Librosa-compatible audio effects for JavaScript
+ * Audio effects for JavaScript
  */
 
 import { stft, istft } from './xa-fft.js'
@@ -9,7 +8,6 @@ import { hpss } from './xa-decompose.js'
 
 /**
  * Time-stretch audio without changing pitch
- * Port of librosa.effects.time_stretch
  * @param {Float32Array} y - Audio time series
  * @param {number} rate - Stretch factor (> 1 = faster, < 1 = slower)
  * @param {number} n_fft - FFT size
@@ -83,7 +81,6 @@ function phase_vocoder(D, rate, hop_length) {
 
 /**
  * Trim leading and trailing silence
- * Port of librosa.effects.trim
  * @param {Float32Array} y - Audio signal
  * @param {number} top_db - Threshold in dB below peak
  * @param {number} frame_length - Frame length for RMS
@@ -135,7 +132,6 @@ export function trim(y, top_db = 60, frame_length = 2048, hop_length = 512) {
 
 /**
  * Split audio on silence
- * Port of librosa.effects.split
  * @param {Float32Array} y - Audio signal
  * @param {number} top_db - Threshold in dB
  * @param {number} frame_length - Frame length
@@ -208,7 +204,6 @@ export function percussive(y, margin = 1.0) {
 
 /**
  * Remix audio by rearranging intervals
- * Port of librosa.effects.remix
  * @param {Float32Array} y - Audio signal
  * @param {Array} intervals - Array of [start, end, output_start] tuples
  * @param {boolean} align_zeros - Align on zero crossings
@@ -296,7 +291,7 @@ export function deemphasis(y, coef = 0.97) {
 
 /**
  * Convert signal-level non-silent regions to frame indices
- * Private helper from librosa.effects._signal_to_frame_nonsilent
+ * Private helper (_signal_to_frame_nonsilent)
  *
  * @private
  * @param {Array} y_signal - Boolean array indicating non-silent samples
@@ -340,7 +335,6 @@ export function _signal_to_frame_nonsilent(y_signal, frame_length, hop_length) {
 
 /**
  * IIR filter implementation using Web Audio API
- * Port of librosa.iirt
  *
  * @param {Float32Array} y - Input signal
  * @param {Array} b - Numerator coefficients
@@ -368,7 +362,6 @@ export function iirt(y, b, a) {
 
 /**
  * Non-negative least squares (simplified implementation)
- * Port of librosa.util._nnls.nnls
  *
  * @param {Array} A - Matrix [[...], [...]]
  * @param {Array} b - Vector [...]

@@ -1,6 +1,5 @@
 /**
- * plot_patch_generation — fixed-size mel patches for ML pipelines
- * (librosa advanced-example replica).
+ * plot_patch_generation — fixed-size mel patches for ML pipelines.
  *
  * Decodes the house-corpus speech-like WAV (am-noise vocal stand-in),
  * computes feature.melspectrogram, then carves overlapping fixed-size
@@ -8,7 +7,7 @@
  *   frameLength = time_to_frames(5.0), hopLength = time_to_frames(0.1).
  *
  * Proofs: n_patches == 1 + floor((T − L)/H) exactly, and patch #1
- * elementwise-equals melspec[:, H:H+L]. DIVERGENCE vs librosa (documented,
+ * elementwise-equals melspec[:, H:H+L]. Copy semantics (documented,
  * asserted): frame() returns COPIES — JS has no strided views, so mutating a
  * patch must NOT write through to the spectrogram.
  */
@@ -57,10 +56,10 @@ for (let m = 0; m < nMels; m++) {
 }
 check('patches[1] elementwise == melspec[:, H:H+L] (0 mismatches)', mismatches, 0)
 
-// Documented librosa divergence: patches are COPIES, not strided views.
+// Copy semantics: patches are COPIES, not strided views.
 const before = melspec[0][H]
 patches[1][0][0] = 12345
-checkTrue('frame() returns copies — mutating a patch does NOT touch melspec (librosa divergence)',
+checkTrue('frame() returns copies — mutating a patch does NOT touch melspec (copy semantics)',
   melspec[0][H] === before, `melspec[0][${H}] still ${before.toExponential(3)}`)
 
 summary('plot_patch_generation — mel patches via promoted util frame()')

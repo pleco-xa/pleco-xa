@@ -1,5 +1,5 @@
 /**
- * Librosa-style Mel filterbank and MFCC computation for JavaScript
+ * Mel filterbank and MFCC computation for JavaScript
  * Mel-scale frequency analysis for audio processing
  */
 
@@ -61,7 +61,7 @@ export function mel_filterbank(
 
     for (let j = 0; j < n_freq_bins; j++) {
       // Continuous triangular ramps over the FFT bin center frequencies
-      // (librosa filters.mel: lower = -ramps[i]/fdiff[i], upper = ramps[i+2]/fdiff[i+1])
+      // (filters.mel: lower = -ramps[i]/fdiff[i], upper = ramps[i+2]/fdiff[i+1])
       const lower = (fftfreqs[j] - mel_f[i]) / fdiff[i]
       const upper = (mel_f[i + 2] - fftfreqs[j]) / fdiff[i + 1]
       const weight = Math.max(0, Math.min(lower, upper))
@@ -69,7 +69,7 @@ export function mel_filterbank(
     }
 
     if (typeof norm === 'number') {
-      // Unit l_p norm per filter (librosa util.normalize semantics)
+      // Unit l_p norm per filter (util.normalize semantics)
       let norm_sum = 0
       for (let j = 0; j < n_freq_bins; j++) {
         norm_sum += Math.pow(Math.abs(filterbank[i][j]), norm)
@@ -99,7 +99,7 @@ export function hz_to_mel(hz, htk = false) {
     return 2595 * Math.log10(1 + hz / 700)
   }
 
-  // Slaney formula (default in Librosa)
+  // Slaney formula (default)
   const f_min = 0.0
   const f_sp = 200.0 / 3
 
@@ -130,7 +130,7 @@ export function mel_to_hz(mel, htk = false) {
     return 700 * (Math.pow(10, mel / 2595) - 1)
   }
 
-  // Slaney formula (default in Librosa)
+  // Slaney formula (default)
   const f_min = 0.0
   const f_sp = 200.0 / 3
   const min_log_hz = 1000.0
@@ -159,7 +159,7 @@ export function linspace(start, stop, num) {
 }
 
 /**
- * Compute Mel spectrogram (Librosa-compatible)
+ * Compute Mel spectrogram
  * @param {Float32Array} y - Audio signal (optional if S provided)
  * @param {number} sr - Sample rate
  * @param {Array} S - Pre-computed power spectrogram [freq][time] (optional)
@@ -208,7 +208,7 @@ export function melspectrogram(
     power_spec = S
   } else if (y !== null) {
     // Compute power spectrogram from audio
-    // stft() now returns [freq][time] format (Librosa-compatible)
+    // stft() now returns [freq][time] format
     const stft_matrix = stft(
       y,
       n_fft,
@@ -243,7 +243,7 @@ export function melspectrogram(
   const mel_fb = mel_filterbank(sr, n_fft, n_mels, fmin, fmax, norm, htk)
 
   // Apply filterbank: mel_spec[m][t] = sum_f(mel_fb[m][f] * power_spec[f][t])
-  // Output: [n_mels][n_frames] (Librosa format)
+  // Output: [n_mels][n_frames]
   const mel_spec = Array(n_mels)
     .fill(null)
     .map(() => new Float32Array(n_frames))
@@ -262,7 +262,7 @@ export function melspectrogram(
 }
 
 /**
- * Compute Mel-Frequency Cepstral Coefficients (MFCCs) - Librosa-compatible.
+ * Compute Mel-Frequency Cepstral Coefficients (MFCCs).
  *
  * Wave-4: delegates to the fixture-verified feature/mfcc.js pipeline
  * (power_to_db instead of the old natural log, cached ortho DCT-II basis
@@ -273,7 +273,7 @@ export function melspectrogram(
  * @param {number} sr - Sample rate
  * @param {Array} S - Pre-computed mel POWER spectrogram [n_mels][n_frames]
  *   (this shim's historical semantics: dB conversion is applied for you;
- *   feature/mfcc.js takes a log-power mel spectrogram like librosa)
+ *   feature/mfcc.js takes a log-power mel spectrogram)
  * @param {number} n_mfcc - Number of MFCCs to return
  * @param {number} dct_type - DCT type (only 2 is supported)
  * @param {string|null} norm - DCT normalization ('ortho' or null)
@@ -329,7 +329,7 @@ export function mfcc(
 }
 
 /**
- * Discrete Cosine Transform (Librosa-compatible)
+ * Discrete Cosine Transform
  * @param {Array} signal - Input signal
  * @param {number} type - DCT type (1, 2, or 3)
  * @param {string|null} norm - Normalization ('ortho' or null)
@@ -358,7 +358,7 @@ export function dct(signal, type = 2, norm = 'ortho') {
       }
     }
   } else if (type === 2) {
-    // DCT Type-II (most common, used by Librosa)
+    // DCT Type-II (most common)
     for (let k = 0; k < N; k++) {
       let sum = 0
       for (let n = 0; n < N; n++) {
@@ -397,7 +397,7 @@ export function dct(signal, type = 2, norm = 'ortho') {
 }
 
 /**
- * Inverse Discrete Cosine Transform (Librosa-compatible)
+ * Inverse Discrete Cosine Transform
  * @param {Array} dct_coeffs - DCT coefficients
  * @param {number} type - DCT type (1, 2, or 3)
  * @param {string|null} norm - Normalization ('ortho' or null)
@@ -519,7 +519,7 @@ export function lifter_mfcc(mfcc_matrix, L = 22) {
   const n_mfcc = mfcc_matrix.length
   const n_frames = mfcc_matrix[0].length
 
-  // Compute liftering weights — librosa indexing: sin(pi * (i + 1) / L)
+  // Compute liftering weights — indexing: sin(pi * (i + 1) / L)
   // (the old sin(pi * i / L) was an off-by-one that left c0 unweighted)
   const lifter_weights = new Array(n_mfcc)
   for (let i = 0; i < n_mfcc; i++) {

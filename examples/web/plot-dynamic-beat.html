@@ -16,7 +16,7 @@
 <body>
 <h2>plot-dynamic-beat — beat tracking through a 90→140 BPM tempo switch</h2>
 <p>
-  librosa's <code>plot_dynamic_beat</code> in the browser. A click track (5&nbsp;ms decaying 1&nbsp;kHz
+  Dynamic beat tracking in the browser. A click track (5&nbsp;ms decaying 1&nbsp;kHz
   bursts, sr=22050) plays <b>90&nbsp;BPM for 4&nbsp;s, then 140&nbsp;BPM for 4&nbsp;s</b>. Two trackers
   run on it. The <span class="r">static</span> tracker takes one scalar
   <code>tempo()</code> for the whole clip, so its beats keep a single spacing and over-detect in the
@@ -24,7 +24,7 @@
   <code>tempo(aggregate:null)</code> curve, feeds it to <code>beat_track(bpm=array)</code>, and its
   beat spacing bends with the music — the inter-beat interval drops from ~0.667&nbsp;s to
   ~0.429&nbsp;s exactly at the switch. Prior width matters: this narrow 90–140 range needs the
-  default <code>std_bpm=1</code> (librosa's snare-accelerate demo uses 4 for its 30–240 span; here
+  default <code>std_bpm=1</code> (a wider std_bpm=4 suits a 30–240 span; here
   the wide prior would collapse 140&nbsp;BPM onto its 70&nbsp;BPM subharmonic). Same asserts as
   <code>examples/node/plot-dynamic-beat.mjs</code>.
 </p>

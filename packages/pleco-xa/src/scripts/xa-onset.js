@@ -1,5 +1,5 @@
 /**
- * Librosa-style onset detection - JavaScript port
+ * Onset detection - JavaScript implementation
  * High-performance implementation for real-time audio analysis
  */
 
@@ -25,8 +25,7 @@ function fft(signal) {
 }
 
 /**
- * Port of librosa.onset.onset_detect()
- * Fast spectral flux-based onset detection
+ * onset_detect() — fast spectral flux-based onset detection
  */
 export function onsetDetect(
   audioData,
@@ -144,14 +143,14 @@ function maximumFilterFreq(S, size) {
 }
 
 /**
- * Port of librosa.onset.onset_strength() (librosa 0.11.0 semantics).
+ * onset_strength() — log-power-mel onset strength envelope.
  *
  * S = power_to_db(melspectrogram(y, sr, n_fft, hop_length, fmax=sr/2))
  * onset_env[t] = mean_f max(0, S[f, t] - ref[f, t - lag])
  * padded left by lag + n_fft // (2 * hop_length) frames (center=true),
  * then trimmed to the frame count of S.
  *
- * Accepts either librosa-style positional args `(y, sr, hop_length)` or an
+ * Accepts either positional args `(y, sr, hop_length)` or an
  * options object `(y, { sr, hop_length, ... })`.
  *
  * @param {Float32Array|Array} y - 1-D audio signal (or null if opts.S given)
@@ -167,16 +166,15 @@ function maximumFilterFreq(S, size) {
  *   @param {boolean} [opts.center=true]     compensate for centered STFT frames
  *   @param {number} [opts.n_mels=128]       mel bands for the default feature
  *   @param {number} [opts.fmin=0]           lowest mel frequency
- *   @param {number} [opts.fmax=sr/2]        highest mel frequency (librosa default)
+ *   @param {number} [opts.fmax=sr/2]        highest mel frequency (default)
  *   @param {boolean} [opts.htk=false]       HTK mel scale
  *   @param {string} [opts.aggregate='mean'] frequency aggregation: 'mean'
- *     (librosa onset_strength default) or 'median' (what librosa.beat.beat_track
- *     passes as aggregate=np.median)
+ *     (default) or 'median' (used by beat_track, aggregate=np.median)
  * @param {number} [maybeHop] - hop_length when called positionally (y, sr, hop)
  * @returns {Float32Array} onset strength envelope
  */
 export function onset_strength(y, opts = {}, maybeHop) {
-  // Support the legacy/librosa positional call style: onset_strength(y, sr, hop_length)
+  // Support the legacy positional call style: onset_strength(y, sr, hop_length)
   if (typeof opts === 'number') {
     opts = { sr: opts }
     if (typeof maybeHop === 'number') opts.hop_length = maybeHop
@@ -195,7 +193,7 @@ export function onset_strength(y, opts = {}, maybeHop) {
     center = true,
     n_mels = 128,
     fmin = 0,
-    fmax = 0.5 * sr, // librosa: kwargs.setdefault('fmax', 0.5 * sr)
+    fmax = 0.5 * sr, // default: fmax = 0.5 * sr
     htk = false,
     aggregate = 'mean',
   } = opts
@@ -218,7 +216,7 @@ export function onset_strength(y, opts = {}, maybeHop) {
     if (y === null || y === undefined) {
       throw new Error('Either y or opts.S must be provided')
     }
-    // Log-power mel spectrogram (librosa default feature)
+    // Log-power mel spectrogram (default feature)
     const melspec = melspectrogram(
       y,
       sr,
@@ -236,7 +234,7 @@ export function onset_strength(y, opts = {}, maybeHop) {
       'slaney',
       htk,
     )
-    S = power_to_db(melspec) // ref=1.0, amin=1e-10, top_db=80 (librosa defaults)
+    S = power_to_db(melspec) // ref=1.0, amin=1e-10, top_db=80 (defaults)
   }
 
   const nFreq = S.length
@@ -251,7 +249,7 @@ export function onset_strength(y, opts = {}, maybeHop) {
   }
 
   // Rectified difference at the given lag, aggregated over frequency bins
-  // (librosa: aggregate(np.maximum(0, S[..., lag:] - ref[..., :-lag]), axis=-2))
+  // aggregate(np.maximum(0, S[..., lag:] - ref[..., :-lag]), axis=-2)
   const rawLen = Math.max(0, nFrames - lag)
   const raw = new Float64Array(rawLen)
   if (aggregate === 'mean') {
@@ -308,7 +306,7 @@ export function onset_strength(y, opts = {}, maybeHop) {
 
 /**
  * Peak picking for onset detection
- * Port of librosa's peak picking algorithm
+ * Peak picking algorithm
  */
 export function pickPeaks(onsetStrength, { delta = 0.07, wait = 20 } = {}) {
   const peaks = []

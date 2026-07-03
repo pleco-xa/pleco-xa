@@ -1,6 +1,5 @@
 /**
  * Harmonic analysis functions
- * Based on librosa's harmonic.py module
  *
  * Provides:
  * - f0_harmonics - Extract energy at harmonics of fundamental frequency
@@ -37,13 +36,13 @@ export function f0_harmonics(
     throw new Error('freqs length must match frequency dimension of x')
   }
 
-  // librosa accepts a scalar f0 (broadcast to every frame) OR a per-frame array.
+  // Accepts a scalar f0 (broadcast to every frame) OR a per-frame array.
   const f0arr = typeof f0 === 'number' ? new Array(n_frames).fill(f0) : f0
   if (f0arr.length !== n_frames) {
     throw new Error('f0 length must match number of frames in x')
   }
 
-  // librosa filters to FINITE frequency bins (dropping NaN/±Inf — e.g. the Inf
+  // Filter to FINITE frequency bins (dropping NaN/±Inf — e.g. the Inf
   // head of a tempo-frequency grid) and interpolates on that sub-grid. Sort
   // ascending so the bracketing search is monotonic regardless of input order
   // (tempo_frequencies is descending).
@@ -123,7 +122,7 @@ export function interp_harmonics(
 }
 
 /**
- * Compute the harmonic salience function (librosa.salience semantics)
+ * Compute the harmonic salience function
  *
  * Salience measures how well the energy distribution matches a harmonic
  * template: aggregate (default: weighted MEAN, np.average) of the energy at
@@ -133,7 +132,7 @@ export function interp_harmonics(
  *
  * Tier-2 repair note (2026-07-02): the previous implementation filtered each
  * harmonic-energy row for local maxima along the TIME axis and aggregated by
- * weighted SUM — diverging from librosa whenever filter_peaks=true (the
+ * weighted SUM — diverging whenever filter_peaks=true (the
  * default). Repaired to frequency-axis peaks of S + weighted average.
  *
  * @param {Array<Array<number>>} S - Spectrogram or time-frequency representation [freq x time]
@@ -163,7 +162,7 @@ export function salience(
   const n_frames = S[0].length
   const n_harmonics = harmonics.length
 
-  // Default weights (uniform, librosa: np.ones)
+  // Default weights (uniform, np.ones)
   if (weights === null) {
     weights = Array(n_harmonics).fill(1.0)
   }
@@ -176,8 +175,8 @@ export function salience(
   const harmonic_energies = interp_harmonics(S, freqs, harmonics, kind, fill_value, axis)
 
   // Aggregate harmonics per (freq, time) bin.
-  // Default matches np.average: sum(w*v)/sum(w), NaN propagating — librosa
-  // does NOT skip non-finite harmonic values here.
+  // Default matches np.average: sum(w*v)/sum(w), NaN propagating — non-finite
+  // harmonic values are NOT skipped here.
   const salience_output = Array(n_freqs).fill(null).map(() => Array(n_frames).fill(0))
 
   if (aggregate === null) {
@@ -334,7 +333,7 @@ function _f_interp_core(x_data, y_data, x_targets, kind = 'linear', fill_value =
 
 /**
  * Harmonic interpolation helper - static frequency grid
- * Equivalent to librosa's _f_interps nested function
+ * Equivalent to the _f_interps nested function
  *
  * Interpolates data at target frequencies, filtering out non-finite frequencies
  *
@@ -367,7 +366,7 @@ export function _f_interps(data, freqs, target_freqs, kind = 'linear', fill_valu
 
 /**
  * Harmonic interpolation helper - dynamic frequency grid
- * Equivalent to librosa's _f_interpd nested function
+ * Equivalent to the _f_interpd nested function
  *
  * Interpolates data at target frequencies using a dynamic (per-frame) frequency grid
  *
@@ -400,7 +399,7 @@ export function _f_interpd(data, frequencies, target_freqs, kind = 'linear', fil
 
 /**
  * Harmonic interpolation - outer product variant
- * Equivalent to librosa's _f_interp nested function
+ * Equivalent to the _f_interp nested function
  *
  * Interpolates using outer product of frequencies with harmonics
  * Used in interp_harmonics for computing harmonic energy across frequency grid

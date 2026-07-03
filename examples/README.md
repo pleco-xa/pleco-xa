@@ -64,17 +64,16 @@ for f in examples/node/*.mjs; do node "$f" >/dev/null && echo "ok  $f" || echo "
 
 A few good ones to start with: `convert-goldens.mjs` (unit conversions vs
 golden values), `linalg-cluster.mjs` (eigensolver + k-means), `beat-tracker.mjs`
-(tempo/beat vs librosa), `streaming-meters.mjs` (real-time RMS/flux).
+(tempo/beat against committed fixtures), `streaming-meters.mjs` (real-time RMS/flux).
 
 ---
 
 ## What they prove
 
 These aren't toys — every assertion is checked against ground truth. Numerical
-demos are validated against **librosa** (the reference Python library) via
-committed fixtures; loop/vocal demos assert real recovery metrics. If a demo
-passes, that capability genuinely works. Nothing silently falls back or fakes a
-result.
+demos are validated against **committed reference fixtures**; loop/vocal demos
+assert real recovery metrics. If a demo passes, that capability genuinely works.
+Nothing silently falls back or fakes a result.
 
 ---
 

@@ -1,7 +1,7 @@
 /**
- * feature/mfcc.js — librosa.feature.mfcc / melspectrogram, fixture-verified.
+ * feature/mfcc.js — mfcc / melspectrogram, fixture-verified.
  *
- * Pipeline (librosa 0.11.0): S = power_to_db(melspectrogram(y)) →
+ * Pipeline: S = power_to_db(melspectrogram(y)) →
  * DCT-II (ortho) along the mel axis → first n_mfcc rows → optional liftering.
  *
  * Builds on the parity-gated foundations:
@@ -22,7 +22,7 @@ import { mfccFromLogMel } from './dct.js'
 export { dctBasis, mfccFromLogMel } from './dct.js'
 
 /**
- * Mel spectrogram with librosa-style (y, options) API.
+ * Mel spectrogram with a (y, options) API.
  * Thin wrapper over the parity-gated scripts/xa-mel.js implementation.
  * @param {Float32Array|Array|null} y - time series (or null when S given)
  * @param {Object} options - { sr, S, n_fft, hop_length, win_length, window,
@@ -54,17 +54,17 @@ export function melspectrogram(y = null, options = {}) {
 }
 
 /**
- * Mel-frequency cepstral coefficients (librosa.feature.mfcc).
+ * Mel-frequency cepstral coefficients.
  * @param {Float32Array|Array|null} y - time series (or null when S given)
  * @param {Object} options
  * @param {Array|null} options.S - precomputed LOG-power mel spectrogram
- *   (librosa semantics: pass power_to_db(melspectrogram(...)))
+ *   (pass power_to_db(melspectrogram(...)))
  * @param {number} options.n_mfcc - number of coefficients (default 20)
  * @param {number} options.dct_type - only type 2 is implemented
  * @param {string|null} options.norm - DCT normalization: 'ortho' (default) or null
  * @param {number} options.lifter - cepstral liftering parameter (default 0)
  * @param {string|number|null} options.mel_norm - mel filterbank normalization
- *   forwarded to melspectrogram as `norm` (librosa signature; default 'slaney')
+ *   forwarded to melspectrogram as `norm` (default 'slaney')
  * Remaining options forward to melspectrogram (sr, n_fft, hop_length, n_mels, ...).
  * @returns {Array<Float64Array>} [n_mfcc][n_frames]
  */

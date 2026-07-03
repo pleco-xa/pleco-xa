@@ -4,7 +4,7 @@
  * pYIN is NOT just YIN-with-a-median: it builds a beta/Boltzmann-weighted
  * observation matrix over a log-spaced pitch grid + an unvoiced state block,
  * then Viterbi-decodes it through a transition_local ⊗ voiced/unvoiced-switch
- * matrix. This proof drives librosa's own pyin fixture signal — a 220 Hz tone
+ * matrix. This proof drives the pyin fixture signal — a 220 Hz tone
  * that steps to 330 Hz, then a silent tail — and asserts:
  *   1. the decoded f0 tracks 220 then 330 Hz within a fraction of a semitone,
  *   2. the silent tail decodes UNVOICED (f0 = NaN) on every frame,

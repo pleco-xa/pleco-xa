@@ -1,23 +1,21 @@
 /**
  * Canonical rhythm engine — the ONLY module that exports beat_track / tempo.
  *
- * Faithful port of librosa 0.11.0:
- *   - tempo():      librosa.feature.tempo   (feature/rhythm.py) — local
- *                   autocorrelation tempogram + pseudo-log-normal tempo prior
- *                   (start_bpm=120, std_bpm=1.0 in log2 space).
- *   - beat_track(): librosa.beat.beat_track (beat.py) — Ellis dynamic
- *                   programming beat tracker, including librosa's exact
+ * Two rhythm estimators:
+ *   - tempo():      local autocorrelation tempogram + pseudo-log-normal tempo
+ *                   prior (start_bpm=120, std_bpm=1.0 in log2 space).
+ *   - beat_track(): Ellis dynamic programming beat tracker, with its
  *                   localscore convolution, DP search bounds, last-beat
  *                   selection, and hanning-smoothed beat trimming.
  *
- * Both consume the librosa-parity onset_strength() from ./xa-onset.js
- * (beat_track uses aggregate='median', exactly like librosa.beat.beat_track).
+ * Both consume onset_strength() from ./xa-onset.js
+ * (beat_track uses aggregate='median').
  *
- * Parity is fixture-gated against tools/parity/fixtures/tempo_beats.json in
+ * Output is fixture-gated against tools/parity/fixtures/tempo_beats.json in
  * tests/parity/beat.parity.test.js.
  *
  * Tier law (explicit tiers, never silent fallbacks):
- *   - tempo() / beat_track()  → parity tier. Slow but librosa-exact.
+ *   - tempo() / beat_track()  → precise tier. Slow but numerically exact.
  *   - quickTempo()            → quick tier. Windowed lb-style live estimate
  *                               over the last N seconds. Distinct name,
  *                               distinct semantics; tempo() NEVER falls back
@@ -31,7 +29,7 @@ import { onset_strength } from './xa-onset.js'
 import { tempogram } from './xa-tempogram.js'
 import { debugLog } from './debug.js'
 
-// np.finfo(np.float32).tiny — librosa envelopes are float32, and
+// np.finfo(np.float32).tiny — onset envelopes are float32, and
 // __normalize_onsets adds util.tiny(onsets) to the standard deviation.
 const FLOAT32_TINY = 1.1754943508222875e-38
 
@@ -67,7 +65,7 @@ function median(values) {
 }
 
 /**
- * librosa.util.localmax along the last axis with edge padding:
+ * Local maxima along the last axis with edge padding:
  * localmax[i] = x[i] > x[i-1] && x[i] >= x[i+1]; localmax[0] is always false,
  * localmax[n-1] reduces to x[n-1] > x[n-2].
  * @private
@@ -83,7 +81,7 @@ function localMax(x) {
 }
 
 /**
- * librosa.convert.tempo_frequencies: BPM value of each autocorrelation lag.
+ * BPM value of each autocorrelation lag.
  * Bin 0 is +Infinity (lag 0).
  * @private
  */
@@ -120,14 +118,13 @@ function assertSampleRate(sr) {
 }
 
 /* ------------------------------------------------------------------------ *
- * Tempogram (librosa.feature.tempogram, center=True, window='hann',
- * norm=np.inf) — returned as the time-mean column, which is all
- * librosa.feature.tempo consumes with the default aggregate=np.mean.
+ * Tempogram (center=True, window='hann', norm=np.inf) — returned as the
+ * time-mean column, which is all tempo() consumes with aggregate='mean'.
  * ------------------------------------------------------------------------ */
 
 /**
  * Mean (over time) of the inf-normalized local autocorrelation tempogram.
- * Delegates to the canonical librosa-parity tempogram() in xa-tempogram.js
+ * Delegates to the canonical tempogram() in xa-tempogram.js
  * (tier-3 proof-of-work, 2026-07-02) — identical padding/window/normalize
  * math, summed over columns in the same order, so the tempo_beats.json
  * parity fixture gates both modules.
@@ -154,15 +151,13 @@ function meanTempogram(onsetEnvelope, winLength) {
 }
 
 /* ------------------------------------------------------------------------ *
- * tempo() — librosa.feature.tempo parity
+ * tempo() — global tempo estimation
  * ------------------------------------------------------------------------ */
 
 /**
- * Estimate the global tempo (BPM). Port of librosa.feature.tempo (0.11.0)
- * with aggregate=np.mean.
+ * Estimate the global tempo (BPM) with aggregate='mean'.
  *
- * The pseudo-log-normal prior is librosa's exact formula
- * (feature/rhythm.py):
+ * The pseudo-log-normal prior formula:
  *   logprior = -0.5 * ((log2(bpms) - log2(start_bpm)) / std_bpm) ** 2
  * and the estimate is
  *   argmax(log1p(1e6 * tempogram_mean) + logprior)   over lag bins,
@@ -171,26 +166,26 @@ function meanTempogram(onsetEnvelope, winLength) {
  * @param {Float32Array|Array|null} y - audio time series (may be null when
  *   opts.onsetEnvelope is provided)
  * @param {Object|number} [opts] - options object, or sr as a number
- *   (librosa-style positional call: tempo(y, sr))
+ *   (positional call: tempo(y, sr))
  * @param {number} [opts.sr=22050] - sample rate
  * @param {Float32Array|Array} [opts.onsetEnvelope=null] - pre-computed onset
- *   strength envelope (librosa-parity onset_strength output)
+ *   strength envelope (onset_strength output)
  * @param {number} [opts.hopLength=512]
  * @param {number} [opts.startBpm=120] - center of the log-normal prior
  * @param {number} [opts.stdBpm=1.0] - prior standard deviation (log2 space)
  * @param {number} [opts.acSize=8.0] - autocorrelation window in seconds
  * @param {number|null} [opts.maxTempo=320.0] - mask tempi at/above this value
- * @param {'mean'|null} [opts.aggregate='mean'] - librosa's aggregate
- *   parameter: 'mean' (default) scores the time-mean tempogram and returns a
+ * @param {'mean'|null} [opts.aggregate='mean'] - aggregation mode:
+ *   'mean' (default) scores the time-mean tempogram and returns a
  *   single BPM; null skips aggregation and returns a per-frame Float64Array
- *   of BPM estimates (librosa aggregate=None — dynamic tempo)
+ *   of BPM estimates (dynamic tempo)
  * @returns {number|Float64Array} estimated tempo in BPM (scalar for
  *   aggregate='mean', one BPM per onset-envelope frame for aggregate=null)
  * @throws {Error} on missing/empty input or invalid parameters — never
  *   returns a fabricated default
  */
 export function tempo(y, opts = {}) {
-  // Support the librosa positional call style: tempo(y, sr)
+  // Support the positional call style: tempo(y, sr)
   if (typeof opts === 'number') {
     opts = { sr: opts }
   }
@@ -220,7 +215,7 @@ export function tempo(y, opts = {}) {
   }
   if (aggregate !== 'mean' && aggregate !== null) {
     throw new Error(
-      `aggregate=${aggregate} is not supported — use 'mean' (librosa default) ` +
+      `aggregate=${aggregate} is not supported — use 'mean' (default) ` +
         'or null (per-frame dynamic tempo)',
     )
   }
@@ -233,7 +228,7 @@ export function tempo(y, opts = {}) {
     assertSignal(env, 'onsetEnvelope')
   }
 
-  // librosa: win_length = time_to_frames(ac_size, sr, hop_length).item()
+  // win_length = time_to_frames(ac_size, sr, hop_length).item()
   const winLength = Math.floor(Math.trunc(acSize * sr) / hopLength)
   if (winLength < 1) {
     throw new Error(`acSize=${acSize} too small for sr=${sr}, hop=${hopLength}`)
@@ -249,7 +244,7 @@ export function tempo(y, opts = {}) {
     logprior[k] = -0.5 * d * d
   }
 
-  // Kill everything at/above the max tempo (librosa masks [:argmax(bpms < max)])
+  // Kill everything at/above the max tempo (mask [:argmax(bpms < max)])
   if (maxTempo !== null && maxTempo !== undefined) {
     let maxIdx = 0
     while (maxIdx < winLength && !(bpms[maxIdx] < maxTempo)) maxIdx++
@@ -259,7 +254,7 @@ export function tempo(y, opts = {}) {
   }
 
   if (aggregate === null) {
-    // librosa aggregate=None: argmax per tempogram COLUMN → per-frame BPM.
+    // aggregate=null: argmax per tempogram COLUMN → per-frame BPM.
     const tgFull = tempogram(null, sr, env, hopLength, winLength, true, 'hann', Infinity)
     const nCols = tgFull[0].length
     const out = new Float64Array(nCols)
@@ -295,7 +290,7 @@ export function tempo(y, opts = {}) {
 }
 
 /* ------------------------------------------------------------------------ *
- * Ellis DP beat tracker — librosa.beat.beat_track internals
+ * Ellis DP beat tracker internals
  * ------------------------------------------------------------------------ */
 
 /**
@@ -321,8 +316,7 @@ function normalizeOnsets(env) {
 
 /**
  * __beat_local_score: same-mode convolution with a Gaussian beat-expectation
- * window, replicating librosa's numba loop bounds exactly (including the
- * exclusive upper bound `min(i + K//2, K)`). Like librosa, framesPerBeat is
+ * window, with the exclusive upper bound `min(i + K//2, K)`. framesPerBeat is
  * an ARRAY: length 1 → static tempo (vanilla convolution), length N →
  * time-varying tempo (the filter is rebuilt per frame from framesPerBeat[i]).
  * @private
@@ -347,7 +341,7 @@ function beatLocalScore(env, framesPerBeat) {
     for (let i = 0; i < N; i++) {
       let sum = 0
       const kStart = Math.max(0, i + halfK - N + 1)
-      const kEnd = Math.min(i + halfK, K) // exclusive (librosa quirk preserved)
+      const kEnd = Math.min(i + halfK, K) // exclusive upper bound
       for (let k = kStart; k < kEnd; k++) {
         sum += window[k] * env[i + halfK - k]
       }
@@ -357,8 +351,8 @@ function beatLocalScore(env, framesPerBeat) {
   }
 
   // Time-varying tempo: not exactly a convolution anymore — the Gaussian
-  // window is rebuilt from framesPerBeat[i] at every frame (librosa's
-  // __beat_local_score time-varying branch, loop bounds preserved).
+  // window is rebuilt from framesPerBeat[i] at every frame
+  // (__beat_local_score time-varying branch).
   for (let i = 0; i < N; i++) {
     const fpb = framesPerBeat[i]
     const K = 2 * fpb + 1
@@ -378,7 +372,7 @@ function beatLocalScore(env, framesPerBeat) {
 /**
  * __beat_track_dp: core dynamic program. framesPerBeat is an array of
  * length 1 (static tempo) or localscore.length (time-varying tempo) — the
- * `tv` indexing trick is librosa's: tv=0 pins every lookup to
+ * `tv` indexing trick: tv=0 pins every lookup to
  * framesPerBeat[0], tv=1 makes the search window follow framesPerBeat[i].
  * @private
  */
@@ -458,8 +452,8 @@ function lastBeat(cumscore) {
 
 /**
  * __trim_beats: suppress spurious leading/trailing beats using a
- * hanning(5)-smoothed beat-onset envelope RMS threshold (librosa's exact
- * slicing, which keeps two convolution tail samples).
+ * hanning(5)-smoothed beat-onset envelope RMS threshold (the slicing keeps
+ * two convolution tail samples).
  * @private
  */
 function trimBeats(localscore, beats, trim) {
@@ -513,7 +507,7 @@ function trimBeats(localscore, beats, trim) {
  * __beat_tracker: full Ellis DP pipeline over an onset envelope.
  * @private
  * @param {Array<number>|Float64Array} bpm - tempo array: length 1 (static)
- *   or onsetEnvelope.length (time-varying), librosa's shape rule
+ *   or onsetEnvelope.length (time-varying)
  * @returns {Array<boolean>} dense beat indicator array
  */
 function ellisBeatTracker(onsetEnvelope, bpm, frameRate, tightness, trim) {
@@ -556,13 +550,13 @@ function ellisBeatTracker(onsetEnvelope, bpm, frameRate, tightness, trim) {
 }
 
 /* ------------------------------------------------------------------------ *
- * beat_track() — librosa.beat.beat_track parity
+ * beat_track() — dynamic programming beat tracker
  * ------------------------------------------------------------------------ */
 
 /**
- * Dynamic programming beat tracker. Port of librosa.beat.beat_track (0.11.0).
+ * Dynamic programming beat tracker.
  *
- * Pipeline (Ellis 2007, librosa's exact variant):
+ * Pipeline (Ellis 2007):
  *   1. onset_strength(y, aggregate='median')   (skipped if onsetEnvelope given)
  *   2. tempo(onsetEnvelope) with the log-normal prior (skipped if bpm given)
  *   3. DP peak picking consistent with the estimated tempo
@@ -579,10 +573,9 @@ function ellisBeatTracker(onsetEnvelope, bpm, frameRate, tightness, trim) {
  * @param {number|Array<number>|Float64Array} [opts.bpm=null] - known tempo
  *   (skips estimation). A scalar tracks a static tempo; an ARRAY of
  *   per-frame BPM values (length 1 or one per onset-envelope frame, e.g.
- *   the output of tempo(..., {aggregate: null})) tracks time-varying tempo,
- *   exactly like librosa 0.11's beat_track(bpm=array).
+ *   the output of tempo(..., {aggregate: null})) tracks time-varying tempo.
  * @param {string} [opts.units='frames'] - 'frames' | 'samples' | 'time'
- *   (librosa default is 'frames')
+ *   (default is 'frames')
  * @param {boolean} [opts.sparse=true] - sparse indices vs dense boolean array
  * @returns {{tempo: number|Array<number>|Float64Array, beats: Array<number>|Array<boolean>}}
  *   tempo echoes a caller-provided bpm as given; when estimated it is a scalar
@@ -608,7 +601,7 @@ export function beat_track(y, sr = 22050, opts = {}) {
     throw new Error(`Invalid unit type: ${units}`)
   }
   // np.atleast_1d(bpm): scalar → [bpm]; arrays pass through (validated in
-  // the tracker against the envelope length, librosa's shape rule).
+  // the tracker against the envelope length).
   let bpmArray = null
   if (bpm !== null) {
     if (typeof bpm === 'number') {
@@ -625,13 +618,13 @@ export function beat_track(y, sr = 22050, opts = {}) {
   let env = onsetEnvelope
   if (env === null) {
     assertSignal(y, 'y')
-    // librosa.beat.beat_track: onset_strength(..., aggregate=np.median)
+    // beat_track uses onset_strength(..., aggregate='median')
     env = onset_strength(y, { sr, hop_length: hopLength, aggregate: 'median' })
   } else {
     assertSignal(env, 'onsetEnvelope')
   }
 
-  // No onsets at all → 0 BPM and no beats (librosa's documented behavior).
+  // No onsets at all → 0 BPM and no beats.
   let any = false
   for (let i = 0; i < env.length; i++) {
     if (env[i] !== 0) {
@@ -687,7 +680,7 @@ export function beat_track(y, sr = 22050, opts = {}) {
  * lb project). This is intentionally cheaper and coarser than tempo():
  * lag-quantized BPM, no tempogram, no log-normal prior.
  *
- * This is NOT librosa parity and is NEVER used as a fallback by tempo() or
+ * This is NOT the precise tier and is NEVER used as a fallback by tempo() or
  * beat_track(). Callers opt into the quick tier explicitly.
  *
  * @param {Float32Array|Array} y - audio time series
@@ -788,7 +781,7 @@ export function quickTempo(y, sr = 22050, opts = {}) {
 
 /**
  * Stateful convenience wrapper around the canonical engine. All numerical
- * work happens in the module-level librosa-parity functions above.
+ * work happens in the module-level functions above.
  */
 export class BeatTracker {
   constructor() {
@@ -813,7 +806,7 @@ export class BeatTracker {
   }
 
   /**
-   * librosa-parity beat tracking (options-object API).
+   * Beat tracking (options-object API).
    * @param {Object} options - {y, sr, onsetEnvelope, hopLength, startBpm,
    *   tightness, trim, bpm, units, sparse} — see beat_track()
    * @returns {{tempo: number, beats: Array}}
@@ -824,7 +817,7 @@ export class BeatTracker {
   }
 
   /**
-   * librosa-parity tempo estimation from a pre-computed onset envelope.
+   * Tempo estimation from a pre-computed onset envelope.
    * @param {Float32Array|Array} onsetEnvelope
    * @param {Object} [opts] - see tempo()
    * @returns {number} BPM
@@ -834,7 +827,7 @@ export class BeatTracker {
   }
 
   /**
-   * librosa-parity onset strength (delegates to xa-onset).
+   * Onset strength (delegates to xa-onset).
    * @param {Float32Array|Array} y
    * @param {number} [sr=22050]
    * @param {number} [hopLength=512]

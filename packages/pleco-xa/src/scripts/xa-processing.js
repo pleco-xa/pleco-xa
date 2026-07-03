@@ -1,14 +1,14 @@
 /**
- * Librosa-style audio processing for JavaScript
+ * Audio processing for JavaScript
  * Advanced audio manipulation including HPSS, pitch shifting, and pitch detection
  *
  * SHIM (Wave 5A): hpss / phase_vocoder / time_stretch / pitch_shift delegate
- * to the canonical librosa-parity implementations in src/decompose/index.js
+ * to the canonical implementations in src/decompose/index.js
  * and src/effects/index.js (fixture-gated: hpss.json, phase_vocoder.json).
  * The legacy local copies returned raw median-filtered spectrograms from
  * hpss (not a decomposition of S), wrapped the raw phase delta instead of
  * the deviation in phase_vocoder, and time_stretch/pitch_shift crashed on a
- * dead require('./librosa-fft.js') with inverted rate semantics.
+ * dead require of a removed FFT module with inverted rate semantics.
  */
 
 import { hpss as hpssCanonical } from '../decompose/index.js'
@@ -21,7 +21,7 @@ import {
 /**
  * Harmonic-Percussive Source Separation (HPSS)
  * Default output is the MASKED components S*mask_H / S*mask_P, so
- * harmonic + percussive ≈ S at margin=1 (librosa semantics).
+ * harmonic + percussive ≈ S at margin=1.
  * @param {Array} S - Magnitude (or complex) spectrogram (freq x time)
  * @param {number|Array} kernel_size - Median filter kernel size(s)
  * @param {number} power - Power for soft masking
@@ -117,7 +117,7 @@ export function pitch_shift(y, sr, n_steps, bins_per_octave = 12) {
 }
 
 /**
- * Phase vocoder for time-stretching an STFT matrix (librosa formulation).
+ * Phase vocoder for time-stretching an STFT matrix.
  * NOTE: operates on the [freq][time] layout produced by xa-fft.js stft —
  * the legacy version here expected a [time][freq] layout that nothing in
  * the library produced.

@@ -1,12 +1,12 @@
 /**
- * plot_music_sync.py — align two performances via DTW (librosa music-sync demo).
+ * plot_music_sync — align two performances via DTW (music-sync demo).
  *
- * The librosa reference aligns a slow and a fast recording of the same lick and
+ * The classic music-sync demo aligns a slow and a fast recording of the same lick and
  * eyeballs the warping path. We make it SELF-VERIFYING by manufacturing a warp
  * of KNOWN factor: take a real audio segment, stretch a copy by exactly 1.25×
  * with the parity-gated phase vocoder (effects.time_stretch), chroma-featurize
  * both (feature.chroma_stft), and DTW-align the chroma sequences
- * (sequence.dtw, cosine metric — same metric as the librosa example).
+ * (sequence.dtw, cosine metric).
  *
  * A uniform 1.25× stretch MUST produce a warping path that is a straight line
  * of slope 1.25 in (X-frame, Y-frame) space. So the proof is geometric and
@@ -53,9 +53,9 @@ const frameRatio = Nx / Ny
 const endpointSlope = (Nx - 1) / (Ny - 1)
 console.log(`\napplied stretch = ${STRETCH}  |  measured chroma-frame ratio Nx/Ny = ${frameRatio.toFixed(4)} (Nx=${Nx}, Ny=${Ny})`)
 
-// ── DTW-align the chroma sequences (cosine metric, as in the librosa demo) ──
+// ── DTW-align the chroma sequences (cosine metric) ─────────────────────────
 const { D, wp } = sequence.dtw(X, Y, { metric: 'cosine' })
-// wp is librosa order: wp[0] = end (Nx−1, Ny−1), wp[last] = start (0, 0).
+// wp is end-first order: wp[0] = end (Nx−1, Ny−1), wp[last] = start (0, 0).
 const startPair = wp[wp.length - 1]
 const endPair = wp[0]
 

@@ -1,13 +1,13 @@
 /**
- * Viterbi decoding — librosa.sequence parity.
+ * Viterbi decoding.
  *
- * Ports `viterbi` (from observation likelihoods) and `viterbi_discriminative`
- * (from p_state-normalized posteriors) from librosa 0.11 (librosa/sequence.py).
+ * Provides `viterbi` (from observation likelihoods) and `viterbi_discriminative`
+ * (from p_state-normalized posteriors).
  * The core recursion runs entirely in the log domain for numerical stability
  * and breaks argmax ties toward the lowest state index, matching numpy's
- * `np.argmax` — required for exact integer path agreement with librosa.
+ * `np.argmax` — required for exact integer path agreement.
  *
- * viterbi_discriminative applies Bayes' rule the way librosa does: the
+ * viterbi_discriminative applies Bayes' rule: the
  * observation likelihood is proportional to P(state | obs) / P(state), i.e. in
  * log space `log(prob) - log(p_state)` (DIVIDE by the prior). An older pleco
  * copy multiplied by the prior, inverting the correction for any non-uniform
@@ -17,9 +17,9 @@
  * (viterbi_discriminative path — exact integer agreement).
  */
 
-// Log-domain underflow floor. librosa uses the dtype's `tiny`; 1e-10 is a safe
+// Log-domain underflow floor. A dtype `tiny` is idiomatic; 1e-10 is a safe
 // floor that leaves every well-conditioned decode (probabilities and
-// transitions away from 0) bit-identical to librosa's argmax path.
+// transitions away from 0) numerically exact on the argmax path.
 const LOG_FLOOR = 1e-10
 
 const logFloor = (x) => Math.log(Math.max(x, LOG_FLOOR))
@@ -122,7 +122,7 @@ export function viterbi(prob, transition, p_init = null, return_logp = false) {
 /**
  * Viterbi decoding from discriminative (mutually exclusive) state posteriors.
  *
- * Observation likelihood ∝ P(state | obs) / P(state); librosa computes this in
+ * Observation likelihood ∝ P(state | obs) / P(state); computed in
  * log space as `log(prob) - log(p_state)`. This function forms the ratio and
  * defers the log/decoding to `viterbi`.
  *

@@ -1,7 +1,7 @@
 /**
  * laplacian-segmentation — REAL McFee-Ellis Laplacian structural segmentation
- * (2014), the spectral-clustering method of librosa's
- * docs/examples/plot_segmentation.py, now that every primitive it needs exists
+ * (2014), a spectral-clustering structural-segmentation method, now that every
+ * primitive it needs exists
  * in pleco (segment.laplacianSegmentation = recurrence → time-lag median filter
  * → normalized graph laplacian → linalg.eigh → cluster.kmeans).
  *
@@ -29,8 +29,8 @@
  *       a returning section, impossible for the agglomerative sibling).
  *   The segment table (label, start_time, end_time) is the qualitative output.
  *
- * Feature scaling note (divergence from librosa, documented not hidden):
- * librosa's example feeds a log-power CQT to the recurrence graph and MFCCs to
+ * Feature scaling note (a documented design choice, not hidden):
+ * The classic McFee-Ellis method feeds a log-power CQT to the recurrence graph and MFCCs to
  * the path graph SEPARATELY. pleco's laplacianSegmentation takes ONE feature
  * matrix and builds both graphs from it, so we stack chroma + MFCC and z-score
  * each row (zero-mean/unit-variance) — otherwise the large-magnitude MFCC

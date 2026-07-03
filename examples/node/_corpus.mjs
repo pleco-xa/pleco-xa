@@ -1,5 +1,5 @@
 /**
- * The house corpus — pleco's answer to librosa.ex(): deterministic synthetic
+ * The house corpus — pleco's own example-asset generator: deterministic synthetic
  * demo assets with machine-checkable ground truth, generated on demand into
  * examples/corpus/. Other demos import ensureCorpus() for stable inputs;
  * examples/node/recordings.mjs is the verification pass that PROVES the

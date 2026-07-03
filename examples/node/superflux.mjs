@@ -1,11 +1,10 @@
 /**
- * plot_superflux — Superflux vs vanilla flux: vibrato immunity (librosa
- * plot_superflux advanced-example replica).
+ * plot_superflux — Superflux vs vanilla flux: vibrato immunity.
  *
  * Four notes with heavy vibrato (±30 cents at 6 Hz) at known onset times,
  * analyzed at the gallery's ~5 ms hop (sr/200 — vanilla flux only "hears"
  * vibrato at high time resolution). Both ODFs are peak-picked with identical
- * librosa onset_detect parameters via the promoted peakPick:
+ * onset_detect parameters via the promoted peakPick:
  *   - superflux (n_mels 138, fmin 27.5, fmax 16000, lag 2, max_size 3) must
  *     fire EXACTLY 4 times, each within ±2 hops of ground truth;
  *   - the default ODF must fire MORE than 4 times (vibrato false positives).
@@ -16,7 +15,7 @@ import { onset_strength, feature, convert, peakPick } from '../../packages/pleco
 import { check, checkTrue, summary } from './_harness.mjs'
 
 const sr = 22050
-const hop = 110 // ≈5 ms, librosa superflux example uses sr/200
+const hop = 110 // ≈5 ms, the superflux example uses sr/200
 const n_fft = 1024
 const noteOn = [0.2, 1.2, 2.2, 3.2]
 const noteFreq = [440, 523.25, 392, 587.33]
@@ -44,7 +43,7 @@ const odfSuper = onset_strength(null, {
 })
 check('ODF frame counts match', odfDefault.length, odfSuper.length)
 
-// identical librosa onset_detect peak picking for both (normalized envelope)
+// identical onset_detect peak picking for both (normalized envelope)
 const pickOnsets = (env) => {
   const mx = Math.max(...env)
   const e = Float64Array.from(env, (v) => (mx > 0 ? v / mx : v))

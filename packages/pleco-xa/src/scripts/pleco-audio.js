@@ -1,6 +1,6 @@
 /**
  * Pleco Audio - JavaScript Audio Analysis Library
- * Librosa-compatible audio processing for JavaScript
+ * Aggregate audio-processing surface for JavaScript
  * 
  * A comprehensive audio analysis library providing:
  * - Spectral analysis (FFT, STFT, Mel, MFCC)
@@ -90,7 +90,7 @@ export { piptrack, yin, pyin, autocorrelation_pitch, hz_to_midi_pitch, pitch_sal
 // Source separation and decomposition
 export { hpss, median_filter, nn_filter, decompose, nmf_reconstruct, nmf_separate } from './xa-decompose.js'
 
-// Rhythm and beat tracking (canonical librosa-parity engine)
+// Rhythm and beat tracking (canonical engine)
 export { beat_track, tempo, quickTempo, BeatTracker } from './xa-beat-tracker.js'
 export { plp, beat_sync } from './xa-rhythm.js'
 
@@ -222,7 +222,6 @@ export { LRUCache, wrapper, deprecated, moved, rename_kw, memoize, globalCache }
 
 // Version info
 export const VERSION = '1.0.0'
-export const LIBROSA_COMPAT_VERSION = '0.10.x'
 
 /**
  * Library information
@@ -230,14 +229,11 @@ export const LIBROSA_COMPAT_VERSION = '0.10.x'
 export const info = {
   name: 'pleco-audio',
   version: VERSION,
-  description: 'Librosa-compatible audio analysis for JavaScript',
-  librosaParity: '100%',
+  description: 'Audio analysis for JavaScript',
   implementedFunctions: 512,
-  totalLibrosaFunctions: 512,
   jsApplicableFunctions: 512,
   notApplicableFunctions: 0,
   remainingToImplement: 0,
-  note: 'Librosa Feature Parity: 100% COMPLETE - All 512 functions implemented! Python magic methods converted to JavaScript equivalents, Matplotlib formatters ported to Canvas/SVG, decorator patterns implemented, filesystem helpers adapted for Web APIs. Full marathon implementation: cache, display, file I/O, music theory, advanced DSP, visualization, and all algorithmic helpers.',
   modules: [
     'Core (FFT, STFT)',
     'Constant-Q transforms (CQT, VQT, Hybrid CQT, inverse CQT, Griffin-Lim CQT)',

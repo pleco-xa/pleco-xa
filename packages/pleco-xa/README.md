@@ -7,10 +7,9 @@ BPM and beat tracking, spectral features (mel, MFCC, chroma, spectral
 descriptors), structural segmentation, effects, and its signature **loop
 detection** — with **zero runtime dependencies** and no build step.
 
-It also, you'll discover, covers everything [librosa](https://librosa.org) does —
-validated function by function against it via committed fixtures — while adding
-real-time and loop-analysis capabilities an offline Python library structurally
-cannot.
+Every function is validated against committed reference fixtures, with real-time
+and loop-analysis capabilities an offline Python library structurally cannot
+match.
 
 ## Install
 
@@ -27,9 +26,9 @@ const ctx = new AudioContext()
 const audioBuffer = await ctx.decodeAudioData(await (await fetch('song.mp3')).arrayBuffer())
 const y = audioBuffer.getChannelData(0)
 
-const { bpm, beats } = beat_track(y, audioBuffer.sampleRate)
-const best = loop.detect(audioBuffer, { strategy: 'fast' })
-console.log(bpm, best.start, best.end)
+const { tempo, beats } = beat_track(y, audioBuffer.sampleRate)
+const best = await loop.detect(audioBuffer, { strategy: 'fast' })
+console.log(tempo, best.loopStart, best.loopEnd)
 ```
 
 In Node, decode a WAV with the built-in `decodeWav` and call the same functions —
@@ -38,8 +37,8 @@ the analysis API is `(Float32Array, sampleRate)` everywhere.
 ## Highlights
 
 - **Zero dependencies**, pure ESM, runs in browsers, Node, and Web Workers.
-- **librosa-parity** across ~20 domains, fixture-verified in CI (many bit-exact).
-- **Loop detection** with no librosa equivalent — the signature feature.
+- **Fixture-verified** across ~20 domains, checked in CI (many numerically exact).
+- **Loop detection** — the signature feature.
 - **Real-time** streaming analyzers and a live tempo tier.
 - **Pure-DSP vocal separation** — no model, no weights, no GPU.
 
@@ -50,4 +49,4 @@ example runs live in your browser) at **[plecoxa.com](https://plecoxa.com)**.
 
 ## License
 
-MIT. Includes audio-analysis algorithms ported from librosa (ISC) — see `NOTICE`.
+MIT. See `NOTICE` for third-party algorithm attributions.

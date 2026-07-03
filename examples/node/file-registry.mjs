@@ -20,8 +20,7 @@
  *   - find_files over a mock directory tree: extension filter (case folded),
  *     recursion on/off, name-sorted output, limit/offset window; calling it
  *     with no handle in Node throws the documented TypeError,
- *   - cite(): BibTeX with BOTH the pleco entry (version echoed) and the
- *     upstream librosa citation (mcfee2015librosa).
+ *   - cite(): the pleco BibTeX entry (version echoed) plus the academic-use note.
  */
 import {
   file, fileio, loadFile, encodeWav, decodeWav,
@@ -119,8 +118,8 @@ check('find_files(limit 1, offset 1) windows the sorted list',
   const c = fileio.cite('9.9.9')
   checkTrue('cite(version) echoes the version in the pleco BibTeX entry',
     c.includes('version      = {9.9.9}') && c.includes('@software{pleco_audio'))
-  checkTrue('cite() includes the upstream librosa citation (mcfee2015librosa)',
-    c.includes('@inproceedings{mcfee2015librosa'))
+  checkTrue('cite() includes the academic-use citation note',
+    c.includes('please cite it'))
 }
 
 summary('xa-file registry + xa-fileio utilities (post-repair, headless)')

@@ -3,11 +3,11 @@
  * Preemphasis and deemphasis filtering + re-pointed filterbank canon
  *
  * SHIM (Wave 5A): preemphasis/deemphasis delegate to the canonical
- * librosa-parity implementations in src/effects/index.js (fixture-gated:
- * effects.json). The legacy local versions initialized zi=0 (librosa uses
- * the lfilter state 2*y[0]-y[1]) and returned a zf convention incompatible
- * with librosa block chaining — both repaired in the canonical module, so
- * deemphasis(preemphasis(x)) now round-trips to x like librosa guarantees.
+ * implementations in src/effects/index.js (fixture-gated:
+ * effects.json). The legacy local versions initialized zi=0 (the correct
+ * lfilter state is 2*y[0]-y[1]) and returned an incompatible zf convention
+ * for block chaining — both repaired in the canonical module, so
+ * deemphasis(preemphasis(x)) now round-trips to x exactly.
  *
  * REPAIR (Tier-1 proof-of-work pass): the legacy marathon filterbank family
  * that lived here (constant_q, wavelet, window_sumsquare, cq_to_chroma,
@@ -36,7 +36,7 @@ export { get_window } from './xa-fft.js'
  * Apply first-order differencing filter (high-pass): y[n] = x[n] - coef*x[n-1]
  * @param {Float32Array} y - Audio time series
  * @param {number} coef - Filter coefficient (typically 0.97)
- * @param {number|null} zi - Initial filter state (librosa default: 2*y[0]-y[1]);
+ * @param {number|null} zi - Initial filter state (default: 2*y[0]-y[1]);
  *   chain non-overlapping blocks by passing the previous call's zf
  * @param {boolean} return_zf - Whether to return final filter state
  * @returns {Float32Array|{y: Float32Array, zf: number}} Filtered audio, or {y, zf}
@@ -53,7 +53,7 @@ export function preemphasis(y, coef = 0.97, zi = null, return_zf = false) {
  * Apply inverse of preemphasis filter (low-pass): x[n] = y[n] + coef*x[n-1]
  * @param {Float32Array} y - Audio time series
  * @param {number} coef - Filter coefficient (typically 0.97)
- * @param {number|null} zi - Initial filter state; when null, librosa's
+ * @param {number|null} zi - Initial filter state; when null, an
  *   extrapolation correction is applied so preemphasis round-trips exactly
  * @param {boolean} return_zf - Whether to return final filter state
  * @returns {Float32Array|{y: Float32Array, zf: number}} Filtered audio, or {y, zf}

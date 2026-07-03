@@ -7,7 +7,7 @@
  * light up the A↔A repeat as bright off-diagonal blocks, keep the |i−j|<width
  * band exactly zero, and be exactly symmetric (mutual-kNN sym contract);
  * lagToRecurrence(recurrenceToLag(R)) must reproduce R bit-exactly (the real
- * librosa shear, both directions); agglomerative(data, 3) must return the
+ * lag shear, both directions); agglomerative(data, 3) must return the
  * exact planted boundaries [0, 20, 40].
  */
 import { segment } from '../../packages/pleco-xa/dist/pleco-xa.js'
@@ -15,7 +15,7 @@ import { check, checkTrue, summary } from './_harness.mjs'
 
 const { recurrenceMatrix, recurrenceToLag, lagToRecurrence, agglomerative, crossSimilarity } = segment
 
-// ── deterministic A-B-A features (12 dims × 60 frames, librosa layout) ──────
+// ── deterministic A-B-A features (12 dims × 60 frames, feature-major layout) ─
 const D = 12
 const T = 60
 let seed = 42

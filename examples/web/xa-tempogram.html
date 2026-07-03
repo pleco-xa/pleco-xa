@@ -8,10 +8,10 @@
   <h2>scripts/xa-tempogram.js — Tempogram heatmap of a tempo jump</h2>
   <p style="max-width:95ch">
     8 s of 100 BPM clicks then 8 s of 140 BPM clicks (sr 22050, hop 512)
-    through the librosa-parity <code>onset_strength</code> →
+    through the canonical <code>onset_strength</code> →
     <code>tempogram()</code> (win_length 192 ≈ 4.5 s, linear-ramp padding,
     per-column inf-norm — the exact math the fixture-gated canonical
-    <code>tempo()</code> consumes). The per-frame argmax ridge (librosa's
+    <code>tempo()</code> consumes). The per-frame argmax ridge (a
     log-normal tempo prior, start 120 BPM) must sit in the lag bin bracketing
     100 BPM for t ∈ [1, 6] s and the bin bracketing 140 BPM for t ∈ [10, 15] s;
     <code>estimate_tempo</code> on each half must land in the same brackets.
@@ -67,7 +67,7 @@
     badge('tempogram shape == win_length x env frames', tg.length === win && nT === env.length,
       `${tg.length}x${nT} (env ${env.length})`)
 
-    // per-frame argmax ridge with librosa's log-normal prior (start 120, std 1)
+    // per-frame argmax ridge with a log-normal prior (start 120, std 1)
     const { tempo_frequencies } = convert
     const bpms = tempo_frequencies(win, hop, sr)
     const logprior = Array.from(bpms, (b) => {

@@ -97,7 +97,7 @@ export async function pitchBasedCompress(audioBuffer, ratio) {
 
 /**
  * Tempo-based audio compression — PITCH-PRESERVING time stretch via the
- * librosa-parity phase vocoder (src/effects/index.js time_stretch). Each
+ * phase vocoder (src/effects/index.js time_stretch). Each
  * channel is stretched independently; output length is
  * round(input length * ratio) and the dominant pitch is unchanged.
  *

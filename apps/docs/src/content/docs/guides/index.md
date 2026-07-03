@@ -10,8 +10,8 @@ show a runnable snippet, and flag the gotchas worth knowing before you lean on a
 function in production.
 
 Every function named here is a real export, verified against the built package.
-Where Pleco-Xa deliberately matches — or deliberately diverges from — a
-well-known reference like librosa, the Notes section says so precisely.
+Where a function has a subtle contract or a sharp edge worth knowing, the Notes
+section says so precisely.
 
 ## The guides
 
@@ -27,7 +27,7 @@ well-known reference like librosa, the Notes section says so precisely.
 - **[Beat & tempo](/guides/beat/)** — the canonical Ellis dynamic-programming
   beat tracker (`beat_track`), tempo estimation (`tempo`), the quick tier
   (`quickTempo`), tempograms, and the `bpm` stability analyzer.
-- **[Onset detection](/guides/onset/)** — the parity onset envelope
+- **[Onset detection](/guides/onset/)** — the canonical onset envelope
   (`onset_strength`) and the fast heuristic peak-picker (`onsetDetect`).
 - **[Spectral features](/guides/feature/)** — the `feature` namespace:
   mel spectrogram, MFCC, chroma, spectral descriptors, and `delta_features`.

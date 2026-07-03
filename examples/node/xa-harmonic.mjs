@@ -6,7 +6,7 @@
  * stft(2048/512) magnitude. f0_harmonics must recover the 1 : 0.5 : 0.25
  * amplitude ladder within 15% (window-leakage tolerance); the harmonic
  * product spectrum must peak within one FFT bin of 220 Hz; and the repaired
- * salience (librosa semantics: weighted-average aggregate + frequency-axis
+ * salience (correct semantics: weighted-average aggregate + frequency-axis
  * peak filter of the ORIGINAL S — the old code filtered along TIME) must put
  * its strongest surviving peak at the fundamental.
  */

@@ -17,14 +17,14 @@
 <body>
   <h2>plot_music_sync — DTW aligns a performance with its 1.25× time-stretched twin</h2>
   <p>
-    Librosa's music-sync gallery page aligns a slow and a fast recording of the
+    The music-sync recipe aligns a slow and a fast recording of the
     same lick and eyeballs the warping path. Here the warp factor is <em>known</em>,
     so the alignment is self-verifying: the first 8&nbsp;s of
     <code>orphans-mix.wav</code> (mono 22050) is stretched by exactly
     <code>1.25×</code> with the parity-gated phase vocoder
     (<code>effects.time_stretch</code>), both takes are chroma-featurized
     (<code>feature.chroma_stft</code>), and the two chroma sequences are aligned
-    with <code>sequence.dtw</code> (cosine metric — same as the librosa example).
+    with <code>sequence.dtw</code> (cosine metric).
     A uniform 1.25× stretch <strong>must</strong> yield a warping path that is a
     straight line of slope&nbsp;1.25 in (X-frame, Y-frame) space; the badges
     assert exactly that (slope ±10%, R²&nbsp;&gt;&nbsp;0.99), plus monotonicity,
@@ -76,7 +76,7 @@
 
     // ── DTW alignment (cosine metric) ─────────────────────────────────────────
     const { D, wp } = sequence.dtw(X, Y, { metric: 'cosine' })
-    const startPair = wp[wp.length - 1] // librosa order: last entry is the start
+    const startPair = wp[wp.length - 1] // DTW order: last entry is the start
     const endPair = wp[0]               // first entry is the end
 
     // ── Geometric proof: least-squares slope + R² of the path ─────────────────

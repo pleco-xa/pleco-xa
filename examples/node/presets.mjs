@@ -1,7 +1,7 @@
 /**
- * plot_presets — presets as plain closures (librosa advanced-example replica).
+ * plot_presets — presets as plain closures.
  *
- * librosa's Presets library wraps functions so default parameters can be
+ * The preset pattern wraps functions so default parameters can be
  * swapped globally. In JS the same ergonomics is a one-line closure over
  * feature.melspectrogram — no library needed. This script proves the
  * parameter plumbing end to end: each output's frame count must equal

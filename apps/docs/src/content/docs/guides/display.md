@@ -6,10 +6,8 @@ description: Pleco-Xa's canvas-native visualization tier — waveforms, spectrog
 Pleco-Xa draws to a `<canvas>`. Where an offline Python stack hands its arrays to
 matplotlib, Pleco-Xa's display tier is canvas-native: it renders waveforms,
 spectrograms, and colormapped matrices directly in the browser, and it includes
-a live analyzer that visualizes audio as it plays. (If you're mapping from
-`librosa.display.*`, this is its counterpart — matplotlib semantics simply do
-not apply in a browser, so the API is its own thing. See the
-[Parity ledger](/reference/parity/) exceptions.)
+a live analyzer that visualizes audio as it plays. (A browser `<canvas>` has no
+matplotlib-style figure/axes model, so this API is its own thing.)
 
 Most of this tier is browser-only (it needs `canvas` and `window`). A few
 helpers — `cmap`, `analyzeWaveform`, `getWaveformPeaks` — are pure and run in

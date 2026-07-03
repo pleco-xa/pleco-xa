@@ -1,8 +1,8 @@
 /**
- * Proof: beat tracking through a tempo change — librosa's plot_dynamic_beat, node edition.
+ * Proof: beat tracking through a tempo change — dynamic-beat demo, node edition.
  *
- * Replicates librosa.beat.beat_track's time-varying-tempo mode (docs/examples/
- * plot_dynamic_beat.py). A click track switches tempo mid-signal — 90 BPM for
+ * Demonstrates beat_track's time-varying-tempo mode. A click track switches
+ * tempo mid-signal — 90 BPM for
  * the first 4 s, then 140 BPM for the last 4 s (sr=22050). Two trackers run:
  *
  *   STATIC : tempo() estimates one scalar BPM for the whole clip, beat_track
@@ -16,7 +16,7 @@
  * aggregate=null per-frame path and beat_track()'s time-varying bpm-array path
  * (the __beat_track_dp `tv` indexing over framesPerBeat) — were already present
  * and correct in scripts/xa-beat-tracker.js + dist; no repair was needed. The
- * only tuning that matters is the prior width: librosa's snare-accelerate demo
+ * only tuning that matters is the prior width: a wide snare-accelerate demo
  * uses std_bpm=4 because it spans 30–240 BPM, but for this narrow 90–140 range
  * the default std_bpm=1 is required — the wide-4 prior lets the 140 BPM section
  * collapse onto its 70 BPM subharmonic (verified: dyn2=69.8 with std_bpm=4).
@@ -73,7 +73,7 @@ const staticBeats = staticRes.beats
 const staticIbis = ibisOf(staticBeats)
 
 // ---- dynamic tracker: per-frame tempo curve, then time-varying beat_track --
-const scalarTempo = tempo(y, { sr }) // librosa default aggregate='mean' → number
+const scalarTempo = tempo(y, { sr }) // default aggregate='mean' → number
 const dynTempo = tempo(y, { sr, aggregate: null, startBpm: 120, stdBpm: 1 })
 const env = onset_strength(y, { sr, hop_length: hop, aggregate: 'median' })
 const dynRes = beat_track(y, sr, { units: 'time', trim: false, bpm: dynTempo })
@@ -119,7 +119,7 @@ console.log(`fast (140 BPM) |     ${IBI_FAST.toFixed(4)}s      |      ${ibiAfter
 console.log(`\ndynamic tempo curve: scalar(static)=${scalarTempo.toFixed(2)} BPM  |  per-frame halves: ${dyn1.toFixed(1)} → ${dyn2.toFixed(1)} BPM (${dynTempo.length} frames)`)
 console.log(`beat counts in slow section [0,${SWITCH}s):  clicks=${clicksSlow}  dynamic=${dynBeats.filter((b) => b < SWITCH).length}  static=${staticSlow} (surplus)`)
 console.log(`steady-region beat→click offset: median ${medSteadyOffset.toFixed(2)} hop, max ${maxSteadyOffset.toFixed(2)} hop`)
-console.log(`(transition zone ±${TRANSITION}s around the switch is excluded — the tempo curve smears there, as librosa documents)\n`)
+console.log(`(transition zone ±${TRANSITION}s around the switch is excluded — the tempo curve smears there)\n`)
 
 // ---- proofs ---------------------------------------------------------------
 // The repair surface: per-frame tempo + time-varying beat_track really ran.

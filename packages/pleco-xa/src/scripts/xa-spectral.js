@@ -9,7 +9,7 @@
  * Fixture judgment (tools/parity/fixtures/spectral_features.json):
  *  - spectralFlatness: formula CORRECT (survived) → delegates to
  *    feature/spectral.js spectral_flatness.
- *  - rms y-path: bit-identical to librosa (survived) → delegates to
+ *  - rms y-path: numerically exact (survived) → delegates to
  *    feature/spectral.js rms (whose S path also works now).
  *  - everything else: did not survive → throws with the feature/ replacement
  *    named, instead of fabricating output.
@@ -38,7 +38,7 @@ function removed(name, replacement) {
 /**
  * Spectral flatness (salvaged path).
  * @param {Object} options - { y, S, n_fft, hop_length, win_length, window,
- *   center, pad_mode, amin, power } (librosa-style, S is [freq][time])
+ *   center, pad_mode, amin, power } (S is [freq][time])
  * @returns {Float64Array} flatness per frame
  */
 export function spectralFlatness(options = {}) {

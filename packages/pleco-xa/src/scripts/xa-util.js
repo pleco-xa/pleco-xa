@@ -1,5 +1,5 @@
 /**
- * Librosa Utility Functions for JavaScript
+ * Utility Functions for JavaScript
  * Core signal processing utilities for audio analysis
  * Provides framing, validation, normalization, and peak detection
  */
@@ -149,7 +149,7 @@ export function isPositiveInt(x) {
   return Number.isInteger(x) && x > 0
 }
 
-// Alias for Librosa compatibility
+// snake_case alias
 export const is_positive_int = isPositiveInt
 
 /**
@@ -451,8 +451,8 @@ export function peakPick(
  * @returns {number} Tiny value for the data type
  */
 export function tiny(_x) {
-  // librosa tiny(): smallest positive normal for the dtype.
-  // Pleco stores audio as float32, so mirror np.finfo(np.float32).tiny.
+  // tiny(): smallest positive normal for the dtype.
+  // Pleco stores audio as float32, so this is np.finfo(np.float32).tiny.
   return 1.1754943508222875e-38
 }
 
@@ -575,7 +575,7 @@ function sliceAxis(arr, axis, start, end) {
   }
   if (axis === 1) {
     // 2D [rows][time]: slice each row along the time axis. NOTE: returns
-    // COPIES — librosa's zero-copy stride view does not transfer to JS.
+    // COPIES — a zero-copy stride view does not transfer to JS.
     // Repaired 2026-07-02 (Tier-1 proof-of-work): frame() on a spectrogram
     // previously threw here, so 2D patch extraction never worked.
     return arr.map((row) => row.slice(start, end))
@@ -826,7 +826,6 @@ export function stack_memory(data, n_steps = 2, delay = 1, kwargs = {}) {
 
 /**
  * Shear a matrix by a given factor
- * Port of librosa.util.shear
  *
  * Applies a shearing transformation along the specified axis
  * Used for time-frequency analysis and spectrogram enhancement
@@ -883,7 +882,6 @@ export function shear(X, factor = 1, axis = -1) {
 
 /**
  * Sort an array along its rows or columns
- * Port of librosa.util.axis_sort
  *
  * @param {Array} S - Input array [n_rows][n_cols]
  * @param {number} axis - Axis to sort (0 for rows, -1 for columns)
@@ -967,7 +965,6 @@ export function axis_sort(S, axis = -1, index = false, value = null) {
 
 /**
  * Expand the dimensions of an input array
- * Port of librosa.util.expand_to
  *
  * @param {Array} x - Input array
  * @param {number} ndim - Target number of dimensions
@@ -1002,7 +999,6 @@ function getArrayDepth(arr) {
 
 /**
  * Set all cells of a matrix to a given value if they're outside a diagonal band
- * Port of librosa.util.fill_off_diagonal
  *
  * @param {Array} x - Input matrix (modified in place) [n][n]
  * @param {number} radius - Diagonal band radius
@@ -1026,13 +1022,12 @@ export function fill_off_diagonal(x, radius, value = 0) {
 
 /**
  * Robustly compute a soft-mask operation
- * Port of librosa.util.softmask
  *
  * Computes the soft mask: X^power / (X^power + X_ref^power)
  *
  * Tier-2 proof-of-work repair (2026-07-02): this copy previously computed
- * X / (X + X_ref)^power, which diverges from librosa whenever power != 1.
- * It now delegates to the librosa-correct implementation in xa-normalize.js
+ * X / (X + X_ref)^power, which diverges whenever power != 1.
+ * It now delegates to the correct implementation in xa-normalize.js
  * (verified in examples/node/normalize-goldens.mjs).
  *
  * @param {Array} X - Input array (numerator)
@@ -1045,7 +1040,6 @@ export { softmask } from './xa-normalize.js'
 
 /**
  * Return a row-sparse matrix approximating the input
- * Port of librosa.util.sparsify_rows
  *
  * Retains only values above a quantile threshold in each row,
  * setting others to zero (creating a sparse-like structure)
@@ -1083,7 +1077,6 @@ export function sparsify_rows(x, quantile = 0.01, dtype = null) {
 
 /**
  * Determine whether a variable contains valid audio data
- * Port of librosa.util.valid_audio
  *
  * Valid audio must be:
  * - A typed array or regular array
@@ -1127,7 +1120,6 @@ export function valid_audio(y, mono = true) {
 
 /**
  * Ensure that an input value is integer-typed
- * Port of librosa.util.valid_int
  *
  * @param {number} x - Input value
  * @param {Function} cast - Optional casting function (default: Math.round)
@@ -1161,7 +1153,6 @@ export function valid_int(x, cast = null) {
 
 /**
  * Ensure that an array is a valid representation of time intervals
- * Port of librosa.util.valid_intervals
  *
  * Valid intervals must be:
  * - A 2D array with shape [n, 2]
@@ -1218,7 +1209,6 @@ export function valid_intervals(intervals) {
 
 /**
  * Convert an integer buffer to floating point values
- * Port of librosa.util.buf_to_float
  *
  * @param {TypedArray|Array} x - Integer buffer to convert
  * @param {number} n_bytes - Number of bytes per sample (1, 2, or 4)
@@ -1257,7 +1247,6 @@ export function buf_to_float(x, n_bytes = 2, dtype = 'float32') {
 
 /**
  * Count the number of unique values in a multi-dimensional array along an axis
- * Port of librosa.util.count_unique
  *
  * @param {Array} data - Input array
  * @param {number} axis - Axis along which to count unique values (default: -1)
@@ -1295,7 +1284,6 @@ export function count_unique(data, axis = -1) {
 
 /**
  * Estimate the gradient of a function over a uniformly sampled periodic domain
- * Port of librosa.util.cyclic_gradient
  *
  * @param {Array} data - Input array
  * @param {number} edge_order - Gradient accuracy at boundaries (1 or 2, default: 1)
@@ -1355,7 +1343,6 @@ export function cyclic_gradient(data, edge_order = 1, axis = -1) {
 
 /**
  * Find the real numpy dtype corresponding to a complex dtype
- * Port of librosa.util.dtype_c2r
  *
  * In JavaScript, we just return appropriate TypedArray constructors
  *
@@ -1375,7 +1362,6 @@ export function dtype_c2r(d, default_type = Float32Array) {
 
 /**
  * Find the complex numpy dtype corresponding to a real dtype
- * Port of librosa.util.dtype_r2c
  *
  * In JavaScript, complex numbers are typically represented as objects {real, imag}
  * or pairs of Float32/Float64Arrays, so we return the appropriate float type
@@ -1396,7 +1382,6 @@ export function dtype_r2c(d, default_type = Float32Array) {
 
 /**
  * Fix a list of frames to lie within [x_min, x_max]
- * Port of librosa.util.fix_frames
  *
  * @param {Array} frames - Frame indices to fix
  * @param {number} x_min - Minimum allowed frame index (default: 0)
@@ -1441,7 +1426,6 @@ export function fix_frames(frames, x_min = 0, x_max = null, pad = true) {
 
 /**
  * Generate a slice array from an index array
- * Port of librosa.util.index_to_slice
  *
  * @param {Array} idx - Sorted array of indices
  * @param {number} idx_min - Minimum index (default: null, use min of idx)
@@ -1490,7 +1474,6 @@ export function index_to_slice(idx, idx_min = null, idx_max = null, step = null,
 
 /**
  * Determine if the input array consists of all unique values along an axis
- * Port of librosa.util.is_unique
  *
  * @param {Array} data - Input array
  * @param {number} axis - Axis along which to check uniqueness (default: -1)
@@ -1528,7 +1511,6 @@ export function is_unique(data, axis = -1) {
 
 /**
  * Stack one or more arrays along a target axis
- * Port of librosa.util.stack
  *
  * @param {Array} arrays - List of arrays to stack
  * @param {number} axis - Axis along which to stack (default: 0)
@@ -1623,12 +1605,11 @@ export function set_fftlib(lib = null) {
 }
 
 // ============================================================================
-// PRIVATE HELPER FUNCTIONS (Librosa Internal Implementations)
+// PRIVATE HELPER FUNCTIONS (Internal Implementations)
 // ============================================================================
 
 /**
  * Jaccard similarity between two intervals
- * Private helper from librosa.util.matching.__jaccard
  *
  * Computes the Jaccard index (intersection over union) between two intervals.
  *
@@ -1657,7 +1638,6 @@ export function __jaccard(int_a, int_b) {
 
 /**
  * Event matching core algorithm
- * Private helper from librosa.util.matching.__match_events_helper
  *
  * Matches events from one sequence to another using nearest neighbor search.
  *
@@ -1694,7 +1674,6 @@ export function __match_events_helper(output, events_from, events_to, left = tru
 
 /**
  * Find best Jaccard match from query to candidates
- * Private helper from librosa.util.matching.__match_interval_overlaps
  *
  * @private
  * @param {Array} query - Query interval [start, end]
@@ -1718,8 +1697,7 @@ export function __match_interval_overlaps(query, intervals_to, candidates) {
 }
 
 /**
- * Interval matching algorithm (Numba-accelerated in Python)
- * Private helper from librosa.util.matching.__match_intervals
+ * Interval matching algorithm
  *
  * Matches intervals from one set to another using Jaccard similarity.
  *
@@ -1775,7 +1753,6 @@ export function __match_intervals(intervals_from, intervals_to, strict = true) {
 
 /**
  * Shear a dense array
- * Private helper from librosa.util.utils.__shear_dense
  *
  * Applies shearing transformation to a dense array.
  * Shearing shifts each row/column by a factor proportional to its index.
@@ -1825,7 +1802,6 @@ export function __shear_dense(X, factor = 1, axis = -1) {
 
 /**
  * Shear a sparse matrix
- * Private helper from librosa.util.utils.__shear_sparse
  *
  * Fast shearing for sparse matrices represented as coordinate lists.
  *
@@ -1878,7 +1854,6 @@ export function __shear_sparse(X, factor = 1, axis = -1) {
 
 /**
  * Stencil for local maxima computation
- * Private helper from librosa.util.utils.__localmax_sten
  *
  * Numba stencil operation in Python, simplified for JavaScript.
  * Checks if the center value is a local maximum.
@@ -1897,7 +1872,6 @@ export function __localmax_sten(x) {
 
 /**
  * Vectorized wrapper for local maxima stencil
- * Private helper from librosa.util.utils._localmax
  *
  * @private
  * @param {Array|Float32Array} x - Input array
@@ -1923,7 +1897,6 @@ export function _localmax(x, y) {
 
 /**
  * Stencil for local minima computation
- * Private helper from librosa.util.utils.__localmin_sten
  *
  * @private
  * @param {Array} x - 3-element window [left, center, right]
@@ -1939,7 +1912,6 @@ export function __localmin_sten(x) {
 
 /**
  * Vectorized wrapper for local minima stencil
- * Private helper from librosa.util.utils._localmin
  *
  * @private
  * @param {Array|Float32Array} x - Input array
@@ -1965,7 +1937,6 @@ export function _localmin(x, y) {
 
 /**
  * Count unique values in an array
- * Private helper from librosa.util.utils.__count_unique
  *
  * @private
  * @param {Array|Float32Array} x - Input array
@@ -1978,7 +1949,6 @@ export function __count_unique(x) {
 
 /**
  * Determine if array has all unique values
- * Private helper from librosa.util.utils.__is_unique
  *
  * @private
  * @param {Array|Float32Array} x - Input array
@@ -1990,7 +1960,6 @@ export function __is_unique(x) {
 
 /**
  * Vectorized wrapper for peak-picking algorithm
- * Private helper from librosa.util.utils.__peak_pick
  *
  * Identifies peaks in a signal based on local maxima and thresholds.
  *
@@ -2055,7 +2024,6 @@ export function __peak_pick(x, pre_max, post_max, pre_avg, post_avg, delta, wait
 
 /**
  * Efficiently compute abs2 on complex inputs
- * Private helper from librosa.util.utils._cabs2
  *
  * For complex number a + bi, returns a^2 + b^2 (magnitude squared).
  *
@@ -2075,7 +2043,6 @@ export function _cabs2(x) {
 
 /**
  * Phasor angle computation helper
- * Private helper from librosa.util.utils._phasor_angles
  *
  * Computes the complex phasor (unit magnitude complex number) for given angles.
  *
@@ -2096,7 +2063,6 @@ export function _phasor_angles(x) {
 
 /**
  * Ensure array is contiguous (JavaScript equivalent)
- * Private helper from librosa.core.spectrum.__ascontiguousarray
  *
  * In JavaScript, typed arrays are always contiguous.
  * This is a no-op that ensures compatibility.
@@ -2114,7 +2080,6 @@ export function __ascontiguousarray(x) {
 
 /**
  * Memory-stacking helper function
- * Private helper from librosa.feature.utils.__stack
  *
  * Stacks features with a time-delay embedding.
  * Creates a lagged representation of features for temporal modeling.
@@ -2305,7 +2270,6 @@ export function vectorize(fn, options = {}) {
 
 /**
  * Get list of files matching a pattern
- * JavaScript/Web equivalent of librosa's __get_files filesystem helper
  *
  * In browser environment, works with File objects from FileList or drag-drop.
  * Cannot access arbitrary filesystem paths (browser security restriction).
@@ -2336,7 +2300,6 @@ export function __get_files(files, pattern = null) {
 
 /**
  * Load a resource file from package data
- * JavaScript/Web equivalent of librosa's _resource_file context manager
  *
  * In browser environment, loads resources from URLs or embedded data.
  * Returns a promise that resolves to the resource content.
@@ -2393,7 +2356,6 @@ export async function _resource_file(packageName, resourcePath, responseType = '
 
 /**
  * Get version of a module or package
- * JavaScript/Web equivalent of librosa's __get_mod_version utility
  *
  * Returns version information for loaded modules/packages.
  * In browser environment, checks package.json or embedded version metadata.
@@ -2416,7 +2378,7 @@ export function __get_mod_version(moduleName) {
   // Hard-coded versions for known modules
   const knownVersions = {
     'pleco-audio': '1.0.0',
-    'librosa': '0.10.1', // Target parity version
+    'the reference': '0.10.1', // reference version
   };
 
   if (knownVersions[moduleName]) {
@@ -2463,7 +2425,7 @@ export function show_versions() {
     library: 'pleco-audio',
     version: '1.0.0',
     // Tier-2 proof-of-work repair (2026-07-02): removed fictional
-    // 'librosaParity: 100%, 512/512 functions' claims — parity status lives
+    // '100%, 512/512 functions' coverage claims — real coverage status lives
     // in PARITY.md and the fixture-gated test suite, not hard-coded numbers.
     environment: isNode ? 'node' : isBrowser ? 'browser' : 'unknown',
 

@@ -2,9 +2,9 @@
  * Rhythm utilities: predominant local pulse and beat-synchronous aggregation.
  *
  * NOTE (collision resolution, v2 wave 2): this module no longer exports
- * `beat_track` or `tempo` — the canonical, librosa-parity engine lives in
- * ./xa-beat-tracker.js. The non-parity onset/tempo/DP helpers that backed
- * the removed exports were deleted; plp() now consumes the librosa-parity
+ * `beat_track` or `tempo` — the canonical engine lives in
+ * ./xa-beat-tracker.js. The former ad-hoc onset/tempo/DP helpers that backed
+ * the removed exports were deleted; plp() now consumes the canonical
  * onset_strength from ./xa-onset.js.
  */
 

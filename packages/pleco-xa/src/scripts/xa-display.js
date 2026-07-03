@@ -1,7 +1,7 @@
 /**
- * Port of librosa.display
+ * Canvas-native spectrogram and waveform display
  * Canvas-based audio visualization utilities for browser environments
- * Librosa-compatible display functions adapted for JavaScript/Canvas API
+ * Spectrogram / waveform display functions for the Canvas API
  */
 
 /**
@@ -646,7 +646,7 @@ class DisplayAdaptor {
       this.disconnect();
     }
 
-    // Map librosa/matplotlib signals to browser events
+    // Map plot signals to browser events
     const eventMap = {
       'xlim_changed': 'zoom',
       'ylim_changed': 'zoom',

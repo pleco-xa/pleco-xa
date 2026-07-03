@@ -1,7 +1,7 @@
 /**
- * Port of librosa.util normalization functions
+ * Port of util normalization functions
  * Normalization and scaling utilities for audio and spectral data
- * Librosa-compatible normalization utilities for JavaScript
+ * canonical normalization utilities for JavaScript
  */
 
 /**

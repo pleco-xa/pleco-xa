@@ -1,9 +1,8 @@
 /**
  * Matching Functions Module — compatibility shim.
  *
- * The librosa-faithful engines live in src/sequence/matching.js
- * (matchIntervals / matchEvents, ports of librosa.util.match_intervals /
- * match_events).
+ * The core engines live in src/sequence/matching.js
+ * (matchIntervals / matchEvents).
  *
  * CRITICAL repair (Wave 5B): the legacy implementation stored sorted VALUES
  * through `Uint32Array.map` (typed-array map preserves the integer element
@@ -13,7 +12,7 @@
  * only adapts calling conventions.
  *
  * The bottom-level `match_events` / `match_intervals` exports (re-exported by
- * pleco-audio.js) now follow librosa semantics: constraint violations THROW
+ * pleco-audio.js) throw on constraint violations
  * (the legacy loose ports returned -1 sentinels instead).
  */
 
@@ -25,7 +24,7 @@ import {
 
 /**
  * Musical Event and Interval Matcher Class
- * Thin wrapper around the librosa-faithful engine, kept for API
+ * Thin wrapper around the core engine, kept for API
  * compatibility (plus the pleco-specific accuracy helpers below).
  */
 export class Matcher {
@@ -41,7 +40,7 @@ export class Matcher {
 
   /**
    * Match one set of time intervals to another based on maximum overlap
-   * (librosa.util.match_intervals semantics, full float precision).
+   * (Jaccard-overlap matching, full float precision).
    * @param {Array<Array<number>>} intervalsFrom - Source intervals [[start, end], ...]
    * @param {Array<Array<number>>} intervalsTo - Target intervals [[start, end], ...]
    * @param {boolean} strict - If true, intervals must overlap to match
@@ -62,7 +61,7 @@ export class Matcher {
 
   /**
    * Match one set of discrete events to another using nearest neighbor
-   * (librosa.util.match_events semantics, full float precision).
+   * (nearest-neighbor matching, full float precision).
    * @param {Array<number>} eventsFrom - Source events (times, samples, or frame indices)
    * @param {Array<number>} eventsTo - Target events
    * @param {boolean} left - Allow matching to events on the left
@@ -223,7 +222,7 @@ export function matchBeatsToOnsets(beats, onsets, tolerance = 0.1) {
 
 /**
  * Match one set of events to another
- * (librosa.util.match_events semantics — full precision, throws on
+ * (nearest-neighbor matching — full precision, throws on
  * constraint violations; the legacy -1 sentinels are gone)
  *
  * @param {Array<number>} events_from - Source event times
@@ -233,7 +232,7 @@ export function matchBeatsToOnsets(beats, onsets, tolerance = 0.1) {
  * @returns {Int32Array} Indices into events_to for each event in events_from
  *
  * @example
- * match_events([0.5, 1.5, 2.5], [0, 1, 2, 3])  // [1, 2, 3] (librosa tie handling)
+ * match_events([0.5, 1.5, 2.5], [0, 1, 2, 3])  // [1, 2, 3] (ties to the middle index)
  */
 export function match_events(events_from, events_to, left = true, right = true) {
   return matchEventsCore(events_from, events_to, { left, right })
@@ -241,7 +240,7 @@ export function match_events(events_from, events_to, left = true, right = true) 
 
 /**
  * Match one set of time intervals to another
- * (librosa.util.match_intervals semantics — Jaccard-scored, full precision,
+ * (Jaccard-scored matching — full precision,
  * strict mode throws when a query is disjoint from every target; the legacy
  * -1 sentinels are gone)
  *

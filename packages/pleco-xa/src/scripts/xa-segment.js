@@ -1,12 +1,9 @@
 /**
- * Port of librosa.segment
- * Structural segmentation and music structure analysis
- * Librosa-compatible segmentation for JavaScript
+ * Structural segmentation and music structure analysis for JavaScript.
  */
 
 /**
  * Compute recurrence matrix from feature sequence
- * Port of librosa.segment.recurrence_matrix
  * @param {Array} data - Feature matrix [n_features][n_frames]
  * @param {number} k - Number of nearest neighbors
  * @param {number} width - Filter width (diagonal suppression)
@@ -90,7 +87,6 @@ function compute_distance(a, b, metric) {
 
 /**
  * Convert recurrence matrix to time-lag representation
- * Port of librosa.segment.recurrence_to_lag
  * @param {Array} R - Recurrence matrix [n][n]
  * @param {number} pad - Pad length
  * @param {number} axis - Aggregation axis
@@ -114,7 +110,6 @@ export function recurrence_to_lag(R, pad = true, axis = -1) {
 
 /**
  * Convert time-lag representation to recurrence matrix
- * Port of librosa.segment.lag_to_recurrence
  * @param {Array} L - Lag matrix [n][n]
  * @returns {Array} Recurrence matrix
  */
@@ -307,7 +302,6 @@ export function boundaries_to_segments(boundaries, n_frames) {
 
 /**
  * Compute cross-similarity from one data sequence to a reference sequence
- * Port of librosa.segment.cross_similarity
  *
  * @param {Array} data - Query feature matrix [n_features][n_frames]
  * @param {Array} data_ref - Reference feature matrix [n_features][n_frames_ref]
@@ -369,7 +363,6 @@ export function cross_similarity(
 
 /**
  * Multi-angle path enhancement for self- and cross-similarity matrices
- * Port of librosa.segment.path_enhance
  *
  * Applies diagonal median filtering at multiple angles to enhance
  * diagonal structures in similarity matrices
@@ -475,7 +468,6 @@ export function path_enhance(
 
 /**
  * Sub-divide a segmentation by feature clustering
- * Port of librosa.segment.subsegment
  *
  * Takes existing segment boundaries and further divides each segment
  * into sub-segments using k-means clustering
@@ -622,7 +614,7 @@ function euclidean_distance(a, b) {
 
 /**
  * Calculate bandwidth for affinity/recurrence matrices
- * Private helper from librosa.segment.__affinity_bandwidth
+ * Private affinity-bandwidth helper
  *
  * Computes the bandwidth parameter for recurrence matrix construction.
  *
@@ -659,7 +651,7 @@ export function __affinity_bandwidth(rec, bw_mode, k) {
 
 /**
  * Filter wrapper for lag domain operations
- * Private helper from librosa.segment.__my_filter
+ * Private filter-wrapper helper
  *
  * Wraps scipy.ndimage.median_filter for lag-domain filtering.
  *

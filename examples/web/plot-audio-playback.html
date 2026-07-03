@@ -15,7 +15,7 @@
   <h2>plot_audio_playback — hear your analysis: onset clicks + chirp playback</h2>
   <p>
     A 4-hit percussion pattern with hits at exactly [0.5, 1.0, 1.5, 2.0] s is
-    analyzed two ways: the librosa-parity centered <code>onset_strength</code>
+    analyzed two ways: the centered <code>onset_strength</code>
     envelope + <code>peakPick</code> must recover all 4 hits within ±1 hop
     (23 ms), and the quick-tier <code>onsetDetect</code> must find 4 within its
     honest uncentered-window bound (100 ms). Detections are sonified with
@@ -47,7 +47,7 @@
     for (let i = 0; i < burst.length; i++) burst[i] = (lcg() * 2 - 1) * Math.exp(-i / (0.004 * sr))
     const y = audioio.clicks({ times: truth, sr, click: burst, length: Math.round(2.5 * sr) })
 
-    // parity tier: centered onset_strength + librosa peak picking
+    // parity tier: centered onset_strength + canonical peak picking
     const env = onset_strength(y, { sr, max_size: 5 })
     const mx = Math.max(...env)
     const picks = Array.from(peakPick(Float64Array.from(env, (v) => v / mx), {

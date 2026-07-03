@@ -2,16 +2,15 @@
  * Laplacian structural segmentation — McFee & Ellis (2014),
  * "Analyzing song structure with spectral clustering" (ISMIR).
  *
- * Line-faithful port of the recipe in librosa's
- * `docs/examples/plot_segmentation.py` (the spectral-clustering half, after the
- * CQT/beat-sync feature stage), composed entirely from pleco's parity-gated
+ * Implements the McFee & Ellis spectral-clustering recipe (the half after the
+ * CQT/beat-sync feature stage), composed entirely from pleco's own
  * primitives:
  *
  *   1. `segment.recurrenceMatrix(feats, mode='affinity', width, sym=true)`
  *      builds the weighted recurrence affinity S_rep (Eq. 1, after Eq. 8).
  *   2. A diagonal-enhancing median filter in the **time-lag domain**
  *      (`recurrenceToLag → median(size=(1,7), reflect) → lagToRecurrence`,
- *      i.e. librosa's `timelag_filter(scipy.ndimage.median_filter)`) yields Rf
+ *      i.e. a `timelag_filter(scipy.ndimage.median_filter)`) yields Rf
  *      (Eq. 2).
  *   3. The sequential path matrix R_path (S_loc) is the tridiagonal chain
  *      `R_path[i, i±1] = exp(-‖f_{i+1} − f_i‖² / σ²)`, σ = median successive
@@ -38,9 +37,9 @@
  * and throw otherwise; symmetrizing keeps that contract honest.
  *
  * Inputs are NEVER shape-guessed: pass a 2D feature matrix, rows = features,
- * columns = frames (librosa layout, d × n). Ambiguous input throws.
+ * columns = frames (d × n layout). Ambiguous input throws.
  *
- * No exact librosa fixture exists for this end-to-end pipeline (the example
+ * No exact reference fixture exists for this end-to-end pipeline (the example
  * chains a CQT that pleco only approximates), so correctness is proven against
  * synthetic known-structure input in tests/segment-laplacian.test.js.
  *
@@ -64,7 +63,7 @@ function toFrameVectors(features2d) {
   ) {
     throw new Error(
       'laplacianSegmentation: features2d must be a non-empty 2D matrix ' +
-        '(rows = features, columns = frames, librosa d×n layout)',
+        '(rows = features, columns = frames, d×n layout)',
     )
   }
   const d = features2d.length
@@ -102,7 +101,7 @@ function medianOdd(buf) {
 /**
  * Diagonal-enhancing median filter in the time-lag domain:
  * `lagToRecurrence(median_{axis=1, reflect}(recurrenceToLag(R, pad=true), win))`.
- * Reproduces librosa `timelag_filter(scipy.ndimage.median_filter)(R, size=(1, win))`.
+ * Reproduces `timelag_filter(scipy.ndimage.median_filter)(R, size=(1, win))`.
  * @private
  */
 function timelagMedianFilter(R, win) {
@@ -150,7 +149,7 @@ function medianFilterColumns(evecs, n, kCols, win) {
  *     the same d×n matrix drives BOTH the recurrence graph and the path graph.
  *     Convenient when one representation must serve both roles.
  *
- *   - **Two-feature form (exact librosa parity)** —
+ *   - **Two-feature form** —
  *     `laplacianSegmentation({ recurrenceFeatures, pathFeatures }, opts)`:
  *     the recurrence affinity Rf is built from `recurrenceFeatures` and the
  *     sequential path graph R_path from `pathFeatures`, matching

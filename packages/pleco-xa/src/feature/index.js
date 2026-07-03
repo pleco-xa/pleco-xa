@@ -1,7 +1,7 @@
 /**
  * feature/ — the canonical, fixture-verified spectral feature namespace.
  *
- * One implementation per feature, librosa 0.11.0 numerics, gated by
+ * One implementation per feature, fixture-verified numerics, gated by
  * tests/parity/{spectral,mfcc,chroma}.parity.test.js against
  * tools/parity/fixtures/{spectral_features,mfcc,chroma}.json.
  *

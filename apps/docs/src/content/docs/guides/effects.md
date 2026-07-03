@@ -10,11 +10,10 @@ a mono `Float32Array` and a sample rate where one is needed, and returns arrays.
 no default fallbacks: `time_stretch` and `pitch_shift` either honour their contract or
 throw.
 
-The whole namespace is fixture-gated against librosa 0.11 (`effects.json`,
-`phase_vocoder.json`): `trim`/`split` match exactly, `preemphasis`/`deemphasis` to
-5.96e-8, and the phase vocoder to within 1e-3 of the peak at rates 0.5 and 2.0. Where the
-names line up with librosa, that parity is a proven result — not a coincidence and not a
-port claim.
+The whole namespace is fixture-gated in CI (`effects.json`,
+`phase_vocoder.json`): `trim`/`split` are exact, `preemphasis`/`deemphasis` to
+5.96e-8, and the phase vocoder to within 1e-3 of the peak at rates 0.5 and 2.0.
+Those tolerances are proven results, enforced on every build.
 
 ## Key functions
 
@@ -58,13 +57,13 @@ const swapped = effects.remix(clean, [
 - **Silence reference is max frame RMS**, not peak sample amplitude — using peak would
   over-trim by 6–15 dB. Good defaults: `top_db: 60`, `frame_length: 2048`,
   `hop_length: 512`.
-- **All-silent input to `trim` returns an empty slice `[0, 0]`**, matching librosa.
+- **All-silent input to `trim` returns an empty slice `[0, 0]`.**
 - **`pitch_shift` resampling uses linear interpolation** (no anti-aliasing filter). Downward
   shifts (upsampling) are clean; upward shifts can alias above `~sr / (2 * rate)`. This is a
   documented fidelity limit of the current resampler, not a silent fallback.
 - **The phase vocoder wraps the deviation from the expected phase advance** (Ellis 2002),
   not the raw phase delta, and pads two zero columns at the boundary — that is what buys the
-  ≤1e-3 parity.
+  ≤1e-3 accuracy.
 - `rate <= 0` throws in `time_stretch`/`phase_vocoder`; a non-positive-integer
   `bins_per_octave` throws in `pitch_shift`.
 

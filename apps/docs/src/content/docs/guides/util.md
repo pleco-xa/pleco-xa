@@ -20,7 +20,7 @@ you reach for.
   matrix between index boundaries (e.g. beat-synchronous mean/max). `aggregate`
   is a reducer **function** (defaults to mean).
 - `peakPick(x, { preMax, postMax, preAvg, postAvg, delta, wait, sparse? })` —
-  the librosa-style `peak_pick` used by the parity onset path.
+  the `peak_pick` peak-picker used by the canonical onset path.
 - `buf_to_float(x, n_bytes?, dtype?)` — convert integer PCM buffers to floats.
 - `valid_audio(y, mono?)` — validate a time series, throwing on the wrong shape.
 
@@ -49,22 +49,22 @@ sync(feats, [0, 3, 6], mean) // [[1, 4], [10, 20]]  ([features][segments])
 
 ## Notes
 
-- **`frame` copies; it does not return a view.** librosa's zero-copy strided
-  view does not transfer — every frame is a fresh copy. For a 2-D spectrogram
-  the patch layout is `[patch][mel][time]`, which is the transpose of librosa's
-  `(mel, L, n_patches)`. Budget the memory: a 33×128×215 patch tensor is
+- **`frame` copies; it does not return a view.** There is no zero-copy strided
+  view — every frame is a fresh copy. For a 2-D spectrogram
+  the patch layout is `[patch][mel][time]` (the transpose of a
+  `(mel, L, n_patches)` layout). Budget the memory: a 33×128×215 patch tensor is
   ~3.6 MB of duplicated floats.
 - **`sync` aggregates *between* consecutive boundaries and ignores its `pad`
-  flag.** To reproduce librosa's `pad=True` output, pass explicit boundaries
+  flag.** For `pad=true`-style output, pass explicit boundaries
   including the endpoints — `[0, ...beats, T]`. It stores results as
   `Float32Array`, so exactness assertions should compare against
   `Math.fround(mean)`, not the double-precision mean.
-- **`peakPick` is the parity peak-picker.** It is the same `peak_pick` the
+- **`peakPick` is the canonical peak-picker.** It is the same `peak_pick` the
   centered `onset_strength` path uses to land beats within ±1 hop of truth —
   distinct from `onsetDetect`'s faster mean-plus-delta heuristic.
 - **`fix_frames` is inclusive and sorted.** It clamps into `[x_min, x_max]`,
   removes duplicates, and (with `pad`) prepends/appends the boundaries.
-- These are Tier-1 promotions to the curated public surface, verified against
-  their reference behavior before shipping.
+- These are Tier-1 promotions to the curated public surface, fixture-verified
+  before shipping.
 
 See the [API reference](/api/) for full signatures and defaults.

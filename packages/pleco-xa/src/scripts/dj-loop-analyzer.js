@@ -97,7 +97,7 @@ export class DJLoopAnalyzer {
     const chroma = chroma_cqt(audioData, sampleRate)
     const enhanced_chroma = enhance_chroma(chroma)
 
-    // Rhythmic features (canonical librosa-parity engine)
+    // Rhythmic features (canonical canonical engine)
     const bpm = tempo(audioData, { sr: sampleRate })
     const tempo_result = { bpm }
     const beat_result = beat_track(audioData, sampleRate, { bpm, units: 'time' })

@@ -7,8 +7,8 @@
  *     now a proper zero-padded DCT-III inverse.
  *   - griffinlim returned 1 sample (istft arg-shift put center=true into
  *     length) AND coerced its complex spectrogram to NaN on typed-array rows.
- *   - mel_to_stft remains a documented transpose APPROXIMATION (librosa uses
- *     NNLS): the steady-frame cosine similarity vs |stft(y)| is
+ *   - mel_to_stft remains a documented transpose APPROXIMATION (NNLS
+ *     would be exact): the steady-frame cosine similarity vs |stft(y)| is
  *     deterministically ~0.838 for this tone — the plan's ">0.9" is
  *     numerically impossible for the transpose method, so we pin the measured
  *     golden band AND assert the stronger structural truth that the per-frame
@@ -59,7 +59,7 @@ for (let t = 1; t < nT - 1; t++) {
 }
 check('per-frame argmax FFT bin identical to |stft(y)| (42/42 interior frames)', argmaxMatches, nT - 2)
 checkTrue(
-  'interior cosine sim in golden band 0.838 ±0.02 (transpose approx — librosa NNLS would score higher)',
+  'interior cosine sim in golden band 0.838 ±0.02 (transpose approx — NNLS would score higher)',
   Math.abs(minCos - 0.838) <= 0.02,
   `min interior cos ${minCos.toFixed(4)}`,
 )

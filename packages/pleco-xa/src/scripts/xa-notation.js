@@ -1,7 +1,6 @@
 /**
- * Port of librosa.core.notation
  * Music notation, scale theory, and key/raga functions
- * Librosa-compatible notation utilities for JavaScript
+ * Notation utilities for JavaScript
  */
 
 import { hz_to_midi, midi_to_hz, note_to_hz, hz_to_note, note_to_midi, midi_to_note } from './xa-convert.js';
@@ -95,8 +94,8 @@ const KEY_DEGREES = {
 
 /**
  * Base note-name grids for key spelling (index == chromatic pitch class,
- * 0 == C). Corrections extend these past 6 sharps / 6 flats, exactly like
- * librosa.core.notation.key_to_notes.
+ * 0 == C). Corrections extend these past 6 sharps / 6 flats for full
+ * enharmonic spelling.
  */
 const NOTES_SHARP = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const NOTES_FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -132,7 +131,7 @@ export function key_to_degrees(key) {
 
 /**
  * List all 12 note names in the chromatic scale, as spelled according to a
- * given key. Port of librosa.core.notation.key_to_notes (0.11): the returned
+ * given key. The returned
  * array is indexed by pitch class (0 == C), NOT rotated to the tonic, and the
  * sharp/flat choice follows the key's position on the circle of fifths
  * (explicit accidental in the tonic forces the side). Unknown keys THROW \u2014
@@ -312,7 +311,7 @@ export function mela_to_degrees(mela) {
 export function mela_to_svara(mela, abbr = true, unicode = true) {
   const degrees = mela_to_degrees(mela);
 
-  // SLOT-AWARE naming (librosa semantics): the same chromatic degree is
+  // SLOT-AWARE naming: the same chromatic degree is
   // spelled differently depending on which svara slot it fills. Degree 2 is
   // R2 in the Ri slot but G1 in the Ga slot; degree 9 is D2 (Dha) but N1 (Ni).
   // A single-valued degree→name map cannot emit G1/G2/N1/N2 — that was the
@@ -325,7 +324,7 @@ export function mela_to_svara(mela, abbr = true, unicode = true) {
   const D_NUM = { 8: 1, 9: 2, 10: 3 };  // Dha slot: degrees 8/9/10
   const N_NUM = { 9: 1, 10: 2, 11: 3 }; // Ni slot: degrees 9/10/11
 
-  // librosa renders variant numbers as unicode subscripts when unicode=true
+  // Variant numbers render as unicode subscripts when unicode=true
   const sub = (n) => (unicode ? ['₁', '₂', '₃'][n - 1] : String(n));
 
   if (abbr) {
@@ -686,12 +685,12 @@ export function note_to_svara_h(notes, Sa, abbr = true, octave = true, unicode =
 }
 
 // ============================================================================
-// Notation Helper Functions (Librosa-compatible)
+// Notation Helper Functions
 // ============================================================================
 
 /**
  * Compute the octave-folded interval
- * Equivalent to librosa's __o_fold helper
+ * Equivalent to the __o_fold helper
  *
  * Maps intervals to the range [1, 2) by removing octave multiples.
  * This is part of the FJS (Functional Just System) notation converter.
@@ -707,7 +706,7 @@ function __o_fold(d) {
 
 /**
  * Compute the balanced, octave-folded interval
- * Equivalent to librosa's __bo_fold helper
+ * Equivalent to the __bo_fold helper
  *
  * Maps intervals to the range [sqrt(2)/2, sqrt(2)) using balanced octave folding.
  * This is part of the FJS notation converter.
@@ -723,7 +722,7 @@ function __bo_fold(d) {
 
 /**
  * Accelerated helper for finding number of fifths
- * Equivalent to librosa's __fifth_search helper
+ * Equivalent to the __fifth_search helper
  *
  * Finds the number of perfect fifths (3/2 ratio) needed to approximate
  * a given interval within a specified tolerance.
@@ -753,7 +752,7 @@ function __fifth_search(interval, tolerance) {
 
 /**
  * Translate a mode into its equivalent major key
- * Equivalent to librosa's __mode_to_key helper
+ * Equivalent to the __mode_to_key helper
  *
  * @private
  * @param {string} signature - Mode signature (e.g., 'D:dorian')
@@ -797,7 +796,7 @@ function __mode_to_key(signature, unicode = true) {
 
 /**
  * Convert note name to scale degree
- * Equivalent to librosa's __note_to_degree helper
+ * Equivalent to the __note_to_degree helper
  *
  * Takes a note name and returns the chromatic degree (C=0, C#=1, ..., B=11).
  * Handles accidentals including sharps, flats, and combinations.
@@ -843,7 +842,7 @@ function __note_to_degree(key) {
 
 /**
  * Simplify note name by canceling accidentals
- * Equivalent to librosa's __simplify_note helper
+ * Equivalent to the __simplify_note helper
  *
  * Takes a note name and simplifies by canceling sharp-flat pairs
  * and compressing multiple accidentals (e.g., 'C♭♯' -> 'C', 'C##' -> 'D').
@@ -902,7 +901,6 @@ function __simplify_note(key, additional_acc = '', unicode = true) {
 
 /**
  * Calculate the note name for a given number of perfect fifths
- * Port of librosa.fifths_to_note
  *
  * Starting from a given unison note, computes the note name that is
  * `fifths` perfect fifths away.
@@ -917,7 +915,7 @@ function __simplify_note(key, additional_acc = '', unicode = true) {
  * fifths_to_note('C', -1)       // 'F'   (down one fifth)
  * fifths_to_note('C', 7, false) // 'C#'  (7 fifths = one sharp on the tonic letter)
  * fifths_to_note('B', 1, false) // 'F#'  (crossing the B→F♯ boundary adds the sharp)
- * fifths_to_note('G', -3, false)// 'Bb'  (librosa docstring golden)
+ * fifths_to_note('G', -3, false)// 'Bb'  (docstring golden)
  */
 export function fifths_to_note(unison, fifths, unicode = true) {
   // Letters ordered by fifths. A note's absolute circle-of-fifths index is

@@ -9,8 +9,8 @@
   <p style="max-width:90ch">
     A C4–E4–G4–C5 arpeggio (261.63 / 329.63 / 392.00 / 523.25 Hz, 0.5 s each) at
     sr=22050 through <code>feature.chroma_stft</code> with tuning auto-estimated
-    (piptrack parabolic interpolation → pitch_tuning histogram, exactly librosa's
-    path). Each note must light its own pitch-class row: per-segment argmax must be
+    (piptrack parabolic interpolation → pitch_tuning histogram — the standard
+    tuning-estimation path). Each note must light its own pitch-class row: per-segment argmax must be
     [0, 4, 7, 0] = [C, E, G, C], and <code>estimate_tuning</code> on these
     A440-derived tones must be within 0.05 chroma bins of 0. Numeric asserts were
     node-verified against dist before this page was written ([0,4,7,0], tuning −0.040).

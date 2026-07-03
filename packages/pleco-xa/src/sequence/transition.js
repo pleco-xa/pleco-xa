@@ -1,16 +1,16 @@
 /**
- * Transition-matrix constructors — librosa.sequence parity.
+ * Transition-matrix constructors.
  *
- * Ports transition_uniform / transition_loop / transition_cycle /
- * transition_local exactly from librosa 0.11 (librosa/sequence.py). Each row of
- * the returned matrix is a proper probability distribution (non-negative, sums
- * to 1), matching librosa's contract for `librosa.sequence.viterbi*`.
+ * Provides transition_uniform / transition_loop / transition_cycle /
+ * transition_local. Each row of the returned matrix is a proper probability
+ * distribution (non-negative, sums to 1), the contract required by the
+ * `viterbi*` decoders.
  *
- * transition_local reproduces librosa's exact pipeline —
+ * transition_local follows the pipeline
  * get_window(window, width) → pad_center(n_states) → np.roll(n//2 + i + 1) →
- * off-band knockout (when wrap=False) → row-normalize — so it agrees with
- * librosa for any width (odd or even), the 'triangle' and uniform ('ones')
- * windows, and wrap on/off, not just the odd-triangle case.
+ * off-band knockout (when wrap=False) → row-normalize — so it holds for any
+ * width (odd or even), the 'triangle' and uniform ('ones') windows, and wrap
+ * on/off, not just the odd-triangle case.
  *
  * Fixture-gated: tools/parity/fixtures/sequence_extra.json (exact within 1e-6).
  * Scalar and typed-array (Float64Array / Int32Array) `prob`/`width` inputs are
@@ -24,7 +24,7 @@ function isPositiveInt(x) {
 
 /**
  * Coerce a scalar-or-iterable per-state parameter into a length-`nStates`
- * numeric array. Mirrors librosa's `np.asarray` + scalar-tile behavior.
+ * numeric array. Mirrors `np.asarray` + scalar-tile behavior.
  */
 function toStateVector(value, nStates, name) {
   let vec
@@ -95,7 +95,7 @@ export function transition_loop(nStates, prob) {
  * Construct a cyclic transition matrix.
  * `transition[i][i] = p`, `transition[i][(i + 1) mod nStates] = 1 - p`.
  *
- * NOTE: `prob` is the SELF-transition (stay) probability, matching librosa —
+ * NOTE: `prob` is the SELF-transition (stay) probability —
  * e.g. `transition_cycle(4, 0.9)` has 0.9 on the diagonal and 0.1 one step
  * forward. (The prior pleco implementation had this inverted.)
  *
@@ -125,7 +125,7 @@ export function transition_cycle(nStates, prob) {
 
 /**
  * scipy.signal.windows.triang(M, sym=True) — symmetric triangular window.
- * Reproduced exactly so `transition_local(window='triangle')` matches librosa.
+ * Reproduced exactly for `transition_local(window='triangle')`.
  */
 function triang(M) {
   if (!isPositiveInt(M)) {
@@ -144,7 +144,7 @@ function triang(M) {
 }
 
 /**
- * Subset of librosa.filters.get_window needed by transition_local: the
+ * Subset of get_window needed by transition_local: the
  * triangular window and the constant ('ones') window. Other window specs throw
  * with a diagnostic rather than silently producing an unrelated matrix.
  */
@@ -170,7 +170,7 @@ function getWindow(window, width) {
 }
 
 /**
- * librosa.util.pad_center — center `data` inside a zero array of `size`.
+ * pad_center — center `data` inside a zero array of `size`.
  * Left pad = floor((size - n) / 2). Throws when the window is wider than size.
  */
 function padCenter(data, size) {
@@ -243,7 +243,7 @@ export function transition_local(nStates, width, window = 'triangle', wrap = fal
     row = roll(row, Math.floor(nStates / 2) + i + 1)
 
     if (!wrap) {
-      // Knock out the off-diagonal-band elements (librosa slice semantics).
+      // Knock out the off-diagonal-band elements (slice semantics).
       const hi = Math.min(nStates, i + half + 1)
       for (let k = hi; k < nStates; k++) row[k] = 0
       const lo = Math.max(0, i - half)

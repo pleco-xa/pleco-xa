@@ -1,29 +1,28 @@
 /**
- * Port of librosa.feature.tempogram (0.11.0) — local autocorrelation
- * tempogram over an onset-strength envelope, plus the Fourier tempogram and
- * a prior-weighted tempo estimator.
+ * Local autocorrelation tempogram over an onset-strength envelope, plus the
+ * Fourier tempogram and a prior-weighted tempo estimator.
  *
  * Tier-3 proof-of-work repairs (2026-07-02):
  *   1. tempogram(): linear_ramp padding (was zero-pad), full win_length lag
  *      rows (was win_length/2+1), per-column inf-norm with the float64-tiny
  *      guard — exactly the math the fixture-gated canonical tempo() consumes
- *      (xa-beat-tracker.js meanTempogram now DELEGATES here, so the parity
+ *      (xa-beat-tracker.js meanTempogram now DELEGATES here, so the
  *      fixture tempo_beats.json gates this module too).
  *   2. fourier_tempogram(): STFT of the onset envelope at hop_length=1
- *      (librosa semantics — the previous code passed the audio hop_length,
+ *      (the previous code passed the audio hop_length,
  *      collapsing a 431-frame envelope to a single column).
- *   3. estimate_tempo(): librosa's pseudo-log-normal tempo prior
+ *   3. estimate_tempo(): pseudo-log-normal tempo prior
  *      (start_bpm=120, std_bpm=1.0 in log2 space) + max_tempo mask over the
  *      time-mean tempogram (the previous raw argmax returned the 60 BPM
  *      subharmonic on a plain 120 BPM click train).
  *   4. The private simplified onset_strength duplicate is gone — the
- *      librosa-parity onset_strength from ./xa-onset.js is used instead.
- *   5. tempogram_ratio(): librosa.feature.tempogram_ratio parity — samples the
- *      tempogram at the Prockup'15 metric ratios of the per-frame tempo. It
- *      does NOT delegate to the exported xa-harmonic.f0_harmonics: that helper
- *      brackets the frequency grid ascending-in-place and mishandles the +Inf
- *      head, so it returns all-zeros on the descending tempo axis (verified);
- *      a librosa-faithful static-grid interpolator lives here instead.
+ *      canonical onset_strength from ./xa-onset.js is used instead.
+ *   5. tempogram_ratio(): samples the tempogram at the Prockup'15 metric
+ *      ratios of the per-frame tempo. It does NOT delegate to the exported
+ *      xa-harmonic.f0_harmonics: that helper brackets the frequency grid
+ *      ascending-in-place and mishandles the +Inf head, so it returns
+ *      all-zeros on the descending tempo axis (verified); a dedicated
+ *      static-grid interpolator lives here instead.
  *      Gated by tools/parity/fixtures/tempogram_ratio.json.
  *
  * Proof: examples/node/tempogram-ratio.mjs (tempogram_ratio),
@@ -56,7 +55,7 @@ function hannPeriodic(n) {
 /**
  * Full (unbounded) autocorrelation of a real signal:
  * ac[lag] = sum_i x[i] * x[i + lag]. Direct O(n^2) evaluation — numerically
- * identical to librosa's FFT path up to float roundoff.
+ * identical to an FFT-based autocorrelation up to float roundoff.
  * @private
  */
 function autocorrelate(x) {
@@ -73,7 +72,7 @@ function autocorrelate(x) {
 }
 
 /**
- * librosa.convert.tempo_frequencies: BPM value of each autocorrelation lag.
+ * BPM value of each autocorrelation lag.
  * Bin 0 is +Infinity (lag 0).
  * @private
  */
@@ -87,12 +86,11 @@ function tempoFrequencies(nBins, hopLength, sr) {
 }
 
 /* ------------------------------------------------------------------------ *
- * tempogram — librosa.feature.tempogram parity
+ * tempogram — local autocorrelation tempogram
  * ------------------------------------------------------------------------ */
 
 /**
  * Local autocorrelation tempogram of the onset strength envelope.
- * Port of librosa.feature.tempogram (0.11.0).
  *
  * Legacy positional signature preserved.
  *
@@ -100,13 +98,13 @@ function tempoFrequencies(nBins, hopLength, sr) {
  *   onset_envelope provided)
  * @param {number} sr - sample rate
  * @param {Float32Array|Array|null} onset_envelope - pre-computed
- *   librosa-parity onset strength envelope
+ *   onset strength envelope
  * @param {number} hop_length - hop length used for the onset envelope
  * @param {number} win_length - autocorrelation window in frames
  * @param {boolean} center - center the analysis windows (linear_ramp pad)
  * @param {string} window - window function ('hann' only)
  * @param {number|null} norm - Infinity for per-column max-normalization
- *   (librosa default), null for raw autocorrelation
+ *   (default), null for raw autocorrelation
  * @returns {Array<Float64Array>} tempogram [win_length][n_frames] — row k is
  *   lag k; convert with convert.tempo_frequencies(win_length, hop_length, sr)
  * @throws {Error} on invalid parameters or an envelope shorter than one
@@ -131,7 +129,7 @@ export function tempogram(
     )
   }
   if (norm !== Infinity && norm !== null) {
-    throw new Error('tempogram: norm must be Infinity (librosa default) or null')
+    throw new Error('tempogram: norm must be Infinity (default) or null')
   }
 
   let oenv = onset_envelope
@@ -162,7 +160,7 @@ export function tempogram(
     padded = Float64Array.from(oenv)
   }
 
-  // librosa frames the padded envelope at hop 1, then trims to n columns
+  // Frame the padded envelope at hop 1, then trim to n columns
   const nCols = center
     ? Math.min(n, padded.length - win_length + 1)
     : padded.length - win_length + 1
@@ -207,17 +205,16 @@ export function tempogram(
 }
 
 /* ------------------------------------------------------------------------ *
- * fourier_tempogram — librosa.feature.fourier_tempogram parity
+ * fourier_tempogram — Fourier tempogram
  * ------------------------------------------------------------------------ */
 
 /**
- * Fourier tempogram: STFT of the onset strength envelope at hop 1.
- * Port of librosa.feature.fourier_tempogram (0.11.0):
+ * Fourier tempogram: STFT of the onset strength envelope at hop 1:
  *   stft(onset_envelope, n_fft=win_length, hop_length=1, center, window)
  *
  * DIVERGENCE NOTE: pleco's radix-2 stft zero-pads non-power-of-2 FFT sizes,
  * which would silently regrid the tempo axis — so win_length must be a power
- * of two here (default 512 instead of librosa's 384; the tempo axis is
+ * of two here (default 512; the tempo axis is
  * convert.fourier_tempo_frequencies(sr, win_length, hop_length)).
  *
  * @param {Float32Array|Array|null} y - audio time series (optional if
@@ -256,7 +253,7 @@ export function fourier_tempogram(
     oenv = onset_strength(y, { sr, hop_length })
   }
 
-  // librosa: stft(oenv, n_fft=win_length, hop_length=1, ...)
+  // stft(oenv, n_fft=win_length, hop_length=1, ...)
   return stft(
     oenv instanceof Float32Array ? oenv : Float32Array.from(oenv),
     win_length,
@@ -269,11 +266,11 @@ export function fourier_tempogram(
 }
 
 /* ------------------------------------------------------------------------ *
- * tempogram_ratio — librosa.feature.tempogram_ratio parity
+ * tempogram_ratio — tempogram ratio features
  * ------------------------------------------------------------------------ */
 
 /**
- * Default metric multiples from Prockup'15 (librosa's factor table). If the
+ * Default metric multiples from Prockup'15. If the
  * estimated tempo is the quarter note, these sample the tempogram at the
  * sixteenth (4), dotted-16th (8/3), 8th-triplet (3), 8th (2), dotted-8th
  * (4/3), quarter-triplet (3/2), quarter (1), dotted-quarter (2/3),
@@ -285,10 +282,10 @@ const TEMPOGRAM_RATIO_FACTORS = Object.freeze([
 ])
 
 /**
- * Per-frame tempo argmax — librosa.feature.tempo(tg=..., aggregate=None).
+ * Per-frame tempo argmax (tempo with tg=..., aggregate=None).
  * Scores each tempogram COLUMN with the pseudo-log-normal prior and returns
  * one BPM per frame. win_length is inferred from the tempogram (bpms use
- * n_lags bins, NOT the ac_size-derived length), exactly as librosa does when
+ * n_lags bins, NOT the ac_size-derived length) when
  * a precomputed tg is passed — so this must NOT delegate to the ac_size-based
  * tempo() in xa-beat-tracker.js.
  * @private
@@ -309,7 +306,7 @@ function perFrameTempo(tg, bpms, start_bpm, std_bpm, max_tempo) {
     const d = (Math.log2(bpms[k]) - log2Start) / std_bpm
     logprior[k] = -0.5 * d * d
   }
-  // Kill everything at/above max_tempo (librosa masks [:argmax(bpms < max)]).
+  // Kill everything at/above max_tempo (mask [:argmax(bpms < max)]).
   if (max_tempo !== null && max_tempo !== undefined) {
     let maxIdx = 0
     while (maxIdx < nLags && !(bpms[maxIdx] < max_tempo)) maxIdx++
@@ -334,19 +331,19 @@ function perFrameTempo(tg, bpms, start_bpm, std_bpm, max_tempo) {
 }
 
 /**
- * Faithful port of librosa.core.harmonic.f0_harmonics for the 1-D static
+ * f0_harmonics implementation for the 1-D static
  * frequency-grid branch (the only branch tempogram_ratio needs).
  *
  * WHY NOT the exported f0_harmonics: the tempo axis is DESCENDING with a
- * non-finite head (tempo_frequencies bin 0 = +Infinity). librosa drops the
- * non-finite bins (`idx = np.isfinite(freqs)`) and interp1d(assume_sorted=
- * False) sorts the remainder ascending. pleco's xa-harmonic.f0_harmonics
- * instead brackets the grid in place (ascending-only) and treats the +Inf
- * head via `target < freqs[0]` — so on this grid it returns fill_value for
- * EVERY target (verified: all-zero output). It is correct only for the
- * ascending, finite fft-frequency grids its own demos use. Reproducing
- * librosa here (filter finite → sort ascending → linear interp → fill_value
- * out of bounds → nan_to_num) is what makes the parity fixture pass.
+ * non-finite head (tempo_frequencies bin 0 = +Infinity). The correct approach
+ * drops the non-finite bins (`idx = np.isfinite(freqs)`) and interp1d(
+ * assume_sorted=False) sorts the remainder ascending. pleco's
+ * xa-harmonic.f0_harmonics instead brackets the grid in place (ascending-only)
+ * and treats the +Inf head via `target < freqs[0]` — so on this grid it
+ * returns fill_value for EVERY target (verified: all-zero output). It is
+ * correct only for the ascending, finite fft-frequency grids its own demos
+ * use. The full recipe here (filter finite → sort ascending → linear interp →
+ * fill_value out of bounds → nan_to_num) is what makes the fixture pass.
  * @private
  * @param {Array<Float64Array|Array>} tg - [n_lags][n_frames]
  * @param {Float64Array|Array} freqs - BPM per lag bin (len n_lags)
@@ -415,8 +412,8 @@ function f0HarmonicsStatic(tg, freqs, bpm, factors, fill_value) {
 }
 
 /**
- * Tempogram ratio features (a.k.a. spectral rhythm patterns). Port of
- * librosa.feature.tempogram_ratio (0.11.0). Summarizes tempogram energy at
+ * Tempogram ratio features (a.k.a. spectral rhythm patterns).
+ * Summarizes tempogram energy at
  * metrically important multiples of the estimated tempo by sampling the
  * tempogram at harmonic/subharmonic ratios of the per-frame BPM:
  *
@@ -425,7 +422,7 @@ function f0HarmonicsStatic(tg, freqs, bpm, factors, fill_value) {
  *   bpm  = tempo(tg=tg, aggregate=None, ...)           # per-frame BPM
  *   tgr  = f0_harmonics(tg, freqs=freqs, f0=bpm, harmonics=factors)
  *
- * Options mirror librosa's keyword-only signature.
+ * Options use a keyword-only signature.
  *
  * @param {Object} [options]
  * @param {Float32Array|Array|null} [options.y] - audio time series (used only
@@ -435,7 +432,7 @@ function f0HarmonicsStatic(tg, freqs, bpm, factors, fill_value) {
  *   onset strength envelope
  * @param {Array<Float64Array|Array>|null} [options.tg] - pre-computed
  *   tempogram [n_lags][n_frames]; if given, y/onset_envelope are ignored and
- *   win_length is inferred from n_lags (librosa semantics)
+ *   win_length is inferred from n_lags
  * @param {Float64Array|Array|null} [options.bpm] - pre-computed per-frame
  *   tempo (length n_frames); estimated from tg when null
  * @param {number} [options.hop_length=512]
@@ -449,7 +446,7 @@ function f0HarmonicsStatic(tg, freqs, bpm, factors, fill_value) {
  *   defaults to the Prockup'15 13-factor table
  * @param {Function|null} [options.aggregate] - if given, called on each
  *   harmonic's per-frame Float64Array to collapse the time axis
- *   (librosa aggregate(tgr, axis=-1)); null keeps the per-frame matrix
+ *   (aggregate(tgr, axis=-1)); null keeps the per-frame matrix
  * @param {boolean} [options.center=true] - center tempogram windows
  * @param {string} [options.window='hann'] - tempogram window
  * @param {string} [options.kind='linear'] - interpolation kind (only 'linear'
@@ -497,14 +494,14 @@ export function tempogram_ratio(options = {}) {
   if (kind !== 'linear') {
     throw new Error(
       `tempogram_ratio: kind='${kind}' is not supported — only 'linear' is ` +
-        'validated to librosa parity (scipy interp1d default)',
+        'validated (scipy interp1d default)',
     )
   }
   if (aggregate !== null && typeof aggregate !== 'function') {
     throw new Error('tempogram_ratio: aggregate must be null or a function')
   }
 
-  // Tempogram: use the caller's, else compute the librosa-parity one.
+  // Tempogram: use the caller's, else compute the canonical one.
   let tgram = tg
   if (tgram === null) {
     tgram = tempogram(
@@ -526,7 +523,7 @@ export function tempogram_ratio(options = {}) {
     )
   }
 
-  // Per-frame tempo (librosa tempo(tg=tg, aggregate=None) — bpms use nLags).
+  // Per-frame tempo (tempo(tg=tg, aggregate=None) — bpms use nLags).
   let bpmCurve = bpm
   if (bpmCurve === null) {
     const bpms = tempoFrequencies(nLags, hop_length, sr)
@@ -545,7 +542,7 @@ export function tempogram_ratio(options = {}) {
   const tgr = f0HarmonicsStatic(tgram, grid, bpmCurve, factorTable, fill_value)
 
   if (aggregate !== null) {
-    // librosa: aggregate(tgr, axis=-1) — collapse the trailing time axis.
+    // aggregate(tgr, axis=-1) — collapse the trailing time axis.
     const agg = new Float64Array(factorTable.length)
     for (let h = 0; h < factorTable.length; h++) {
       agg[h] = aggregate(tgr[h])
@@ -561,8 +558,8 @@ export function tempogram_ratio(options = {}) {
  * ------------------------------------------------------------------------ */
 
 /**
- * Estimate the global tempo from a (lag) tempogram using librosa's
- * feature.tempo scoring: time-mean of the tempogram, pseudo-log-normal prior
+ * Estimate the global tempo from a (lag) tempogram using tempo scoring:
+ * time-mean of the tempogram, pseudo-log-normal prior
  *   logprior = -0.5 * ((log2(bpm) - log2(start_bpm)) / std_bpm)^2
  * and argmax of log1p(1e6 * mean) + logprior with tempi at/above max_tempo
  * masked out. (The previous raw argmax had no prior and returned the 60 BPM
@@ -596,7 +593,7 @@ export function estimate_tempo(
     throw new Error('estimate_tempo: start_bpm and std_bpm must be positive')
   }
 
-  // Time-mean tempogram (librosa aggregate=np.mean)
+  // Time-mean tempogram (aggregate=np.mean)
   const mean = new Float64Array(n_lags)
   for (let k = 0; k < n_lags; k++) {
     let sum = 0

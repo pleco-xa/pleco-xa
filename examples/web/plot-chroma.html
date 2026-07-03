@@ -7,11 +7,11 @@
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
   <h2>plot_chroma — Enhanced chroma: harmonic + non-local + median</h2>
   <p style="max-width:95ch">
-    Replica of librosa's <em>Enhanced chroma</em> gallery page on a fully
+    An <em>enhanced chroma</em> demo on a fully
     known signal: a C4–E4–G4 arpeggio (1 s each, fundamental + octave
     partial) contaminated with noise-burst percussion (every 150 ms) and
     sparse chromatic <em>passing tones</em> (80 ms, at C#/D#/F#/G#/A#).
-    Pipeline exactly as the gallery: <code>effects.harmonic(margin=8)</code>
+    Pipeline: <code>effects.harmonic(margin=8)</code>
     (kills the bursts) → <code>feature.chroma_stft</code> → element-min with
     <code>decompose.nn_filter(aggregate='median', metric='cosine')</code>
     (kills the sparse passing tones — they don't recur, so their cosine-nearest
@@ -74,7 +74,7 @@
       }
     }
 
-    // ── the gallery pipeline ─────────────────────────────────────────────────
+    // ── the enhancement pipeline ─────────────────────────────────────────────
     const raw = feature.chroma_stft(y, { sr })
     const yHarm = effects.harmonic(y, { margin: 8 })
     const chromaHarm = feature.chroma_stft(yHarm, { sr })
@@ -137,7 +137,7 @@
       segArgmax[0] === 0 && segArgmax[1] === 4 && segArgmax[2] === 7,
       `got [${segArgmax.join(',')}]`)
 
-    // ── plots: the four gallery stages ───────────────────────────────────────
+    // ── plots: the four enhancement stages ───────────────────────────────────
     const stages = [
       ['Raw chroma (mix)', raw],
       ['Harmonic (margin=8)', chromaHarm],

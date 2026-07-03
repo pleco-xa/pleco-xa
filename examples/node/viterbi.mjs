@@ -1,8 +1,8 @@
 /**
- * plot_viterbi — Viterbi smoothing: don't flinch at the dip (librosa
- * plot_viterbi advanced-example replica; viterbi family promoted into the
- * sequence namespace for this proof, with the viterbi_discriminative prior
- * repaired to librosa semantics — divide by p_state, not multiply).
+ * plot_viterbi — Viterbi smoothing: don't flinch at the dip (viterbi family
+ * promoted into the sequence namespace for this proof, with the
+ * viterbi_discriminative prior repaired to correct Bayes semantics — divide
+ * by p_state, not multiply).
  *
  * 1 s tone + 0.3 s silence containing one noise blip + 1 s tone. feature.rms
  * → logistic map → non-silence probability p; transition_loop(2, [0.5, 0.6]);
@@ -87,23 +87,23 @@ check('viterbi toy decode [0,1,1]',
   viterbi([[0.9, 0.2, 0.1], [0.1, 0.8, 0.9]], transition_loop(2, 0.7)).join(','), '0,1,1')
 
 // the prior-repair golden: with p_state=[0.9, 0.1] the likelihood must be
-// p/p_state (librosa) → state 1 wins both frames despite lower raw prob.
+// p/p_state (Bayes correction) → state 1 wins both frames despite lower raw prob.
 // The legacy multiply-by-prior implementation decoded [0,0] here.
-check('viterbi_discriminative divides by p_state (librosa Bayes correction)',
+check('viterbi_discriminative divides by p_state (Bayes correction)',
   viterbi_discriminative([[0.8, 0.6], [0.2, 0.4]], transition_uniform(2), [0.9, 0.1]).join(','),
   '1,1')
 
-// ── transition-matrix constructors (librosa.sequence parity) ────────────────
+// ── transition-matrix constructors (sequence parity) ───────────────────────
 // transition_cycle(n, p): each state self-loops with prob p and advances to
 // the next (mod n) with 1−p. Rows are stochastic.
-check('transition_cycle(3, 0.5) == librosa golden',
+check('transition_cycle(3, 0.5) == golden',
   transition_cycle(3, 0.5), [[0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5]])
 checkTrue('transition_cycle rows sum to 1',
   transition_cycle(4, 0.3).every((r) => Math.abs(r.reduce((a, b) => a + b, 0) - 1) < 1e-12))
 
 // transition_local(n, width, 'triangle'): banded, triangle-weighted, row-
-// normalized locality. 5 states, width 3 → the librosa golden band.
-check('transition_local(5, 3, triangle) == librosa golden',
+// normalized locality. 5 states, width 3 → the golden band.
+check('transition_local(5, 3, triangle) == golden',
   transition_local(5, 3).map((r) => r.map((x) => +x.toFixed(4))),
   [[0.6667, 0.3333, 0, 0, 0], [0.25, 0.5, 0.25, 0, 0], [0, 0.25, 0.5, 0.25, 0],
     [0, 0, 0.25, 0.5, 0.25], [0, 0, 0, 0.3333, 0.6667]])

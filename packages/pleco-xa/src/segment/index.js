@@ -1,22 +1,22 @@
 /**
- * Temporal segmentation — librosa.segment ports.
+ * Temporal segmentation.
  *
- * Line-faithful ports of librosa 0.11 `librosa/segment.py`:
+ * Recurrence, cross-similarity, lag, and agglomerative primitives:
  *
- *  - `recurrenceMatrix` — kNN self-recurrence with librosa's exact pipeline:
+ *  - `recurrenceMatrix` — kNN self-recurrence pipeline:
  *    kNN graph (n_neighbors = min(t-1, k + 2*width), self excluded), width-band
  *    removal, per-row top-k retention (stable value-then-column ordering, which
  *    reproduces scipy/numpy's LIL + stable-argsort behavior, including the
  *    connectivity-mode column-order tie-break), self-diagonal handling,
  *    `sym` via MUTUAL nearest neighbors (element-wise minimum with the
  *    transpose — not union/max), affinity kernel exp(-d / bandwidth) with
- *    librosa's 'med_k_scalar' bandwidth estimation, and the final transpose.
+ *    the 'med_k_scalar' bandwidth estimation, and the final transpose.
  *  - `crossSimilarity` — kNN graph from one sequence into a reference.
  *  - `recurrenceToLag` / `lagToRecurrence` — the REAL shear:
  *    lag[i][j] = rec[(i + j) mod H][j] (factor -1), inverse with factor +1.
  *  - `agglomerative` — temporally-constrained bottom-up Ward clustering,
  *    replicating sklearn's AgglomerativeClustering(ward, chain connectivity)
- *    as used by librosa: greedy merge of the ADJACENT pair with minimum Ward
+ *    greedy merge of the ADJACENT pair with minimum Ward
  *    increment (nA·nB/(nA+nB)·||µA − µB||²), boundaries = left edges.
  *
  * Parity: fixture-gated against tools/parity/fixtures/dtw_segment.json
@@ -24,7 +24,7 @@
  * agglomerative boundary frames exact).
  *
  * Input features are NEVER shape-guessed: pass a 2D matrix (rows = features,
- * columns = frames, librosa layout) or a flat typed array with an explicit
+ * columns = frames) or a flat typed array with an explicit
  * `{ nFeatures, nFrames }`. Ambiguous input throws.
  *
  * Also re-exports `laplacianSegmentation` — the McFee-Ellis Laplacian spectral
@@ -37,7 +37,7 @@
 /**
  * Normalize feature input into an array of frame vectors (t × d).
  * Accepts:
- *  - 2D array/typed rows, shape (d, n) — librosa layout, features × frames;
+ *  - 2D array/typed rows, shape (d, n) — features × frames;
  *  - flat Array/TypedArray with explicit `nFeatures`/`nFrames` (row-major d×n).
  * @private
  */
@@ -130,7 +130,7 @@ function frameDistance(a, b, metric, fnName) {
 const VALID_MODES = ['connectivity', 'distance', 'affinity']
 
 /**
- * Per-row top-k retention replicating librosa's LIL walk:
+ * Per-row top-k retention via a sparse LIL walk:
  * links are visited in ascending column order and stably argsorted by value,
  * so equal values (connectivity mode) keep column order. Everything past the
  * k-th closest is squashed. Mutates struct.
@@ -153,7 +153,7 @@ function retainTopK(struct, vals, rows, cols, k) {
 }
 
 /**
- * librosa __affinity_bandwidth, 'med_k_scalar' branch: the median (NaN-aware)
+ * Affinity bandwidth, 'med_k_scalar' branch: the median (NaN-aware)
  * over rows of the distance to the k-th nearest retained neighbor.
  * @private
  */
@@ -167,7 +167,7 @@ function medKScalarBandwidth(struct, vals, rows, cols, k, fnName) {
         rowVals.push(vals[i * cols + j])
       }
     }
-    if (rowVals.length === 0) continue // librosa: NaN, skipped by nanmedian
+    if (rowVals.length === 0) continue // NaN, skipped by nanmedian
     rowVals.sort((a, b) => a - b)
     distToK.push(rowVals[Math.min(k, rowVals.length) - 1])
   }
@@ -200,25 +200,24 @@ function resolveBandwidth(bandwidth, struct, vals, rows, cols, k, fnName) {
 
 /**
  * Compute a recurrence (self-similarity) matrix from a feature matrix.
- * Port of librosa.segment.recurrence_matrix.
  *
  * @param {Array|Float32Array|Float64Array} data - features, shape (d, n) as a
  *   2D matrix, or flat with explicit `options.nFeatures`/`options.nFrames`.
  * @param {Object} [options]
  * @param {number|null} [options.k=null] - neighbors per sample
- *   (default 2*ceil(sqrt(t - 2*width + 1)), librosa).
+ *   (default 2*ceil(sqrt(t - 2*width + 1))).
  * @param {number} [options.width=1] - |i - j| < width links are removed.
  * @param {string} [options.metric='euclidean']
  * @param {boolean} [options.sym=false] - keep only MUTUAL nearest neighbors.
  * @param {string} [options.mode='connectivity'] - 'connectivity' | 'distance' | 'affinity'.
  * @param {number|string|null} [options.bandwidth=null] - affinity bandwidth
- *   (positive scalar or 'med_k_scalar'; other librosa estimators throw).
+ *   (positive scalar or 'med_k_scalar'; other estimators throw).
  * @param {boolean} [options.self=false] - populate the main diagonal.
  * @param {boolean} [options.full=false] - full distance/affinity matrix.
  * @param {number|null} [options.nFeatures], [options.nFrames] - shape for flat input.
  * @returns {Float64Array[]} rec - (t, t) matrix, rows are Float64Array.
- *   rec[i][j] non-zero means data[:, i] is a k-NN of data[:, j] (librosa
- *   orientation, i.e. the transposed graph).
+ *   rec[i][j] non-zero means data[:, i] is a k-NN of data[:, j]
+ *   (the transposed-graph orientation).
  */
 export function recurrenceMatrix(data, options = {}) {
   const {
@@ -293,7 +292,7 @@ export function recurrenceMatrix(data, options = {}) {
     retainTopK(struct, vals, t, t, kVal)
   }
 
-  // Diagonal handling (librosa: self=True marks it, self=False clears it)
+  // Diagonal handling (self=True marks it, self=False clears it)
   for (let i = 0; i < t; i++) {
     const di = i * t + i
     if (self) {
@@ -302,7 +301,7 @@ export function recurrenceMatrix(data, options = {}) {
         vals[di] = 1
       } else if (mode === 'affinity') {
         // negative placeholder: preserved in structure, excluded from
-        // bandwidth statistics, restored to exp(0)=1 below (librosa trick)
+        // bandwidth statistics, restored to exp(0)=1 below
         struct[di] = 1
         vals[di] = -1
       }
@@ -339,7 +338,7 @@ export function recurrenceMatrix(data, options = {}) {
   if (mode === 'connectivity') {
     for (let i = 0; i < t; i++) {
       for (let j = 0; j < t; j++) {
-        // final transpose (librosa: rec = rec.T)
+        // final transpose (rec = rec.T)
         if (struct[j * t + i]) out[i][j] = 1
       }
     }
@@ -368,7 +367,6 @@ export function recurrenceMatrix(data, options = {}) {
 
 /**
  * Cross-similarity between a comparison sequence and a reference sequence.
- * Port of librosa.segment.cross_similarity.
  *
  * @param {Array|Float32Array|Float64Array} data - comparison features (d, n).
  * @param {Array|Float32Array|Float64Array} dataRef - reference features (d, n_ref).
@@ -491,8 +489,7 @@ function asMatrixRows(m, fnName) {
 
 /**
  * Convert a recurrence matrix into a lag matrix:
- * `lag[i][j] = rec[(i + j) mod H][j]` (librosa util.shear, factor=-1, axis=1).
- * Port of librosa.segment.recurrence_to_lag.
+ * `lag[i][j] = rec[(i + j) mod H][j]` (a shear with factor=-1, axis=1).
  *
  * @param {Array<Array<number>|Float32Array|Float64Array>} rec - square (n, n).
  * @param {Object} [options]
@@ -523,7 +520,6 @@ export function recurrenceToLag(rec, { pad = true } = {}) {
  * Convert a lag matrix back into a recurrence matrix:
  * shear with factor=+1 (`out[i][j] = lag[(i - j) mod H][j]`), then keep the
  * first t rows (t = number of columns).
- * Port of librosa.segment.lag_to_recurrence.
  *
  * @param {Array<Array<number>|Float32Array|Float64Array>} lag - (t, t) or (2t, t).
  * @returns {Float64Array[]} rec - (t, t).
@@ -548,8 +544,8 @@ export function lagToRecurrence(lag) {
 /**
  * Bottom-up temporal segmentation: partition frames into k contiguous
  * segments by temporally-constrained agglomerative clustering.
- * Port of librosa.segment.agglomerative (which delegates to sklearn's
- * AgglomerativeClustering with Ward linkage on a chain connectivity graph):
+ * Mirrors sklearn's AgglomerativeClustering with Ward linkage on a chain
+ * connectivity graph:
  * repeatedly merge the ADJACENT pair of segments with minimum Ward increment
  *   d²(A, B) = (nA·nB / (nA + nB)) · ||centroid(A) − centroid(B)||²
  * until k segments remain.

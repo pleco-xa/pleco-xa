@@ -8,10 +8,10 @@
   <h2>scripts/xa-mel.js — Slaney mel filterbank triangles</h2>
   <p style="max-width:80ch">
     First 12 slaney-normalized triangles of <code>filters.mel_filterbank(22050, 2048, 40)</code>
-    (re-exported from scripts/xa-mel.js) plotted over a Hz axis — the librosa gallery classic.
+    (re-exported from scripts/xa-mel.js) plotted over a Hz axis — the mel-filterbank classic.
     Proofs: the Slaney boundary identities hz_to_mel(1000)=15 and mel_to_hz(15)=1000 (float-exact:
-    ≤1e-9; the raw float64 value is 15 − 1.8e-15 from 200/3 roundoff, matching librosa bit-for-bit),
-    filterbank shape 40 × 1025, every filter elementwise-matches an independent librosa-formula
+    ≤1e-9; the raw float64 value is 15 − 1.8e-15 from 200/3 roundoff),
+    filterbank shape 40 × 1025, every filter elementwise-matches an independent Slaney-formula
     reconstruction (mel grid rebuilt via xa-convert's separate hz_to_mel/mel_to_hz implementation)
     within 1e-6, and each triangle's peak equals the Slaney area norm 2/(mel_f[i+2]−mel_f[i]):
     never above it, and within the provable half-FFT-bin sampling bound below it (the continuous
@@ -39,7 +39,7 @@
     badge('shape 40 x 1025', fb.length === n_mels && fb.every((r) => r.length === 1025),
       `${fb.length} x ${fb[0].length}`)
 
-    // Independent reconstruction: librosa filters.mel formula written out here, with the
+    // Independent reconstruction: the Slaney mel-filterbank formula written out here, with the
     // mel grid from xa-convert (a separate implementation from xa-mel's internals).
     const melMin = convert.hz_to_mel(0)
     const melMax = convert.hz_to_mel(sr / 2)
@@ -68,13 +68,13 @@
       const steepest = enorm * Math.max(1 / (mel_f[i + 1] - mel_f[i]), 1 / (mel_f[i + 2] - mel_f[i + 1]))
       if (!(peak >= Math.max(0, enorm - steepest * halfBin) - 1e-12)) peakBoundOk = false
     }
-    badge('every filter matches librosa formula elementwise (maxDiff < 1e-6)',
+    badge('every filter matches the Slaney formula elementwise (maxDiff < 1e-6)',
       maxDiff < 1e-6, `maxDiff ${maxDiff.toExponential(2)}`)
     badge('triangle peaks == slaney 2/(mel_f[i+2]-mel_f[i]): never above, within half-bin bound below',
       maxPeakExcess <= 1e-9 && peakBoundOk, `max excess ${maxPeakExcess.toExponential(2)}`)
 
     // Line plot: first 12 triangles over Hz. They only occupy the low end (~0–1100 Hz),
-    // so zoom the x-axis to the 14th band edge for the classic gallery look.
+    // so zoom the x-axis to the 14th band edge for the classic filterbank look.
     const canvas = document.getElementById('plot')
     const ctx = canvas.getContext('2d')
     const { width: w, height: h } = canvas

@@ -10,13 +10,12 @@ is. This is the library's flagship: everything else (beat tracking, spectral
 features, structural segmentation) exists in service of, or alongside, getting a
 loop right.
 
-It is also the one part of Pleco-Xa with **no librosa equivalent**. librosa is
-an offline analysis library; it can hand you onsets, a tempo, and a recurrence
-matrix, but it has no notion of "where does this clip loop, and how cleanly?"
-That question is inherently about playback, and answering it well means
-combining beat structure, cross-correlation, recurrence analysis, and
-zero-crossing alignment into one decision. Pleco-Xa does that, in the browser,
-with no dependencies.
+It is also the capability that sets Pleco-Xa apart. Offline analysis tools hand
+you onsets, a tempo, and a recurrence matrix, but none of that answers "where
+does this clip loop, and how cleanly?" That question is inherently about
+playback, and answering it well means combining beat structure,
+cross-correlation, recurrence analysis, and zero-crossing alignment into one
+decision. Pleco-Xa does that, in the browser, with no dependencies.
 
 ## One API
 
@@ -238,8 +237,7 @@ wraps the same call for callers who prefer a plain function over a static method
 
 Loop detection is not just asserted by hand. `loop.detect()` is fixture-gated in
 CI against `loop_goldens.json` with a **±10 ms** tolerance on the returned loop
-points, so regressions in any strategy break the build. See the
-[Parity ledger](/reference/parity/) for the full verification table.
+points, so regressions in any strategy break the build.
 
 ## See it live
 

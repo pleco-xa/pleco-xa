@@ -1,5 +1,5 @@
 /**
- * Pleco-XA effects domain — librosa.effects parity surface (Wave 5A).
+ * Pleco-XA effects domain (Wave 5A).
  *
  * Canonical home for trim / split / preemphasis / deemphasis / remix /
  * phase_vocoder / time_stretch / pitch_shift and the waveform-level
@@ -7,27 +7,24 @@
  * xa-remix / xa-filters / xa-processing / xa-advanced modules are shims
  * that delegate here.
  *
- * Fixture-gated against librosa 0.11.0:
+ * Fixture-gated:
  *   - tools/parity/fixtures/effects.json        (trim, split, preemphasis)
  *   - tools/parity/fixtures/phase_vocoder.json  (rates 0.5 and 2.0)
- *
- * Reference sources read in full: librosa/effects.py and
- * librosa/core/spectrum.py (phase_vocoder, l.1365–1474).
  */
 
 import { stft, istft } from '../scripts/xa-fft.js'
 import { resample, zeroCrossings } from '../scripts/xa-audioio.js'
 import { hpss as hpssSpectrogram } from '../decompose/index.js'
 
-/** amin used by librosa.amplitude_to_db (amplitude domain). */
+/** amin used by amplitude_to_db (amplitude domain). */
 const AMIN = 1e-5
 
 /* ────────────────────────────────────────────────────────────────────────
- * Silence framing (librosa.effects._signal_to_frame_nonsilent)
+ * Silence framing (_signal_to_frame_nonsilent)
  * ──────────────────────────────────────────────────────────────────────── */
 
 /**
- * Frame RMS envelope matching librosa.feature.rms (center=true, zero pad).
+ * Frame RMS envelope (center=true, zero pad).
  * @param {Float32Array|Float64Array|number[]} y - Mono signal
  * @param {number} frame_length - Samples per analysis frame
  * @param {number} hop_length - Samples between frames
@@ -86,7 +83,6 @@ function nonSilentFrames(y, { top_db, ref, frame_length, hop_length }) {
 
 /**
  * Trim leading and trailing silence from an audio signal.
- * Port of librosa.effects.trim.
  *
  * @param {Float32Array} y - Mono audio signal
  * @param {Object} [options]
@@ -96,7 +92,7 @@ function nonSilentFrames(y, { top_db, ref, frame_length, hop_length }) {
  * @param {number} [options.hop_length=512]
  * @returns {[Float32Array, number[]]} [y_trimmed, [start, end]] with
  *   y_trimmed === y.slice(start, end). All-silent input yields an EMPTY
- *   slice ([0, 0]), matching librosa.
+ *   slice ([0, 0]).
  */
 export function trim(y, { top_db = 60, ref = null, frame_length = 2048, hop_length = 512 } = {}) {
   const nonSilent = nonSilentFrames(y, { top_db, ref, frame_length, hop_length })
@@ -122,7 +118,7 @@ export function trim(y, { top_db = 60, ref = null, frame_length = 2048, hop_leng
 
 /**
  * Split an audio signal into non-silent intervals.
- * Port of librosa.effects.split (frame-edge sample indices, capped to y.length).
+ * Frame-edge sample indices, capped to y.length.
  *
  * @param {Float32Array} y - Mono audio signal
  * @param {Object} [options] - Same options as trim()
@@ -154,10 +150,9 @@ export function split(y, { top_db = 60, ref = null, frame_length = 2048, hop_len
  * ──────────────────────────────────────────────────────────────────────── */
 
 /**
- * Pre-emphasis filter y[n] = x[n] - coef*x[n-1].
- * Port of librosa.effects.preemphasis, including its exact zi handling:
- * zi is the raw lfilter delay state, so out[0] = x[0] + zi, and the default
- * zi = 2*x[0] - x[1] (verified against the librosa 0.11.0 fixture).
+ * Pre-emphasis filter y[n] = x[n] - coef*x[n-1], including its exact zi
+ * handling: zi is the raw lfilter delay state, so out[0] = x[0] + zi, and the
+ * default zi = 2*x[0] - x[1] (verified against the fixture).
  *
  * @param {Float32Array} y - Audio signal (>= 2 samples when zi is defaulted)
  * @param {Object} [options]
@@ -184,9 +179,8 @@ export function preemphasis(y, { coef = 0.97, zi = null, return_zf = false } = {
 
 /**
  * De-emphasis filter x[n] = y[n] + coef*x[n-1] — exact inverse of
- * preemphasis() including librosa's default-zi extrapolation correction,
+ * preemphasis() including the default-zi extrapolation correction,
  * so deemphasis(preemphasis(x)) round-trips to x.
- * Port of librosa.effects.deemphasis.
  *
  * @param {Float32Array} y - Pre-emphasized signal
  * @param {Object} [options] - Same options as preemphasis()
@@ -206,7 +200,7 @@ export function deemphasis(y, { coef = 0.97, zi = null, return_zf = false } = {}
 
   const out = new Float32Array(n)
   if (zi === null || zi === undefined) {
-    // Remove the response to librosa's implied preemphasis init (2x0 - x1)
+    // Remove the response to the implied preemphasis init (2x0 - x1)
     const c0 = ((2 - coef) * y[0] - y[1]) / (3 - coef)
     let decay = 1
     for (let i = 0; i < n; i++) {
@@ -225,7 +219,7 @@ export function deemphasis(y, { coef = 0.97, zi = null, return_zf = false } = {}
  * ──────────────────────────────────────────────────────────────────────── */
 
 /**
- * Nearest value lookup in a sorted Int32-ish array (librosa util.match_events
+ * Nearest value lookup in a sorted Int32-ish array (match_events
  * for sorted targets; ties resolve to the smaller value, like np.argmin).
  * @param {number[]} sorted - Ascending values
  * @param {number} v - Query
@@ -248,10 +242,10 @@ function nearestSorted(sorted, v) {
 
 /**
  * Remix an audio signal by re-ordering time intervals.
- * Port of librosa.effects.remix: intervals are concatenated in CALLER ORDER
+ * Intervals are concatenated in CALLER ORDER
  * (no sorting — reordering, e.g. beat reversal, is the whole point) and, by
  * default, interval boundaries snap to the nearest zero crossing of the
- * whole signal (librosa match_events semantics), never shrinking segments
+ * whole signal (match_events semantics), never shrinking segments
  * to their internal crossings.
  *
  * @param {Float32Array} y - Mono audio signal
@@ -302,7 +296,7 @@ export function remix(y, intervals, { align_zeros = true } = {}) {
 
 /**
  * Phase vocoder: time-stretch an STFT matrix by `rate`.
- * Port of librosa.core.spectrum.phase_vocoder (Ellis 2002 formulation):
+ * Ellis 2002 formulation:
  * phi_advance = linspace(0, π*hop_length, 1 + n_fft/2); phase accumulates
  * from column 0's phase; the DEVIATION (dphase - phi_advance) is wrapped to
  * (-π, π]; input is padded with 2 zero columns for the boundary.
@@ -347,7 +341,7 @@ export function phase_vocoder(D, rate, { hop_length = null, n_fft = null } = {})
     const alpha = step - i0
     for (let k = 0; k < nFreq; k++) {
       const row = D[k]
-      const c0 = i0 < nFrames ? row[i0] : ZERO // librosa pads 2 zero columns
+      const c0 = i0 < nFrames ? row[i0] : ZERO // pad 2 zero columns
       const c1 = i0 + 1 < nFrames ? row[i0 + 1] : ZERO
 
       const mag = (1 - alpha) * Math.hypot(c0.real, c0.imag) + alpha * Math.hypot(c1.real, c1.imag)
@@ -369,7 +363,7 @@ export function phase_vocoder(D, rate, { hop_length = null, n_fft = null } = {})
 
 /**
  * Time-stretch an audio series by a fixed rate (pitch-preserving).
- * Port of librosa.effects.time_stretch: stft → phase_vocoder → istft with
+ * Pipeline: stft → phase_vocoder → istft with
  * output length round(n / rate).
  *
  * @param {Float32Array} y - Audio signal
@@ -401,7 +395,7 @@ export function time_stretch(y, rate, {
   return istft(Dst, hop, win_length, window, center, lenStretch)
 }
 
-/** Trim or zero-pad a signal to an exact length (librosa util.fix_length). */
+/** Trim or zero-pad a signal to an exact length (fix_length). */
 function fixLength(x, size) {
   if (x.length === size) return x
   if (x.length > size) return x.slice(0, size)
@@ -412,13 +406,13 @@ function fixLength(x, size) {
 
 /**
  * Shift the pitch of a waveform by n_steps steps (duration preserved).
- * Port of librosa.effects.pitch_shift:
+ * Recipe:
  * rate = 2^(-n_steps/bins_per_octave); resample(time_stretch(y, rate),
  * sr/rate → sr); fix_length to the input size.
  *
  * QUALITY NOTE: the resampling stage uses pleco's linear-interpolation
- * resample (xa-audioio.js) — no anti-aliasing filter, unlike librosa's
- * default 'soxr_hq'. Downward shifts (upsampling) are clean; upward shifts
+ * resample (xa-audioio.js) — no high-quality anti-aliasing filter. Downward
+ * shifts (upsampling) are clean; upward shifts
  * can alias above ~sr/(2*rate). This is a documented fidelity limit of the
  * current resampler, not a silent fallback.
  *
@@ -448,7 +442,7 @@ export function pitch_shift(y, sr, n_steps, { bins_per_octave = 12, ...stretchOp
 
 /**
  * Decompose an audio time series into harmonic and percussive components.
- * Port of librosa.effects.hpss: stft → decompose.hpss (masked components)
+ * Pipeline: stft → decompose.hpss (masked components)
  * → istft with length matched to the input, so harmonic + percussive ≈ y
  * at margin=1.
  *
@@ -482,7 +476,6 @@ export function hpss(y, {
 
 /**
  * Extract only the harmonic component of a waveform.
- * Port of librosa.effects.harmonic.
  * @param {Float32Array} y - Audio signal
  * @param {Object} [options] - Same options as hpss()
  * @returns {Float32Array} Harmonic component, length y.length
@@ -493,7 +486,6 @@ export function harmonic(y, options = {}) {
 
 /**
  * Extract only the percussive component of a waveform.
- * Port of librosa.effects.percussive.
  * @param {Float32Array} y - Audio signal
  * @param {Object} [options] - Same options as hpss()
  * @returns {Float32Array} Percussive component, length y.length

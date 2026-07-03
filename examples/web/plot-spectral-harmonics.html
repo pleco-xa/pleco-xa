@@ -7,7 +7,7 @@
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
   <h2>plot_spectral_harmonics — Harmonic spectrum: track f0, peel the overtones</h2>
   <p style="max-width:95ch">
-    Replica of librosa's <em>Harmonic spectrum</em> gallery page on a fully
+    A <em>harmonic spectrum</em> demo on a fully
     known quasi-vowel: f0 glides 110 → 165 Hz over 3 s carrying harmonics
     1..10 at amplitudes 1/h (phase-continuous additive synthesis, sr 22050).
     Pipeline: <code>yin(50, 300)</code> f0 contour overlaid on a
@@ -22,8 +22,8 @@
     1.84 — 36×). Resynthesis: an additive oscillator bank driven by the
     measured f0 + harmonic energies (mir_eval.sonify.pitch_contour
     equivalent), playable with the original glide or forced to a 110 Hz
-    monotone — the gallery's f0/timbre-decoupling trick, audible.
-    NOTE: librosa's page uses pyin; pleco's pyin is intentionally off the
+    monotone — the f0/timbre-decoupling trick, audible.
+    NOTE: the classic recipe uses pyin; pleco's pyin is intentionally off the
     curated surface until it is a real HMM/Viterbi pYIN, so this page uses
     the verified yin — the accuracy assertion is unchanged.
   </p>

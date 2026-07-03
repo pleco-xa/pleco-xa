@@ -1,7 +1,7 @@
 /**
  * Musical Interval Construction Module for JavaScript
  * Functions for constructing various musical interval systems
- * Based on librosa's interval functionality with crystal growth algorithms
+ * Interval construction with crystal growth algorithms
  */
 
 import { debugLog } from './debug.js'
@@ -596,14 +596,14 @@ export function compareTuningSystems(
 }
 
 // ============================================================================
-// Librosa-compatible standalone function exports
+// Standalone function exports
 // ============================================================================
 
 // Singleton instance for convenience
 const _intervalConstructor = new IntervalConstructor()
 
 /**
- * Construct interval frequencies (librosa-compatible wrapper)
+ * Construct interval frequencies (convenience wrapper)
  *
  * @param {number} n_bins - Number of frequency bins
  * @param {number} fmin - Minimum frequency in Hz
@@ -631,7 +631,7 @@ export function interval_frequencies(
 }
 
 /**
- * Construct p-limit intervals (librosa-compatible wrapper)
+ * Construct p-limit intervals (convenience wrapper)
  *
  * @param {Array<number>} primes - Prime factors to use
  * @param {number} bins_per_octave - Bins per octave (default: 12)
@@ -654,7 +654,7 @@ export function plimit_intervals(
 }
 
 /**
- * Construct Pythagorean intervals (librosa-compatible wrapper)
+ * Construct Pythagorean intervals (convenience wrapper)
  *
  * @param {number} bins_per_octave - Bins per octave (default: 12)
  * @param {boolean} sort - Sort intervals (default: true)
@@ -674,12 +674,12 @@ export function pythagorean_intervals(
 }
 
 // ============================================================================
-// Interval Helper Functions (Librosa-compatible)
+// Interval Helper Functions
 // ============================================================================
 
 /**
  * Compute the harmonic distance between two intervals
- * Equivalent to librosa's __harmonic_distance helper
+ * Equivalent to the __harmonic_distance helper
  *
  * Harmonic distance is defined as log2(a * b) - 2*log2(gcd(a, b))
  * based on Tenney's crystal growth algorithm.
@@ -721,7 +721,7 @@ function __harmonic_distance(logs, a, b) {
 
 /**
  * Tie-breaking function for crystal growth algorithm
- * Equivalent to librosa's _crystal_tie_break helper
+ * Equivalent to the _crystal_tie_break helper
  *
  * Given two tuples of prime powers with equal harmonic distance,
  * prefer the one with smaller Tenney height (sum of absolute log values).

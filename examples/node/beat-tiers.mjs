@@ -1,6 +1,6 @@
 /**
  * Proof: scripts/xa-beat.js — fast-tier vs parity-tier: same answer, measured speedup.
- * The heuristic tier (beatTrack / fastBPMDetect) and the canonical librosa-parity
+ * The heuristic tier (beatTrack / fastBPMDetect) and the canonical parity-tier
  * beat_track() analyze the same 10s 120 BPM click train. Proofs: both tiers land within
  * one lag bin (<= 7 BPM) of each other, beat counts agree within +/-2, and — at MATCHED
  * hopLength (512) — the fast tier is strictly faster than the parity tier (measured ~2x).

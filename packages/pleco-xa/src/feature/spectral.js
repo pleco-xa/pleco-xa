@@ -1,22 +1,22 @@
 /**
- * feature/spectral.js — librosa.feature spectral descriptors, fixture-verified.
+ * feature/spectral.js — spectral descriptors, fixture-verified.
  *
- * Ports of librosa 0.11.0 `feature/spectral.py` formulas onto the
+ * Standard spectral descriptor formulas computed over the
  * parity-gated STFT in scripts/xa-fft.js. Every function accepts either a
  * time series `y` (first positional arg) or a precomputed spectrogram `S`
- * (magnitude, [freq][time] rows) via options — exactly where librosa does.
+ * (magnitude, [freq][time] rows) via options.
  *
  * Parity gate: tests/parity/spectral.parity.test.js vs
  * tools/parity/fixtures/spectral_features.json.
  *
  * Layout convention: all spectrogram matrices are freq-major ([freq][time]),
- * matching librosa's axis=-2 = frequency semantics.
+ * i.e. axis=-2 is the frequency axis.
  */
 
 import { stft, fft_frequencies } from '../scripts/xa-fft.js'
 import { power_to_db } from '../scripts/xa-convert.js'
 
-/** float32 tiny — librosa's util.normalize threshold on its f32 pipeline */
+/** float32 tiny — util.normalize threshold on the f32 pipeline */
 const TINY = 1.1754943508222875e-38
 
 export class ParameterError extends Error {
@@ -37,7 +37,7 @@ function isVector(x) {
 }
 
 /**
- * librosa core.spectrum._spectrogram: resolve (y, S) to a spectrogram.
+ * Resolve (y, S) to a spectrogram (the _spectrogram helper).
  * If S is given it is passed through (n_fft inferred from its row count);
  * otherwise S = |stft(y)|**power.
  * @returns {{S: Array, n_fft: number}} freq-major spectrogram + resolved n_fft
@@ -88,7 +88,7 @@ function _spectrogram(y, S, options) {
   return { S: spec, n_fft }
 }
 
-/** Throw on non-finite or negative spectrogram values (librosa's guards). */
+/** Throw on non-finite or negative spectrogram values (input guards). */
 function validateSpectrogram(S, name) {
   for (let f = 0; f < S.length; f++) {
     const row = S[f]
@@ -156,7 +156,7 @@ function frameCount(length, frame_length, hop_length) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Spectral centroid per frame (librosa.feature.spectral_centroid).
+ * Spectral centroid per frame.
  * centroid[t] = sum_f freq[f] * S_norm[f][t], with per-frame L1 normalization.
  * @param {Float32Array|Array|null} y - time series (or null when S given)
  * @param {Object} options - { sr, S, n_fft, hop_length, win_length, window, center, pad_mode, freq }
@@ -188,7 +188,7 @@ export function spectral_centroid(y = null, options = {}) {
   for (let t = 0; t < nT; t++) {
     let norm = 0
     for (let f = 0; f < nF; f++) norm += spec[f][t]
-    if (norm < TINY) norm = 1 // librosa normalize: sub-threshold columns pass through
+    if (norm < TINY) norm = 1 // normalize: sub-threshold columns pass through
     let acc = 0
     for (let f = 0; f < nF; f++) acc += freqs[f] * spec[f][t]
     out[t] = acc / norm
@@ -197,7 +197,7 @@ export function spectral_centroid(y = null, options = {}) {
 }
 
 /**
- * p'th-order spectral bandwidth (librosa.feature.spectral_bandwidth).
+ * p'th-order spectral bandwidth.
  * bw[t] = (sum_f S_norm[f][t] * |freq[f] - centroid[t]|**p) ** (1/p)
  * @returns {Float64Array} bandwidth per frame
  */
@@ -252,7 +252,7 @@ export function spectral_bandwidth(y = null, options = {}) {
 }
 
 /**
- * Roll-off frequency (librosa.feature.spectral_rolloff): the minimum
+ * Roll-off frequency: the minimum
  * frequency bin whose cumulative energy reaches roll_percent of the total.
  * @returns {Float64Array} rolloff frequency (Hz) per frame
  */
@@ -303,7 +303,7 @@ export function spectral_rolloff(y = null, options = {}) {
 }
 
 /**
- * Spectral flatness (librosa.feature.spectral_flatness):
+ * Spectral flatness:
  * geometric mean / arithmetic mean of max(amin, S**power) per frame.
  * (Formula salvaged from xa-spectral.js — verified against fixtures —
  * re-hosted here with correct freq-major orientation.)
@@ -351,7 +351,7 @@ export function spectral_flatness(y = null, options = {}) {
 }
 
 /**
- * Spectral contrast (librosa.feature.spectral_contrast).
+ * Spectral contrast.
  * Octave-band peak/valley contrast: mean of the top / bottom `quantile`
  * fraction of sorted magnitudes per band, then power_to_db difference.
  * @returns {Array<Float64Array>} [n_bands + 1][n_frames]
@@ -433,7 +433,7 @@ export function spectral_contrast(y = null, options = {}) {
         `spectral_contrast: no FFT bins in band [${fLow}, ${fHigh}] Hz`,
       )
     }
-    // librosa boundary adjustments
+    // boundary adjustments
     if (k > 0 && first - 1 >= 0) current[first - 1] = true
     if (k === n_bands) {
       for (let f = last + 1; f < nF; f++) current[f] = true
@@ -481,9 +481,9 @@ export function spectral_contrast(y = null, options = {}) {
 }
 
 /**
- * Root-mean-square energy per frame (librosa.feature.rms).
+ * Root-mean-square energy per frame.
  * y path: centered constant-padded framing (verified salvage of the
- * xa-spectral rms y-path — bit-identical to librosa on fixtures).
+ * xa-spectral rms y-path — numerically exact on fixtures).
  * S path: Parseval-based power from a magnitude spectrogram.
  * @returns {Float64Array} RMS per frame
  */
@@ -545,7 +545,7 @@ export function rms(y = null, options = {}) {
 }
 
 /**
- * Frame-wise zero-crossing rate (librosa.feature.zero_crossing_rate):
+ * Frame-wise zero-crossing rate:
  * edge-padded centering, |v| <= threshold clipped to zero before the sign
  * test, first sample of each frame never counted (pad=False).
  * @returns {Float64Array} fraction of zero crossings per frame

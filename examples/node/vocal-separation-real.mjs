@@ -13,7 +13,7 @@
  * each stem is an honest recovery metric: everything shares the master's phase.
  *
  * Two separators run on the identical mixture:
- *   A. REPET-SIM (librosa gallery recipe, UNSUPERVISED) —
+ *   A. REPET-SIM (repetition-based separation, UNSUPERVISED) —
  *      decompose.nn_filter(|STFT|, median, cosine, width=2 s) → element-min with
  *      S → decompose.softmask (margins 2/10, power 2) → istft with mix phase.
  *   B. fingerprint (pleco flagship, SUPERVISED — it is handed the true vocal's
@@ -101,7 +101,7 @@ const D = stft(mix, N_FFT, HOP)
 const S_full = D.map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
 const nF = S_full.length
 const nT = S_full[0].length
-const widthFrames = Math.round((2 * SR) / HOP) // librosa: width = time_to_frames(2 s)
+const widthFrames = Math.round((2 * SR) / HOP) // width = time_to_frames(2 s)
 const S_filter = nn_filter(S_full, { aggregate: 'median', metric: 'cosine', width: widthFrames })
 for (let f = 0; f < nF; f++) for (let t = 0; t < nT; t++) S_filter[f][t] = Math.min(S_full[f][t], S_filter[f][t])
 

@@ -2,7 +2,7 @@
  * scripts/xa-normalize.js — normalization exactness proof.
  * Known-vector goldens: inf-norm normalize is exact, rms_normalize hits its
  * target when re-measured, softmask on equal energy is exactly half (the
- * librosa-correct X^p/(X^p+Xref^p) form), and crossfade length/blend math holds.
+ * standard X^p/(X^p+Xref^p) form), and crossfade length/blend math holds.
  * (xa-normalize is not on the dist curated surface yet — imported from src;
  * pure ESM, zero dependencies.)
  */

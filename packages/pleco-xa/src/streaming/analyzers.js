@@ -7,7 +7,7 @@
  * frames are emitted whenever enough samples have accumulated.
  *
  * These are QUICK-tier live meters (see the tier law in xa-beat-tracker.js):
- * they are explicit streaming tools, not fallbacks for the librosa-parity
+ * they are explicit streaming tools, not fallbacks for the precise
  * offline analyzers.
  */
 

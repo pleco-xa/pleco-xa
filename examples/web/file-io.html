@@ -23,10 +23,10 @@
   quantization bound — original and reloaded waveforms are overlaid below;
   (2) <code>example()/exampleBuffer()</code> exercise the AudioCache against a
   <em>local</em> fixture (<code>fixtures/trumpet.ogg</code> — WAV bytes; the
-  remote librosa.org registry stays unverified, see barrel note) proving
+  remote sample registry stays unverified, see barrel note) proving
   entries+1 after first load and a zero-network cache hit on the second;
   (3) <code>fileio.stream()</code> (post-repair docs: chunked reader, NOT
-  librosa.stream semantics) splits a 3 s tone into exactly ⌈N/2048⌉ lossless
+  streaming frame-generator semantics) splits a 3 s tone into exactly ⌈N/2048⌉ lossless
   blocks. Chunk math node-verified 2026-07-02 via injected decoder (65 blocks,
   bitwise re-concat). Saving triggers one real download of
   <code>pleco-tone-440.wav</code> — that side effect is the point.

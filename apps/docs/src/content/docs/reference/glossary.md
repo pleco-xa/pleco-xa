@@ -42,7 +42,7 @@ time.
 
 **Beat tracking**
 : Finding the sequence of beat instants in audio, given (or jointly with) a
-tempo estimate. Pleco-Xa's `beat_track` returns exact frames against librosa
+tempo estimate. Pleco-Xa's `beat_track` returns exact frames, pinned by CI
 fixtures.
 
 **HPSS (Harmonic-Percussive Source Separation)**
@@ -59,7 +59,7 @@ repeated sections — the backbone of both structural segmentation and the
 
 **RQA (Recurrence Quantification Analysis)**
 : Quantifying the structure in a recurrence matrix — in particular finding the
-best diagonal alignment path. Pleco-Xa's `sequence.rqa` matches librosa's path
+best diagonal alignment path. Pleco-Xa's `sequence.rqa` recovers that path
 exactly, and the loop `recurrence` strategy can use an RQA path as a lag
 candidate.
 
@@ -71,8 +71,9 @@ warping path.
 
 **PCEN (Per-Channel Energy Normalization)**
 : An adaptive gain / dynamic-range compression applied per frequency channel,
-often used in place of log scaling before onset or event detection. Bit-exact to
-librosa in CI, and equivalent whether run whole-signal or block-by-block.
+often used in place of log scaling before onset or event detection. Numerically
+exact and fixture-gated in CI, and equivalent whether run whole-signal or
+block-by-block.
 
 **Laplacian segmentation**
 : The McFee-Ellis method for finding structural boundaries: build a recurrence

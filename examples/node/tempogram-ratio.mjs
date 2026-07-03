@@ -1,5 +1,5 @@
 /**
- * scripts/xa-tempogram.js — tempogram_ratio (librosa.feature.tempogram_ratio).
+ * scripts/xa-tempogram.js — tempogram_ratio.
  *
  * Tempogram ratio features (Peeters'05 spectral rhythm patterns, Prockup'15
  * factor table): sample the tempogram at metric multiples of the per-frame
@@ -8,14 +8,14 @@
  * rows < 6 super-metric (eighth, sixteenth, ...).
  *
  * Two proofs:
- *   A. Direct librosa 0.11.0 parity on the committed fixture
+ *   A. Direct parity on the committed fixture
  *      (tools/parity/fixtures/tempogram_ratio.json, shape [13, 173]).
  *   B. Self-contained semantics on a synthetic 120-BPM click train: the
  *      fundamental (factor 1) dominates, only integer subharmonics (1/2, 1/3,
  *      1/4) carry energy, and NO super-metric factor (f > 1) fires because the
  *      click train has no periodicity faster than the tempo.
  *
- * NOTE: tempogram_ratio interpolates with a librosa-faithful static-grid
+ * NOTE: tempogram_ratio interpolates with a faithful static-grid
  * routine, NOT the exported f0_harmonics — that helper brackets the frequency
  * grid ascending-in-place and returns all-zeros on the descending, +Inf-headed
  * tempo axis (see module JSDoc + parity test).
@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url'
 
 const FACTORS = [4, 8 / 3, 3, 2, 4 / 3, 3 / 2, 1, 2 / 3, 3 / 4, 1 / 2, 1 / 3, 3 / 8, 1 / 4]
 
-/* ── Proof A: librosa parity on the fixture ──────────────────────────────── */
+/* ── Proof A: parity on the fixture ──────────────────────────────────────── */
 const fx = JSON.parse(
   readFileSync(
     fileURLToPath(new URL('../../tools/parity/fixtures/tempogram_ratio.json', import.meta.url)),
@@ -51,7 +51,7 @@ for (let h = 0; h < R; h++) {
   }
 }
 checkTrue(
-  `librosa parity: max abs deviation ${maxAbs.toExponential(3)} < 2e-3`,
+  `fixture parity: max abs deviation ${maxAbs.toExponential(3)} < 2e-3`,
   maxAbs < 2e-3,
   `${maxAbs.toExponential(3)}`,
 )
@@ -103,4 +103,4 @@ checkTrue(
   dottedTriplet.toExponential(2),
 )
 
-summary('tempogram_ratio (librosa.feature.tempogram_ratio) proofs')
+summary('tempogram_ratio proofs')

@@ -1,38 +1,37 @@
 /**
- * Constant-Q and Variable-Q Transform — repaired against librosa's
- * constantq.py (0.11.0).
+ * Constant-Q and Variable-Q Transform.
  *
  * Tier-3 proof-of-work repair (2026-07-02). The previous implementation was
  * runtime-confirmed garbage: it multiplied TIME-domain wavelet filters
- * element-wise against STFT FREQUENCY bins (a category error — librosa FFTs
- * the filterbank first), called resample() positionally against an
+ * element-wise against STFT FREQUENCY bins (a category error — the correct
+ * order FFTs the filterbank first), called resample() positionally against an
  * options-object signature (silently returning the un-resampled signal), and
  * passed 8 positional args to a 7-arg stft. A 440 Hz sine peaked at bin
  * 23/24 with a smooth magnitude ramp instead of an isolated peak at bin 12.
  *
  * Repaired forward path (this file):
- *   - wavelet filterbank: complex exponentials on librosa's exact time grid
+ *   - wavelet filterbank: complex exponentials on the time grid
  *     arange(-ilen//2, ilen//2), periodic-hann windowed, L1/L2/inf
  *     normalized, center-padded to a power-of-2 n_fft;
  *   - fft_basis: basis * lengths/n_fft, then row-wise FFT keeping the
- *     non-negative frequencies (librosa __vqt_filter_fft);
+ *     non-negative frequencies (the VQT filter-FFT stage);
  *   - response: fft_basis · stft(y, n_fft, hop, window='ones')
- *     (librosa __cqt_response);
+ *     (the CQT response stage);
  *   - scale=true divides by sqrt(lengths) (the old code MULTIPLIED).
  *
- * DOCUMENTED DIVERGENCES from librosa:
+ * DOCUMENTED DIVERGENCES from the classic octave-recursive approach:
  *   - Single-pass evaluation: every bin's filter is built at the native
- *     sample rate. librosa recurses octave-by-octave with 2x resampling
- *     (a speed optimization with sqrt(2) gain compensation); results agree
- *     up to resampling error, but this version is slower for many-octave
- *     ranges.
- *   - sparsity is accepted but NOT applied (dense basis; librosa quantile-
- *     sparsifies rows for speed, not correctness).
+ *     sample rate. The classic approach recurses octave-by-octave with 2x
+ *     resampling (a speed optimization with sqrt(2) gain compensation);
+ *     results agree up to resampling error, but this version is slower for
+ *     many-octave ranges.
+ *   - sparsity is accepted but NOT applied (dense basis; quantile
+ *     sparsification would trade speed, not correctness).
  *   - window: periodic hann only.
  *
  * HONEST-FAIL surface (not minimally repairable — these now throw instead
  * of returning plausible-looking garbage):
- *   - icqt(): previous body overlap-added the ANALYSIS basis (not librosa's
+ *   - icqt(): previous body overlap-added the ANALYSIS basis (not the
  *     dual frame) through an O(N^2) DFT loop;
  *   - griffinlim_cqt(): inherits icqt.
  *
@@ -42,7 +41,7 @@
 
 import { stft, ifft } from './xa-fft.js'
 
-// scipy.signal window bandwidth constant used by librosa for the hann window
+// scipy.signal window bandwidth constant for the hann window
 const HANN_BANDWIDTH = 1.50018310546875
 
 const C1_HZ = 32.70319566257483
@@ -51,7 +50,7 @@ const C1_HZ = 32.70319566257483
  * Frequency / length helpers
  * ------------------------------------------------------------------------ */
 
-/** librosa.cqt_frequencies. @private */
+/** cqt_frequencies. @private */
 function cqt_frequencies(n_bins, fmin, bins_per_octave, tuning) {
   const freqs = new Float64Array(n_bins)
   const f0 = fmin * Math.pow(2, tuning / bins_per_octave)
@@ -61,13 +60,13 @@ function cqt_frequencies(n_bins, fmin, bins_per_octave, tuning) {
   return freqs
 }
 
-/** librosa __et_relative_bw: alpha = 2^(1/bpo) - 1. @private */
+/** Equal-tempered relative bandwidth: alpha = 2^(1/bpo) - 1. @private */
 function relativeBandwidth(bins_per_octave) {
   return Math.pow(2, 1.0 / bins_per_octave) - 1.0
 }
 
 /**
- * librosa filters.wavelet_lengths: fractional filter lengths and the
+ * wavelet_lengths: fractional filter lengths and the
  * filterbank's maximum frequency cutoff. gamma=0 gives constant-Q.
  * @private
  */
@@ -101,7 +100,7 @@ function fftComplex(x) {
 }
 
 /* ------------------------------------------------------------------------ *
- * Filterbank construction (librosa filters.wavelet + __vqt_filter_fft)
+ * Filterbank construction (wavelet + VQT filter-FFT)
  * ------------------------------------------------------------------------ */
 
 /**
@@ -129,7 +128,7 @@ function buildFftBasis(freqs, sr, { filter_scale, norm, window, gamma, hop_lengt
   let maxLen = 0
   for (let i = 0; i < n_bins; i++) if (lengths[i] > maxLen) maxLen = lengths[i]
   let n_fft = Math.pow(2, Math.ceil(Math.log2(Math.ceil(maxLen))))
-  // librosa __vqt_filter_fft: ensure n_fft comfortably exceeds the hop
+  // VQT filter-FFT: ensure n_fft comfortably exceeds the hop
   if (hop_length != null && n_fft < Math.pow(2, 1 + Math.ceil(Math.log2(hop_length)))) {
     n_fft = Math.pow(2, 1 + Math.ceil(Math.log2(hop_length)))
   }
@@ -192,7 +191,7 @@ function buildFftBasis(freqs, sr, { filter_scale, norm, window, gamma, hop_lengt
 }
 
 /**
- * librosa __cqt_response: fft_basis · stft(y, n_fft, hop, window='ones').
+ * CQT response: fft_basis · stft(y, n_fft, hop, window='ones').
  * @private
  */
 function cqtResponse(y, n_fft, hop_length, fftBasis, pad_mode) {
@@ -226,7 +225,7 @@ function cqtResponse(y, n_fft, hop_length, fftBasis, pad_mode) {
  * ------------------------------------------------------------------------ */
 
 /**
- * Constant-Q Transform of an audio signal (librosa.cqt semantics, single-pass
+ * Constant-Q Transform of an audio signal (single-pass
  * evaluation — see module header for documented divergences).
  *
  * Legacy positional signature preserved.
@@ -242,7 +241,7 @@ function cqtResponse(y, n_fft, hop_length, fftBasis, pad_mode) {
  * @param {number|null} norm - Filter normalization (1, 2, Infinity, or null)
  * @param {number} sparsity - Accepted but not applied (dense basis)
  * @param {string} window - Window function ('hann' only)
- * @param {boolean} scale - Divide by sqrt(filter length) (librosa scale=True)
+ * @param {boolean} scale - Divide by sqrt(filter length) (scale=True)
  * @param {string} pad_mode - Padding mode for signal edges
  * @returns {Array<Array<{real:number, imag:number}>>} CQT [n_bins][n_frames]
  *   with n_frames = 1 + floor(len(y)/hop_length)
@@ -297,7 +296,7 @@ export function cqt(
 }
 
 /**
- * Variable-Q Transform. intervals='equal' with the librosa-default
+ * Variable-Q Transform. intervals='equal' with the default
  * ERB-derived gamma (24.7 * alpha / 0.108); pass gamma=0 to recover cqt().
  * Custom interval arrays build freqs[i] = fmin * 2^floor(i/len) * ratio.
  *
@@ -374,7 +373,7 @@ export function vqt(
 
 /**
  * Pseudo-CQT: magnitude-only approximation |fft_basis| · |STFT|
- * (librosa.pseudo_cqt shape). Returns REAL magnitudes, not complex values.
+ * (pseudo-CQT shape). Returns REAL magnitudes, not complex values.
  *
  * @param {Float32Array} y - Audio time series
  * @param {number} sr - Sample rate
@@ -387,7 +386,7 @@ export function vqt(
  * @param {number|null} norm - Filter normalization
  * @param {number} sparsity - Accepted but not applied
  * @param {string} window - Window function ('hann' only)
- * @param {boolean} scale - librosa pseudo-CQT scaling (sqrt(n_fft/lengths))
+ * @param {boolean} scale - pseudo-CQT scaling (sqrt(n_fft/lengths))
  * @param {string} pad_mode - Padding mode
  * @returns {Array<Float64Array>} magnitude matrix [n_bins][n_frames]
  */
@@ -431,7 +430,7 @@ export function pseudo_cqt(
       }
       out[t] = sum
     }
-    // librosa: C *= sqrt(n_fft / lengths) with scale, else C *= sqrt(n_fft)
+    // C *= sqrt(n_fft / lengths) with scale, else C *= sqrt(n_fft)
     const s = scale ? Math.sqrt(n_fft / lengths[b]) : Math.sqrt(n_fft)
     for (let t = 0; t < n_frames; t++) out[t] *= s
     C[b] = out
@@ -442,7 +441,7 @@ export function pseudo_cqt(
 
 /**
  * Hybrid CQT: pseudo-CQT for the top two octaves stacked over the full CQT
- * for the rest. Returns MAGNITUDES (librosa.hybrid_cqt shape).
+ * for the rest. Returns MAGNITUDES (hybrid-CQT shape).
  *
  * @param {Float32Array} y - Audio time series
  * @param {number} sr - Sample rate
@@ -500,17 +499,17 @@ export function hybrid_cqt(
  * ------------------------------------------------------------------------ */
 
 /**
- * Inverse CQT is NOT implemented to librosa parity. The previous body
- * overlap-added the ANALYSIS wavelets (librosa reconstructs through the dual
- * frame with per-octave resampling) via an O(N^2) DFT loop, producing
+ * Inverse CQT is NOT implemented. The previous body
+ * overlap-added the ANALYSIS wavelets (a correct inverse reconstructs through
+ * the dual frame with per-octave resampling) via an O(N^2) DFT loop, producing
  * unusable output. It now fails honestly instead.
  * @throws {Error} always
  */
 export function icqt() {
   throw new Error(
-    'icqt: not implemented to librosa parity — the previous implementation ' +
+    'icqt: not implemented — the previous implementation ' +
       'reconstructed with a non-dual basis and an O(N^2) IDFT. Repair requires ' +
-      'the dual-frame synthesis of librosa.icqt.',
+      'a dual-frame synthesis.',
   )
 }
 
@@ -523,6 +522,6 @@ export function icqt() {
 export function griffinlim_cqt() {
   throw new Error(
     'griffinlim_cqt: not implemented — depends on icqt, which is not ' +
-      'implemented to librosa parity. Use griffinlim (STFT domain) instead.',
+      'implemented. Use griffinlim (STFT domain) instead.',
   )
 }

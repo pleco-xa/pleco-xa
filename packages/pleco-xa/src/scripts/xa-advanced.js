@@ -1,5 +1,5 @@
 /**
- * Librosa Advanced Functions Module
+ * Advanced Functions Module
  * Web-ready JavaScript implementation of advanced audio processing functions
  *
  * Provides the missing foundational functions for complete audio analysis:
@@ -187,7 +187,7 @@ export function rms(y, frame_length = 2048, hop_length = 512, center = true) {
  * @returns {Object} {harmonic, percussive} components
  */
 export function hpss(S, kernel_size = 31, power = 2.0, mask = false) {
-  // SHIM (Wave 5A): delegates to the canonical librosa-parity HPSS in
+  // SHIM (Wave 5A): delegates to the canonical HPSS in
   // src/decompose/index.js (fixture-gated: hpss.json). The legacy local copy
   // returned raw median-filtered spectrograms by default (not a decomposition
   // of S) and used shrinking window boundaries instead of reflect.
@@ -208,7 +208,7 @@ export function hpss(S, kernel_size = 31, power = 2.0, mask = false) {
  * @returns {Float32Array} Pitch-shifted audio
  */
 export function pitch_shift(y, sr, n_steps, bins_per_octave = 12) {
-  // SHIM (Wave 5A): delegates to the canonical librosa-parity pitch_shift
+  // SHIM (Wave 5A): delegates to the canonical pitch_shift
   // (time_stretch → resample → fix_length) in src/effects/index.js. The
   // legacy local copy phase-vocoded without the resample step (a duration
   // change, not a pitch change) through a phase vocoder that never read the
@@ -221,7 +221,7 @@ export function pitch_shift(y, sr, n_steps, bins_per_octave = 12) {
 
 /**
  * Phase vocoder for time-stretching an STFT matrix.
- * SHIM (Wave 5A): delegates to the canonical librosa-parity implementation
+ * SHIM (Wave 5A): delegates to the canonical implementation
  * in src/effects/index.js (fixture-gated: phase_vocoder.json). The legacy
  * local copy ignored the input phase entirely (magnitude-only robotization)
  * and skipped magnitude interpolation.
@@ -580,7 +580,7 @@ export function pcen(
   zi = null,
   return_zf = false
 ) {
-  // --- Parameter validation (mirrors librosa.core.spectrum.pcen) -------------
+  // --- Parameter validation --------------------------------------------------
   if (!S || S.length === 0 || !S[0] || S[0].length === undefined) {
     throw new ParameterError('pcen: S must be a non-empty [freq][time] matrix')
   }
@@ -607,7 +607,7 @@ export function pcen(
   const n_freq = S.length
   const n_frames = S[0].length
 
-  // Smoothing coefficient. librosa solves b**2 + (1 - b)/T - 2 = 0, the
+  // Smoothing coefficient. Solve b**2 + (1 - b)/T - 2 = 0, the
   // full-width-half-max of the squared IIR frequency response, NOT the naive
   // exp(-1/T). T is the time constant expressed in frames.
   if (b === null) {
@@ -621,7 +621,7 @@ export function pcen(
   // Reference signal R fed to the IIR smoother. With max_size == 1, R = S.
   // Frequency-axis max-filtering (max_size > 1) requires scipy.ndimage's
   // reflect-boundary maximum_filter1d, which is not implemented here; throw
-  // rather than silently diverge from librosa.
+  // rather than silently produce wrong output.
   let R = ref
   if (R === null) {
     if (max_size === 1) {
@@ -666,7 +666,7 @@ export function pcen(
       const logSmooth = -gain * (logEps + Math.log1p(M / eps))
       const smooth = Math.exp(logSmooth)
 
-      // Dynamic range compression (librosa's stable branches).
+      // Dynamic range compression (numerically stable branches).
       const x = Si[j]
       let out
       if (power === 0) {
@@ -951,7 +951,7 @@ const {spectrogram, frequencies, times} = reassigned_spectrogram(audioData, 2205
 
 /**
  * Overlap-add operation for inverse STFT and Griffin-Lim
- * Equivalent to librosa's __overlap_add helper
+ * The __overlap_add helper
  *
  * Accumulates windowed frames into output buffer using overlap-add method.
  * This is the core operation for combining overlapping STFT frames back into
@@ -977,7 +977,7 @@ export function __overlap_add(y, ytmp, hop_length, frame_idx) {
 
 /**
  * Compute instantaneous frequencies for reassigned spectrogram
- * Equivalent to librosa's __reassign_frequencies helper
+ * The __reassign_frequencies helper
  *
  * Uses the method from Flandrin et al. (2002) to compute frequency reassignments
  * based on the derivative of the analysis window.
@@ -1023,7 +1023,7 @@ export function __reassign_frequencies(
   // Compute STFT with derivative window for frequency reassignment
   // For frequency reassignment, we need to compute the phase derivative
   // This is approximated using finite differences in the frequency domain
-  // NOTE: This is a simplified implementation - full Librosa version uses derivative window
+  // NOTE: This is a simplified implementation - a full version uses a derivative window
   const S_dh = stftTransform(y, n_fft, hop_length, win_length, window, center, pad_mode)
 
   const n_freq = S.length
@@ -1060,7 +1060,7 @@ export function __reassign_frequencies(
 
 /**
  * Compute time reassignments for reassigned spectrogram
- * Equivalent to librosa's __reassign_times helper
+ * The __reassign_times helper
  *
  * Computes time-domain reassignment using time-weighted window STFT.
  *
@@ -1105,7 +1105,7 @@ export function __reassign_times(
   // Compute STFT with time-weighted window for time reassignment
   // For time reassignment, we need to compute the group delay
   // This is approximated using finite differences in the time domain
-  // NOTE: This is simplified - full Librosa version uses time-weighted window
+  // NOTE: This is simplified - a full version uses a time-weighted window
   const S_th = stftTransform(y, n_fft, hop_length, win_length, window, center, pad_mode)
 
   const n_freq = S.length
@@ -1149,7 +1149,7 @@ export function __reassign_times(
 
 /**
  * Compute magnitude spectrogram from audio or STFT
- * Equivalent to librosa's _spectrogram helper
+ * The _spectrogram helper
  *
  * Internal helper that retrieves or computes a magnitude spectrogram,
  * handling both audio input and pre-computed STFT.

@@ -1,5 +1,5 @@
 /**
- * Fast loop detection using librosa-style algorithms.
+ * Fast loop detection.
  *
  * Wave 3: this is the purged xa-loop.js pipeline. Removed: ~420 lines of
  * commented-out dead code, the live-but-broken analyzeLoopCandidate (which

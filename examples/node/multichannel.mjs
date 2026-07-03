@@ -1,6 +1,6 @@
 /**
- * multichannel — Stereo without broadcasting: channel independence (librosa
- * multichannel advanced-example replica).
+ * multichannel — Stereo without broadcasting: channel independence, the
+ * multichannel Node demo.
  *
  * encodeWav a 2-channel file (440 Hz sine left, 880 Hz right), decodeWav back
  * to the planar channel array, and run stft + magnitude peak-picking per

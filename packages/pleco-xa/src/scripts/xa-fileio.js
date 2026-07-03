@@ -1,7 +1,6 @@
 /**
- * Port of librosa file I/O utilities
- * Browser-compatible file I/O and streaming using Web APIs
- * Librosa-compatible audio file handling for JavaScript
+ * File I/O utilities.
+ * Browser-compatible file I/O and streaming using Web APIs.
  */
 
 /**
@@ -10,10 +9,10 @@
  * The whole source is decoded up front via decodeAudioData, then yielded in
  * fixed-size sample windows: each block is `blockLength` SAMPLES and the
  * window advances by `hopLength` samples, so blockLength > hopLength yields
- * OVERLAPPING blocks. This does NOT match librosa.stream's contract (whose
- * block_length counts FRAMES of frameLength/hopLength each and which reads
- * incrementally). Memory use is O(file), not O(block). For live input use
- * createMediaStreamProcessor instead.
+ * OVERLAPPING blocks. This is a simplified streaming contract — a true
+ * frame-based streamer would count block_length in FRAMES of
+ * frameLength/hopLength each and read incrementally. Memory use is O(file),
+ * not O(block). For live input use createMediaStreamProcessor instead.
  *
  * With blockLength === hopLength the blocks are non-overlapping and lossless:
  * ceil(N / blockLength) blocks whose concatenation reproduces the decoded
@@ -317,7 +316,6 @@ export async function find_files(directory, options = {}) {
  * Get citation information for pleco-audio library
  *
  * Returns citation information in BibTeX format for academic use.
- * This is the JavaScript equivalent of librosa.cite().
  *
  * @param {string} version - Optional version string (default: uses library VERSION)
  * @returns {string} Citation information in BibTeX format
@@ -326,7 +324,7 @@ export async function find_files(directory, options = {}) {
  * console.log(cite());
  * // Prints:
  * // @software{pleco_audio,
- * //   title = {Pleco Audio: Librosa-compatible audio analysis for JavaScript},
+ * //   title = {Pleco Audio: audio analysis for JavaScript},
  * //   author = {Pleco Audio Contributors},
  * //   ...
  * // }
@@ -341,27 +339,17 @@ export function cite(version = null) {
   const libVersion = version || '1.0.0';
 
   const citation = `@software{pleco_audio,
-  title        = {Pleco Audio: Librosa-compatible audio analysis for JavaScript},
+  title        = {Pleco Audio: audio analysis for JavaScript},
   author       = {Pleco Audio Contributors},
   year         = {2025},
   version      = {${libVersion}},
   url          = {https://github.com/pleco-audio/pleco-audio},
-  note         = {Browser-compatible audio DSP library with full Librosa API parity}
+  note         = {Browser-compatible audio DSP library}
 }
 
-Pleco Audio is a JavaScript port of librosa, the Python audio analysis library.
-Original librosa citation:
+Pleco Audio is a browser-native audio analysis library for JavaScript.
 
-@inproceedings{mcfee2015librosa,
-  title        = {librosa: Audio and music signal analysis in Python},
-  author       = {McFee, Brian and Raffel, Colin and Liang, Dawen and Ellis, Daniel PW and McVicar, Matt and Battenberg, Eric and Nieto, Oriol},
-  booktitle    = {Proceedings of the 14th Python in Science Conference},
-  pages        = {18--25},
-  year         = {2015},
-  organization = {SCIPY}
-}
-
-If you use pleco-audio in academic work, please cite both pleco-audio and the original librosa library.
+If you use pleco-audio in academic work, please cite it using the entry above.
 `;
 
   return citation;

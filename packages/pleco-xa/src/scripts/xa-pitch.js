@@ -1,7 +1,6 @@
 /**
- * Port of librosa.core.pitch and librosa.feature.pitch tracking
  * Pitch detection and fundamental frequency estimation
- * Librosa-compatible pitch tracking for JavaScript
+ * Pitch tracking for JavaScript
  */
 
 import { stft } from './xa-fft.js'
@@ -10,7 +9,6 @@ import { viterbi, transition_local, transition_loop } from '../sequence/index.js
 
 /**
  * Pitch tracking using parabolic interpolation of peak locations in a spectrogram
- * Port of librosa.core.piptrack
  * @param {Float32Array} y - Audio time series (optional if S provided)
  * @param {number} sr - Sample rate
  * @param {Array} S - Pre-computed magnitude/power spectrogram [freq][time]
@@ -110,7 +108,6 @@ export function piptrack(
 
 /**
  * Fundamental frequency (F0) estimation using the YIN algorithm
- * Port of librosa.core.yin
  * @param {Float32Array} y - Audio time series
  * @param {number} fmin - Minimum frequency to search
  * @param {number} fmax - Maximum frequency to search
@@ -200,9 +197,9 @@ export function yin(
 }
 
 /**
- * Probabilistic YIN (pYIN) — librosa.core.pyin parity port.
+ * Probabilistic YIN (pYIN).
  *
- * Faithful two-stage port of librosa 0.11's pyin (librosa/core/pitch.py):
+ * Two-stage pYIN pipeline:
  *   1. YIN cumulative-mean-normalized-difference per frame → local minima
  *      (troughs) below a beta-distributed threshold ensemble, each weighted by
  *      a Boltzmann prior over trough rank and the beta pmf over thresholds →
@@ -210,13 +207,13 @@ export function yin(
  *      bins/semitone) stacked with an unvoiced state block.
  *   2. Transition matrix = transition_local band over the pitch grid ⊗
  *      voiced/unvoiced switching (transition_loop(2, 1 - switch_prob)) via a
- *      Kronecker product — exactly librosa's np.kron(t_switch, transition).
+ *      Kronecker product np.kron(t_switch, transition).
  *   3. sequence.viterbi decode → per-frame pitch bin → f0 (fill_na when
  *      unvoiced), voiced_flag, voiced_prob.
  *
  * Fixture-gated: tools/parity/fixtures/pyin.json (220→330 Hz step + silent
- * tail; voiced f0 within ~1 semitone of librosa, voicing exact on the clearly
- * voiced/silent regions). This is the real pYIN — NOT the former median-over-
+ * tail; voiced f0 within ~1 semitone, voicing exact on the clearly voiced/
+ * silent regions). This is the real pYIN — NOT the former median-over-
  * threshold-ensemble stub (no transition matrix, no Viterbi) that was honestly
  * left unexported.
  *
@@ -235,7 +232,7 @@ export function yin(
  * @param {number} [opts.switch_prob=0.01] - Voiced↔unvoiced switch prob.
  * @param {number} [opts.no_trough_prob=0.01] - Best-guess mass when no trough.
  * @param {number} [opts.fill_na=NaN] - Value written to unvoiced f0 frames.
- * @param {boolean} [opts.center=true] - Center-pad frames (librosa default).
+ * @param {boolean} [opts.center=true] - Center-pad frames (default).
  * @returns {{ f0: Float64Array, voiced_flag: boolean[], voiced_prob: Float64Array }}
  */
 export function pyin(y, fmin, fmax, sr = 22050, {
@@ -267,7 +264,7 @@ export function pyin(y, fmin, fmax, sr = 22050, {
     )
   }
 
-  // Period search bounds (samples). Matches librosa exactly.
+  // Period search bounds (samples).
   const min_period = Math.floor(sr / fmax)
   const max_period = Math.min(Math.ceil(sr / fmin), frame_length - 1)
 
@@ -336,7 +333,7 @@ export function pyin(y, fmin, fmax, sr = 22050, {
 }
 
 /**
- * Per-frame framing with librosa center-padding (mode='constant').
+ * Per-frame framing with center-padding (mode='constant').
  * Returns frame-major rows (each a Float64Array of frame_length) so the
  * downstream YIN math iterates one contiguous frame at a time.
  * @param {ArrayLike<number>} y
@@ -478,7 +475,7 @@ function boltzmannPmf(k, lambda_, N) {
 }
 
 /**
- * Local minima of a 1-D array with librosa.util.localmin edge semantics
+ * Local minima of a 1-D array with edge semantics
  * (edge-padded): out[i] = (x[i] < x[i+1]) && (x[i] <= x[i-1]); the last index
  * is never a local min, the first uses its own value as the left neighbor.
  * @param {ArrayLike<number>} x
@@ -742,7 +739,6 @@ export function smooth_pitch(f0, window_size = 5) {
 
 /**
  * Given a collection of pitches, estimate its tuning offset (in fractions of a bin)
- * Port of librosa.pitch_tuning
  *
  * This function estimates the deviation from 12-tone equal temperament (12-TET)
  * by analyzing the distribution of pitch deviations from semitone centers.
@@ -814,7 +810,6 @@ export function pitch_tuning(frequencies, resolution = 0.01, bins_per_octave = 1
 
 /**
  * Estimate the tuning of an audio time series or spectrogram input
- * Port of librosa.estimate_tuning
  *
  * @param {Float32Array} y - Audio time series (optional if S provided)
  * @param {number} sr - Sample rate (default: 22050)
@@ -874,8 +869,8 @@ export function estimate_tuning(
 }
 
 /**
- * Check the feasibility of YIN/pYIN parameters — matches librosa's
- * __check_yin_params (0 < fmin < fmax <= sr/2 and sr/fmin < frame_length - 1).
+ * Check the feasibility of YIN/pYIN parameters via __check_yin_params
+ * (0 < fmin < fmax <= sr/2 and sr/fmin < frame_length - 1).
  * Failure paths throw with a diagnostic; nothing is silently clamped.
  *
  * @param {number} sr - Sample rate
@@ -906,9 +901,9 @@ function __check_yin_params(sr, fmax, fmin, frame_length) {
 }
 
 /**
- * Cumulative mean normalized difference function for YIN/pYIN — librosa parity.
+ * Cumulative mean normalized difference function for YIN/pYIN.
  *
- * Reproduces librosa._cumulative_mean_normalized_difference exactly:
+ * Computes _cumulative_mean_normalized_difference:
  *   d(p)   = 2 * (ACF(0) - ACF(p)) - E(p-1),  d(0) = 0
  *   d'(p)  = d(p) / ( (1/p) * Σ_{j=1..p} d(j) + tiny )
  * where ACF is the linear autocorrelation and E the cumulative frame energy.
@@ -922,7 +917,7 @@ function __check_yin_params(sr, fmax, fmin, frame_length) {
 function _cumulative_mean_normalized_difference(y_frames, min_period, max_period) {
   const n_frames = y_frames.length
   const n_lags = max_period - min_period + 1
-  // float32 tiny — librosa's util.tiny over the (float32) frame dtype. Only
+  // float32 tiny — util.tiny over the (float32) frame dtype. Only
   // matters when the denominator is ~0 (silent frames → CMND = 0).
   const TINY = 1.1754944e-38
   const out = new Array(n_frames)
@@ -965,9 +960,9 @@ function _cumulative_mean_normalized_difference(y_frames, min_period, max_period
 }
 
 /**
- * Piecewise parabolic interpolation for YIN/pYIN — librosa parity.
+ * Piecewise parabolic interpolation for YIN/pYIN.
  *
- * Applies librosa's _pi_stencil per lag: with a = x[i+1]+x[i-1]-2·x[i] and
+ * Applies the _pi_stencil per lag: with a = x[i+1]+x[i-1]-2·x[i] and
  * b = (x[i+1]-x[i-1])/2, the sub-sample shift is -b/a, but is forced to 0 when
  * |b| >= |a| (i.e. the parabola optimum lies outside [i-1, i+1]). Edge lags
  * (first/last) get a shift of 0. Operates frame-major on the CMND matrix.
@@ -993,7 +988,7 @@ function _parabolic_interpolation(x) {
 }
 
 /**
- * pYIN observation-probability builder — librosa parity (__pyin_helper).
+ * pYIN observation-probability builder (__pyin_helper).
  *
  * For each frame: find CMND troughs (local minima), then for every trough that
  * falls below a given threshold add a Boltzmann-over-rank × beta-over-threshold
@@ -1074,7 +1069,7 @@ function __pyin_helper(
     }
 
     // Bias the global-minimum trough with no_trough_prob mass for the thresholds
-    // it never fell below (librosa's best-guess-when-no-trough contribution).
+    // it never fell below (the best-guess-when-no-trough contribution).
     let gMin = 0
     for (let t = 1; t < nT; t++) if (troughHeights[t] < troughHeights[gMin]) gMin = t
     let nThreshBelowMinComplement = 0
@@ -1087,7 +1082,7 @@ function __pyin_helper(
 
     // Scatter trough probabilities onto the pitch grid. Ascending lag order
     // means the highest-lag trough wins any same-bin collision (matches the
-    // row-major np.nonzero assignment order in librosa).
+    // row-major np.nonzero assignment order).
     for (let t = 0; t < nT; t++) {
       const p = probs[t]
       if (p === 0) continue

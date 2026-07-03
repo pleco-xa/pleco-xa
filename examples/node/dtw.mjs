@@ -12,7 +12,7 @@ import { check, checkTrue, summary } from './_harness.mjs'
 
 const { dtw, dtwBacktracking } = sequence
 
-// X: 2-dim strictly-monotonic ramp features, 40 frames (librosa layout d×N)
+// X: 2-dim strictly-monotonic ramp features, 40 frames (feature layout d×N)
 const N = 40
 const X = [new Float64Array(N), new Float64Array(N)]
 for (let i = 0; i < N; i++) {
@@ -85,7 +85,7 @@ for (let m = 0; m < B; m++) {
 }
 check('subseq: min over D[last row] (embedded verbatim → 0)', minLast, 0)
 check('subseq: matched window ends at column OFFSET+N−1', minCol, OFFSET + N - 1)
-check('subseq: path start pair [0, OFFSET] (librosa end-to-start order)',
+check('subseq: path start pair [0, OFFSET] (end-to-start order)',
   r3.wp[r3.wp.length - 1], [0, OFFSET])
 
 // ── dtwBacktracking: standalone backtrack reproduces dtw's internal wp ──────

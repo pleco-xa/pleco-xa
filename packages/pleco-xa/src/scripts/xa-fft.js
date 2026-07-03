@@ -153,7 +153,7 @@ export function ifft(spectrum) {
 }
 
 /**
- * Short-Time Fourier Transform (Librosa-compatible)
+ * Short-Time Fourier Transform
  * @param {Float32Array} y - Audio signal
  * @param {number} n_fft - FFT window size
  * @param {number} hop_length - Hop length (default: n_fft/4)
@@ -161,7 +161,7 @@ export function ifft(spectrum) {
  * @param {string} window - Window type
  * @param {boolean} center - Whether to center the signal
  * @param {string} pad_mode - Padding mode ('reflect', 'constant', 'edge')
- * @returns {Array} STFT matrix [freq, time] - matches Librosa format
+ * @returns {Array} STFT matrix [freq, time]
  */
 export function stft(
   y,
@@ -172,7 +172,7 @@ export function stft(
   center = true,
   pad_mode = 'constant',
 ) {
-  // Set defaults to match Librosa
+  // Set defaults
   if (hop_length === null) {
     hop_length = Math.floor(n_fft / 4)
   }
@@ -206,7 +206,7 @@ export function stft(
   const num_frames = Math.floor((padded_y.length - n_fft) / hop_length) + 1
   const n_freq = Math.floor(n_fft / 2) + 1
 
-  // Initialize output matrix as [freq][time] (Librosa format)
+  // Initialize output matrix as [freq][time]
   const stft_matrix = Array(n_freq)
   for (let f = 0; f < n_freq; f++) {
     stft_matrix[f] = new Array(num_frames)
@@ -233,7 +233,7 @@ export function stft(
 }
 
 /**
- * Inverse Short-Time Fourier Transform (Librosa-compatible)
+ * Inverse Short-Time Fourier Transform
  * @param {Array} D - STFT matrix [freq, time]
  * @param {number} hop_length - Hop length (default: n_fft/4)
  * @param {number} win_length - Window length (default: n_fft)
@@ -250,7 +250,7 @@ export function istft(
   center = true,
   length = null,
 ) {
-  // D is [freq][time] format (Librosa-compatible)
+  // D is [freq][time] format
   const n_freq = D.length
   const n_frames = D[0] ? D[0].length : 0
   const n_fft = (n_freq - 1) * 2
@@ -458,7 +458,7 @@ export function polar_to_complex(magnitude, phase) {
 }
 
 /**
- * Pad signal with various modes (Librosa-compatible)
+ * Pad signal with various modes
  * @param {Float32Array} array - Input array
  * @param {number} pad_width - Padding width on each side
  * @param {string} mode - Padding mode ('constant', 'reflect', 'edge')
@@ -471,7 +471,7 @@ function pad_signal(array, pad_width, mode = 'constant') {
   result.set(array, pad_width)
 
   if (mode === 'constant') {
-    // Zero padding (default for Librosa)
+    // Zero padding (default)
     // Already zeros from Float32Array initialization
   } else if (mode === 'reflect') {
     // Reflect padding

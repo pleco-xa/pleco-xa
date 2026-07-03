@@ -11,7 +11,7 @@ vocal out of a mix using nothing but DSP. There is no machine-learning model any
 this namespace: zero weights, zero inference runtime, no ONNX, just median filters, masks,
 and gradient-optimised EQ curves.
 
-The HPSS/softmask core is fixture-gated against librosa 0.11 (`hpss.json`, including
+The HPSS/softmask core is fixture-gated in CI (`hpss.json`, including
 `margin=2`); harmonic + percussive ≈ the input at `margin=1`.
 
 ## Key functions
@@ -21,7 +21,7 @@ Verified against the built barrel (`decompose` namespace):
 - **`hpss(S, opts)`** → `{ harmonic, percussive }` spectrograms. Default (`mask: false`)
   returns the **masked components** `S · mask`, so `harmonic + percussive ≈ S` at
   `margin=1`. Accepts magnitude rows or complex `{real, imag}` bins (phase is reapplied).
-- **`softmask(X, X_ref, opts)`** → mask matrix `X^p / (X^p + X_ref^p)` with librosa's
+- **`softmask(X, X_ref, opts)`** → mask matrix `X^p / (X^p + X_ref^p)` with
   rescale-by-max stabilisation; `power: Infinity` gives a hard mask (`X > X_ref`).
 - **`nn_filter(S, opts)`** — replace each frame by an aggregate of its nearest neighbours in
   a recurrence graph. `aggregate: 'median'` + `metric: 'cosine'` + a width band is the
@@ -72,7 +72,7 @@ const foreground = decompose.nn_filter(S, {
   frames with no neighbours pass through unchanged. Supported `aggregate` values are `'mean'`,
   `'median'`, `'average'` (weighted by the graph), or a custom `(values, weights) => number`.
 - **NMF decomposition is deliberately out of scope** (the merged marathon NMF converges
-  incorrectly and is not exported) — see the PARITY exceptions ledger.
+  incorrectly and is not exported) — see the exceptions ledger.
 
 ## API reference
 

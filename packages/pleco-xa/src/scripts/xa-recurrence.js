@@ -2,7 +2,7 @@
  * JavaScript recurrence matrix and loop structure analysis
  * For finding loop structures in audio.
  *
- * Wave 3 repairs (see docs/superpowers/research/librosa-parity/pleco-unique.md):
+ * Wave 3 repairs:
  *  - stackMemory / matrix helpers now accept Float32Array rows (ArrayBuffer.isView),
  *    which computeChroma has always produced. The old Array.isArray-only checks
  *    silently rejected every real input.

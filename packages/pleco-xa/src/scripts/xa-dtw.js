@@ -1,7 +1,7 @@
 /**
  * Dynamic Time Warping (DTW) — compatibility shim.
  *
- * The librosa-faithful engine lives in src/sequence/dtw.js (recorded-step
+ * The core engine lives in src/sequence/dtw.js (recorded-step
  * backtracking, appended custom steps, honored weights_add/weights_mul,
  * subseq, absolute-radius Sakoe-Chiba band; fixture-gated against
  * tools/parity/fixtures/dtw_segment.json). This module keeps the legacy
@@ -11,7 +11,7 @@
  * Removed (Wave 5B): `fastDTW` and `constrainedDTW`. constrainedDTW ignored
  * its radius/path and called full dtw, so fastDTW was full DTW plus recursion
  * overhead — a fabricated speedup. `isWithinBand` (the old normalized-
- * coordinate band, which never matched librosa's geometry) is gone with it.
+ * coordinate band, which had the wrong geometry) is gone with it.
  * Callers who want FastDTW semantics must implement a real constrained pass.
  */
 
@@ -23,17 +23,16 @@ import { dtw as dtwCore } from '../sequence/dtw.js'
  * @param {Array} X - First sequence (2D: features x time)
  * @param {Array} Y - Second sequence (2D: features x time)
  * @param {string} metric - 'euclidean' | 'cosine' | 'manhattan' | 'sqeuclidean'
- * @param {Array} step_sizes_sigma - custom steps (appended to librosa defaults)
+ * @param {Array} step_sizes_sigma - custom steps (appended to the defaults)
  * @param {Array} weights_add - additive step weights (honored)
  * @param {Array} weights_mul - multiplicative step weights (honored)
  * @param {boolean} subseq - subsequence matching (honored)
  * @param {boolean} backtrack - whether to return the optimal path
- * @param {boolean} global_constraints - Sakoe-Chiba band (librosa geometry)
+ * @param {boolean} global_constraints - Sakoe-Chiba band
  * @param {number} band_rad - band radius as a fraction of min(N, M)
  * @returns {Object} { distance, cost_matrix, path, normalized_distance }
- *   `cost_matrix` is the (N, M) accumulated cost matrix (librosa layout —
- *   no longer the padded (N+1, M+1) legacy matrix). `path` is start-to-end
- *   ascending, as before.
+ *   `cost_matrix` is the (N, M) accumulated cost matrix (no longer the padded
+ *   (N+1, M+1) legacy matrix). `path` is start-to-end ascending, as before.
  */
 export function dtw(
   X,

@@ -8,7 +8,7 @@
  * audio-analysis.js depends on. Delegation to feature/spectral.js with
  * center=false is numerically identical to the old loop for RMS.
  *
- * computeZeroCrossingRate now uses librosa counting (divides by frameSize
+ * computeZeroCrossingRate now uses standard ZCR counting (divides by frameSize
  * instead of frameSize - 1, clips |v| <= 1e-10 to zero) — a ≤0.1% shift.
  */
 
@@ -56,7 +56,7 @@ export function computeZeroCrossingRate(
 }
 
 /**
- * Framewise peak amplitude tracking (pleco extra — no librosa counterpart).
+ * Framewise peak amplitude tracking (pleco extra).
  * @param {Float32Array} buffer - Audio buffer to analyze
  * @param {Number} frameSize - Frame length in samples (default: 1024)
  * @param {Number} hopSize - Hop between frames (default: frameSize/2)

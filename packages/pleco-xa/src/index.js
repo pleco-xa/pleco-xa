@@ -21,13 +21,13 @@ export {
   fft_frequencies, spectrogram,
 } from './scripts/xa-fft.js'
 
-// Rhythm — canonical librosa-parity engine (fixture-gated: tempo_beats.json).
+// Rhythm — canonical beat engine (fixture-gated: tempo_beats.json).
 // tempo()/beat_track() are the parity tier; quickTempo() is the explicit
 // quick tier (windowed lb-style live estimate, never a silent fallback).
 export { BeatTracker, beat_track, tempo, quickTempo } from './scripts/xa-beat-tracker.js'
 export * as bpm from './scripts/xa-bpm-algorithm.js'
 
-// Onset detection (librosa-parity onset_strength; fixture-gated: onset_strength.json)
+// Onset detection (log-power-mel onset_strength; fixture-gated: onset_strength.json)
 export { onset_strength, onsetDetect } from './scripts/xa-onset.js'
 
 // Transient snap: kick+snare hit finder for beat-driven material (returns
@@ -39,7 +39,7 @@ export { calculateBeatAlignment } from './scripts/musical-timing.js'
 
 // Pitch: YIN + probabilistic YIN (pYIN) fundamental-frequency estimators.
 // pyin is a real HMM/Viterbi port (observation matrix → transition_local band →
-// viterbi decode), grid-exact vs librosa; fixture-gated (pyin.json).
+// viterbi decode); fixture-gated (pyin.json).
 export { yin, pyin } from './scripts/xa-pitch.js'
 
 // Streaming analyzers (worker-safe, incremental push API)
@@ -48,7 +48,7 @@ export { createRmsMeter, createFluxAnalyzer } from './streaming/analyzers.js'
 // IO (universal: Node + browser + workers)
 export { encodeWav, decodeWav } from './io/wav.js'
 
-// Conversions (fixture-validated vs librosa 0.11.0)
+// Conversions (fixture-validated in CI)
 export * as convert from './scripts/xa-convert.js'
 
 // Spectral features — Wave 4 consolidated namespace (fixture-gated:
@@ -61,7 +61,7 @@ export * as feature from './feature/index.js'
 // get_window / mel_filterbank)
 export * as filters from './filters/index.js'
 
-// Music notation & scale theory — librosa.core.notation port. Tier-1
+// Music notation & scale theory. Tier-1
 // proof-of-work repairs (2026-07-02): slot-aware mela_to_svara, circle-of-
 // fifths key_to_notes (unknown keys throw), kafi thaat, exact fifths_to_note.
 // Proof: examples/node/notation.mjs.
@@ -72,15 +72,15 @@ export * as notation from './scripts/xa-notation.js'
 // examples/node/compression.mjs + examples/web/compression.html.
 export { pitchBasedCompress, tempoBasedCompress } from './scripts/compression.js'
 
-// Framing utilities promoted for ML patch pipelines (librosa.util.frame /
-// sync / fix_frames). NOTE divergence: frame() COPIES each frame — librosa's
+// Framing utilities promoted for ML patch pipelines (frame /
+// sync / fix_frames). NOTE: frame() COPIES each frame — a
 // zero-copy stride view does not transfer to JS. Proof: examples/node/patch-generation.mjs.
 export { frame, sync, fix_frames } from './scripts/xa-util.js'
 
-// Delta features (librosa.feature.delta tier), promoted for the tutorial's
+// Delta features, promoted for the tutorial's
 // beat-synchronous mfcc+delta stacking demo (2026-07-02). Interior frames
-// match librosa's width-9 Savitzky-Golay slope (polyorder-1 regression is the
-// same formula); edges use clamp-replication, NOT librosa's mode='interp'.
+// a width-9 Savitzky-Golay slope (polyorder-1 regression is the
+// same formula); edges use clamp-replication (not an interp edge mode).
 // Proof: examples/node/tutorial.mjs.
 export { delta_features } from './scripts/xa-mel.js'
 
@@ -155,7 +155,7 @@ export {
   applyLiveHalfSpeed, applyLiveDoubleSpeed, resetLiveSpeed, liveSpeedController,
 } from './scripts/live-speed-control.js'
 
-// Display: canvas-native spectrogram rendering (librosa.display replacement
+// Display: canvas-native spectrogram rendering (browser-native
 // tier — see PARITY.md exceptions ledger).
 export {
   createSpectrogram, renderStaticSpectrum, RealtimeSpectrumAnalyzer,
@@ -217,15 +217,15 @@ export { loadFile } from './scripts/xa-file.js'
 export { findMusicalLoop } from './scripts/xa-downbeat.js'
 export { warnIfNoMp3Support } from './scripts/xa-util.js'
 
-// Harmonic analysis (librosa.core.harmonics tier): f0-conditioned harmonic
+// Harmonic analysis: f0-conditioned harmonic
 // energy extraction + HPS pitch helper. Tier-2 repair (2026-07-02): salience
-// now follows librosa semantics (weighted-average aggregate, frequency-axis
+// uses a weighted-average aggregate over the frequency axis
 // peak filter on the original S). Proof: examples/node/xa-harmonic.mjs.
 export {
   f0_harmonics, salience, harmonic_product_spectrum,
 } from './scripts/xa-harmonic.js'
 
-// Display (librosa.display canvas tier): specshow/waveshow + axis formatters.
+// Display (canvas tier): specshow/waveshow + axis formatters.
 // Tier-2 repair (2026-07-02): typed-array-aware flatten — cmap/specshow now
 // accept the Array<Float32Array> matrices every xa feature module returns.
 // Proof: examples/web/mfcc-specshow.html.
@@ -233,8 +233,8 @@ export {
   specshow, waveshow, cmap, NoteFormatter, ChromaFormatter, TimeFormatter,
 } from './scripts/xa-display.js'
 
-// Inverse transforms (librosa.feature.inverse tier). mel_to_stft is a
-// documented transpose APPROXIMATION (librosa uses NNLS); mel_to_audio /
+// Inverse transforms. mel_to_stft is a
+// documented transpose APPROXIMATION (NNLS is the exact inverse); mel_to_audio /
 // mfcc_to_audio reconstruct via Griffin-Lim (istft arg-order repaired
 // 2026-07-02); mfcc_to_mel is a proper zero-padded DCT-III inverse.
 // Proof: examples/node/xa-inverse.mjs.
@@ -244,9 +244,9 @@ export {
 
 // ─── Tier-2 proof-of-work promotions: core IO/util corner (2026-07-02) ──────
 
-// util: librosa peak picking, PCM→float buffer conversion, audio validation
+// util: peak picking, PCM→float buffer conversion, audio validation
 // (proof: examples/node/xa-util.mjs). frame/sync/fix_frames already above.
-// Repair: softmask here now delegates to the librosa-correct xa-normalize
+// Repair: softmask here now delegates to the corrected xa-normalize
 // implementation; show_versions no longer reports fictional parity numbers.
 export { peakPick, buf_to_float, valid_audio } from './scripts/xa-util.js'
 
@@ -261,7 +261,7 @@ export * as audioio from './scripts/xa-audioio.js'
 // — the pure 3:2 fifth and 5/4 just third come out EXACT).
 export * as intervals from './scripts/xa-intervals.js'
 
-// Browser file IO: chunked reader (decode-then-chunk, NOT librosa.stream
+// Browser file IO: chunked reader (decode-then-chunk, a frame reader,
 // semantics — see module JSDoc), live-mic block processor, find_files, cite
 // (proof: examples/web/file-io.html; chunk math node-verified via injected
 // decoder).
@@ -269,7 +269,7 @@ export * as fileio from './scripts/xa-fileio.js'
 
 // Example registry + AudioCache + WAV save/load. Repair: saveAudio now
 // delegates to the canonical io/wav encoder and returns the Blob.
-// NOTE: the remote librosa.org AUDIO_REGISTRY entries remain unverified —
+// NOTE: the remote AUDIO_REGISTRY entries remain unverified —
 // the proof page exercises example()/exampleBuffer() against a local fixture
 // via the baseUrl parameter (proof: examples/web/file-io.html).
 export * as file from './scripts/xa-file.js'
@@ -299,7 +299,7 @@ export {
 } from './scripts/xa-tempo.js'
 
 // Pulse strength + beat-synchronous aggregation. NOTE: plp here is a
-// windowed-autocorrelation pulse-strength approximation, NOT librosa's
+// windowed-autocorrelation pulse-strength approximation, not the
 // Fourier-tempogram PLP (proof: examples/node/rhythm-plp.mjs — beat_sync
 // goldens [2.5, 6.5] / [4, 8] exact).
 export { plp, beat_sync } from './scripts/xa-rhythm.js'
@@ -310,32 +310,32 @@ export { plp, beat_sync } from './scripts/xa-rhythm.js'
 // the old call sliced output to 1 sample — proof: examples/node/xa-advanced.mjs
 // + examples/web/xa-advanced.html). pcen is a real streaming PCEN with
 // zi/return_zf filter-state carry (proof: examples/node/pcen-stream.mjs —
-// block-wise == one-shot bit-exactly) but is NOT librosa-parity: the smoother
-// coefficient is exp(-1/t_frames) where librosa uses the sqrt steady-state
+// block-wise == one-shot bit-exactly); divergence noted: the smoother
+// coefficient is exp(-1/t_frames) rather than the sqrt steady-state
 // formula (same 1/t leading term, diverges at small time constants), and
-// warmup starts from state 0 where librosa seeds lfilter_zi with frame 0.
-// No librosa fixture yet — divergences documented, not hidden.
+// warmup starts from state 0 rather than seeding lfilter_zi with frame 0.
+// No fixture yet — divergences documented, not hidden.
 export { griffinlim, pcen } from './scripts/xa-advanced.js'
 
 // ─── Tier-3 proof-of-work promotions: tempogram + CQT (2026-07-02) ──────────
 
-// Tempogram (librosa.feature.tempogram parity — linear_ramp padding, full
+// Tempogram (linear_ramp padding, full
 // win_length lag rows, per-column inf-norm). The canonical tempo() consumes
 // this exact math (xa-beat-tracker meanTempogram delegates here, so the
 // tempo_beats.json parity fixture gates it). fourier_tempogram runs at hop=1
 // (power-of-2 win_length required — radix-2 stft, divergence documented);
-// estimate_tempo applies librosa's log-normal tempo prior over the time-mean
+// estimate_tempo applies a log-normal tempo prior over the time-mean
 // tempogram. tempogram_ratio samples the tempogram at harmonic/subharmonic
 // ratios of the per-frame tempo (Prockup'15 factor table); fixture-gated
-// (tempogram_ratio.json, 7.5e-8 vs librosa). Proof: examples/web/xa-tempogram.html.
+// (tempogram_ratio.json, 7.5e-8). Proof: examples/web/xa-tempogram.html.
 export {
   tempogram, fourier_tempogram, estimate_tempo, tempogram_ratio,
 } from './scripts/xa-tempogram.js'
 
 // Constant-Q transform (repaired 2026-07-02: frequency-domain filter basis
-// like librosa __vqt_filter_fft — the old code multiplied time-domain
-// wavelets against STFT bins and peaked a 440 Hz sine at the wrong bin with
-// a monotonic ramp). Single-pass evaluation (no octave recursion), hann
+// — the old code multiplied time-domain wavelets against STFT bins and peaked
+// a 440 Hz sine at the wrong bin with a monotonic ramp). Single-pass
+// evaluation (no octave recursion), hann
 // only, sparsity accepted-not-applied — divergences documented in-module.
 // icqt/griffinlim_cqt throw honestly (inverse path not minimally
 // repairable). Proof: examples/node/xa-constantq.mjs.

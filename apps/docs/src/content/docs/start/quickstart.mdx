@@ -12,20 +12,20 @@ Decode a file into an `AudioBuffer` with the Web Audio API, then hand its channe
 data to the library.
 
 ```js
-import { beat_track, tempo, loop } from 'pleco-xa'
+import { beat_track, loop } from 'pleco-xa'
 
 const ctx = new AudioContext()
 const audioBuffer = await ctx.decodeAudioData(await (await fetch('song.mp3')).arrayBuffer())
 const y = audioBuffer.getChannelData(0)
 const sr = audioBuffer.sampleRate
 
-// Tempo + beats — the canonical, librosa-parity Ellis DP tracker
-const { bpm, beats } = beat_track(y, sr)
-console.log(`${bpm.toFixed(1)} BPM, ${beats.length} beats`)
+// Tempo + beats — the Ellis dynamic-programming beat tracker
+const { tempo, beats } = beat_track(y, sr)
+console.log(`${tempo.toFixed(1)} BPM, ${beats.length} beats`)
 
-// The signature feature: find the best loop point
-const result = loop.detect(audioBuffer, { strategy: 'fast' })
-console.log(`loop ${result.start.toFixed(2)}s → ${result.end.toFixed(2)}s`)
+// The signature feature: find the best loop point (async)
+const result = await loop.detect(audioBuffer, { strategy: 'fast' })
+console.log(`loop ${result.loopStart.toFixed(2)}s → ${result.loopEnd.toFixed(2)}s`)
 ```
 
 ## In Node
@@ -52,5 +52,4 @@ separate, named call — for example `quickTempo` for a ~5–10 s live estimate 
 never a silent fallback. If a quality gate can't be met, the function throws
 with diagnostics rather than returning a fabricated number.
 
-Every function used here is validated against librosa. See
-[Coming from librosa](/start/coming-from-librosa/) for the full map.
+Every function used here is fixture-gated in CI.

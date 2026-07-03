@@ -1,7 +1,7 @@
 /**
- * Port of librosa.cache utilities
+ * Port of cache utilities
  * Browser-compatible caching system using Map and WeakMap
- * Librosa-compatible cache and decorator utilities for JavaScript
+ * canonical cache and decorator utilities for JavaScript
  */
 
 /**
@@ -370,7 +370,7 @@ export function deprecated(version, versionRemoved, message = null) {
  *
  * @example
  * // Mark function as moved
- * const movedFunc = moved('librosa.core', '1.0.0', '2.0.0', 'librosa.feature')(
+ * const movedFunc = moved('core', '1.0.0', '2.0.0', 'feature')(
  *   function spectral_centroid(S) { return computeCentroid(S); }
  * );
  *

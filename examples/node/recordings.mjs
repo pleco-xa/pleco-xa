@@ -1,7 +1,7 @@
 /**
- * recordings — the house corpus: ex() with ground truth.
+ * recordings — the house corpus with ground truth.
  *
- * Corpus-generator replica of librosa.ex(): _corpus.mjs synthesizes the
+ * Corpus generator: _corpus.mjs synthesizes the
  * shared demo assets (tone-440, chirp-110-880, click-track-120bpm, am-noise
  * vocal stand-in) via encodeWav and writes manifest.json. This script is the
  * verification pass: it re-decodes EVERY file from disk and proves each
@@ -125,4 +125,4 @@ for (const entry of manifest) {
   check('am-noise: RMS-envelope peaks == 24 (3 Hz × 8 s)', countEnvelopePeaks(y), 24)
 }
 
-summary('recordings — house corpus ground-truth verification (librosa.ex replica)')
+summary('recordings — house corpus ground-truth verification')

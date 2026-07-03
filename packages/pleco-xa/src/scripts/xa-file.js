@@ -1,5 +1,5 @@
 /**
- * Librosa File Utilities Module
+ * File Utilities Module
  * Web-ready JavaScript implementation of file utilities and example loading
  *
  * Provides tools for:
@@ -27,7 +27,7 @@ class FileError extends Error {
 
 /**
  * Audio example registry with metadata
- * Provides access to standard librosa example files
+ * Provides access to the bundled example files
  */
 const AUDIO_REGISTRY = {
   brahms: {
@@ -194,7 +194,7 @@ const audioCache = new AudioCache()
 export async function example(
   key,
   hq = false,
-  baseUrl = 'https://librosa.org/data/assets/audio/',
+  baseUrl = '',
 ) {
   // Validate example key
   if (!AUDIO_REGISTRY[key]) {
@@ -258,7 +258,7 @@ export async function exampleBuffer(
   key,
   hq = false,
   audioContext = null,
-  baseUrl = 'https://librosa.org/data/assets/audio/',
+  baseUrl = '',
 ) {
   if (!audioContext) {
     audioContext = new (window.AudioContext ||

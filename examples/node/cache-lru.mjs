@@ -2,8 +2,8 @@
  * scripts/xa-cache.js — call-count LRU proof.
  * Counts real underlying-function invocations to prove hits, LRU eviction order,
  * the wrapper() decorator, and memoize()'s WeakMap identity semantics.
- * NOTE: LRUCache.eval(fn, ...args) is the librosa cache API port (method name
- * from librosa.cache) — it invokes the passed fn, never JS global eval.
+ * NOTE: LRUCache.eval(fn, ...args) is a cache-lookup method (its name is a
+ * historical port convention) — it invokes the passed fn, never JS global eval.
  * (xa-cache is not on the dist curated surface yet — imported from src; the
  * module is pure ESM with zero dependencies, import-safe everywhere.)
  */

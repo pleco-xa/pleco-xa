@@ -421,7 +421,7 @@ export function processAudioToFingerprints(audioBuffer, nFft = 2048, hopLength =
   const channelData = audioBuffer.getChannelData(0)
   const sr = audioBuffer.sampleRate
 
-  // Create STFT — xa-fft.js returns (freq x time), already librosa layout.
+  // Create STFT — xa-fft.js returns (freq x time), the layout we need.
   // (Wave 5A repair: the old code transposed here on the assumption stft
   // returned time x freq, which scrambled frequency and time semantics for
   // the entire fingerprint pipeline.)

@@ -1,8 +1,8 @@
 /**
  * scripts/xa-convert.js — unit-conversion golden table.
- * Definitional values every conversion library must hit (librosa 0.11.0 parity).
- * Note: hz_to_mel(1000) is 15 − 1.8e-15 in float64 (200/3 roundoff, identical to
- * librosa's own float result), so "exact" identities are asserted at 1e-9.
+ * Definitional values every conversion library must hit (exact reference goldens).
+ * Note: hz_to_mel(1000) is 15 − 1.8e-15 in float64 (200/3 roundoff — the
+ * unavoidable float64 result), so "exact" identities are asserted at 1e-9.
  */
 import { convert } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
@@ -26,7 +26,7 @@ check('midi_to_hz(69) == 440 (A4 by definition)', convert.midi_to_hz(69), 440)
 check("note_to_midi('A4') == 69", convert.note_to_midi('A4'), 69)
 check("hz_to_note(440) == 'A4'", convert.hz_to_note(440), 'A4')
 check("hz_to_note(261.63) == 'C4' (middle C)", convert.hz_to_note(261.63), 'C4')
-check('hz_to_octs(440) == 4.75 (librosa: A4 sits at octave 4.75)',
+check('hz_to_octs(440) == 4.75 (A4 sits at octave 4.75)',
   convert.hz_to_octs(440), 4.75, 1e-9)
 check('octs_to_hz(hz_to_octs(261.6256)) == 261.6256 (octave roundtrip)',
   convert.octs_to_hz(convert.hz_to_octs(261.6256)), 261.6256, 1e-9)
@@ -75,7 +75,7 @@ check('blocks_to_time(2, 16, 512, 22050) == 16384/22050 s',
   check('fourier_tempo_frequencies bin 1 == 60·(sr/hop)/win ≈ 6.7291 BPM',
     ftf[1], (60 * (22050 / 512)) / 384, 1e-3)
   const tf = convert.tempo_frequencies(5)
-  check('tempo_frequencies: lag 0 == Infinity, lag 1 == 60·sr/hop == 2583.98 BPM (librosa lag grid)',
+  check('tempo_frequencies: lag 0 == Infinity, lag 1 == 60·sr/hop == 2583.98 BPM (tempo lag grid)',
     [tf[0] === Infinity, tf[1]], [true, (60 * 22050) / 512])
   check('tempo_frequencies lag 4 == 2583.98/4 == 645.996 BPM',
     tf[4], (60 * 22050) / 512 / 4, 1e-9)
@@ -102,10 +102,10 @@ check("multi_frequency_weighting([1000], ['Z','A','C']) rows == [z, a, c](1000)"
 check("perceptual_weighting(1000, 'A') == a_weighting(1000) (A-curve tier)",
   convert.perceptual_weighting(1000, 'A'), convert.a_weighting(1000))
 
-// ── uppercase librosa aliases, called DIRECTLY (not just referenced) ─────────
+// ── uppercase weighting aliases, called DIRECTLY (not just referenced) ───────
 // A/B/C/D are all normalized to 0 dB at the 1 kHz reference; Z is the flat
 // (no-weighting) curve; each rolls off in the sub-bass. These are the exact
-// librosa.A_weighting … Z_weighting spellings.
+// A_weighting … Z_weighting uppercase spellings.
 check('A_weighting(1000) ~= 0 dB (A-curve reference at 1 kHz)',
   convert.A_weighting(1000), 0, 1e-3)
 check('B_weighting(1000) ~= 0 dB', convert.B_weighting(1000), 0, 1e-3)

@@ -16,8 +16,8 @@
  *     length (all exact sample arithmetic),
  *   - setDebug/isDebugEnabled/debugLog: gate flips and debugLog is silent
  *     when disabled, prints when enabled (console.log capture),
- *   - fix_frames: clips to [x_min, x_max], dedupes, pads boundaries (librosa
- *     util.fix_frames golden),
+ *   - fix_frames: clips to [x_min, x_max], dedupes, pads boundaries
+ *     (fix_frames golden),
  *   - warnIfNoMp3Support: in Node (no Audio constructor) returns '' without
  *     touching a DOM.
  */

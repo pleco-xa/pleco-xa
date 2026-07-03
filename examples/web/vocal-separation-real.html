@@ -36,7 +36,7 @@
   <b>higher</b> with the true vocal than with the true instrumental.
 </p>
 <p>
-  <b>A. REPET-SIM</b> (librosa gallery recipe, unsupervised):
+  <b>A. REPET-SIM</b> (repetition-based separation, unsupervised):
   <code>decompose.nn_filter(|STFT|, median, cosine, width=2 s)</code> →
   element-min with S → <code>decompose.softmask</code> (margins 2/10, power 2)
   → istft with mix phase.

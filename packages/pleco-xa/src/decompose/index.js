@@ -1,13 +1,10 @@
 /**
- * Pleco-XA decompose domain — librosa.decompose parity surface (Wave 5A).
+ * Pleco-XA decompose domain (Wave 5A).
  *
  * ONE canonical HPSS for the whole library (Fitzgerald 2010, Driedger 2014),
  * consolidating the previous xa-advanced.js / xa-processing.js duplicates.
- * Fixture-gated against librosa 0.11.0: tools/parity/fixtures/hpss.json
+ * Fixture-gated: tools/parity/fixtures/hpss.json
  * (default margin AND margin=2.0).
- *
- * Reference source read in full: librosa/decompose.py (hpss, l.209–408) and
- * librosa/util/utils.py (softmask, l.1678–1793).
  */
 
 // Pleco-unique vocal-separation flagship (multi-scale spectral
@@ -40,7 +37,7 @@ function resolveAggregate(aggregate) {
     }
   }
   if (aggregate === 'average') {
-    // librosa's np.average branch: weighted by the recurrence-matrix values
+    // np.average branch: weighted by the recurrence-matrix values
     return (values, weights) => {
       let s = 0
       let w = 0
@@ -59,26 +56,26 @@ function resolveAggregate(aggregate) {
 }
 
 /**
- * Nearest-neighbor filtering — port of librosa.decompose.nn_filter.
+ * Nearest-neighbor filtering (nn_filter).
  *
  * Each frame (column) of S is replaced by aggregating its nearest neighbors
- * in feature space, as selected by librosa.segment.recurrence_matrix
+ * in feature space, as selected by recurrence-matrix
  * semantics: for output frame i the neighbor set is { j : rec[i][j] != 0 },
- * exactly librosa's CSR-row walk in __nn_filter_helper (frames with an empty
+ * via a CSR-row walk in __nn_filter_helper (frames with an empty
  * neighbor set pass through unchanged). aggregate='median' with a cosine
  * metric and a width-in-frames exclusion band is the REPET-SIM configuration
- * (Rafii & Pardo 2012) used by librosa's vocal-separation gallery example.
+ * (Rafii & Pardo 2012), the standard vocal-separation configuration.
  *
  * The recurrence graph itself comes from segment.recurrenceMatrix (Wave-5
  * fixture-gated); this function adds only the neighbor-aggregation walk.
- * NOTE: no direct librosa fixture for the composition yet — behavior is
+ * NOTE: no direct fixture for the composition yet — behavior is
  * proven against planted-repetition structure in
  * examples/web/plot-vocal-separation.html (node-spot-run first).
  *
  * @param {Array<ArrayLike<number>>} S - Feature matrix [features][frames]
  * @param {Object} [options]
  * @param {Array<ArrayLike<number>>|null} [options.rec=null] - Precomputed
- *   recurrence matrix [frames][frames] (librosa orientation); computed from S
+ *   recurrence matrix [frames][frames]; computed from S
  *   via recurrenceMatrix when null.
  * @param {string|Function} [options.aggregate='mean'] - 'mean' | 'median' |
  *   'average' (weighted by rec values) | custom (values, weights) => number.
@@ -114,7 +111,7 @@ export function nn_filter(S, options = {}) {
     }
 
     if (targets.length === 0) {
-      // librosa: frames with no neighbors pass through unchanged
+      // Frames with no neighbors pass through unchanged
       for (let f = 0; f < nFeat; f++) out[f][i] = S[f][i]
       continue
     }
@@ -131,8 +128,8 @@ export function nn_filter(S, options = {}) {
   return out
 }
 
-/** Smallest usable float32 (np.finfo(np.float32).tiny) — librosa computes in
- *  float32, so the softmask underflow threshold must match that dtype. */
+/** Smallest usable float32 (np.finfo(np.float32).tiny) — softmask computes in
+ *  float32, so the underflow threshold must match that dtype. */
 const FLOAT32_TINY = 1.1754943508222875e-38
 
 /**
@@ -172,7 +169,7 @@ function medianFilter1dReflect(row, size, out, scratch) {
 
 /**
  * Robust soft mask: M = X^power / (X^power + X_ref^power), computed with
- * librosa.util.softmask's rescale-by-max stabilization.
+ * a rescale-by-max stabilization.
  *
  * @param {Array<ArrayLike<number>>} X - Non-negative 2D array [rows][cols]
  * @param {Array<ArrayLike<number>>} X_ref - Reference array, same shape
@@ -229,7 +226,7 @@ function isComplexSpectrogram(S) {
 
 /**
  * Median-filtering harmonic/percussive source separation on a spectrogram.
- * Port of librosa.decompose.hpss with librosa-faithful DEFAULTS:
+ * Default behavior:
  * the default (mask=false) return is the MASKED components S*mask_H / S*mask_P,
  * so harmonic + percussive ≈ S at margin=1 — NOT the raw median-filtered
  * spectrograms the legacy pleco copies returned.
@@ -254,7 +251,7 @@ export function hpss(S, { kernel_size = 31, power = 2.0, mask = false, margin = 
   const nFreq = S.length
   const nTime = S[0].length
 
-  // Magnitude view (librosa: S, phase = magphase(S) for complex input)
+  // Magnitude view (S, phase = magphase(S) for complex input)
   const mag = new Array(nFreq)
   for (let f = 0; f < nFreq; f++) {
     const row = new Float64Array(nTime)

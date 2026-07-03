@@ -1,10 +1,10 @@
 /**
  * Temporal Segmentation Module — compatibility shim.
  *
- * The librosa-faithful engines live in src/segment/index.js (fixture-gated
+ * The core engines live in src/segment/index.js (fixture-gated
  * against tools/parity/fixtures/dtw_segment.json):
  *  - recurrenceMatrix: kNN with MUTUAL-nearest-neighbor symmetrization
- *    (the legacy union/max sym was the opposite of librosa) and the
+ *    (the legacy union/max sym was inverted) and the
  *    exp(-d/bandwidth) affinity kernel (legacy used a Gaussian).
  *  - recurrenceToLag / lagToRecurrence: the REAL shear
  *    (lag[i][j] = rec[(i+j) mod H][j]) — the legacy `_shear` was a no-op
@@ -24,8 +24,7 @@
  * optional { sparse: true } output format.
  *
  * `pathEnhance` remains a pleco-specific variant (stripe kernel, global
- * zero-mean) — it is NOT a librosa parity port; see the audit
- * (docs/superpowers/research/librosa-parity/structure-sequence.md).
+ * zero-mean).
  */
 
 import {
@@ -152,7 +151,7 @@ function toSparseMatrix(dense, rows, cols) {
 
 /**
  * Cross-similarity matrix between feature matrices
- * (delegates to segment/crossSimilarity — librosa semantics).
+ * (delegates to segment/crossSimilarity).
  *
  * @param {Array|Float32Array} data - comparison features: 2D (d, n) or flat
  *   with explicit options.nFeatures/options.nFrames
@@ -173,7 +172,7 @@ export function crossSimilarity(data, dataRef, options = {}) {
 
 /**
  * Recurrence (self-similarity) matrix
- * (delegates to segment/recurrenceMatrix — librosa semantics: mutual-NN
+ * (delegates to segment/recurrenceMatrix: mutual-NN
  * symmetrization, exp(-d/bandwidth) affinity).
  *
  * @param {Array|Float32Array} data - features: 2D (d, n) or flat with
@@ -197,13 +196,13 @@ export function recurrenceMatrix(data, options = {}) {
  *
  * @param {Float32Array|Array} rec - flat square matrix or 2D rows
  * @param {boolean} pad - zero-pad to (2t, t) before shearing
- * @param {number} axis - only the librosa default (-1 / 1) is supported
+ * @param {number} axis - only the default (-1 / 1) is supported
  * @returns {Float32Array} flat lag matrix ((2t, t) when padded, else (t, t))
  */
 export function recurrenceToLag(rec, pad = true, axis = -1) {
   if (axis !== -1 && axis !== 1) {
     throw new ParameterError(
-      `recurrenceToLag: axis=${axis} is not supported (only the librosa default time axis -1/1)`,
+      `recurrenceToLag: axis=${axis} is not supported (only the default time axis -1/1)`,
     )
   }
   const rows = toSquareRows(rec, 'recurrenceToLag')
@@ -214,13 +213,13 @@ export function recurrenceToLag(rec, pad = true, axis = -1) {
  * Convert lag matrix back to recurrence matrix (inverse shear + row slice).
  *
  * @param {Float32Array|Array} lag - flat (t, t) or (2t, t) matrix, or 2D rows
- * @param {number} axis - only the librosa default (-1 / 1) is supported
+ * @param {number} axis - only the default (-1 / 1) is supported
  * @returns {Float32Array} flat (t, t) recurrence matrix
  */
 export function lagToRecurrence(lag, axis = -1) {
   if (axis !== -1 && axis !== 1) {
     throw new ParameterError(
-      `lagToRecurrence: axis=${axis} is not supported (only the librosa default time axis -1/1)`,
+      `lagToRecurrence: axis=${axis} is not supported (only the default time axis -1/1)`,
     )
   }
   const rows = toLagRows(lag, 'lagToRecurrence')
@@ -228,7 +227,7 @@ export function lagToRecurrence(lag, axis = -1) {
 }
 
 /**
- * Python-style snake_case aliases (kept for verbatim librosa ports).
+ * Python-style snake_case aliases (kept for legacy call sites).
  */
 export function recurrence_to_lag(rec, pad = true, axis = -1) {
   return recurrenceToLag(rec, pad, axis)
@@ -239,7 +238,7 @@ export function lag_to_recurrence(lag, axis = -1) {
 }
 
 /**
- * Temporally-constrained agglomerative clustering (Ward, librosa/sklearn
+ * Temporally-constrained agglomerative clustering (Ward, sklearn
  * semantics; delegates to segment/agglomerative).
  *
  * @param {Array|Float32Array} data - features: 2D (d, n) or flat with
@@ -252,7 +251,7 @@ export function agglomerative(data, k, options = {}) {
   const { linkage = 'ward' } = options
   if (linkage !== 'ward') {
     throw new ParameterError(
-      `agglomerative: linkage='${linkage}' is not supported (librosa uses Ward; ` +
+      `agglomerative: linkage='${linkage}' is not supported (only Ward; ` +
         `the legacy 'single'/'complete'/'average' fallbacks are gone)`,
     )
   }
@@ -262,10 +261,9 @@ export function agglomerative(data, k, options = {}) {
 /**
  * Multi-angle path enhancement for tempo-varying music.
  *
- * NOTE: pleco-specific variant, NOT a librosa parity port — the diagonal
- * kernel is a cosine-tapered stripe (librosa rotates a 1-D window along the
- * diagonal with spline interpolation) and zeroMean subtracts the global mean
- * (librosa offsets only off-diagonal coordinates).
+ * NOTE: pleco-specific variant — the diagonal kernel is a cosine-tapered
+ * stripe (not a spline-interpolated rotated 1-D window) and zeroMean
+ * subtracts the global mean (not just off-diagonal coordinates).
  *
  * @param {Float32Array} R - flat square similarity matrix
  * @param {number} [n] - filter length (default: size/8 clamped to [32, 256])

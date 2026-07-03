@@ -7,14 +7,14 @@
  *   - chroma_stft on a 440 Hz tone: strongest chroma row is A (index 9),
  *   - piptrackPeaks: the strongest tracked pitch is 440 ± 5 Hz,
  *   - estimate_tuning: 440 Hz → 0.00 ± 0.02 bins; 452 Hz (+46.6 cents) →
- *     +0.47 ± 0.03 bins (both mod-1 tuning offsets, librosa semantics),
+ *     +0.47 ± 0.03 bins (both mod-1 tuning offsets),
  *   - logFrequencySpectrum → foldLogSpectrumToChroma: 84 log bins fold to 12
  *     chroma rows, frame count preserved, argmax chroma == A,
  *   - dctBasis(3, 5): orthonormal DCT-II basis — row 0 constant 1/√3, rows
  *     mutually orthogonal (|dot| ≤ 1e-9),
  *   - mfccFromLogMel of a CONSTANT log-mel matrix (c == 1, 4 mels): coeff 0
  *     == c·√n_mels == 2 per frame, higher coefficients exactly ~0,
- *   - spectral_contrast: librosa shape (n_bands+1 == 7 rows); white noise has
+ *   - spectral_contrast: standard shape (n_bands+1 == 7 rows); white noise has
  *     LOWER mean contrast than a harmonic tone (peaks ≈ valleys in noise),
  *   - filters.mel_filterbank(22050, 2048, 40): shape (40, 1025), non-negative,
  *     filter peak positions strictly increase with mel index.
@@ -69,7 +69,7 @@ checkTrue('estimate_tuning(440 Hz tone) == 0.00 ± 0.02 bins',
 }
 
 // ── pitch_tuning: the primitive behind estimate_tuning, called DIRECTLY on a
-// set of detected frequencies (librosa.pitch_tuning). Take equal-tempered notes
+// set of detected frequencies (the pitch_tuning primitive). Take equal-tempered notes
 // and detune them by a KNOWN fraction of a semitone; the histogram-mode offset
 // must recover that detuning (in fractions of a chroma bin, resolution 0.01).
 {
@@ -85,8 +85,8 @@ checkTrue('estimate_tuning(440 Hz tone) == 0.00 ± 0.02 bins',
   // Custom resolution still recovers the sign of the offset.
   checkTrue('pitch_tuning(+30-cent notes, resolution 0.02) is positive ≈ +0.3',
     pitch_tuning(detune(30), { resolution: 0.02 }) > 0.2, pitch_tuning(detune(30), { resolution: 0.02 }).toFixed(3))
-  // librosa parity: an empty frequency set warns and returns 0 (not NaN/throw).
-  check('pitch_tuning([]) == 0.0 (librosa empty-set fallback)', pitch_tuning([]), 0)
+  // empty-set contract: an empty frequency set warns and returns 0 (not NaN/throw).
+  check('pitch_tuning([]) == 0.0 (empty-set fallback)', pitch_tuning([]), 0)
 }
 
 // ── log-frequency spectrum → chroma fold ────────────────────────────────────
@@ -140,7 +140,7 @@ checkTrue('estimate_tuning(440 Hz tone) == 0.00 ± 0.02 bins',
 // ── spectral_contrast: tone vs noise ────────────────────────────────────────
 {
   const sc = spectral_contrast(a440, { sr })
-  check('spectral_contrast shape == (7, frames) (6 bands + 1, librosa default)',
+  check('spectral_contrast shape == (7, frames) (6 bands + 1, default)',
     sc.length, 7)
   let seed = 7
   const lcg = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff

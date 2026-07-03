@@ -1,15 +1,15 @@
 /**
- * Interval and event matching — librosa.util.matching ports.
+ * Interval and event matching.
  *
- * Line-faithful ports of librosa 0.11 `librosa/util/matching.py`:
+ * Two matchers:
  *
  *  - `matchIntervals` — Jaccard-scored interval matching with searchsorted
  *    candidate pruning; strict mode throws when a query is disjoint from
  *    every target; non-strict falls back to the closest disjoint interval
- *    (replicating librosa's exact index arithmetic, including its
+ *    (with exact index arithmetic, including the
  *    `search_ends[i] + 1` neighbor choice).
  *  - `matchEvents` — nearest-event matching with left/right constraints and
- *    librosa's exact middle/left/right selection logic.
+ *    exact middle/left/right selection logic.
  *
  * CRITICAL repair vs the legacy xa-matching implementation: all sorted VALUE
  * arrays are Float64Array. The legacy code stored sorted values through
@@ -45,8 +45,8 @@ function searchSorted(arr, value, side) {
 }
 
 /**
- * Jaccard similarity between two intervals (port of librosa __jaccard —
- * including its "identical zero-length intervals score 0" behavior).
+ * Jaccard similarity between two intervals
+ * (including the "identical zero-length intervals score 0" behavior).
  * @private
  */
 function jaccard(a, b) {
@@ -84,7 +84,6 @@ function validIntervals(intervals, name) {
 
 /**
  * Match one set of time intervals to another, maximizing Jaccard similarity.
- * Port of librosa.util.match_intervals.
  *
  * @param {Array<Array<number>>} intervalsFrom - (n, 2) source intervals.
  * @param {Array<Array<number>>} intervalsTo - (m, 2) target intervals.
@@ -158,7 +157,7 @@ export function matchIntervals(intervalsFrom, intervalsTo, { strict = true } = {
         `matchIntervals: unable to match interval [${query[0]}, ${query[1]}] with strict=true`,
       )
     } else {
-      // Closest disjoint interval (librosa's exact index arithmetic)
+      // Closest disjoint interval (exact index arithmetic)
       let distBefore = Infinity
       let distAfter = Infinity
       if (searchStarts[i] > 0) {
@@ -172,11 +171,11 @@ export function matchIntervals(intervalsFrom, intervalsTo, { strict = true } = {
       } else if (Number.isFinite(distAfter)) {
         output[i] = startIndex[searchEnds[i] + 1]
       } else {
-        // librosa reads out of bounds here (numba UB); we throw instead
+        // the fallback neighbor index would read out of bounds here; we throw
         throw new Error(
           `matchIntervals: no disjoint neighbor available for interval ` +
             `[${query[0]}, ${query[1]}] with strict=false ` +
-            `(librosa's fallback indexing is out of range for this input)`,
+            `(the fallback neighbor index is out of range for this input)`,
         )
       }
     }
@@ -187,7 +186,7 @@ export function matchIntervals(intervalsFrom, intervalsTo, { strict = true } = {
 
 /**
  * Match one set of events to another (nearest neighbor with optional
- * left/right constraints). Port of librosa.util.match_events.
+ * left/right constraints).
  *
  * @param {Array<number>|Float32Array|Float64Array} eventsFrom
  * @param {Array<number>|Float32Array|Float64Array} eventsTo
@@ -273,7 +272,7 @@ export function matchEvents(eventsFrom, eventsTo, { left = true, right = true } 
     if (left && leftFlag) leftDiff = Math.abs(sortedTo[leftInd] - fromNum)
     if (right && rightFlag) rightDiff = Math.abs(sortedTo[rightInd] - fromNum)
 
-    // librosa's exact selection logic (Python operator precedence preserved)
+    // exact selection logic (Python operator precedence preserved)
     if (
       leftFlag &&
       ((!right && sortedTo[middleInd] > fromNum) ||

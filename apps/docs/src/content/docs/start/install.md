@@ -123,6 +123,4 @@ the canvas display layer) require a browser.
 ## Next steps
 
 With the package installed, head to the [Quickstart](/start/quickstart/) to load
-a clip, track its tempo, and find its loop in a dozen lines — or, if you are
-arriving from Python, jump to [Coming from librosa](/start/coming-from-librosa/)
-for a function-by-function map.
+a clip, track its tempo, and find its loop in a dozen lines.

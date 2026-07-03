@@ -1,10 +1,10 @@
 /**
- * feature/chroma.js — librosa.feature.chroma_stft, fixture-verified.
+ * feature/chroma.js — chroma_stft, fixture-verified.
  *
  * chroma_stft: power-2 spectrogram → filters.chroma Gaussian filterbank
- * matmul → per-frame inf-norm normalization (librosa 0.11.0 defaults).
- * When tuning is not given it is estimated from the signal exactly as
- * librosa does (piptrack parabolic interpolation → pitch_tuning histogram).
+ * matmul → per-frame inf-norm normalization.
+ * When tuning is not given it is estimated from the signal
+ * (piptrack parabolic interpolation → pitch_tuning histogram).
  *
  * Also hosts logFrequencySpectrum — the honest rename of the old
  * xa-chroma "constant_q_transform". It is NOT a constant-Q transform:
@@ -19,16 +19,16 @@ import { stft, fft, fft_frequencies } from '../scripts/xa-fft.js'
 import { chroma as chromaFilterbank } from '../filters/index.js'
 import { ParameterError } from './spectral.js'
 
-/** float32 tiny — librosa util.normalize threshold on its f32 pipeline */
+/** float32 tiny — util.normalize threshold on the f32 pipeline */
 const TINY = 1.1754943508222875e-38
 
 /* -------------------------------------------------------------------------- */
-/*  Tuning estimation (librosa.core.pitch)                                    */
+/*  Tuning estimation (pitch tracking)                                        */
 /* -------------------------------------------------------------------------- */
 
 /**
  * Pitch tracking on thresholded parabolically-interpolated STFT
- * (librosa.piptrack), restricted to what estimate_tuning needs:
+ * (piptrack), restricted to what estimate_tuning needs:
  * returns the sparse list of detected {pitch, mag} peaks.
  * @param {Object} options - { y, sr, S, n_fft, hop_length, fmin, fmax, threshold }
  * @returns {{pitches: number[], mags: number[]}}
@@ -125,7 +125,7 @@ export function piptrackPeaks(options = {}) {
 
 /**
  * Tuning offset of a set of detected frequencies relative to A440,
- * in fractions of a chroma bin (librosa.pitch_tuning).
+ * in fractions of a chroma bin.
  * @returns {number} tuning in [-0.5, 0.5)
  */
 export function pitch_tuning(frequencies, options = {}) {
@@ -134,7 +134,7 @@ export function pitch_tuning(frequencies, options = {}) {
   const freqs = []
   for (const f of frequencies) if (f > 0) freqs.push(f)
   if (freqs.length === 0) {
-    // librosa warns and returns 0.0 here; mirrored for parity.
+    // Warns and returns 0.0 here for an empty frequency set.
     console.warn('pitch_tuning: trying to estimate tuning from empty frequency set')
     return 0.0
   }
@@ -176,7 +176,7 @@ export function pitch_tuning(frequencies, options = {}) {
 }
 
 /**
- * Estimate tuning from a signal or spectrogram (librosa.estimate_tuning).
+ * Estimate tuning from a signal or spectrogram.
  * @param {Object} options - { y, sr, S, n_fft, resolution, bins_per_octave,
  *   + piptrack options }
  * @returns {number} tuning deviation in fractions of a bin, in [-0.5, 0.5)
@@ -212,13 +212,13 @@ export function estimate_tuning(options = {}) {
 
 /**
  * Chromagram from a waveform or power spectrogram
- * (librosa.feature.chroma_stft, Ellis chromagram_E lineage).
+ * (Ellis chromagram_E lineage).
  * @param {Float32Array|Array|null} y - time series (or null when S given)
  * @param {Object} options
  * @param {Array|null} options.S - precomputed POWER spectrogram [freq][time]
  * @param {number|null} options.norm - per-frame norm (default Infinity = max)
  * @param {number|null} options.tuning - tuning in fractional chroma bins;
- *   null (default) estimates it from the input like librosa
+ *   null (default) estimates it from the input
  * @param {number} options.n_chroma - number of chroma bins (default 12)
  * @param {number} options.ctroct / options.octwidth / options.filter_norm /
  *   options.base_c - forwarded to filters.chroma (filter_norm maps to that
@@ -244,7 +244,7 @@ export function chroma_stft(y = null, options = {}) {
     base_c = true,
   } = options
 
-  // Power spectrogram (librosa passes power=2 to _spectrogram)
+  // Power spectrogram (power=2 into _spectrogram)
   let spec = S
   let nfft = n_fft
   if (spec == null) {
@@ -300,7 +300,7 @@ export function chroma_stft(y = null, options = {}) {
     raw[c] = row
   }
 
-  // Per-frame normalization (librosa util.normalize, axis=-2)
+  // Per-frame normalization (util.normalize, axis=-2)
   if (norm === null) return raw
   for (let t = 0; t < nT; t++) {
     let length

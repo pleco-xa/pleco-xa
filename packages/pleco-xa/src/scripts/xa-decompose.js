@@ -1,7 +1,6 @@
 /**
- * Port of librosa.decompose
  * Source separation and signal decomposition
- * Librosa-compatible HPSS and decomposition utilities for JavaScript
+ * HPSS and decomposition utilities for JavaScript
  */
 
 import { stft, istft } from './xa-fft.js'
@@ -9,7 +8,6 @@ import { softmask } from './xa-normalize.js'
 
 /**
  * Harmonic-Percussive Source Separation (HPSS)
- * Port of librosa.decompose.hpss
  * @param {Float32Array} y - Audio time series (optional if S provided)
  * @param {Array} S - Pre-computed complex STFT [freq][time]
  * @param {number} kernel_size - Kernel size for median filtering [harmonic, percussive]
@@ -206,7 +204,6 @@ export function median_filter(S, size = [1, 1]) {
 
 /**
  * Nearest-neighbor filter (NNF) for audio enhancement
- * Port of librosa.decompose.nn_filter
  * @param {Array} S - Input spectrogram [freq][time]
  * @param {Array} aggregate - Aggregation function (median, mean, max, min)
  * @param {Array} metric - Distance metric (cosine, euclidean, cityblock)
@@ -346,7 +343,7 @@ function apply_aggregate(values, aggregate) {
 
 /**
  * Decompose a feature matrix into components
- * Port of librosa.decompose.decompose (simplified NMF)
+ * Simplified NMF decomposition
  * @param {Array} S - Input spectrogram [freq][time]
  * @param {number} n_components - Number of components
  * @param {string} transformer - Decomposition method (nmf, pca, ica)
@@ -529,7 +526,7 @@ export function nmf_separate(S, n_sources = 2, max_iter = 200) {
 
 /**
  * Nearest-neighbor filter helper function
- * Private helper from librosa.decompose.__nn_filter_helper
+ * Private helper (__nn_filter_helper)
  *
  * Internal implementation for sparse nearest-neighbor filtering.
  * Uses sparse matrix representation for efficient filtering.

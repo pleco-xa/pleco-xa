@@ -2,7 +2,7 @@
  * xa-chroma.js — LEGACY SHIM over the fixture-verified feature/ namespace
  * (Wave 4 consolidation).
  *
- * chroma_stft now delegates to feature/chroma.js: librosa's Gaussian
+ * chroma_stft now delegates to feature/chroma.js: a Gaussian
  * filters.chroma matrix over a power spectrogram with per-frame inf-norm
  * (gated by tools/parity/fixtures/chroma.json). The old nearest-semitone
  * hard binning survives only as the explicitly-named fast variant
@@ -58,7 +58,7 @@ export function chroma_cqt(
 }
 
 /**
- * Chromagram from STFT — now librosa-parity via feature/chroma.js
+ * Chromagram from STFT — now via feature/chroma.js
  * (Gaussian filterbank matmul + per-frame inf-norm; the old version used
  * hard nearest-semitone binning and no frame centering).
  * @param {Float32Array} y - Audio time series
@@ -68,7 +68,7 @@ export function chroma_cqt(
  * @param {number} n_chroma - Number of chroma bins
  * @param {number|null} tuning - Tuning in fractional chroma bins
  *   (0.0 default preserves this shim's historical signature; pass null to
- *   estimate from the signal like librosa)
+ *   estimate from the signal)
  * @returns {Array<Float64Array>} [n_chroma][n_frames]
  */
 export function chroma_stft(
@@ -139,7 +139,7 @@ export function cqt_to_chroma(cqt, n_chroma = 12, bins_per_octave = 12) {
 }
 
 /**
- * FAST VARIANT (not librosa parity): fold magnitude spectra into chroma by
+ * FAST VARIANT (not the parity path): fold magnitude spectra into chroma by
  * hard nearest-semitone binning with sqrt-energy-share normalization.
  * Kept as an explicitly-named approximation; feature/chroma.js chroma_stft
  * is the parity path.

@@ -1,12 +1,12 @@
 /**
  * Remix functionality for JavaScript.
- * SHIM (Wave 5A): remix() delegates to the canonical librosa-parity
+ * SHIM (Wave 5A): remix() delegates to the canonical
  * implementation in src/effects/index.js. The legacy local implementation
- * SORTED intervals by start time, which defeated reordering — librosa's
+ * SORTED intervals by start time, which defeated reordering — the
  * canonical remix use case (beat reversal) was a no-op through it. The
  * canonical remix preserves caller order and defaults align_zeros=true,
- * snapping boundaries to zero crossings of the whole signal (librosa
- * match_events semantics) instead of shrinking each segment.
+ * snapping boundaries to zero crossings of the whole signal (match_events
+ * semantics) instead of shrinking each segment.
  */
 
 import { remix as remixCanonical } from '../effects/index.js'
@@ -35,7 +35,7 @@ export function find_zero_crossing(y, start, direction) {
  * Remix audio by reordering time intervals (caller order preserved).
  * @param {Float32Array} y - Audio time series
  * @param {Array<number[]>} intervals - [start, end) sample intervals, in output order
- * @param {boolean} align_zeros - Snap boundaries to zero crossings of y (librosa default: true)
+ * @param {boolean} align_zeros - Snap boundaries to zero crossings of y (default: true)
  * @returns {Float32Array} Remixed audio
  */
 export function remix(y, intervals, align_zeros = true) {

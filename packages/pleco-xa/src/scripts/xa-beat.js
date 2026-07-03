@@ -3,7 +3,7 @@
  * High-performance beat detection using onset analysis
  *
  * NOTE (collision resolution, v2 wave 2): this module no longer exports
- * `beat_track` or `tempo`. The canonical, librosa-parity implementations
+ * `beat_track` or `tempo`. The canonical implementations
  * live in ./xa-beat-tracker.js. This module keeps its distinctly-named
  * fast heuristics (beatTrack / estimateTempo / fastBPMDetect).
  */

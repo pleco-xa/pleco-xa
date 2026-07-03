@@ -10,8 +10,8 @@ own feature or writing a custom spectrogram, this is where you start.
 
 Pleco-Xa works in **arrays in, arrays out**. `fft` takes a signal and returns
 complex bins; `stft` takes a `(y, sr)`-style time series and returns a
-`[freq][time]` grid of `{ real, imag }` objects — the same frequency-major
-layout librosa uses, so spectrograms transpose cleanly between the two worlds.
+`[freq][time]` grid of `{ real, imag }` objects — a frequency-major layout, so a
+spectrogram is a plain 2-D array you can index directly.
 
 ## Key functions
 
@@ -70,9 +70,8 @@ convert.frames_to_time([0, 1, 2], sr, 512) // frame indices -> seconds
   `[freq][time]` STFT matrix returns garbage silently — compute magnitude
   per cell (`Math.hypot(bin.real, bin.imag)`) for spectrograms.
 - **Slaney seam values are float-exact, not literal.** `convert.hz_to_mel(1000)`
-  is `15 − 1.8e-15` and `mel_to_hz(15)` is `1000 + 2.3e-13` (200/3 roundoff,
-  bit-identical to librosa's float64). Assert these identities at `1e-9`, never
-  with `===`.
+  is `15 − 1.8e-15` and `mel_to_hz(15)` is `1000 + 2.3e-13` (200/3 roundoff in
+  IEEE-754 float64). Assert these identities at `1e-9`, never with `===`.
 - **`hz_to_mel` defaults to the Slaney formula** (`htk=false`); pass
   `htk: true` for the HTK log form. `midi_to_hz` / `midi_to_note` reject notes
   outside `[0, 127]`.

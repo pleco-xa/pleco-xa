@@ -1,6 +1,6 @@
 /**
- * Librosa-style split functionality for JavaScript.
- * SHIM (Wave 5A): delegates to the canonical librosa-parity implementation
+ * Split functionality for JavaScript.
+ * SHIM (Wave 5A): delegates to the canonical implementation
  * in src/effects/index.js (fixture-gated: effects.json). The legacy local
  * implementation used peak sample amplitude as the silence reference and
  * extended interval ends by a full frame — repaired in the canonical module.

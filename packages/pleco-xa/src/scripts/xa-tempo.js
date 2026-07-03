@@ -3,8 +3,8 @@
  * ranking, and groove/swing analysis for DJ applications.
  *
  * NOTE (collision resolution, v2 wave 2): this module no longer exports
- * `tempo`, `beat_track`, or `dp_beat_track`. The canonical, librosa-parity
- * tempo/beat engine lives in ./xa-beat-tracker.js. The `dp_beat_track`
+ * `tempo`, `beat_track`, or `dp_beat_track`. The canonical tempo/beat
+ * engine lives in ./xa-beat-tracker.js. The `dp_beat_track`
  * implementation that used to live here had a verified backtracking bug
  * (indexOf of a float score in an index array) and was deleted outright.
  * What remains are the distinctly-named, salvageable helpers.

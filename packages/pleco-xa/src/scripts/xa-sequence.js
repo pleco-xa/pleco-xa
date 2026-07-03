@@ -1,6 +1,5 @@
 /**
  * Sequence analysis and alignment implementations
- * Based on librosa's sequence.py module
  *
  * Provides:
  * - DTW (Dynamic Time Warping)
@@ -13,7 +12,7 @@
  * ../sequence/viterbi.js) and are re-exported here so the historical
  * scripts/xa-sequence.js import surface (used by scripts/pleco-audio.js) keeps
  * working unchanged. viterbi_binary remains here: it is pleco's own multi-label
- * helper, intentionally NOT promoted to a librosa-parity export.
+ * helper, intentionally NOT promoted to the canonical export surface.
  */
 
 import { viterbi, viterbi_discriminative } from '../sequence/viterbi.js'
@@ -130,7 +129,7 @@ export function dtw_backtracking(
 /**
  * Viterbi decoding from binary (multi-label) discriminative state predictions
  *
- * NOTE: This is pleco's own multi-label helper, not a librosa-parity port. It
+ * NOTE: This is pleco's own multi-label helper. It
  * builds an observation-likelihood matrix P(obs|state) = prob * p_state and
  * runs the standard Viterbi decoder, returning a single most-likely state path.
  *

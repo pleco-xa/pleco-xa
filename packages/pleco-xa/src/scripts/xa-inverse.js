@@ -1,5 +1,5 @@
 /**
- * Librosa-compatible Inverse Transforms for JavaScript
+ * Inverse Transforms for JavaScript
  * Convert features back to audio or spectrograms
  */
 
@@ -10,7 +10,7 @@ import { db_to_power } from './xa-convert.js'
 /**
  * Approximate STFT magnitude from a Mel power spectrogram.
  *
- * DIVERGENCE NOTE: librosa solves a non-negative least squares problem
+ * NOTE: an exact inverse solves a non-negative least squares problem
  * (nnls(mel_basis, M)); this implementation uses the filterbank TRANSPOSE as
  * a pseudo-inverse — a rough approximation. Spectral shape (per-frame peak
  * location, cosine similarity vs |stft|) survives; absolute magnitudes do not.
@@ -142,7 +142,7 @@ export function mfcc_to_mel(
   // Copy MFCC to avoid modifying input
   let mfcc_unliftered = mfcc.map(row => Float32Array.from(row))
 
-  // Reverse liftering if applied — librosa indexing: sin(pi * (i + 1) / L)
+  // Reverse liftering if applied — indexing: sin(pi * (i + 1) / L)
   // (matches the corrected xa-mel lifter_mfcc; the old sin(pi*i/L) was an
   // off-by-one that left c0 unweighted)
   if (lifter > 0) {
@@ -159,13 +159,13 @@ export function mfcc_to_mel(
     }
   }
 
-  // Zero-padded inverse DCT along the mel axis — librosa does
+  // Zero-padded inverse DCT along the mel axis, i.e.
   // scipy.fftpack.idct(mfcc, type=2, norm='ortho', n=n_mels): the n_mfcc
   // coefficients are zero-padded to n_mels, then a DCT-III (the inverse of
   // the ortho DCT-II used by the forward mfcc) expands each frame to n_mels.
   // The old code called xa-mel idct(coeffs, type, norm) as idct(frame,
   // n_mels, type, norm) — n_mels landed in `type` and threw 'Unsupported DCT
-  // type: 128'; and idct cannot expand length anyway. Only the librosa
+  // type: 128'; and idct cannot expand length anyway. Only the
   // default (dct_type=2, norm='ortho') is implemented; anything else throws
   // honestly instead of silently mis-scaling.
   if (dct_type !== 2 || norm !== 'ortho') {

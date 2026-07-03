@@ -7,8 +7,8 @@
  * dist surface). Proofs:
  *   (1) preemphasis/deemphasis shims ({y, zf} object convention) round-trip
  *       and chain across a 2-block split exactly like a single call;
- *   (2) the re-pointed mel/get_window exports now agree with the librosa
- *       0.11.0 parity fixtures — the old local mel() (HTK math sold as
+ *   (2) the re-pointed mel/get_window exports now agree with the reference
+ *       parity fixtures — the old local mel() (HTK math sold as
  *       'slaney', integer-snapped triangle corners) is provably gone.
  */
 import {

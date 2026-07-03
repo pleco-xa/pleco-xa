@@ -7,10 +7,10 @@
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
   <h2>plot_rainbowgram — Rainbowgram: phase you can see</h2>
   <p style="max-width:95ch">
-    Replica of librosa's <em>Rainbowgrams</em> gallery page (the NSynth
+    A <em>rainbowgram</em> demo (the NSynth
     visualization): hue = demodulated phase differential
     diff(unwrap(∠D − 2πft)), alpha = amplitude_to_db(|D|)/80 + 1 on black.
-    Signal: a linear chirp 32 → 1024 Hz (the gallery's chirp) plus a steady
+    Signal: a linear chirp 32 → 1024 Hz plus a steady
     440 Hz partial, at sr 16384 / n_fft 2048 so 440 Hz is EXACTLY bin 55 —
     a bin-centered partial has zero demodulated drift, so its band renders
     one constant hue while the chirp sweeps the full color wheel.
@@ -43,7 +43,7 @@
     const dur = 6
     const n = dur * sr
     const F0 = 32
-    const F1 = 1024 // librosa gallery: chirp(fmin=32, fmax=32*2**5, linear=True)
+    const F1 = 1024 // chirp(fmin=32, fmax=32*2**5, linear=True)
 
     // chirp + bin-centered partial (440 = 55 * sr/n_fft exactly)
     const y = new Float32Array(n)
@@ -146,7 +146,7 @@
       const k = Math.round(Math.exp(Math.log(binMin) + frac * (Math.log(binMax) - Math.log(binMin))))
       for (let x = 0; x < W; x++) {
         const t = Math.min(nT - 2, Math.floor((x / W) * (nT - 1)))
-        // amplitude_to_db(mag, ref=max)/80 + 1, clamped — the gallery's alpha
+        // amplitude_to_db(mag, ref=max)/80 + 1, clamped — the rainbowgram alpha
         const db = 20 * Math.log10(Math.max(mag[k][t + 1], 1e-10) / magMax)
         const alpha = Math.max(0, Math.min(1, db / 80 + 1))
         const hue = (dphi[k][t] + Math.PI) / (2 * Math.PI)

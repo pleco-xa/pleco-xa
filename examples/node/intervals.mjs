@@ -50,7 +50,7 @@ checkTrue('equal major third is ~14c SHARP of just 5/4', Math.abs(thirdDev - 13.
 // (6) interval_frequencies: tile an interval set across octaves from fmin.
 // Explicit ratios [1, 1.25, 1.5] at 3 bins/octave, fmin 100 → octave 0 is
 // 100/125/150, octave 1 doubles to 200/250/300 (hand-verifiable, and matching
-// librosa.interval_frequencies' octave-tiling math).
+// interval_frequencies' own octave-tiling math).
 check('interval_frequencies(6,100,[1,1.25,1.5],bpo=3) tiles octaves exactly',
   Array.from(interval_frequencies(6, 100, [1, 1.25, 1.5], 3, 0.0, true)),
   [100, 125, 150, 200, 250, 300])

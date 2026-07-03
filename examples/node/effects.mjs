@@ -1,5 +1,5 @@
 /**
- * effects/index.js — librosa.effects parity on a known signal:
+ * effects/index.js — the effects suite on a known signal:
  * trim / split / preemphasis→deemphasis / time_stretch / pitch_shift /
  * hpss / remix, each asserted against closed-form expectations.
  *
@@ -40,7 +40,7 @@ function zcPitch(x, sr, a = 0, b = x.length) {
 
 // ── (1) trim / split: exact frame-quantized burst edges ───────────────────
 // The plan's "within 1 hop" tolerance is numerically impossible under
-// librosa semantics: trim uses CENTERED 2048-sample RMS frames, so a frame
+// the trim semantics: trim uses CENTERED 2048-sample RMS frames, so a frame
 // whose window merely touches the burst is non-silent — detected edges lead
 // the true edges by up to frame_length/2 + hop - 1 samples. The CORRECT
 // (stronger) expectation is the exact frame-quantized golden:
@@ -106,7 +106,7 @@ checkTrue('440 Hz-bin energy: harmonic/percussive > 100', ratio440 > 100, ratio4
 // STRONGER than the planned >0.99 correlation: with align_zeros:false the
 // output must equal the hand-swapped slices BIT-EXACTLY (caller-order
 // concatenation proof). The default align_zeros path snaps boundaries to the
-// nearest zero crossing of y (librosa match_events semantics) — e.g. the
+// nearest zero crossing of y (nearest-crossing snap semantics) — e.g. the
 // burst's fade-in edge 11025 sits mid-silence, so it snaps ~25 samples in to
 // the tone's first true crossing. A naive unsnapped reference therefore
 // DECORRELATES by half a 440 Hz period; the honest reference snaps with an
@@ -165,4 +165,4 @@ let pvThrew2 = false
 try { effects.phase_vocoder(D, 0) } catch { pvThrew2 = true }
 checkTrue('phase_vocoder(D, 0) throws on non-positive rate', pvThrew2)
 
-summary('effects/index.js — librosa.effects parity: trim/split/preemph/stretch/shift/hpss/remix')
+summary('effects/index.js — effects suite: trim/split/preemph/stretch/shift/hpss/remix')

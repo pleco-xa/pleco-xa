@@ -5,14 +5,14 @@ description: The canonical Ellis dynamic-programming beat tracker, tempo estimat
 
 Rhythm analysis in Pleco-Xa is tiered, and the tiers are honest about what they
 promise. At the top is `beat_track` — the canonical Ellis dynamic-programming
-tracker, matched function-for-function against librosa 0.11.0 with bit-exact
-tempo and exact beat frames. Below it sits `quickTempo`, an explicit fast tier
+tracker, with numerically exact tempo and exact beat frames. Below it sits
+`quickTempo`, an explicit fast tier
 for live meters, and the `bpm` namespace, a windowed stability analyzer for
 watching tempo *drift* over a performance. No tier fabricates a result: failure
 paths throw, and there are no default BPMs.
 
-`beat_track(y, sr)` returns `{ tempo, beats }`. The pipeline is the exact librosa
-variant: `onset_strength` (median aggregate) → `tempo` with the log-normal prior
+`beat_track(y, sr)` returns `{ tempo, beats }`. The pipeline is
+`onset_strength` (median aggregate) → `tempo` with the log-normal prior
 → dynamic-programming peak picking consistent with the estimated tempo.
 
 ## Key functions
@@ -41,7 +41,7 @@ import { beat_track, tempo, quickTempo } from 'pleco-xa'
 
 // y is a Float32Array time series (e.g. from audioio.load), sr its sample rate
 const { tempo: bpm, beats } = beat_track(y, sr)
-bpm // scalar BPM, bit-exact vs librosa 0.11.0
+bpm // scalar BPM
 beats // beat frame indices (default units: 'frames')
 
 // Tempo alone (scalar), or per-frame for time-varying material
@@ -61,17 +61,17 @@ const quick = quickTempo(y, sr)
   `60·sr / (hop·k)`, so a true 120 BPM click train legitimately reports
   ~117.45 at hop 512. The honest bound is `|err| ≤ 7 BPM` at that hop — don't
   assert tempo on a knife edge.
-- **Parity is bit-exact.** `beat_track`'s tempo *and* beat frames match the
-  pinned librosa 0.11.0 fixture (`tempo_beats.json`) — even after a 16-bit WAV
+- **Tempo and beats are pinned.** `beat_track`'s tempo *and* beat frames are
+  fixture-gated in CI (`tempo_beats.json`) — and hold even after a 16-bit WAV
   encode/decode round trip.
 - **The quick tier never impersonates the canonical one.** `quickTempo` is
-  explicitly the fast path; it is only actually faster than the parity tier at a
-  *matched* hop length (~2.2× at hop 512). Compare tiers at the same hop.
+  explicitly the fast path; it is only actually faster than the canonical tier at
+  a *matched* hop length (~2.2× at hop 512). Compare tiers at the same hop.
 - **`bpm` is a drift analyzer, not the primary source.** Its windowed pass now
   tracks tempo changes (a 100→140 BPM ramp reads ~99→144 across windows) — use
   it to characterize *stability*, never as your headline BPM.
 - **`plp` and `beat_sync` have caveats.** `plp` is a windowed-autocorrelation
-  pulse-strength approximation, not librosa's Fourier-tempogram PLP;
+  pulse-strength approximation, not a Fourier-tempogram PLP;
   `beat_sync` drops audio after the last beat boundary (it emits
   `beats.length − 1` segments).
 - **Use `beat_track`, not the legacy detector.** The DP tracker (backed by

@@ -7,7 +7,7 @@
  * bpm:120/confidence:50 on every failure) is dissolved; loop-smart.js's
  * zero-crossing trim is folded in here.
  *
- * Optional RQA scoring (librosa.sequence.rqa port): when `rqa: true`, the
+ * Optional RQA scoring: when `rqa: true`, the
  * recurrence matrix is additionally scored with recurrence quantification
  * analysis and the best alignment path contributes a lag candidate whose
  * strength is the RQA path score.

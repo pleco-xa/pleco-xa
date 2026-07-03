@@ -41,7 +41,7 @@ export function dctBasis(n_in, n_out, norm = 'ortho') {
 
 /**
  * MFCC cepstral core: DCT-II along the mel axis of a LOG-power mel
- * spectrogram, keep the first n_mfcc rows, optional librosa liftering
+ * spectrogram, keep the first n_mfcc rows, optional cepstral liftering
  * (1 + (L/2)·sin(π(k+1)/L)).
  * @param {Array} logMel - [n_mels][n_frames] log-power mel spectrogram
  * @returns {Array<Float64Array>} [n_mfcc][n_frames]
@@ -49,7 +49,7 @@ export function dctBasis(n_in, n_out, norm = 'ortho') {
 export function mfccFromLogMel(logMel, { n_mfcc = 20, dct_type = 2, norm = 'ortho', lifter = 0 } = {}) {
   if (dct_type !== 2) {
     throw new ParameterError(
-      `mfcc: dct_type=${dct_type} is not implemented (only librosa's default dct_type=2)`,
+      `mfcc: dct_type=${dct_type} is not implemented (only the default dct_type=2)`,
     )
   }
   if (norm !== 'ortho' && norm !== null) {

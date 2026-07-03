@@ -1,10 +1,11 @@
 /**
- * Librosa-style trim functionality for JavaScript.
- * SHIM (Wave 5A): delegates to the canonical librosa-parity implementation
+ * Trim functionality for JavaScript.
+ * SHIM (Wave 5A): delegates to the canonical implementation
  * in src/effects/index.js (fixture-gated: effects.json). The legacy local
- * implementation used peak sample amplitude as the silence reference (librosa
- * uses max frame RMS), extended the end index by a full frame, and spread the
- * whole signal through Math.max — all repaired in the canonical module.
+ * implementation used peak sample amplitude as the silence reference (max
+ * frame RMS is the correct reference), extended the end index by a full frame,
+ * and spread the whole signal through Math.max — all repaired in the
+ * canonical module.
  */
 
 import { trim as trimCanonical } from '../effects/index.js'
@@ -17,7 +18,7 @@ import { trim as trimCanonical } from '../effects/index.js'
  * @param {number} frame_length - Frame size for analysis
  * @param {number} hop_length - Frame hop size
  * @returns {{y_trimmed: Float32Array, index: number[]}} Trimmed audio and [start, end).
- *   All-silent input yields an empty y_trimmed with index [0, 0] (librosa semantics).
+ *   All-silent input yields an empty y_trimmed with index [0, 0].
  */
 export function trim(
   y,

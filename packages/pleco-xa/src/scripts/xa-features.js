@@ -1,16 +1,16 @@
 /**
  * xa-features.js — LEGACY SHIM over the fixture-verified feature/ namespace.
  *
- * History (Wave 4 consolidation): the spectral functions here called
- * require('./librosa-fft.js') — CommonJS in an ES module AND a file that no
- * longer exists — so centroid/bandwidth/rolloff/contrast were dead on
- * arrival. They now delegate to feature/spectral.js (librosa 0.11.0
+ * History (Wave 4 consolidation): the spectral functions here called a
+ * CommonJS require() for a bundled FFT module — CommonJS in an ES module AND
+ * a file that no longer exists — so centroid/bandwidth/rolloff/contrast were
+ * dead on arrival. They now delegate to feature/spectral.js (fixture-verified
  * numerics, gated by tools/parity/fixtures/spectral_features.json).
  *
  * Signature note: the old positional signatures are preserved. Two behavior
  * changes come with correctness:
- *  - rms/zero_crossing_rate now center-pad like librosa (center=true).
- *  - spectral_contrast now returns n_bands + 1 rows (librosa includes the
+ *  - rms/zero_crossing_rate now center-pad by default (center=true).
+ *  - spectral_contrast now returns n_bands + 1 rows (including the
  *    [0, fmin] band) instead of the old n_bands.
  *
  * New code should import from src/feature/ directly.
@@ -26,7 +26,7 @@ import {
 } from '../feature/spectral.js'
 
 /**
- * Zero crossing rate per frame (librosa-parity via feature/spectral.js).
+ * Zero crossing rate per frame (via feature/spectral.js).
  * @returns {Float64Array} fraction of zero crossings per frame
  */
 export function zero_crossing_rate(
@@ -39,7 +39,7 @@ export function zero_crossing_rate(
 }
 
 /**
- * RMS energy per frame (librosa-parity via feature/spectral.js).
+ * RMS energy per frame (via feature/spectral.js).
  * @returns {Float64Array} RMS per frame
  */
 export function rms(y, frame_length = 2048, hop_length = 512, center = true) {
@@ -47,7 +47,7 @@ export function rms(y, frame_length = 2048, hop_length = 512, center = true) {
 }
 
 /**
- * Spectral centroid per frame (librosa-parity via feature/spectral.js).
+ * Spectral centroid per frame (via feature/spectral.js).
  * @returns {Float64Array} centroid (Hz) per frame
  */
 export function spectral_centroid(y, sr = 22050, hop_length = 512, n_fft = 2048) {
@@ -55,7 +55,7 @@ export function spectral_centroid(y, sr = 22050, hop_length = 512, n_fft = 2048)
 }
 
 /**
- * Spectral bandwidth per frame (librosa-parity via feature/spectral.js).
+ * Spectral bandwidth per frame (via feature/spectral.js).
  * @returns {Float64Array} bandwidth per frame
  */
 export function spectral_bandwidth(
@@ -69,8 +69,8 @@ export function spectral_bandwidth(
 }
 
 /**
- * Spectral rolloff per frame (librosa-parity via feature/spectral.js).
- * Note: librosa computes rolloff on the magnitude spectrogram (power=1);
+ * Spectral rolloff per frame (via feature/spectral.js).
+ * Note: rolloff is computed on the magnitude spectrogram (power=1);
  * the old power-squared variant here was a divergence and is gone.
  * @returns {Float64Array} rolloff frequency (Hz) per frame
  */
@@ -85,7 +85,7 @@ export function spectral_rolloff(
 }
 
 /**
- * Spectral contrast (librosa-parity via feature/spectral.js).
+ * Spectral contrast (via feature/spectral.js).
  * @returns {Array<Float64Array>} [n_bands + 1][n_frames]
  */
 export function spectral_contrast(
@@ -315,7 +315,7 @@ export function detrend_feature(feature, degree = 1) {
 
 /**
  * Extract comprehensive audio features (now functional: the old version
- * died on require('./librosa-fft.js')).
+ * died on a require() for a missing FFT module).
  * @param {Float32Array} y - Audio signal
  * @param {number} sr - Sample rate
  * @returns {Object} Comprehensive feature set

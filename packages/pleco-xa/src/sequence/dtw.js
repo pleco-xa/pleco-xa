@@ -1,24 +1,23 @@
 /**
  * Dynamic time warping (DTW).
  *
- * Line-faithful port of librosa 0.11 `librosa.sequence.dtw` (sequence.py),
- * following Müller, "Fundamentals of Music Processing" (2015):
+ * Follows Müller, "Fundamentals of Music Processing" (2015):
  *
  *  - default step sizes [[1,1],[0,1],[1,0]] with zero additive and unit
  *    multiplicative weights;
  *  - custom `stepSizesSigma` are APPENDED to the defaults, and the default
- *    steps get infinite weights so they are never preferred (librosa
- *    behavior — customs do not replace the defaults);
+ *    steps get infinite weights so they are never preferred (customs do not
+ *    replace the defaults);
  *  - `weightsAdd` / `weightsMul` are honored in the forward pass;
  *  - step indices are RECORDED during cost accumulation and backtracking
  *    walks the recorded step matrix (greedy re-derivation from D is wrong
  *    under non-zero weights);
  *  - `subseq` (subsequence DTW) starts backtracking at argmin(D[-1, :]);
- *  - `globalConstraints` applies librosa's absolute-radius Sakoe-Chiba band
+ *  - `globalConstraints` applies an absolute-radius Sakoe-Chiba band
  *    (`int(round(bandRad * min(C.shape)))`, off-diagonal offset compensated
  *    for non-square C), not a normalized-coordinate band.
  *
- * Parity: fixture-gated against tools/parity/fixtures/dtw_segment.json
+ * Fixture-gated against tools/parity/fixtures/dtw_segment.json
  * (case 1: D[-1][-1] within 1e-6 relative, warping path exact).
  *
  * All failures throw. No silent parameter drops: every accepted option is
@@ -33,7 +32,7 @@ const DEFAULT_STEPS = [
 
 /**
  * Pairwise distance between column vectors of X (d×N) and Y (d×M),
- * mirroring the scipy.spatial.distance.cdist metrics librosa relies on.
+ * mirroring the scipy.spatial.distance.cdist metrics.
  * @private
  */
 function costMatrix(X, Y, metric) {
@@ -101,7 +100,7 @@ function costMatrix(X, Y, metric) {
 }
 
 /**
- * librosa util.fill_off_diagonal: absolute-radius Sakoe-Chiba band, with
+ * fill_off_diagonal: absolute-radius Sakoe-Chiba band, with
  * the radius expanded by |N - M| on the long side so (N-1, M-1) stays inside.
  * Modifies C in place.
  * @private
@@ -128,8 +127,7 @@ function copyMatrix(C) {
 }
 
 /**
- * Backtrack a warping path from a recorded step matrix
- * (port of librosa __dtw_backtracking).
+ * Backtrack a warping path from a recorded step matrix.
  * @private
  */
 function backtrackSteps(steps, stepSizesSigma, subseq, start) {
@@ -155,7 +153,7 @@ function backtrackSteps(steps, stepSizesSigma, subseq, start) {
 
 /**
  * Dynamic time warping between two feature sequences (or a precomputed
- * cost matrix), librosa-faithful.
+ * cost matrix).
  *
  * @param {Array<Array<number>|Float32Array|Float64Array>|null} X
  *   Feature matrix, shape (d, N) — rows are features, columns are frames.
@@ -164,10 +162,10 @@ function backtrackSteps(steps, stepSizesSigma, subseq, start) {
  *   Feature matrix, shape (d, M). Pass null when supplying `options.C`.
  * @param {Object} [options]
  * @param {Array<Array<number>>} [options.C=null] - precomputed cost matrix (N, M).
- *   Mutually exclusive with X/Y (librosa contract).
+ *   Mutually exclusive with X/Y.
  * @param {string} [options.metric='euclidean']
  * @param {Array<Array<number>>} [options.stepSizesSigma=null] - custom steps,
- *   APPENDED to the defaults (librosa semantics).
+ *   APPENDED to the defaults.
  * @param {Array<number>} [options.weightsAdd=null] - additive step weights.
  * @param {Array<number>} [options.weightsMul=null] - multiplicative step weights.
  * @param {boolean} [options.subseq=false] - subsequence DTW.
@@ -177,8 +175,8 @@ function backtrackSteps(steps, stepSizesSigma, subseq, start) {
  * @param {boolean} [options.returnSteps=false] - also return the step matrix.
  * @returns {{D: Float64Array[], wp?: number[][], steps?: Int32Array[]}}
  *   `D` is the (N, M) accumulated cost matrix (`D[N-1][M-1]` is the total
- *   alignment cost). `wp` (when backtrack) is the warping path in librosa
- *   order: from the end of the alignment down to its start.
+ *   alignment cost). `wp` (when backtrack) is the warping path from the end
+ *   of the alignment down to its start.
  */
 export function dtw(X = null, Y = null, options = {}) {
   const {
@@ -194,7 +192,7 @@ export function dtw(X = null, Y = null, options = {}) {
     returnSteps = false,
   } = options
 
-  // --- Step sizes and weights (librosa: customs are appended to defaults) ---
+  // --- Step sizes and weights (customs are appended to defaults) ---
   let steps
   let wAdd
   let wMul
@@ -280,7 +278,7 @@ export function dtw(X = null, Y = null, options = {}) {
   const max0 = Math.max(...steps.map((s) => s[0]))
   const max1 = Math.max(...steps.map((s) => s[1]))
 
-  // Padded accumulated-cost and step matrices (librosa layout)
+  // Padded accumulated-cost and step matrices
   const Dp = Array.from({ length: N + max0 }, () =>
     new Float64Array(M + max1).fill(Infinity),
   )
@@ -368,8 +366,7 @@ export function dtw(X = null, Y = null, options = {}) {
 }
 
 /**
- * Backtrack a warping path from a recorded step matrix
- * (port of librosa `librosa.sequence.dtw_backtracking`).
+ * Backtrack a warping path from a recorded step matrix.
  *
  * @param {Int32Array[]|Array<Array<number>>} steps - step matrix from `dtw`
  *   (`returnSteps: true`).
@@ -379,7 +376,7 @@ export function dtw(X = null, Y = null, options = {}) {
  *   too, so index bookkeeping matches the forward pass).
  * @param {boolean} [options.subseq=false]
  * @param {number|null} [options.start=null] - start column (subseq only).
- * @returns {number[][]} warping path, end-to-start (librosa order).
+ * @returns {number[][]} warping path, end-to-start.
  */
 export function dtwBacktracking(steps, options = {}) {
   const { stepSizesSigma = null, subseq = false, start = null } = options

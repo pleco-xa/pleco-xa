@@ -68,8 +68,8 @@ const test = audioio.tone(440, { sr: 22050, duration: 1 })
   decoder that produced the data.
 - **`fileio.stream()` is decode-whole-then-chunk**, not true streaming: memory is
   O(file), `blockLength` counts **samples** and advances by `hopLength` (so
-  blocks can overlap). This is deliberately *not* librosa's block-of-frames
-  contract — treat it as a chunked reader.
+  blocks can overlap). It is a sample-block reader, not a frame-block stream —
+  treat it as a chunked reader.
 - **Codec coverage is an explicit exception.** Native WAV is built in; other
   codecs come from the browser's `decodeAudioData` or, in Node, an injectable
   decoder hook. `tone` / `chirp` / `clicks` / mu-law / `lpc` are all

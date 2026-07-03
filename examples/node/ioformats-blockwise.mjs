@@ -1,10 +1,10 @@
 /**
- * ioformats — Blockwise IO: streaming equals one-shot (librosa ioformats/stream
- * advanced-example replica; THE canonical Node demo).
+ * ioformats — Blockwise IO: streaming equals one-shot (the canonical
+ * blockwise-streaming Node demo).
  *
  * (a) Decode a real golden WAV with io/wav decodeWav, feed it through the
  *     worker-safe streaming meters in 128-frame blocks (frame 2048 / hop 512,
- *     the librosa.stream block contract), and prove the streamed RMS sequence
+ *     the streaming block contract), and prove the streamed RMS sequence
  *     equals one-shot feature.rms on the full signal — the overlap bookkeeping
  *     cross-checked with convert.blocks_to_frames.
  * (b) Prove chunk-size invariance: a flux analyzer fed random 37–1999-sample
@@ -33,7 +33,7 @@ const y = channels.length > 1
 // ── (a) blockwise streaming RMS vs one-shot feature.rms ─────────────────────
 const FRAME = 2048
 const HOP = 512
-const BLOCK = 128 // frames per block (librosa.stream block_length)
+const BLOCK = 128 // frames per block (block_length)
 const samplesPerBlock = BLOCK * HOP
 const lookahead = FRAME / HOP - 1 // frames pending until their tail samples arrive
 
