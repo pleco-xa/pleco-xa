@@ -26,6 +26,12 @@
  * Input features are NEVER shape-guessed: pass a 2D matrix (rows = features,
  * columns = frames, librosa layout) or a flat typed array with an explicit
  * `{ nFeatures, nFrames }`. Ambiguous input throws.
+ *
+ * Also re-exports `laplacianSegmentation` — the McFee-Ellis Laplacian spectral
+ * structural segmentation (2014), composed from the recurrence pipeline above
+ * plus the linalg (eigh/laplacian) and cluster (kmeans) primitives. See
+ * `laplacian-segmentation.js`; proven on synthetic known-structure input in
+ * tests/segment-laplacian.test.js.
  */
 
 /**
@@ -632,3 +638,8 @@ export function agglomerative(data, k, options = {}) {
   }
   return boundaries
 }
+
+// McFee-Ellis Laplacian structural segmentation (2014). Composed from the
+// recurrence pipeline above + linalg (eigh/laplacian) + cluster (kmeans).
+// Proven on synthetic known-structure input (tests/segment-laplacian.test.js).
+export { laplacianSegmentation } from './laplacian-segmentation.js'

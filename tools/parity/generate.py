@@ -370,3 +370,87 @@ gen_phase_vocoder()
 gen_hpss()
 gen_dtw_segment()
 print("wave5 fixtures done")
+
+
+# ---------------- Missing-pieces goal: linalg, cluster, sequence, pcen ----------------
+
+def gen_linalg():
+    import scipy.linalg, scipy.sparse.csgraph
+    rng = np.random.default_rng(3)
+    # symmetric eigendecomposition ground truth (scipy.linalg.eigh)
+    M = rng.standard_normal((6, 6)); A = (M + M.T) / 2
+    evals, evecs = scipy.linalg.eigh(A)
+    # normalized graph Laplacian ground truth (scipy.sparse.csgraph.laplacian normed=True)
+    W = np.abs(rng.standard_normal((5, 5))); W = (W + W.T) / 2; np.fill_diagonal(W, 0)
+    L = scipy.sparse.csgraph.laplacian(W, normed=True)
+    Levals, Levecs = scipy.linalg.eigh(L)
+    write("linalg", "scipy.linalg.eigh + scipy.sparse.csgraph.laplacian(normed)", {}, [
+        {"input": {"fn": "eigh", "A": A.ravel().tolist(), "n": 6},
+         "eigenvalues": f32(evals), "reconstruct": A.ravel().tolist()},
+        {"input": {"fn": "laplacian_normed", "W": W.ravel().tolist(), "n": 5},
+         "expected": L.ravel().tolist(),
+         "L_eigenvalues": f32(Levals)},
+    ])
+
+
+def gen_cluster():
+    from sklearn.cluster import KMeans
+    rng = np.random.default_rng(0)
+    # three well-separated blobs so the partition is unique regardless of init
+    blobs = np.vstack([rng.standard_normal((20, 2)) * 0.3 + c
+                       for c in ([0, 0], [8, 8], [0, 8])])
+    km = KMeans(n_clusters=3, n_init=10, random_state=0).fit(blobs)
+    # canonical: sort clusters by centroid (x,y) so labels are comparable up to our own sort
+    order = np.lexsort((km.cluster_centers_[:, 1], km.cluster_centers_[:, 0]))
+    remap = {old: new for new, old in enumerate(order)}
+    labels = np.array([remap[l] for l in km.labels_])
+    centers = km.cluster_centers_[order]
+    write("cluster", "sklearn.cluster.KMeans (separable blobs)", {}, [{
+        "input": {"X": blobs.ravel().tolist(), "shape": list(blobs.shape), "k": 3},
+        "expected_labels": labels.tolist(),
+        "expected_centers": f32(centers.ravel()),
+        "expected_inertia": float(km.inertia_),
+    }])
+
+
+def gen_sequence_extra():
+    rng = np.random.default_rng(5)
+    n = 4
+    cases = [
+        {"input": {"fn": "transition_uniform", "n_states": n},
+         "expected": f32(librosa.sequence.transition_uniform(n).ravel())},
+        {"input": {"fn": "transition_loop", "n_states": n, "prob": 0.8},
+         "expected": f32(librosa.sequence.transition_loop(n, 0.8).ravel())},
+        {"input": {"fn": "transition_cycle", "n_states": n, "prob": 0.9},
+         "expected": f32(librosa.sequence.transition_cycle(n, 0.9).ravel())},
+        {"input": {"fn": "transition_local", "n_states": 6, "width": 3, "window": "triangle", "wrap": False},
+         "expected": f32(librosa.sequence.transition_local(6, 3, window="triangle", wrap=False).ravel())},
+    ]
+    # viterbi_discriminative: 3-state posterior over 12 frames + loopy transition
+    T, S = 12, 3
+    prob = rng.random((S, T)); prob /= prob.sum(axis=0, keepdims=True)
+    trans = librosa.sequence.transition_loop(S, 0.7)
+    path = librosa.sequence.viterbi_discriminative(prob, trans)
+    cases.append({"input": {"fn": "viterbi_discriminative", "prob": prob.ravel().tolist(),
+                            "shape": [S, T], "transition": trans.ravel().tolist()},
+                  "expected_path": np.asarray(path).tolist()})
+    write("sequence_extra", "librosa.sequence transition_* + viterbi_discriminative", {}, cases)
+
+
+def gen_pcen():
+    sigs = signals()
+    y = (sigs["sine440"][: SR // 2] * 0.6 + _click_signal(120.0, dur=0.5) * 0.7).astype(np.float32)
+    S = librosa.feature.melspectrogram(y=y, sr=SR, n_fft=2048, hop_length=512, n_mels=64)
+    P = librosa.pcen(S, sr=SR, hop_length=512)
+    write("pcen", "librosa.pcen (defaults on melspectrogram)", {}, [{
+        "input": {"y": f32(y), "sr": SR, "n_fft": 2048, "hop_length": 512, "n_mels": 64},
+        "S_shape": list(S.shape),
+        "expected": f32(P.ravel()),
+    }])
+
+
+gen_linalg()
+gen_cluster()
+gen_sequence_extra()
+gen_pcen()
+print("missing-pieces fixtures done")
