@@ -1,0 +1,10 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["../../packages/pleco-xa/src/index.js"],
+  "tsconfig": "./tsconfig.json",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
+  "skipErrorChecking": true,
+  "excludeInternal": true,
+  "out": "src/content/docs/api"
+}

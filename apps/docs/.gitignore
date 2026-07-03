@@ -1,0 +1,6 @@
+dist/
+.astro/
+node_modules/
+public/
+# starlight-typedoc regenerates the API reference on every build (derived from JSDoc)
+src/content/docs/api/
