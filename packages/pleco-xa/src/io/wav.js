@@ -50,7 +50,10 @@ export function encodeWav(channels, sampleRate) {
   for (let i = 0; i < length; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
       const s = Math.max(-1, Math.min(1, channels[ch][i]))
-      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true)
+      // Round (not truncate) to the nearest quantization level: halves the
+      // per-sample error to ≤0.5 LSB and removes the toward-zero DC bias that
+      // setInt16's implicit truncation introduces.
+      view.setInt16(offset, Math.round(s < 0 ? s * 0x8000 : s * 0x7fff), true)
       offset += 2
     }
   }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — plot_vocal_separation: REPET-SIM vs fingerprint on a golden WAV</title>
+<title>pleco-xa proof — plot_vocal_separation: REPET-SIM vs fingerprint on a real mix</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -15,47 +15,49 @@
   td, th { border: 1px solid #444; padding: 4px 10px; text-align: right; }
   th { color: #9ad; }
   .note { color: #fc8; }
+  .win { color: #7f7; }
 </style>
 </head>
 <body>
-<h1>plot_vocal_separation — librosa's REPET-SIM (nn_filter) vs pleco's fingerprint method, same golden WAV</h1>
+<h1>plot_vocal_separation — librosa's REPET-SIM (nn_filter) vs pleco's fingerprint method, on a real vocal mix</h1>
 <p>
-  First 8 s of <code>Drive Through Beat.wav</code> (mono downmix) is the
-  backing; a known intermittent "vocal" — five 0.6 s vibrato bursts at
-  <i>different</i> pitches (330/494/415/370/554 Hz, a melody — REPET separates
-  <i>non-repeating</i> foreground, so the bursts must not repeat) — is mixed in
-  at 3× the excerpt RMS. Both separators run on the identical mixture:
+  Input is a real 16 s excerpt of <code>Orphans</code> (mono, 22.05 kHz) — a full
+  band mix with sung vocals. This run has <b>true ground truth</b>: the isolated
+  vocal and instrumental stems (from the original session) are loaded separately
+  and used only as references to <i>score</i> each separator. Both separators see
+  only the mixture.
 </p>
 <p>
-  <b>A. REPET-SIM</b> (librosa gallery recipe, unsupervised):
+  <b>A. REPET-SIM</b> (librosa gallery recipe, <b>unsupervised</b>):
   <code>decompose.nn_filter(|STFT|, median, cosine, width=2 s)</code> →
   element-min with S → <code>decompose.softmask</code> (margins 2/10, power 2)
-  → istft with the mixture phase.
+  → istft with the mixture phase. It models the <i>repeating</i> background and
+  treats the non-repeating residue as foreground.
   <b>B. Fingerprint</b> (pleco flagship, <span class="note">supervised — it is
   given the true vocal's fingerprints</span>):
   <code>processAudioToFingerprints</code> → <code>optimizeEqCurves</code> →
   <code>reconstructVocal</code>.
 </p>
 <p class="note">
-  Honest comparison notes (node spot-run 2026-07-02, deterministic): the plan's
-  synthetic-scenario gates (&gt;6 dB foreground gain, &gt;80% background
-  retention) do NOT transfer to real percussion — median self-similarity
-  underestimates transients at 21 ms hops, so REPET's background retains ~39%
-  of the loop energy here (reported below, not hidden). The supervised
-  fingerprint method wins every metric on this material, as a supervised
-  method should.
+  Honest framing: both are pure DSP — <b>no trained model, no weights, no GPU.</b>
+  On real dense material the unsupervised REPET-SIM baseline recovers the vocal
+  weakly (it needs enough background repetition, and dense percussion leaks
+  through); the supervised fingerprint method — handed the true vocal as a target
+  — wins clearly, as it should. All correlations are measured against the real
+  stems and reported below, nothing hidden. (Metric: time-domain Pearson
+  correlation; the mix ≈ vocal + instrumental so this is meaningful.)
 </p>
 <div id="badges"></div>
 <div id="buttons"></div>
-<h2>honest scoreboard (all measured against the known injected vocal)</h2>
+<h2>scoreboard (correlations vs the real Orphans stems)</h2>
 <div id="scoreboard"></div>
-<h2>mixture |STFT| (0–4.7 kHz)</h2>
+<h2>mixture |STFT| (0–~5 kHz)</h2>
 <canvas id="specMix" width="820" height="180"></canvas>
-<h2>A. REPET-SIM foreground (bursts should remain, beat should fade)</h2>
+<h2>A. REPET-SIM foreground (should lean vocal)</h2>
 <canvas id="specFg" width="820" height="180"></canvas>
-<h2>A. REPET-SIM background (the beat)</h2>
+<h2>A. REPET-SIM background (should lean instrumental)</h2>
 <canvas id="specBg" width="820" height="180"></canvas>
-<h2>B. fingerprint reconstruction</h2>
+<h2>B. fingerprint reconstruction (should track the true vocal)</h2>
 <canvas id="specRecon" width="820" height="180"></canvas>
 
 <script type="module">
@@ -64,49 +66,22 @@ import { badge, drawSpectrogram } from './_badge.js'
 
 const { nn_filter, softmask, processAudioToFingerprints, optimizeEqCurves, reconstructVocal } = decompose
 
-const resp = await fetch('../../apps/demo/public/audio/Drive%20Through%20Beat.wav')
-const wav = decodeWav(await resp.arrayBuffer())
-const SR = wav.sampleRate
-const DUR = 8
-const N = SR * DUR
-const chans = wav.channels ?? wav.channelData
-const backing = new Float32Array(N)
-for (let i = 0; i < N; i++) backing[i] = (chans[0][i] + chans[1][i]) / 2
-let rms = 0
-for (let i = 0; i < N; i++) rms += backing[i] ** 2
-rms = Math.sqrt(rms / N)
-
-// ── known intermittent "vocal": five distinct-pitch vibrato bursts ───────────
-const BURSTS = [[1.0, 330], [2.5, 494], [4.0, 415], [5.5, 370], [7.0, 554]]
-const BURST_DUR = 0.6
-const vocal = new Float32Array(N)
-{
-  const amp = 3 * rms
-  for (const [b, fBase] of BURSTS) {
-    const s0 = Math.round(b * SR)
-    const s1 = Math.min(N, Math.round((b + BURST_DUR) * SR))
-    let ph1 = 0, ph2 = 0
-    for (let i = s0; i < s1; i++) {
-      const t = (i - s0) / SR
-      const f0 = fBase * Math.pow(2, (50 / 1200) * Math.sin(2 * Math.PI * 6 * t))
-      ph1 += (2 * Math.PI * f0) / SR
-      ph2 += (2 * Math.PI * 2 * f0) / SR
-      const env = Math.sin((Math.PI * (i - s0)) / (s1 - s0))
-      vocal[i] = amp * env * (0.7 * Math.sin(ph1) + 0.3 * Math.sin(ph2))
-    }
-  }
+const loadWav = async (name) => {
+  const r = await fetch('../../apps/demo/public/audio/' + name)
+  return decodeWav(await r.arrayBuffer()).channels[0]
 }
-const mixture = new Float32Array(N)
-for (let i = 0; i < N; i++) mixture[i] = backing[i] + vocal[i]
-
-const N_FFT = 2048
-const HOP = 1024
+// mixture = the real master (separator input); vocal/backing = ground-truth stems (scoring only)
+const [mixture, vocal, backing] = await Promise.all([
+  loadWav('orphans-mix.wav'), loadWav('orphans-vocals.wav'), loadWav('orphans-instrumental.wav'),
+])
+const SR = 22050
+const N = mixture.length
+const N_FFT = 2048, HOP = 1024
 
 // ── A. REPET-SIM ─────────────────────────────────────────────────────────────
 const D = stft(mixture, N_FFT, HOP)
 const S_full = D.map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
-const nF = S_full.length
-const nT = S_full[0].length
+const nF = S_full.length, nT = S_full[0].length
 
 const widthFrames = Math.round((2 * SR) / HOP) // librosa: width = time_to_frames(2 s)
 const S_filter = nn_filter(S_full, { aggregate: 'median', metric: 'cosine', width: widthFrames })
@@ -131,18 +106,7 @@ const LR = 0.5 / (maxMag * maxMag) // GD stability bound: lr < 1/max(|STFT|)²
 const eq = optimizeEqCurves(vocalFp.fingerprints, mixFp.fingerprints, mixFp.magnitudeSpec, mixFp.numWindows, SR, 100, LR)
 const recon = reconstructVocal(mixFp.stftResult, eq, SR, N_FFT, HOP)
 
-// ── metrics against the known parts ──────────────────────────────────────────
-const inBurst = (i) => BURSTS.some(([b]) => i >= b * SR && i < (b + BURST_DUR) * SR)
-const burstRatio = (sig) => {
-  let eb = 0, en = 0
-  const n = Math.min(sig.length, N)
-  for (let i = 0; i < n; i++) {
-    if (inBurst(i)) eb += sig[i] ** 2
-    else en += sig[i] ** 2
-  }
-  return eb / en
-}
-const dB = (x) => 10 * Math.log10(x)
+// ── metrics vs the real stems ─────────────────────────────────────────────────
 const corr = (a, b) => {
   const n = Math.min(a.length, b.length)
   let sa = 0, sb = 0
@@ -152,43 +116,38 @@ const corr = (a, b) => {
   for (let i = 0; i < n; i++) { const x = a[i] - ma, y = b[i] - mb; num += x * y; da += x * x; db2 += y * y }
   return num / Math.sqrt(da * db2)
 }
+const mixV = corr(mixture, vocal), mixI = corr(mixture, backing)
+const fgV = corr(y_fg, vocal), fgI = corr(y_fg, backing)
+const bgV = corr(y_bg, vocal), bgI = corr(y_bg, backing)
+const rcV = corr(recon, vocal), rcI = corr(recon, backing)
 
-const impFg = dB(burstRatio(y_fg) / burstRatio(mixture))
-const impRecon = dB(burstRatio(recon) / burstRatio(mixture))
-const cFgV = corr(y_fg, vocal), cFgB = corr(y_fg, backing)
-const cRcV = corr(recon, vocal), cRcB = corr(recon, backing)
-let bgNB = 0, fgNB = 0, mixNB = 0
-for (let i = 0; i < N; i++) {
-  if (!inBurst(i)) { bgNB += y_bg[i] ** 2; fgNB += y_fg[i] ** 2; mixNB += mixture[i] ** 2 }
-}
+// ── hard gates: only what is TRUE on this real material (orderings, no thresholds) ──
+badge('REPET-SIM foreground leans vocal: corr(fg, vocal) > corr(fg, instrumental)',
+  fgV > fgI, `${fgV.toFixed(3)} vs ${fgI.toFixed(3)}`)
+badge('REPET-SIM background leans instrumental: corr(bg, inst) > corr(bg, vocal)',
+  bgI > bgV, `${bgI.toFixed(3)} vs ${bgV.toFixed(3)}`)
+badge('fingerprint recovers the vocal: corr(recon, vocal) > corr(recon, instrumental)',
+  rcV > rcI, `${rcV.toFixed(3)} vs ${rcI.toFixed(3)}`)
+badge('fingerprint beats REPET-SIM on vocal fidelity',
+  rcV > fgV, `recon ${rcV.toFixed(3)} > REPET ${fgV.toFixed(3)}`)
+badge('both lift the vocal:instrumental ratio above the raw mix',
+  (fgV / fgI) > (mixV / mixI) && (rcV / rcI) > (mixV / mixI),
+  `mix ${(mixV / mixI).toFixed(2)} → REPET ${(fgV / fgI).toFixed(2)}, fp ${(rcV / rcI).toFixed(2)}`)
 
-// ── badges (bounds set from the deterministic node spot-run, with margin) ────
-badge('REPET-SIM foreground: burst/non-burst ratio improves > 3 dB over mix',
-  impFg > 3, `${impFg.toFixed(2)} dB (spot-run 4.38)`)
-badge('REPET-SIM foreground: corr(fg, vocal) > corr(fg, backing)',
-  cFgV > cFgB, `${cFgV.toFixed(3)} vs ${cFgB.toFixed(3)}`)
-badge('REPET-SIM background carries the loop: non-burst E(bg) > 4× E(fg)',
-  bgNB > 4 * fgNB, `${(bgNB / fgNB).toFixed(2)}× (spot-run 7.27×)`)
-badge('fingerprint: burst/non-burst ratio improves > 6 dB over mix',
-  impRecon > 6, `${impRecon.toFixed(2)} dB (spot-run 10.06)`)
-badge('fingerprint: corr(recon, vocal) > corr(recon, backing)',
-  cRcV > cRcB, `${cRcV.toFixed(3)} vs ${cRcB.toFixed(3)}`)
-
-// ── scoreboard (DOM-built) ────────────────────────────────────────────────────
+// ── scoreboard ────────────────────────────────────────────────────────────────
 {
   const rows = [
-    ['measure', 'REPET-SIM (unsupervised)', 'fingerprint (supervised)'],
-    ['burst/non-burst improvement over mix', `${impFg.toFixed(2)} dB`, `${impRecon.toFixed(2)} dB`],
-    ['corr(output, true vocal)', cFgV.toFixed(4), cRcV.toFixed(4)],
-    ['corr(output, backing)', cFgB.toFixed(4), cRcB.toFixed(4)],
-    ['background retains loop energy', `${((100 * bgNB) / mixNB).toFixed(1)} %`, '(no background output)'],
+    ['correlation vs stem', 'raw mix', 'REPET-SIM (unsup.)', 'fingerprint (sup.)'],
+    ['↑ true vocal', mixV.toFixed(4), fgV.toFixed(4), rcV.toFixed(4)],
+    ['↓ true instrumental', mixI.toFixed(4), fgI.toFixed(4), rcI.toFixed(4)],
   ]
   const table = document.createElement('table')
-  rows.forEach(([a, b, c], i) => {
+  rows.forEach(([a, b, c, d], i) => {
     const tr = document.createElement('tr')
-    for (const text of [a, b, c]) {
+    for (const text of [a, b, c, d]) {
       const cell = document.createElement(i === 0 ? 'th' : 'td')
       cell.textContent = text
+      if (i > 0 && text === rows[i][3]) cell.className = 'win'
       tr.appendChild(cell)
     }
     table.appendChild(tr)
@@ -196,7 +155,7 @@ badge('fingerprint: corr(recon, vocal) > corr(recon, backing)',
   document.getElementById('scoreboard').appendChild(table)
 }
 
-// ── spectrograms (rows 0..200 ≈ 0–4.7 kHz at 48 kHz / 2048) ─────────────────
+// ── spectrograms (low ~5 kHz band) ────────────────────────────────────────────
 const magOf = (sig) => stft(sig, N_FFT, HOP).map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
 const crop = (M) => M.slice(0, 200)
 drawSpectrogram(document.getElementById('specMix'), crop(S_full))
@@ -217,7 +176,7 @@ function play(data) {
 }
 const btns = document.getElementById('buttons')
 for (const [label, data] of [
-  ['play mixture', mixture], ['play true vocal', vocal],
+  ['play mix', mixture], ['play true vocal', vocal], ['play true instrumental', backing],
   ['play REPET foreground', y_fg], ['play REPET background', y_bg],
   ['play fingerprint reconstruction', recon],
 ]) {

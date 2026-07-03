@@ -125,16 +125,23 @@ for (let i = N3; i < cat.length; i++) if (cat[i] !== 0) { tailZero = false; brea
 badge('re-concatenated blocks == decoded source, sample-for-sample', identical && tailZero,
   identical ? 'bitwise identical, tail zero-filled' : 'MISMATCH')
 
-// and the whole path stays within the 16-bit quantization bound of the
-// original synthesized tone (package decodeWav agrees to the same bound)
+// and the whole path stays within the 16-bit round-trip bound of the original
+// synthesized tone. Two principled bounds:
+//  - decodeWav shares encodeWav's convention (encode ·0x7fff / decode ÷0x7fff)
+//    so it meets the single-quantization bound 1/32767.
+//  - stream() decodes via Chrome's decodeAudioData (÷32768), crossing a second
+//    int16 convention, so its honest bound is 2 LSB (2/32768) — the same
+//    round-trip bound used for save→reload above. This is NOT the stream path
+//    being lossy (it is bitwise-identical to decodeAudioData, proven above); it
+//    is the cost of comparing a ÷32768-decoded signal to a ·0x7fff-encoded one.
 let pathErr = 0
 for (let i = 0; i < N3; i++) pathErr = Math.max(pathErr, Math.abs(cat[i] - y3[i]))
 const refWav = decodeWav(await blob3.arrayBuffer()).channels[0]
 let wavErr = 0
 for (let i = 0; i < N3; i++) wavErr = Math.max(wavErr, Math.abs(refWav[i] - y3[i]))
-badge('chunked path within 16-bit bound of original tone (≤ 1/32767)',
-  pathErr <= 1 / 32767 && wavErr <= 1 / 32767,
-  `stream ${pathErr.toExponential(2)}, decodeWav ${wavErr.toExponential(2)}`)
+badge('chunked path within 16-bit round-trip bound of original tone',
+  pathErr <= 2 / 32768 && wavErr <= 1 / 32767,
+  `stream ${pathErr.toExponential(2)} (≤2/32768), decodeWav ${wavErr.toExponential(2)} (≤1/32767)`)
 
 // ── (4) optional live mic RMS meter (manual — needs permission) ─────────────
 let proc = null
