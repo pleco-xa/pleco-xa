@@ -23,7 +23,7 @@
  * stackMemory(10, 3) windows share raw audio up to lag 27, so anything
  * narrower lets the alignment path hug the self-overlap diagonal.
  */
-import { loop, recurrence } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { loop, recurrence, convert } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
 // ── synthesis: 2.0 s harmonic period × 4, ornamented final bar ────────────
@@ -113,5 +113,22 @@ checkTrue('direct detection confidence in (0, 1]',
 checkTrue('direct detection surfaces candidates + diagnostics',
   Array.isArray(direct.candidates) && direct.diagnostics != null,
   Object.keys(direct).join(','))
+
+// ── recurrence.framesToTime — the lag→seconds helper used to label candidates ─
+// It is the xa-argument-order sibling of convert.frames_to_time (frames, hop,
+// sr) vs (frames, sr, hop); called directly, the two must agree exactly, and a
+// frame array maps element-wise. The RQA lag above, converted to seconds, must
+// land back on the 2.0 s period.
+{
+  const scalar = recurrence.framesToTime(10, hop, sr)
+  check('framesToTime(10, hop, sr) == 10·hop/sr (scalar)', scalar, (10 * hop) / sr, 1e-12)
+  check('framesToTime(10, hop, sr) === convert.frames_to_time(10, sr, hop) (redundant sibling)',
+    scalar, convert.frames_to_time(10, sr, hop), 1e-12)
+  check('framesToTime maps a frame array element-wise',
+    recurrence.framesToTime([0, 1, 2], hop, sr),
+    [0, 1, 2].map((f) => (f * hop) / sr))
+  check('framesToTime(rqa lagFrames) recovers the 2.0 s period ± 0.1',
+    recurrence.framesToTime(rqaCand.lagFrames, hop, sr), PERIOD, 0.1)
+}
 
 summary('loop/recurrence.js — tempo-free period recovery + RQA lag')

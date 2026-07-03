@@ -23,7 +23,7 @@ import { feature, filters } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
 
 const {
-  ParameterError, chroma_stft, estimate_tuning, piptrackPeaks,
+  ParameterError, chroma_stft, estimate_tuning, pitch_tuning, piptrackPeaks,
   logFrequencySpectrum, foldLogSpectrumToChroma, dctBasis, mfccFromLogMel,
   spectral_contrast,
 } = feature
@@ -66,6 +66,27 @@ checkTrue('estimate_tuning(440 Hz tone) == 0.00 ± 0.02 bins',
   const t = estimate_tuning({ y: tone(452), sr }) // 12·log2(452/440) ≈ +0.466
   checkTrue('estimate_tuning(452 Hz tone) == +0.47 ± 0.03 bins',
     Math.abs(t - 12 * Math.log2(452 / 440)) <= 0.03, t.toFixed(4))
+}
+
+// ── pitch_tuning: the primitive behind estimate_tuning, called DIRECTLY on a
+// set of detected frequencies (librosa.pitch_tuning). Take equal-tempered notes
+// and detune them by a KNOWN fraction of a semitone; the histogram-mode offset
+// must recover that detuning (in fractions of a chroma bin, resolution 0.01).
+{
+  const etNotes = [220, 261.63, 329.63, 440, 523.25] // A3 C4 E4 A4 C5, on-grid
+  const detune = (cents) => etNotes.map((f) => f * 2 ** (cents / 100 / 12))
+
+  check('pitch_tuning(on-grid ET notes) == 0 bins (in tune)',
+    pitch_tuning(etNotes), 0)
+  check('pitch_tuning(+25-cent-sharp notes) == +0.25 bins',
+    pitch_tuning(detune(25)), 0.25, 1e-9)
+  check('pitch_tuning(−40-cent-flat notes) == −0.40 bins',
+    pitch_tuning(detune(-40)), -0.4, 1e-9)
+  // Custom resolution still recovers the sign of the offset.
+  checkTrue('pitch_tuning(+30-cent notes, resolution 0.02) is positive ≈ +0.3',
+    pitch_tuning(detune(30), { resolution: 0.02 }) > 0.2, pitch_tuning(detune(30), { resolution: 0.02 }).toFixed(3))
+  // librosa parity: an empty frequency set warns and returns 0 (not NaN/throw).
+  check('pitch_tuning([]) == 0.0 (librosa empty-set fallback)', pitch_tuning([]), 0)
 }
 
 // ── log-frequency spectrum → chroma fold ────────────────────────────────────

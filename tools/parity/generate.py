@@ -503,3 +503,71 @@ def gen_laplacian_seg_twofeat():
 
 gen_laplacian_seg_twofeat()
 print("laplacian-seg two-feature fixture done")
+
+
+def gen_pyin():
+    """librosa.pyin ground truth on a known-pitch signal for the HMM/Viterbi port."""
+    # 220 Hz then 330 Hz (a clear pitch step), plus a silent tail (unvoiced)
+    t = np.arange(int(1.5 * SR)) / SR
+    y = np.zeros_like(t, dtype=np.float32)
+    half = len(t) // 3
+    y[:half] = np.sin(2 * np.pi * 220.0 * t[:half])
+    y[half:2 * half] = np.sin(2 * np.pi * 330.0 * t[half:2 * half])
+    # last third silent → unvoiced
+    y = (y * 0.7).astype(np.float32)
+    f0, vflag, vprob = librosa.pyin(y, fmin=80, fmax=500, sr=SR, frame_length=2048, hop_length=512)
+    write("pyin", "librosa.pyin", {"fmin": 80, "fmax": 500, "frame_length": 2048, "hop_length": 512}, [{
+        "input": {"y": f32(y), "sr": SR},
+        "expected_f0": [None if (x != x) else float(x) for x in f0],  # NaN → None
+        "expected_voiced": [bool(v) for v in vflag],
+        "n_frames": int(len(f0)),
+    }])
+
+
+def gen_tempogram_ratio():
+    y = _click_signal(120.0, dur=4.0)
+    oenv = librosa.onset.onset_strength(y=y, sr=SR, hop_length=512)
+    tg = librosa.feature.tempogram(onset_envelope=oenv, sr=SR, hop_length=512)
+    tgr = librosa.feature.tempogram_ratio(tg=tg, sr=SR, hop_length=512)
+    write("tempogram_ratio", "librosa.feature.tempogram_ratio", {"hop_length": 512}, [{
+        "input": {"y": f32(y), "sr": SR, "hop_length": 512},
+        "tg_shape": list(tg.shape),
+        "expected_shape": list(tgr.shape),
+        "expected": f32(tgr.ravel()),
+    }])
+
+
+gen_pyin()
+gen_tempogram_ratio()
+print("pyin + tempogram_ratio fixtures done")
+
+
+def gen_f0_harmonics():
+    rng = np.random.default_rng(23)
+    cases = []
+    # Case 1: ascending FFT-like grid, per-frame f0 array (existing demo shape)
+    freqs1 = np.linspace(0, 800, 9)
+    x1 = rng.random((9, 4))
+    f0arr = np.array([200., 210., 190., 205.])
+    cases.append({"input": {"name": "fft_perframe", "x": x1.ravel().tolist(), "x_shape": [9, 4],
+                            "freqs": freqs1.tolist(), "f0": f0arr.tolist(), "harmonics": [1, 2, 3]},
+                  "expected_shape": [3, 4],
+                  "expected": f32(librosa.f0_harmonics(x1, freqs=freqs1, f0=f0arr, harmonics=[1, 2, 3], axis=-2).ravel())})
+    # Case 2: ascending grid, SCALAR f0 (pleco currently throws)
+    cases.append({"input": {"name": "fft_scalar", "x": x1.ravel().tolist(), "x_shape": [9, 4],
+                            "freqs": freqs1.tolist(), "f0": 200.0, "harmonics": [1, 2]},
+                  "expected_shape": [2, 4],
+                  "expected": f32(librosa.f0_harmonics(x1, freqs=freqs1, f0=200.0, harmonics=[1, 2], axis=-2).ravel())})
+    # Case 3: tempo grid with +Inf head, scalar in-range f0 (pleco currently throws)
+    freqs3 = librosa.tempo_frequencies(8, hop_length=512, sr=SR)  # freqs[0] = inf
+    x3 = np.arange(8 * 3, dtype=float).reshape(8, 3)
+    cases.append({"input": {"name": "tempo_infhead", "x": x3.ravel().tolist(), "x_shape": [8, 3],
+                            "freqs": [None if not np.isfinite(v) else float(v) for v in freqs3],
+                            "f0": 500.0, "harmonics": [1, 2]},
+                  "expected_shape": [2, 3],
+                  "expected": f32(librosa.f0_harmonics(x3, freqs=freqs3, f0=500.0, harmonics=[1, 2], axis=-2).ravel())})
+    write("f0_harmonics", "librosa.f0_harmonics (scalar/array f0, inf-head grid)", {}, cases)
+
+
+gen_f0_harmonics()
+print("f0_harmonics fixture done")

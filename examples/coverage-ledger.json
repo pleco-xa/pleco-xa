@@ -1,10 +1,1 @@
-{
-  "notation.__o_fold": "internal helper leaked into the notation namespace (Python __-mangled private): FJS octave-fold reducer, exercised indirectly by canonical hz_to_fjs / interval_to_fjs",
-  "notation.__bo_fold": "internal helper leaked into the notation namespace (__-mangled private): FJS balanced octave-fold, exercised indirectly by canonical hz_to_fjs / interval_to_fjs",
-  "notation.__fifth_search": "internal helper leaked into the notation namespace (__-mangled private): FJS fifth-shift search, exercised indirectly by canonical hz_to_fjs / interval_to_fjs",
-  "notation.__mode_to_key": "internal helper leaked into the notation namespace (__-mangled private): key-signature speller for canonical key_to_notes",
-  "notation.__note_to_degree": "internal helper leaked into the notation namespace (__-mangled private): circle-of-fifths degree lookup for canonical key_to_notes / fifths_to_note",
-  "notation.__simplify_note": "internal helper leaked into the notation namespace (__-mangled private): accidental simplifier for canonical key_to_notes spelling",
-  "intervals.__harmonic_distance": "internal helper leaked into the intervals namespace (__-mangled private): Tenney harmonic-distance metric for canonical plimit_intervals selection",
-  "intervals._crystal_tie_break": "internal helper leaked into the intervals namespace (_-prefixed private): crystal-growth tie-break for canonical plimit_intervals selection"
-}
+{}

@@ -33,34 +33,35 @@ export function f0_harmonics(
   const n_frames = x[0].length
   const n_harmonics = harmonics.length
 
-  // Validate inputs
-  if (f0.length !== n_frames) {
-    throw new Error('f0 length must match number of frames in x')
-  }
-
   if (freqs.length !== n_freqs) {
     throw new Error('freqs length must match frequency dimension of x')
   }
 
-  // Initialize output
+  // librosa accepts a scalar f0 (broadcast to every frame) OR a per-frame array.
+  const f0arr = typeof f0 === 'number' ? new Array(n_frames).fill(f0) : f0
+  if (f0arr.length !== n_frames) {
+    throw new Error('f0 length must match number of frames in x')
+  }
+
+  // librosa filters to FINITE frequency bins (dropping NaN/±Inf — e.g. the Inf
+  // head of a tempo-frequency grid) and interpolates on that sub-grid. Sort
+  // ascending so the bracketing search is monotonic regardless of input order
+  // (tempo_frequencies is descending).
+  const finite = []
+  for (let i = 0; i < n_freqs; i++) if (isFinite(freqs[i])) finite.push(i)
+  finite.sort((a, b) => freqs[a] - freqs[b])
+  const fFreqs = finite.map((i) => freqs[i])
+  const fX = finite.map((i) => x[i])
+
   const output = Array(n_harmonics).fill(null).map(() => Array(n_frames).fill(fill_value))
 
-  // For each frame
   for (let t = 0; t < n_frames; t++) {
-    const f0_val = f0[t]
+    const f0_val = f0arr[t]
+    if (!isFinite(f0_val) || f0_val <= 0) continue
 
-    // Skip if f0 is invalid
-    if (!isFinite(f0_val) || f0_val <= 0) {
-      continue
-    }
-
-    // For each harmonic
     for (let h = 0; h < n_harmonics; h++) {
       const harmonic_freq = f0_val * harmonics[h]
-
-      // Interpolate energy at this harmonic frequency
-      const energy = interpolate_at_frequency(x, freqs, harmonic_freq, t, kind, fill_value)
-      output[h][t] = energy
+      output[h][t] = interpolate_at_frequency(fX, fFreqs, harmonic_freq, t, kind, fill_value)
     }
   }
 

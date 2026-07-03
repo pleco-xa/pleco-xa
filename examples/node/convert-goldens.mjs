@@ -5,7 +5,7 @@
  * librosa's own float result), so "exact" identities are asserted at 1e-9.
  */
 import { convert } from '../../packages/pleco-xa/dist/pleco-xa.js'
-import { check, summary } from './_harness.mjs'
+import { check, checkTrue, summary } from './_harness.mjs'
 
 check('hz_to_midi(440) == 69 (A4 is MIDI 69 by definition)', convert.hz_to_midi(440), 69)
 check("midi_to_note(69) == 'A4'", convert.midi_to_note(69), 'A4')
@@ -101,5 +101,25 @@ check("multi_frequency_weighting([1000], ['Z','A','C']) rows == [z, a, c](1000)"
   [[convert.z_weighting(1000)], [convert.a_weighting(1000)], [convert.c_weighting(1000)]])
 check("perceptual_weighting(1000, 'A') == a_weighting(1000) (A-curve tier)",
   convert.perceptual_weighting(1000, 'A'), convert.a_weighting(1000))
+
+// ── uppercase librosa aliases, called DIRECTLY (not just referenced) ─────────
+// A/B/C/D are all normalized to 0 dB at the 1 kHz reference; Z is the flat
+// (no-weighting) curve; each rolls off in the sub-bass. These are the exact
+// librosa.A_weighting … Z_weighting spellings.
+check('A_weighting(1000) ~= 0 dB (A-curve reference at 1 kHz)',
+  convert.A_weighting(1000), 0, 1e-3)
+check('B_weighting(1000) ~= 0 dB', convert.B_weighting(1000), 0, 1e-3)
+check('C_weighting(1000) ~= 0 dB', convert.C_weighting(1000), 0, 1e-3)
+check('D_weighting(1000) ~= 0 dB', convert.D_weighting(1000), 0, 1e-3)
+check('Z_weighting(1000) == 0 dB exactly (flat/no weighting)',
+  convert.Z_weighting(1000), 0)
+checkTrue('A_weighting rolls off in the sub-bass: A(100) < −15 dB < A(1000)',
+  convert.A_weighting(100) < -15 && convert.A_weighting(100) < convert.A_weighting(1000),
+  `A(100)=${convert.A_weighting(100).toFixed(2)} dB`)
+check('Z_weighting is flat across a frequency sweep (all zeros)',
+  convert.Z_weighting([50, 440, 1000, 12000]), [0, 0, 0, 0])
+check('A_weighting maps an array element-wise (vectorized)',
+  convert.A_weighting([1000, 100]),
+  [convert.A_weighting(1000), convert.A_weighting(100)])
 
 summary('xa-convert — unit-conversion golden table')

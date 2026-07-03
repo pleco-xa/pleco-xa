@@ -6,12 +6,23 @@ import { join } from 'node:path'
 const root = new URL('..', import.meta.url).pathname
 const mod = await import(join(root, 'packages/pleco-xa/dist/pleco-xa.js'))
 
+// A public member worth "demonstrating" is a CALLABLE export (function/class).
+// Namespace sub-members: only enumerate function values — skip `default`
+// (re-exported module default object) and non-function state/constants, which
+// are not "called" and were previously credited by coincidental name matches.
 const members = []
+const nonCallable = []
 for (const [k, v] of Object.entries(mod)) {
   if (typeof v === 'object' && v !== null && !Array.isArray(v) && !(v instanceof Float32Array)) {
-    for (const sub of Object.keys(v)) members.push(`${k}.${sub}`)
-  } else {
+    for (const [sub, sv] of Object.entries(v)) {
+      if (sub === 'default') continue
+      if (typeof sv === 'function') members.push(`${k}.${sub}`)
+      else nonCallable.push(`${k}.${sub}`)
+    }
+  } else if (typeof v === 'function') {
     members.push(k)
+  } else {
+    nonCallable.push(k)
   }
 }
 
@@ -29,14 +40,16 @@ for (const dir of ['examples/node', 'examples/web']) {
 const ledgerPath = join(root, 'examples/coverage-ledger.json')
 const ledger = existsSync(ledgerPath) ? JSON.parse(readFileSync(ledgerPath, 'utf8')) : {}
 
+// "Demonstrated" now requires a genuine CALL-SITE — `foo(` (bare, incl.
+// `new foo(` and destructured-then-called) or `ns.foo(` (namespaced/method).
+// The old bare property-ref and destructure-ref branches were name-presence
+// checks that credited prose/`<code>` mentions and coincidental locals.
 const rows = members.map((m) => {
   const short = m.includes('.') ? m.split('.')[1] : m
   const esc = short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const used = new RegExp(
-    `(^|[^\\w.])${esc}\\s*\\(` +   // bare call:        foo(
-    `|\\.${esc}\\s*\\(` +          // namespaced call:  ns.foo(
-    `|\\.${esc}\\b` +             // namespaced ref:   ns.foo
-    `|[{,\\s]${esc}[,}\\s:]`,     // destructure/ref:  { foo }  , foo
+    `(^|[^\\w.])${esc}\\s*\\(` +   // call: foo(   (also `new foo(`, destructured foo())
+    `|\\.${esc}\\s*\\(`,          // namespaced/method call: ns.foo(
   ).test(corpus)
   const ledgered = ledger[m] || null
   return { member: m, covered: used, ledgered }
@@ -44,10 +57,10 @@ const rows = members.map((m) => {
 const uncovered = rows.filter(r => !r.covered && !r.ledgered)
 const pct = (100 * (rows.length - uncovered.length) / rows.length).toFixed(1)
 
-writeFileSync(join(root, 'docs/notes/demo-coverage.json'), JSON.stringify({ generated: new Date().toISOString(), total: rows.length, coveredOrLedgered: rows.length - uncovered.length, pct, uncovered: uncovered.map(r => r.member), rows }, null, 1))
-console.log(`coverage: ${rows.length - uncovered.length}/${rows.length} (${pct}%) demonstrated-or-ledgered`)
+writeFileSync(join(root, 'docs/notes/demo-coverage.json'), JSON.stringify({ generated: new Date().toISOString(), total: rows.length, coveredOrLedgered: rows.length - uncovered.length, pct, uncovered: uncovered.map(r => r.member), nonCallable, rows }, null, 1))
+console.log(`coverage: ${rows.length - uncovered.length}/${rows.length} (${pct}%) demonstrated-or-ledgered [call-site check]`)
+console.log(`(non-callable exports excluded from the gate: ${nonCallable.length})`)
 if (uncovered.length) {
-  console.log('uncovered:'); for (const r of uncovered.slice(0, 40)) console.log('  -', r.member)
-  if (uncovered.length > 40) console.log(`  ... +${uncovered.length - 40} more`)
+  console.log('uncovered:'); for (const r of uncovered) console.log('  -', r.member)
 }
 process.exit(uncovered.length ? 1 : 0)
