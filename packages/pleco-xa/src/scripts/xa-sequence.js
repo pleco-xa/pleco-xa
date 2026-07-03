@@ -7,7 +7,24 @@
  * - Viterbi decoding (standard, discriminative, binary)
  * - RQA (Recurrence Quantification Analysis)
  * - Transition matrices (uniform, loop, local, cycle)
+ *
+ * The transition-matrix constructors and the standard/discriminative Viterbi
+ * decoders live in the canonical sequence modules (../sequence/transition.js,
+ * ../sequence/viterbi.js) and are re-exported here so the historical
+ * scripts/xa-sequence.js import surface (used by scripts/pleco-audio.js) keeps
+ * working unchanged. viterbi_binary remains here: it is pleco's own multi-label
+ * helper, intentionally NOT promoted to a librosa-parity export.
  */
+
+import { viterbi, viterbi_discriminative } from '../sequence/viterbi.js'
+
+export { viterbi, viterbi_discriminative }
+export {
+  transition_uniform,
+  transition_loop,
+  transition_cycle,
+  transition_local,
+} from '../sequence/transition.js'
 
 /**
  * Dynamic Time Warping (DTW)
@@ -111,83 +128,11 @@ export function dtw_backtracking(
 }
 
 /**
- * Viterbi decoding from observation likelihoods
- *
- * Find the most-likely sequence of hidden states using the Viterbi algorithm.
- *
- * @param {Array<Array<number>>} prob - Observation probability matrix [n_states x n_frames]
- * @param {Array<Array<number>>} transition - State transition matrix [n_states x n_states]
- * @param {Array<number>|null} p_init - Initial state distribution
- * @param {boolean} return_logp - Return log probability of best path
- * @returns {Array<number>|Object} State sequence, or {states, logp} if return_logp
- */
-export function viterbi(
-  prob,
-  transition,
-  p_init = null,
-  return_logp = false
-) {
-  const n_states = prob.length
-  const n_frames = prob[0].length
-
-  // Default uniform initial distribution
-  if (p_init === null) {
-    p_init = new Array(n_states).fill(1.0 / n_states)
-  }
-
-  // Convert to log domain for numerical stability
-  const log_prob = prob.map(row => row.map(p => Math.log(Math.max(p, 1e-10))))
-  const log_trans = transition.map(row => row.map(p => Math.log(Math.max(p, 1e-10))))
-  const log_p_init = p_init.map(p => Math.log(Math.max(p, 1e-10)))
-
-  // Run core Viterbi
-  const { path, logp } = _viterbi(log_prob, log_trans, log_p_init)
-
-  return return_logp ? { states: path, logp } : path
-}
-
-/**
- * Viterbi decoding from discriminative state predictions
- *
- * @param {Array<Array<number>>} prob - State probability matrix [n_states x n_frames]
- * @param {Array<Array<number>>} transition - Transition matrix
- * @param {Array<number>|null} p_state - Prior state distribution
- * @param {Array<number>|null} p_init - Initial distribution
- * @param {boolean} return_logp - Return log probability
- * @returns {Array<number>|Object} State sequence or {states, logp}
- */
-export function viterbi_discriminative(
-  prob,
-  transition,
-  p_state = null,
-  p_init = null,
-  return_logp = false
-) {
-  const n_states = prob.length
-  const n_frames = prob[0].length
-
-  // Default uniform state prior
-  if (p_state === null) {
-    p_state = new Array(n_states).fill(1.0 / n_states)
-  }
-
-  // Convert discriminative probabilities to (proportional) likelihoods by
-  // Bayes' rule: P(obs | state) ∝ P(state | obs) / P(state) — librosa
-  // viterbi_discriminative subtracts log p_state. (Repaired 2026-07-02: the
-  // legacy code MULTIPLIED by the prior, which inverts the correction for any
-  // non-uniform p_state; identical decode under the uniform default.)
-  const gen_prob = prob.map((row, i) =>
-    row.map(p => {
-      const p_clipped = Math.max(Math.min(p, 1 - 1e-10), 1e-10)
-      return p_clipped / p_state[i]
-    })
-  )
-
-  return viterbi(gen_prob, transition, p_init, return_logp)
-}
-
-/**
  * Viterbi decoding from binary (multi-label) discriminative state predictions
+ *
+ * NOTE: This is pleco's own multi-label helper, not a librosa-parity port. It
+ * builds an observation-likelihood matrix P(obs|state) = prob * p_state and
+ * runs the standard Viterbi decoder, returning a single most-likely state path.
  *
  * @param {Array<Array<number>>} prob - Binary state probabilities [n_states x n_frames]
  * @param {Array<Array<number>>} transition - Transition matrix
@@ -253,136 +198,6 @@ export function rqa(
 
   const path = __rqa_backtrack(score, pointers)
   return { score, path }
-}
-
-/**
- * Construct a uniform transition matrix
- *
- * All transitions are equally likely.
- *
- * @param {number} n_states - Number of states
- * @returns {Array<Array<number>>} Transition matrix [n_states x n_states]
- */
-export function transition_uniform(n_states) {
-  const prob = 1.0 / n_states
-  return Array(n_states).fill(null).map(() =>
-    Array(n_states).fill(prob)
-  )
-}
-
-/**
- * Construct a self-loop transition matrix
- *
- * Each state can stay in place or transition uniformly to any other state.
- *
- * @param {number} n_states - Number of states
- * @param {number|Array<number>} prob - Self-loop probability (or array per state)
- * @returns {Array<Array<number>>} Transition matrix
- */
-export function transition_loop(n_states, prob) {
-  const self_probs = Array.isArray(prob) ? prob : Array(n_states).fill(prob)
-
-  const trans = []
-  for (let i = 0; i < n_states; i++) {
-    const row = new Array(n_states)
-    const self_p = self_probs[i]
-    const other_p = (1 - self_p) / (n_states - 1)
-
-    for (let j = 0; j < n_states; j++) {
-      row[j] = i === j ? self_p : other_p
-    }
-    trans.push(row)
-  }
-
-  return trans
-}
-
-/**
- * Construct a cyclic transition matrix
- *
- * States transition in a cycle with optional stay probability.
- *
- * @param {number} n_states - Number of states
- * @param {number|Array<number>} prob - Forward transition probability
- * @returns {Array<Array<number>>} Transition matrix
- */
-export function transition_cycle(n_states, prob) {
-  const forward_probs = Array.isArray(prob) ? prob : Array(n_states).fill(prob)
-
-  const trans = Array(n_states).fill(null).map(() =>
-    Array(n_states).fill(0)
-  )
-
-  for (let i = 0; i < n_states; i++) {
-    const fwd_p = forward_probs[i]
-    const next = (i + 1) % n_states
-
-    trans[i][i] = 1 - fwd_p  // Stay
-    trans[i][next] = fwd_p    // Move forward
-  }
-
-  return trans
-}
-
-/**
- * Construct a localized transition matrix
- *
- * States can only transition to nearby states within a window.
- *
- * @param {number} n_states - Number of states
- * @param {number|Array<number>} width - Transition window width
- * @param {string} window - Window function ('triangle', 'uniform')
- * @param {boolean} wrap - Wrap around at boundaries
- * @returns {Array<Array<number>>} Transition matrix
- */
-export function transition_local(
-  n_states,
-  width,
-  window = 'triangle',
-  wrap = false
-) {
-  const widths = Array.isArray(width) ? width : Array(n_states).fill(width)
-
-  const trans = Array(n_states).fill(null).map(() =>
-    Array(n_states).fill(0)
-  )
-
-  for (let i = 0; i < n_states; i++) {
-    const w = widths[i]
-    const half_w = Math.floor(w / 2)
-
-    // Determine neighboring states
-    const neighbors = []
-    for (let d = -half_w; d <= half_w; d++) {
-      let j = i + d
-      if (wrap) {
-        j = (j + n_states) % n_states
-      }
-      if (j >= 0 && j < n_states) {
-        neighbors.push({ idx: j, dist: Math.abs(d) })
-      }
-    }
-
-    // Apply window function
-    let total_weight = 0
-    const weights = neighbors.map(n => {
-      let weight
-      if (window === 'triangle') {
-        weight = Math.max(0, 1 - n.dist / (half_w + 1))
-      } else {  // uniform
-        weight = 1
-      }
-      total_weight += weight
-      return weight
-    })
-
-    // Normalize
-    neighbors.forEach((n, idx) => {
-      trans[i][n.idx] = weights[idx] / total_weight
-    })
-  }
-
-  return trans
 }
 
 // ============================================================================
@@ -547,62 +362,6 @@ function __dtw_backtracking(steps, step_sizes_sigma, subseq, start = null) {
   }
 
   return path
-}
-
-/**
- * Core Viterbi algorithm
- */
-function _viterbi(log_prob, log_trans, log_p_init) {
-  const n_states = log_prob.length
-  const n_frames = log_prob[0].length
-
-  // Viterbi table and backpointers
-  const V = Array(n_states).fill(null).map(() => Array(n_frames).fill(-Infinity))
-  const backpointer = Array(n_states).fill(null).map(() => Array(n_frames).fill(-1))
-
-  // Initialize
-  for (let s = 0; s < n_states; s++) {
-    V[s][0] = log_p_init[s] + log_prob[s][0]
-  }
-
-  // Forward pass
-  for (let t = 1; t < n_frames; t++) {
-    for (let s = 0; s < n_states; s++) {
-      let max_prob = -Infinity
-      let max_state = -1
-
-      for (let s_prev = 0; s_prev < n_states; s_prev++) {
-        const prob = V[s_prev][t - 1] + log_trans[s_prev][s]
-        if (prob > max_prob) {
-          max_prob = prob
-          max_state = s_prev
-        }
-      }
-
-      V[s][t] = max_prob + log_prob[s][t]
-      backpointer[s][t] = max_state
-    }
-  }
-
-  // Find best final state
-  let best_final_state = 0
-  let best_final_prob = V[0][n_frames - 1]
-  for (let s = 1; s < n_states; s++) {
-    if (V[s][n_frames - 1] > best_final_prob) {
-      best_final_prob = V[s][n_frames - 1]
-      best_final_state = s
-    }
-  }
-
-  // Backtrack
-  const path = new Array(n_frames)
-  path[n_frames - 1] = best_final_state
-
-  for (let t = n_frames - 2; t >= 0; t--) {
-    path[t] = backpointer[path[t + 1]][t + 1]
-  }
-
-  return { path, logp: best_final_prob }
 }
 
 /**

@@ -580,53 +580,110 @@ export function pcen(
   zi = null,
   return_zf = false
 ) {
+  // --- Parameter validation (mirrors librosa.core.spectrum.pcen) -------------
+  if (!S || S.length === 0 || !S[0] || S[0].length === undefined) {
+    throw new ParameterError('pcen: S must be a non-empty [freq][time] matrix')
+  }
+  if (power < 0) throw new ParameterError(`pcen: power=${power} must be nonnegative`)
+  if (gain < 0) throw new ParameterError(`pcen: gain=${gain} must be non-negative`)
+  if (bias < 0) throw new ParameterError(`pcen: bias=${bias} must be non-negative`)
+  if (eps <= 0) throw new ParameterError(`pcen: eps=${eps} must be strictly positive`)
+  if (time_constant <= 0) {
+    throw new ParameterError(
+      `pcen: time_constant=${time_constant} must be strictly positive`,
+    )
+  }
+  if (!Number.isInteger(max_size) || max_size < 1) {
+    throw new ParameterError(`pcen: max_size=${max_size} must be a positive integer`)
+  }
+  // pcen smooths along the time axis, which for a [freq][time] matrix is the
+  // last axis (-1, or 1 for 2-D input). Any other axis is unsupported here.
+  if (axis !== -1 && axis !== 1) {
+    throw new ParameterError(
+      `pcen: axis=${axis} unsupported; time must be the last axis of [freq][time] S`,
+    )
+  }
+
   const n_freq = S.length
   const n_frames = S[0].length
 
-  // Compute smoothing coefficient if not provided
+  // Smoothing coefficient. librosa solves b**2 + (1 - b)/T - 2 = 0, the
+  // full-width-half-max of the squared IIR frequency response, NOT the naive
+  // exp(-1/T). T is the time constant expressed in frames.
   if (b === null) {
-    const frame_rate = sr / hop_length
-    b = Math.exp(-1.0 / (time_constant * frame_rate))
+    const t_frames = (time_constant * sr) / hop_length
+    b = (Math.sqrt(1 + 4 * t_frames * t_frames) - 1) / (2 * t_frames * t_frames)
+  }
+  if (!(b >= 0 && b <= 1)) {
+    throw new ParameterError(`pcen: b=${b} must be between 0 and 1`)
   }
 
-  // Initialize reference
-  let M = ref
-  if (M === null) {
-    M = Array(n_freq).fill(null).map(() => Array(n_frames).fill(0))
-  }
-
-  // Initialize filter state
-  let state = zi
-  if (state === null) {
-    state = Array(n_freq).fill(0)
-  }
-
-  // Apply AGC (Automatic Gain Control) - exponential smoothing
-  const M_smooth = Array(n_freq).fill(null).map(() => Array(n_frames))
-
-  for (let i = 0; i < n_freq; i++) {
-    let prev = state[i]
-    for (let j = 0; j < n_frames; j++) {
-      const curr = (1 - b) * S[i][j] + b * prev
-      M_smooth[i][j] = Math.max(curr, eps)
-      prev = curr
+  // Reference signal R fed to the IIR smoother. With max_size == 1, R = S.
+  // Frequency-axis max-filtering (max_size > 1) requires scipy.ndimage's
+  // reflect-boundary maximum_filter1d, which is not implemented here; throw
+  // rather than silently diverge from librosa.
+  let R = ref
+  if (R === null) {
+    if (max_size === 1) {
+      R = S
+    } else {
+      throw new ParameterError(
+        `pcen: max_size=${max_size} (frequency max-filtering) is not implemented; ` +
+          'pass a pre-computed ref or use max_size=1',
+      )
     }
-    state[i] = prev
   }
 
-  // Apply PCEN formula: (S / (eps + M)^gain + bias)^power - bias^power
-  const P = Array(n_freq).fill(null).map(() => Array(n_frames))
+  // First-order IIR low-pass: M[t] = b*R[t] + (1-b)*M[t-1], realised as
+  // scipy.signal.lfilter([b], [1, b-1], R, zi). The delay register holds
+  // z0 = (1-b)*M[t]; scipy.signal.lfilter_zi([b],[1,b-1]) == (1-b), so the
+  // unspecified-state warmup behaves as if M[-1] = 1 (steady state for a
+  // unit-DC input), NOT M[-1] = 0.
+  const state = new Float64Array(n_freq)
+  if (zi === null) {
+    state.fill(1 - b)
+  } else {
+    for (let i = 0; i < n_freq; i++) state[i] = zi[i]
+  }
 
+  const oneMinusB = 1 - b
+  const logEps = Math.log(eps)
+  const biasPow = Math.pow(bias, power)
+
+  const P = new Array(n_freq)
   for (let i = 0; i < n_freq; i++) {
+    const Si = S[i]
+    const Ri = R[i]
+    const row = new Float64Array(n_frames)
+    let z = state[i]
     for (let j = 0; j < n_frames; j++) {
-      const normalized = S[i][j] / Math.pow(M_smooth[i][j], gain)
-      const compressed = Math.pow(normalized + bias, power)
-      P[i][j] = compressed - Math.pow(bias, power)
+      // Temporal integration (IIR smoother).
+      const M = b * Ri[j] + z
+      z = oneMinusB * M
+
+      // Adaptive gain control in log-space:
+      //   smooth = (eps + M)^(-gain) = exp(-gain*(log(eps) + log1p(M/eps)))
+      const logSmooth = -gain * (logEps + Math.log1p(M / eps))
+      const smooth = Math.exp(logSmooth)
+
+      // Dynamic range compression (librosa's stable branches).
+      const x = Si[j]
+      let out
+      if (power === 0) {
+        out = Math.log1p(x * smooth)
+      } else if (bias === 0) {
+        out = Math.exp(power * (Math.log(x) + logSmooth))
+      } else {
+        out = biasPow * Math.expm1(power * Math.log1p((x * smooth) / bias))
+      }
+      row[j] = out
     }
+    state[i] = z
+    P[i] = row
   }
 
   if (return_zf) {
-    return { output: P, zf: state }
+    return { output: P, zf: Array.from(state) }
   }
 
   return P

@@ -106,8 +106,22 @@ export { rqa } from './sequence/rqa.js'
 export { DJLoopAnalyzer, compareLoops } from './scripts/dj-loop-analyzer.js'
 
 // Structural segmentation — Wave 5 (fixture-gated: dtw_segment.json —
-// recurrence/lag/agglomerative exact)
+// recurrence/lag/agglomerative exact). Missing-pieces goal (2026-07-02):
+// segment.laplacianSegmentation = McFee-Ellis Laplacian spectral clustering
+// (recurrence → laplacian → eigh → kmeans), built on the new linalg/cluster
+// primitives; boundaries recovered exactly on known-structure input.
 export * as segment from './segment/index.js'
+
+// Linear algebra primitives (missing-pieces goal): eigh = symmetric
+// eigendecomposition via cyclic Jacobi matching scipy.linalg.eigh (reconstruction
+// 1e-16, orthonormal); laplacian = normalized graph Laplacian matching
+// scipy.sparse.csgraph.laplacian(normed=True) to 1e-9. Fixture-gated: linalg.json.
+export * as linalg from './linalg/index.js'
+
+// Clustering (missing-pieces goal): kmeans = Lloyd + k-means++ matching
+// sklearn.cluster.KMeans (exact labels, inertia bit-exact), deterministic via
+// seeded PRNG. Fixture-gated: cluster.json.
+export * as cluster from './cluster/index.js'
 
 // Effects — Wave 5 (fixture-gated: effects.json, phase_vocoder.json).
 // Real phase vocoder; time_stretch/pitch_shift honor their contracts or throw.

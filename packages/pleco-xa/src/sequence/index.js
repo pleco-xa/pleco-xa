@@ -7,17 +7,20 @@ export { rqa } from './rqa.js'
 export { dtw, dtwBacktracking } from './dtw.js'
 export { matchIntervals, matchEvents } from './matching.js'
 
-// Viterbi decoding + transition-matrix constructors, promoted from
-// scripts/xa-sequence.js for the tier-2 proof-of-work demos (2026-07-02).
-// viterbi_discriminative repaired to librosa semantics (likelihood ∝
-// P(state|obs) / p_state — the legacy copy multiplied by the prior).
-// viterbi_binary is intentionally NOT promoted: it is not librosa's
-// per-label binary decode. Proof: examples/node/viterbi.mjs.
+// Viterbi decoding — librosa.sequence parity (viterbi.py). Discriminative
+// decode applies Bayes' rule the way librosa does: likelihood ∝
+// P(state|obs) / p_state (DIVIDE by the prior; a legacy copy multiplied it).
+// viterbi_binary is intentionally NOT promoted: it is not librosa's per-label
+// binary decode. Proof: examples/node/viterbi.mjs.
+export { viterbi, viterbi_discriminative } from './viterbi.js'
+
+// Transition-matrix constructors — librosa.sequence parity (sequence.py).
+// Fixture-gated: sequence_extra.json (exact within 1e-6). transition_cycle
+// puts the SELF-transition prob on the diagonal (a legacy copy inverted it);
+// transition_local reproduces librosa's get_window→pad_center→roll pipeline.
 export {
-  viterbi,
-  viterbi_discriminative,
   transition_uniform,
   transition_loop,
   transition_cycle,
   transition_local,
-} from '../scripts/xa-sequence.js'
+} from './transition.js'
