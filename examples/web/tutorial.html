@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — tutorial quickstart</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 72ch; }
+    canvas { border: 1px solid #333; display: block; margin: 8px 0; }
+    button { font: 14px system-ui; margin: 6px 2px; padding: 6px 12px; }
+    #status { color: #999; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h2>tutorial — the quickstart: same beats, both runtimes</h2>
+  <p>
+    The pinned librosa 0.11.0 fixture signal (click120 from
+    <code>tempo_beats.json</code>) goes through a 16-bit WAV encode/decode, then
+    <code>beat_track</code> — tempo and beat frames must EXACTLY equal the
+    librosa fixture values (bit-exact parity claim), identical to
+    <code>examples/node/tutorial.mjs</code>. Advanced half:
+    <code>effects.hpss → beat_track(percussive) → feature.mfcc + delta</code>,
+    beat-synchronously aggregated. Waveform below shows detected beat markers;
+    Play overlays a click on each detected beat.
+  </p>
+  <div id="badges"></div>
+  <canvas id="wave" width="880" height="140"></canvas>
+  <button id="play" disabled>Play with beat clicks</button>
+  <div id="status">fetching fixture…</div>
+
+  <script type="module">
+    import {
+      encodeWav, decodeWav, beat_track, convert, effects, feature, sync,
+      delta_features, audioio,
+    } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawWave } from './_badge.js'
+
+    const status = document.getElementById('status')
+    const resp = await fetch('../../tools/parity/fixtures/tempo_beats.json')
+    const fixture = (await resp.json()).cases[0]
+    const sr = fixture.input.sr
+    const y0 = Float32Array.from(fixture.input.y)
+    status.textContent = `fixture ${fixture.input.signal}: ${y0.length} samples @ ${sr} Hz`
+
+    // quickstart: WAV round trip → beat_track, bit-exact vs librosa
+    const { channels } = decodeWav(encodeWav([y0], sr))
+    const y = channels[0]
+    const { tempo, beats } = beat_track(y, sr)
+    badge('tempo EXACTLY equals the librosa fixture', tempo === fixture.expected_tempo,
+      `${tempo} vs ${fixture.expected_tempo}`)
+    badge('beat frames EXACTLY equal the librosa fixture',
+      JSON.stringify(Array.from(beats)) === JSON.stringify(fixture.expected_beats),
+      `[${Array.from(beats)}]`)
+
+    const beatTimes = Array.from(beats, (b) => convert.frames_to_time(b, sr, 512))
+
+    // waveform + beat markers
+    const canvas = document.getElementById('wave')
+    drawWave(canvas, y)
+    const ctx = canvas.getContext('2d')
+    ctx.strokeStyle = '#7fda5a'
+    for (const t of beatTimes) {
+      const x = (t / (y.length / sr)) * canvas.width
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke()
+    }
+
+    // advanced half: hpss → beat_track(percussive) → mfcc + delta → beat-sync
+    const { percussive } = effects.hpss(y)
+    const rp = beat_track(percussive, sr)
+    badge('beat_track(percussive) reproduces the same beat grid',
+      JSON.stringify(Array.from(rp.beats)) === JSON.stringify(fixture.expected_beats),
+      `[${Array.from(rp.beats)}]`)
+    const M = feature.mfcc(y, { sr, n_mfcc: 13 })
+    const Md = delta_features(M)
+    badge('mfcc 13 × 130, delta same shape',
+      M.length === 13 && M[0].length === 130 && Md.length === 13 && Md[0].length === 130,
+      `${M.length}×${M[0].length}`)
+    const Msync = sync([...M, ...Md], [0, ...rp.beats, M[0].length])
+    let mean = 0
+    for (let t = rp.beats[0]; t < rp.beats[1]; t++) mean += M[0][t]
+    mean /= rp.beats[1] - rp.beats[0]
+    badge('beat-sync matrix 26 × (n_beats+1), segment mean bit-exact (fround)',
+      Msync.length === 26 && Msync[0].length === rp.beats.length + 1 &&
+        Msync[0][1] === Math.fround(mean),
+      `${Msync.length}×${Msync[0].length}`)
+
+    // audible proof: original + clicks on the DETECTED beats
+    const clickTrack = audioio.clicks({ times: beatTimes, sr, clickFreq: 1500, clickDuration: 0.05, length: y.length })
+    document.getElementById('play').disabled = false
+    document.getElementById('play').onclick = () => {
+      const actx = new AudioContext({ sampleRate: sr })
+      const buf = actx.createBuffer(1, y.length, sr)
+      const mix = Float32Array.from(y, (v, i) => 0.8 * v + 0.5 * clickTrack[i])
+      buf.copyToChannel(mix, 0)
+      const src = actx.createBufferSource()
+      src.buffer = buf
+      src.connect(actx.destination)
+      src.start()
+    }
+    status.textContent = 'ready'
+  </script>
+</body>
+</html>

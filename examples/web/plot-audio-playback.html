@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — hear your analysis</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 72ch; }
+    canvas { border: 1px solid #333; display: block; margin: 8px 0; }
+    button { font: 14px system-ui; margin: 6px 2px; padding: 6px 12px; }
+    .lbl { color: #999; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h2>plot_audio_playback — hear your analysis: onset clicks + chirp playback</h2>
+  <p>
+    A 4-hit percussion pattern with hits at exactly [0.5, 1.0, 1.5, 2.0] s is
+    analyzed two ways: the librosa-parity centered <code>onset_strength</code>
+    envelope + <code>peakPick</code> must recover all 4 hits within ±1 hop
+    (23 ms), and the quick-tier <code>onsetDetect</code> must find 4 within its
+    honest uncentered-window bound (100 ms). Detections are sonified with
+    <code>audioio.clicks()</code> and mixed over the pattern — the overlay
+    clicks land audibly ON the hits. A C3→C5 <code>audioio.chirp</code> plays
+    through AudioPlayer; its quarter-by-quarter zero-crossing counts must
+    strictly increase (frequency-ramp proof). Numeric asserts node-verified.
+  </p>
+  <div id="badges"></div>
+  <canvas id="wave" width="880" height="140"></canvas>
+  <div class="lbl">percussion pattern — green: ground truth, cyan: onset_strength detections</div>
+  <button id="playMix">Play pattern + detection clicks</button>
+  <button id="playChirp">Play C3→C5 chirp (AudioPlayer)</button>
+
+  <script type="module">
+    import {
+      audioio, onset_strength, onsetDetect, peakPick, convert, AudioPlayer,
+    } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawWave } from './_badge.js'
+
+    const sr = 22050
+    const hop = 512
+    const truth = [0.5, 1.0, 1.5, 2.0]
+
+    // ── 4-hit percussion pattern via clicks() with a deterministic noise burst
+    let seed = 5
+    const lcg = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+    const burst = new Float32Array(Math.round(0.03 * sr))
+    for (let i = 0; i < burst.length; i++) burst[i] = (lcg() * 2 - 1) * Math.exp(-i / (0.004 * sr))
+    const y = audioio.clicks({ times: truth, sr, click: burst, length: Math.round(2.5 * sr) })
+
+    // parity tier: centered onset_strength + librosa peak picking
+    const env = onset_strength(y, { sr, max_size: 5 })
+    const mx = Math.max(...env)
+    const picks = Array.from(peakPick(Float64Array.from(env, (v) => v / mx), {
+      preMax: Math.ceil((0.03 * sr) / hop),
+      postMax: Math.ceil((0.0 * sr) / hop) + 1,
+      preAvg: Math.ceil((0.1 * sr) / hop),
+      postAvg: Math.ceil((0.1 * sr) / hop) + 1,
+      delta: 0.07,
+      wait: Math.ceil((0.03 * sr) / hop),
+    }))
+    const times = picks.map((f) => convert.frames_to_time(f, sr, hop))
+    badge('onset_strength + peakPick count == 4', times.length === 4, `n=${times.length}`)
+    const maxD = times.length === 4
+      ? Math.max(...times.map((t, i) => Math.abs(t - truth[i])))
+      : Infinity
+    badge('each detection within ±1 hop (23 ms) of ground truth', maxD <= hop / sr,
+      `max Δ ${(maxD * 1000).toFixed(1)} ms`)
+
+    // quick tier: onsetDetect (uncentered STFT → honest 100 ms bound)
+    const det = onsetDetect(y, sr)
+    const maxD2 = det.onsetTimes.length
+      ? Math.max(...det.onsetTimes.map((t) => Math.min(...truth.map((c) => Math.abs(t - c)))))
+      : Infinity
+    badge('onsetDetect count == 4 within 100 ms (uncentered window bound)',
+      det.onsetTimes.length === 4 && maxD2 <= 0.1,
+      `n=${det.onsetTimes.length}, max Δ ${(maxD2 * 1000).toFixed(0)} ms`)
+
+    // sonification: clicks at the DETECTED times, aligned with the pattern
+    const son = audioio.clicks({ times, sr, clickFreq: 1500, clickDuration: 0.05, length: y.length })
+    badge('sonification length matches the pattern', son.length === y.length,
+      `${son.length} samples`)
+
+    // waveform + markers
+    const canvas = document.getElementById('wave')
+    drawWave(canvas, y)
+    const ctx = canvas.getContext('2d')
+    const dur = y.length / sr
+    ctx.strokeStyle = '#7fda5a'
+    for (const t of truth) {
+      const x = (t / dur) * canvas.width
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height / 2); ctx.stroke()
+    }
+    ctx.strokeStyle = '#4fecec'
+    for (const t of times) {
+      const x = (t / dur) * canvas.width
+      ctx.beginPath(); ctx.moveTo(x, canvas.height / 2); ctx.lineTo(x, canvas.height); ctx.stroke()
+    }
+
+    // ── chirp C3→C5: monotone zero-crossing proof + AudioPlayer playback ────
+    const chirp = audioio.chirp({ fmin: 130.81, fmax: 523.25, sr, duration: 3 })
+    const q = Math.floor(chirp.length / 4)
+    const zc = []
+    for (let k = 0; k < 4; k++) {
+      let c = 0
+      for (let i = k * q + 1; i < (k + 1) * q; i++) {
+        if ((chirp[i - 1] < 0 && chirp[i] >= 0) || (chirp[i - 1] >= 0 && chirp[i] < 0)) c++
+      }
+      zc.push(c)
+    }
+    badge('chirp zero-crossings strictly increase quarter-over-quarter',
+      zc.every((v, i) => i === 0 || v > zc[i - 1]), zc.join(' → '))
+
+    document.getElementById('playMix').onclick = () => {
+      const actx = new AudioContext({ sampleRate: sr })
+      const buf = actx.createBuffer(1, y.length, sr)
+      buf.copyToChannel(Float32Array.from(y, (v, i) => 0.8 * v + 0.5 * son[i]), 0)
+      const src = actx.createBufferSource()
+      src.buffer = buf
+      src.connect(actx.destination)
+      src.start()
+    }
+
+    document.getElementById('playChirp').onclick = async () => {
+      const buf = new AudioBuffer({ length: chirp.length, sampleRate: sr, numberOfChannels: 1 })
+      buf.copyToChannel(chirp, 0)
+      const player = new AudioPlayer()
+      await player.load(buf)
+      if (player.audioContext.state === 'suspended') await player.audioContext.resume()
+      player.play()
+      badge('AudioPlayer accepted the synthesized chirp AudioBuffer',
+        player.audioBuffer === buf && player.state.isPlaying,
+        `duration ${buf.duration.toFixed(2)} s`)
+    }
+  </script>
+</body>
+</html>

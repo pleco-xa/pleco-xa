@@ -122,17 +122,27 @@ export function interp_harmonics(
 }
 
 /**
- * Compute the harmonic salience function
+ * Compute the harmonic salience function (librosa.salience semantics)
  *
- * Salience measures how well the energy distribution matches a harmonic template.
+ * Salience measures how well the energy distribution matches a harmonic
+ * template: aggregate (default: weighted MEAN, np.average) of the energy at
+ * each bin's harmonics, then — when filter_peaks is true — keep salience only
+ * where the ORIGINAL spectrogram has a local maximum along the FREQUENCY axis
+ * (scipy.signal.argrelmax(S, axis=-2)); all other positions get fill_value.
+ *
+ * Tier-2 repair note (2026-07-02): the previous implementation filtered each
+ * harmonic-energy row for local maxima along the TIME axis and aggregated by
+ * weighted SUM — diverging from librosa whenever filter_peaks=true (the
+ * default). Repaired to frequency-axis peaks of S + weighted average.
  *
  * @param {Array<Array<number>>} S - Spectrogram or time-frequency representation [freq x time]
  * @param {Array<number>} freqs - Frequency values [freq]
  * @param {Array<number>} harmonics - Harmonic numbers to consider [1, 2, 3, ...]
  * @param {Array<number>|null} weights - Weights for each harmonic (default: null, uniform)
- * @param {Function|null} aggregate - Aggregation function (default: null, uses weighted sum)
- * @param {boolean} filter_peaks - Apply peak filtering before aggregation
- * @param {number} fill_value - Fill value for out-of-bounds
+ * @param {Function|null} aggregate - Aggregation fn(values, weights) per bin
+ *   (default: null, weighted average like np.average — NaN propagates)
+ * @param {boolean} filter_peaks - Keep only frequency-axis peaks of S (default: true)
+ * @param {number} fill_value - Value for filtered-out / out-of-bounds bins (default: NaN)
  * @param {string} kind - Interpolation type
  * @param {number} axis - Frequency axis
  * @returns {Array<Array<number>>} Salience function [freq x time]
@@ -152,58 +162,60 @@ export function salience(
   const n_frames = S[0].length
   const n_harmonics = harmonics.length
 
-  // Default weights (uniform)
+  // Default weights (uniform, librosa: np.ones)
   if (weights === null) {
-    weights = Array(n_harmonics).fill(1.0 / n_harmonics)
+    weights = Array(n_harmonics).fill(1.0)
   }
 
   if (weights.length !== n_harmonics) {
     throw new Error('weights length must match harmonics length')
   }
 
-  // Get harmonic energies for all frequency bins
+  // Get harmonic energies for all frequency bins [n_harmonics x freq x time]
   const harmonic_energies = interp_harmonics(S, freqs, harmonics, kind, fill_value, axis)
 
-  // Apply peak filtering if requested
-  let filtered_energies = harmonic_energies
-  if (filter_peaks) {
-    filtered_energies = harmonic_energies.map(h_matrix =>
-      h_matrix.map(freq_row =>
-        freq_row.map((val, t) => {
-          // Simple peak detection: keep only local maxima
-          if (t === 0 || t === n_frames - 1) return val
-          const is_peak = val > freq_row[t - 1] && val > freq_row[t + 1]
-          return is_peak ? val : 0
-        })
-      )
-    )
-  }
-
-  // Aggregate harmonics
+  // Aggregate harmonics per (freq, time) bin.
+  // Default matches np.average: sum(w*v)/sum(w), NaN propagating — librosa
+  // does NOT skip non-finite harmonic values here.
   const salience_output = Array(n_freqs).fill(null).map(() => Array(n_frames).fill(0))
 
   if (aggregate === null) {
-    // Default: weighted sum
+    let weightSum = 0
+    for (let h = 0; h < n_harmonics; h++) weightSum += weights[h]
     for (let f = 0; f < n_freqs; f++) {
       for (let t = 0; t < n_frames; t++) {
         let sum = 0
         for (let h = 0; h < n_harmonics; h++) {
-          const val = filtered_energies[h][f][t]
-          if (isFinite(val)) {
-            sum += weights[h] * val
-          }
+          sum += weights[h] * harmonic_energies[h][f][t]
         }
-        salience_output[f][t] = sum
+        salience_output[f][t] = sum / weightSum
       }
     }
   } else {
     // Custom aggregation function
     for (let f = 0; f < n_freqs; f++) {
       for (let t = 0; t < n_frames; t++) {
-        const harmonic_values = filtered_energies.map(h => h[f][t])
+        const harmonic_values = harmonic_energies.map(h => h[f][t])
         salience_output[f][t] = aggregate(harmonic_values, weights)
       }
     }
+  }
+
+  if (filter_peaks) {
+    // scipy.signal.argrelmax(S, axis=-2), mode='clip': a bin is a peak iff it
+    // is STRICTLY greater than both frequency neighbors; edge rows are never
+    // peaks (clipped self-comparison is false). Non-peak bins -> fill_value.
+    const filtered = Array(n_freqs)
+      .fill(null)
+      .map(() => Array(n_frames).fill(fill_value))
+    for (let f = 1; f < n_freqs - 1; f++) {
+      for (let t = 0; t < n_frames; t++) {
+        if (S[f][t] > S[f - 1][t] && S[f][t] > S[f + 1][t]) {
+          filtered[f][t] = salience_output[f][t]
+        }
+      }
+    }
+    return filtered
   }
 
   return salience_output

@@ -33,8 +33,6 @@ export function onsetDetect(
   sampleRate,
   { hopLength = 512, frameLength = 2048, delta = 0.07, wait = 20 } = {},
 ) {
-  console.time('onset_detect')
-
   // Step 1: Compute STFT (Short-Time Fourier Transform)
   const stft = computeSTFT(audioData, frameLength, hopLength)
 
@@ -48,8 +46,6 @@ export function onsetDetect(
   const onsetTimes = onsetFrames.map(
     (frame) => (frame * hopLength) / sampleRate,
   )
-
-  console.timeEnd('onset_detect')
 
   return {
     onsetTimes,
@@ -342,9 +338,11 @@ export function pickPeaks(onsetStrength, { delta = 0.07, wait = 20 } = {}) {
 /**
  * Convert onset times to beat times
  * Simple version - just use onset spacing
+ * Reports failure honestly: with fewer than 2 onsets there is no interval to
+ * measure, so bpm is null (never a fabricated default).
  */
 export function onsetsToBeats(onsetTimes) {
-  if (onsetTimes.length < 2) return { bpm: 120, beatTimes: [] }
+  if (onsetTimes.length < 2) return { bpm: null, beatTimes: [], interval: null }
 
   // Calculate intervals between onsets
   const intervals = []

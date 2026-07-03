@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa · core/demoSequences.js — signature choreography</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; background: #181818; color: #ddd; max-width: 920px; margin: 2em auto; padding: 0 1em; }
+    h1 { font-size: 18px; }
+    canvas { width: 100%; background: #111; border-radius: 6px; display: block; margin: 12px 0; }
+    button { font: 14px system-ui; padding: 8px 14px; border: 0; border-radius: 6px; background: #1565c0; color: #fff; cursor: pointer; }
+    button:disabled { background: #444; cursor: default; }
+    code { color: #9ccc65; }
+    #op-log { font: 12px monospace; color: #ffb74d; margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <h1>core/demoSequences.js — Signature Choreography (deterministic)</h1>
+  <p>
+    <code>signatureDemo</code> is a fixed 15-step glitch choreography with <strong>no rng</strong>:
+    every run emits the same op log and, because the ops are pure integer arithmetic on the loop
+    descriptor (halve / double / move-forward, reverses don't touch bounds), the final loop bounds
+    are predictable in closed form for any buffer length N:
+    <code>{2q, N}</code> where <code>q = ⌊⌊⌊N/2⌋/2⌋/2⌋</code>
+    (the last "move forward" is always a no-op — the loop already reaches the buffer end).
+    Badge 1 asserts the op log equals the canonical sequence; badge 2 asserts the executed final
+    bounds equal the closed-form expectation. Press <em>Play signature</em> to hear the choreography
+    audition each step against a synthesized 4 s riff while the overlay tracks the moving loop.
+  </p>
+  <div id="badges"></div>
+  <canvas id="wave" width="880" height="160"></canvas>
+  <div>
+    <button id="play">&#9654; Play signature</button>
+    <span id="op-log"></span>
+  </div>
+
+  <script type="module">
+    import { signatureDemo } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawWave } from './_badge.js'
+
+    const SR = 44100
+    const N = 4 * SR // 4 s buffer
+    const CANONICAL = [
+      'half', 'half', 'half', 'reverse', 'move forward', 'reverse', 'move forward',
+      'reverse', 'double', 'reverse', 'double', 'reverse', 'double', 'move forward', 'reverse',
+    ]
+
+    // Synthesized deterministic "riff": 8 half-second decaying tones with a click
+    // on each segment start, so reverses and loop moves are audible and visible.
+    // signatureDemo is environment-blind — a duck-typed {length, numberOfChannels,
+    // getChannelData} buffer is enough (same shape the node spot-run used).
+    function makeBuffer() {
+      const data = new Float32Array(N)
+      const notes = [220, 277.18, 329.63, 440, 329.63, 277.18, 220, 164.81]
+      const seg = SR / 2
+      for (let i = 0; i < N; i++) {
+        const s = Math.floor(i / seg)
+        const t = (i % seg) / SR
+        const click = t < 0.005 ? 0.35 * (1 - t / 0.005) : 0
+        data[i] = 0.55 * Math.exp(-4 * t) * Math.sin(2 * Math.PI * notes[s] * (i / SR)) + click
+      }
+      return { length: N, numberOfChannels: 1, sampleRate: SR, duration: N / SR, getChannelData: () => data, data }
+    }
+
+    // Closed-form expectation (pure arithmetic on N, no library calls).
+    const q = Math.floor(Math.floor(Math.floor(N / 2) / 2) / 2)
+    const expected = { startSample: 2 * q, endSample: N }
+
+    // ---- Badges: run the full choreography on a throwaway buffer -------------
+    const verifyBuf = makeBuffer()
+    const steps = signatureDemo(verifyBuf)
+    const ops = steps.map((st) => st.op)
+    let last = null
+    for (const st of steps) last = st.fn() // one-shot closures: execute exactly once
+
+    badge('op log = canonical 15-op signature', ops.join(',') === CANONICAL.join(','), ops.join(','))
+    badge(
+      `final loop = closed-form {${expected.startSample}, ${expected.endSample}}`,
+      last.loop.startSample === expected.startSample && last.loop.endSample === expected.endSample,
+      `got {${last.loop.startSample}, ${last.loop.endSample}}`,
+    )
+
+    // ---- Waveform + loop overlay ---------------------------------------------
+    const canvas = document.getElementById('wave')
+    function draw(data, loop, op) {
+      drawWave(canvas, data)
+      const ctx = canvas.getContext('2d')
+      const x0 = (loop.startSample / N) * canvas.width
+      const x1 = (loop.endSample / N) * canvas.width
+      ctx.fillStyle = 'rgba(76, 175, 80, 0.22)'
+      ctx.fillRect(x0, 0, x1 - x0, canvas.height)
+      ctx.strokeStyle = '#66bb6a'
+      ctx.strokeRect(x0, 0, x1 - x0, canvas.height)
+      if (op) {
+        ctx.fillStyle = '#ffb74d'
+        ctx.font = '13px monospace'
+        ctx.fillText(op, x0 + 4, 14)
+      }
+    }
+    draw(makeBuffer().data, { startSample: 0, endSample: N })
+
+    // ---- Audible playback: fresh buffer + fresh steps every run --------------
+    const playBtn = document.getElementById('play')
+    const opLog = document.getElementById('op-log')
+    let audioCtx = null
+    let source = null
+
+    function stopSource() {
+      if (source) { try { source.stop() } catch { /* already stopped */ } source = null }
+    }
+
+    function audition(buf, loop) {
+      stopSource()
+      // Copy the current (mutated) samples into a fresh AudioBuffer each step so
+      // Web Audio's acquire-on-start semantics never hide a reverse we just did.
+      const ab = audioCtx.createBuffer(1, N, SR)
+      ab.copyToChannel(buf.data, 0)
+      source = audioCtx.createBufferSource()
+      source.buffer = ab
+      source.loop = true
+      source.loopStart = loop.startSample / SR
+      source.loopEnd = loop.endSample / SR
+      source.connect(audioCtx.destination)
+      source.start(0, source.loopStart)
+    }
+
+    playBtn.onclick = async () => {
+      playBtn.disabled = true
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()
+      await audioCtx.resume()
+      const buf = makeBuffer()
+      const runSteps = signatureDemo(buf)
+      let i = 0
+      const timer = setInterval(() => {
+        if (i >= runSteps.length) {
+          clearInterval(timer)
+          stopSource()
+          playBtn.disabled = false
+          return
+        }
+        const { loop, op } = runSteps[i].fn()
+        opLog.textContent = runSteps.slice(0, i + 1).map((s) => s.op).join(' → ')
+        draw(buf.data, loop, op)
+        audition(buf, loop)
+        i++
+      }, 700)
+    }
+  </script>
+</body>
+</html>

@@ -65,21 +65,34 @@ export function renderWaveform(canvas, waveformData, options = {}) {
     gap: 0,
     gradient: null,
     responsive: true,
-    pixelRatio: window.devicePixelRatio || 1,
+    pixelRatio:
+      (typeof window !== 'undefined' && window.devicePixelRatio) || 1,
     ...options,
   }
 
   const ctx = canvas.getContext('2d')
-  const width = canvas.width
-  const height = canvas.height
+
+  // Logical (CSS-pixel) size. Remembered across calls so repeated renders are
+  // idempotent: the backing store is width * pixelRatio exactly once, not
+  // compounded on every call (re-render loops used to grow the canvas).
+  const width = canvas.__plecoLogicalWidth ?? canvas.width
+  const height = canvas.__plecoLogicalHeight ?? canvas.height
 
   // Set up high DPI rendering
   if (opts.pixelRatio > 1) {
-    canvas.style.width = width + 'px'
-    canvas.style.height = height + 'px'
-    canvas.width = width * opts.pixelRatio
-    canvas.height = height * opts.pixelRatio
-    ctx.scale(opts.pixelRatio, opts.pixelRatio)
+    canvas.__plecoLogicalWidth = width
+    canvas.__plecoLogicalHeight = height
+    if (canvas.style) {
+      canvas.style.width = width + 'px'
+      canvas.style.height = height + 'px'
+    }
+    const targetWidth = Math.round(width * opts.pixelRatio)
+    const targetHeight = Math.round(height * opts.pixelRatio)
+    if (canvas.width !== targetWidth) canvas.width = targetWidth
+    if (canvas.height !== targetHeight) canvas.height = targetHeight
+    // Setting width/height resets the context state, so set the scale
+    // explicitly every render instead of compounding ctx.scale calls.
+    ctx.setTransform(opts.pixelRatio, 0, 0, opts.pixelRatio, 0, 0)
   }
 
   // Clear canvas
@@ -150,31 +163,43 @@ export function renderStereoWaveform(canvas, stereoData, options = {}) {
   const ctx = canvas.getContext('2d')
   const width = canvas.width
   const height = canvas.height
-  const channelHeight = (height - opts.channelGap) / 2
+  const channelHeight = Math.floor((height - opts.channelGap) / 2)
+
+  // Each channel renders to its own offscreen canvas and is composited into
+  // its half. (The previous implementation called the nonexistent
+  // ctx.clipRect() and re-invoked renderWaveform on the shared canvas, which
+  // clears and re-scales the whole surface — it could never render two halves.)
+  const doc =
+    canvas.ownerDocument || (typeof document !== 'undefined' ? document : null)
+  if (!doc) {
+    throw new Error(
+      'renderStereoWaveform requires a DOM document to create per-channel canvases',
+    )
+  }
+
+  const renderChannel = (data, color) => {
+    const off = doc.createElement('canvas')
+    off.width = width
+    off.height = channelHeight
+    renderWaveform(off, data, {
+      ...opts,
+      color,
+      mirror: false,
+      pixelRatio: 1,
+    })
+    return off
+  }
 
   // Clear canvas
   ctx.clearRect(0, 0, width, height)
 
-  // Render left channel (top)
-  ctx.save()
-  ctx.clipRect(0, 0, width, channelHeight)
-  renderWaveform(canvas, stereoData.left.data, {
-    ...opts,
-    color: opts.leftColor,
-    mirror: false,
-  })
-  ctx.restore()
-
-  // Render right channel (bottom)
-  ctx.save()
-  ctx.translate(0, channelHeight + opts.channelGap)
-  ctx.clipRect(0, 0, width, channelHeight)
-  renderWaveform(canvas, stereoData.right.data, {
-    ...opts,
-    color: opts.rightColor,
-    mirror: false,
-  })
-  ctx.restore()
+  // Render left channel (top), right channel (bottom)
+  ctx.drawImage(renderChannel(stereoData.left.data, opts.leftColor), 0, 0)
+  ctx.drawImage(
+    renderChannel(stereoData.right.data, opts.rightColor),
+    0,
+    channelHeight + opts.channelGap,
+  )
 
   // Draw channel separator
   ctx.strokeStyle = '#ddd'
@@ -294,6 +319,7 @@ export function createInteractiveRenderer(canvas, options = {}) {
   // Mouse event handlers
   function handleMouseDown(e) {
     if (!opts.enableSelection) return
+    if (duration <= 0) return // no time mapping until setDuration() is called
 
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
@@ -307,6 +333,8 @@ export function createInteractiveRenderer(canvas, options = {}) {
   }
 
   function handleMouseMove(e) {
+    if (duration <= 0) return // no time mapping until setDuration() is called
+
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const time = (x / canvas.width) * duration
@@ -362,6 +390,7 @@ export function createInteractiveRenderer(canvas, options = {}) {
     // Add selection overlay
     if (
       opts.enableSelection &&
+      duration > 0 &&
       (isSelecting || renderOptions.preserveSelection)
     ) {
       const ctx = canvas.getContext('2d')
@@ -384,7 +413,7 @@ export function createInteractiveRenderer(canvas, options = {}) {
     }
 
     // Add playhead
-    if (opts.enablePlayhead && playheadPosition > 0) {
+    if (opts.enablePlayhead && duration > 0 && playheadPosition > 0) {
       const ctx = canvas.getContext('2d')
       const x = (playheadPosition / duration) * canvas.width
 

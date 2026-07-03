@@ -25,6 +25,11 @@ is a deliberate, documented divergence — not a gap we're hiding.
 | Decompose | hpss incl. margin (1.6e-5; H+P≈S at margin=1), softmask | `hpss.json` | Wave 5 |
 | Sequence | dtw (bit-exact cost, exact path), match_intervals/match_events | `dtw_segment.json` | Wave 5 |
 | Segment | recurrence_matrix (exact), recurrence↔lag (exact shear), agglomerative (exact bounds) | `dtw_segment.json` | Wave 5 |
+| Linear algebra | eigh (symmetric eigendecomp, Jacobi; reconstruction 1e-16), laplacian (normalized graph, 1e-9 vs scipy) | `linalg.json` | Missing-pieces |
+| Clustering | kmeans (Lloyd + k-means++; exact labels, inertia bit-exact vs sklearn) | `cluster.json` | Missing-pieces |
+| Sequence (viterbi) | viterbi_discriminative (exact path), transition_uniform/loop/cycle/local (exact; fixed inverted transition_cycle) | `sequence_extra.json` | Missing-pieces |
+| PCEN | per-channel energy normalization (bit-exact to librosa, 9e-8) | `pcen.json` | Missing-pieces |
+| Laplacian segmentation | McFee-Ellis spectral clustering — single-feature (synthetic) + two-feature form exact vs librosa primitives pipeline | `laplacian_seg.json` | Missing-pieces |
 
 ## Planned (fixture sets exist or land with their wave)
 

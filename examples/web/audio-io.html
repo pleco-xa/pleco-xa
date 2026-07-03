@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — xa-audioio: synthesize, analyze, play</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 12px 0; border: 1px solid #333; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
+  button:hover { background: #37474f; }
+</style>
+</head>
+<body>
+<h1>scripts/xa-audioio.js — synthesize → analyze → play (chirp proof)</h1>
+<p>
+  <code>tone(440)</code> at sr=8000 for 0.5 s must contain exactly
+  2·440·0.5 = 440 zero crossings. The 200→2000 Hz <code>chirp()</code> below,
+  split into quarters, must show a strictly increasing zero-crossing count
+  (frequency-ramp proof). <code>muExpand(muCompress(x))</code> must round-trip
+  to maxErr &lt; 1e-6. The Play button routes the chirp through the module's
+  own <code>load()/play()</code> Web Audio path — the half Node can't prove
+  (numeric halves node-verified 2026-07-02: ZC=440, mu err 1.2e-7).
+</p>
+<div id="badges"></div>
+<canvas id="wave" width="720" height="140"></canvas>
+<div>
+  <button id="play">▶ play chirp (module load()/play() path)</button>
+  <button id="stop">■ stop</button>
+</div>
+
+<script type="module">
+import { audioio, encodeWav } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawWave } from './_badge.js'
+
+const { tone, chirp, zeroCrossings, muCompress, muExpand } = audioio
+
+// (1) tone zero-crossing golden: exactly 2 * f * dur
+const t = tone(440, { sr: 8000, duration: 0.5 })
+const zcSum = zeroCrossings(t).reduce((a, b) => a + b, 0)
+badge('tone(440, 0.5s @ 8k) zero crossings == 440 exactly', zcSum === 440 && t.length === 4000, `n=${zcSum}`)
+
+// (2) chirp frequency ramp: per-quarter ZC strictly increases
+const c = chirp({ fmin: 200, fmax: 2000, sr: 22050, duration: 2 })
+drawWave(document.getElementById('wave'), c)
+const q = c.length / 4
+const zcq = []
+for (let i = 0; i < 4; i++) {
+  const seg = c.slice(i * q, (i + 1) * q)
+  zcq.push(zeroCrossings(seg).reduce((a, b) => a + b, 0))
+}
+badge('chirp quarter ZC counts strictly increase', zcq.every((v, i) => i === 0 || v > zcq[i - 1]), zcq.join(' → '))
+
+// (3) mu-law companding roundtrip (continuous, quantize:false)
+const x = Float32Array.from({ length: 1000 }, (_, i) => 0.9 * Math.sin((2 * Math.PI * 5 * i) / 1000))
+const rt = muExpand(muCompress(x, { quantize: false }), { quantize: false })
+let muErr = 0
+for (let i = 0; i < x.length; i++) muErr = Math.max(muErr, Math.abs(rt[i] - x[i]))
+badge('muExpand(muCompress(x)) maxErr < 1e-6', muErr < 1e-6, `maxErr ${muErr.toExponential(2)}`)
+
+// (4) playback via the module's own currentAudioBuffer route:
+// encode the chirp as WAV, load() it back through fetch+decodeAudioData, play().
+const chirpUrl = URL.createObjectURL(new Blob([encodeWav([c], 22050)], { type: 'audio/wav' }))
+document.getElementById('play').onclick = async () => {
+  await audioio.load(chirpUrl, { sr: null })
+  audioio.play()
+}
+document.getElementById('stop').onclick = () => audioio.stop()
+</script>
+</body>
+</html>

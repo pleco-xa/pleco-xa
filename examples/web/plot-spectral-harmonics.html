@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>plot_spectral_harmonics — Harmonic spectrum: track f0, peel the overtones</title>
+</head>
+<body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
+  <h2>plot_spectral_harmonics — Harmonic spectrum: track f0, peel the overtones</h2>
+  <p style="max-width:95ch">
+    Replica of librosa's <em>Harmonic spectrum</em> gallery page on a fully
+    known quasi-vowel: f0 glides 110 → 165 Hz over 3 s carrying harmonics
+    1..10 at amplitudes 1/h (phase-continuous additive synthesis, sr 22050).
+    Pipeline: <code>yin(50, 300)</code> f0 contour overlaid on a
+    log-frequency spectrogram, then <code>f0_harmonics(S, f0, 1..10,
+    fft_frequencies)</code> renders the f0-normalized harmonic-energy
+    heatmap — the rows stay FLAT while the raw spectrogram's fixed bins
+    slope with the glide. Badges (node-verified against dist first): median
+    yin f0 error &lt; 1% vs the known glide (measured 0.079%); recovered
+    harmonic amplitude ratios follow 1/h within 15% for h ≤ 5 (measured
+    within 0.4%); the h=1 harmonic-energy row's coefficient of variation is
+    &lt; 0.25 while the raw 110 Hz bin's is &gt; 2× larger (measured 0.051 vs
+    1.84 — 36×). Resynthesis: an additive oscillator bank driven by the
+    measured f0 + harmonic energies (mir_eval.sonify.pitch_contour
+    equivalent), playable with the original glide or forced to a 110 Hz
+    monotone — the gallery's f0/timbre-decoupling trick, audible.
+    NOTE: librosa's page uses pyin; pleco's pyin is intentionally off the
+    curated surface until it is a real HMM/Viterbi pYIN, so this page uses
+    the verified yin — the accuracy assertion is unchanged.
+  </p>
+  <div id="badges"></div>
+  <p>
+    <button id="play-orig">▶ original</button>
+    <button id="play-resynth">▶ resynthesis (measured f0 + harmonics)</button>
+    <button id="play-mono">▶ resynthesis, monotone 110 Hz</button>
+    <span id="status">computing…</span>
+  </p>
+  <div>
+    <div style="font:12px monospace;color:#888">log-frequency spectrogram + yin f0 contour (white)</div>
+    <canvas id="spec" width="900" height="280" style="background:#000"></canvas>
+    <div style="font:12px monospace;color:#888;margin-top:8px">
+      f0-normalized harmonic energy — y (bottom → top): h = 1 … 10 (rows are flat where the spectrogram slopes)
+    </div>
+    <canvas id="harm" width="900" height="160" style="image-rendering:pixelated"></canvas>
+  </div>
+  <script type="module">
+    import {
+      stft, yin, f0_harmonics, fft_frequencies,
+    } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawSpectrogram } from './_badge.js'
+
+    const sr = 22050
+    const n_fft = 2048
+    const hop = 512
+    const dur = 3
+    const n = dur * sr
+    const F0A = 110
+    const F0B = 165
+    const NH = 10
+
+    // quasi-vowel: linear f0 glide, harmonics 1..10 at amp 0.3/h
+    const y = new Float32Array(n)
+    {
+      const phases = new Float64Array(NH)
+      for (let i = 0; i < n; i++) {
+        const f0i = F0A + ((F0B - F0A) * i) / n
+        let v = 0
+        for (let h = 0; h < NH; h++) {
+          phases[h] += (2 * Math.PI * f0i * (h + 1)) / sr
+          v += (0.3 / (h + 1)) * Math.sin(phases[h])
+        }
+        y[i] = v
+      }
+    }
+    const f0True = (t) => F0A + ((F0B - F0A) * t) / dur
+
+    // ── badge 1: yin tracks the known glide to < 1% (median) ────────────────
+    const f0 = yin(y, 50, 300, sr) // frame_length 2048, hop 512, uncentered
+    const errs = []
+    for (let i = 0; i < f0.length; i++) {
+      const tc = (i * hop + n_fft / 2) / sr // frame-center time
+      errs.push(Math.abs(f0[i] - f0True(tc)) / f0True(tc))
+    }
+    errs.sort((a, b) => a - b)
+    const medianErr = errs[Math.floor(errs.length / 2)]
+    badge('median yin f0 error < 1% vs known 110→165 Hz glide',
+      medianErr < 0.01, `${(medianErr * 100).toFixed(3)}%`)
+
+    // ── spectrogram + f0-aligned contour → harmonic energy ──────────────────
+    const D = stft(y, n_fft, hop)
+    const S = D.map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
+    const nT = S[0].length
+    // stft is centered, yin is not: stft frame t ≈ yin frame t−2 at hop 512
+    const f0S = new Float64Array(nT)
+    for (let t = 0; t < nT; t++) f0S[t] = f0[Math.max(0, Math.min(f0.length - 1, t - 2))]
+
+    const freqs = fft_frequencies(sr, n_fft)
+    const harmonics = Array.from({ length: NH }, (_, h) => h + 1)
+    const HE = f0_harmonics(S, f0S, freqs, harmonics)
+
+    // ── badge 2: recovered amplitude ratios follow 1/h within 15% (h ≤ 5) ───
+    const t0 = Math.floor(nT * 0.1)
+    const t1 = Math.ceil(nT * 0.9)
+    const meanRow = (row) => {
+      let s = 0
+      for (let t = t0; t < t1; t++) s += row[t]
+      return s / (t1 - t0)
+    }
+    const m1 = meanRow(HE[0])
+    let worst = 0
+    const ratios = []
+    for (let h = 1; h < 5; h++) {
+      const r = meanRow(HE[h]) / m1
+      const dev = Math.abs((r * (h + 1)) - 1)
+      ratios.push(`h${h + 1}:${r.toFixed(3)}`)
+      if (dev > worst) worst = dev
+    }
+    badge('harmonic amplitude ratios follow 1/h within 15% (h ≤ 5)',
+      worst < 0.15, `${ratios.join(' ')} (worst dev ${(worst * 100).toFixed(1)}%)`)
+
+    // ── badge 3: harmonic rows flat where the raw spectrogram slopes ────────
+    const cv = (row) => {
+      let s = 0
+      for (let t = t0; t < t1; t++) s += row[t]
+      const mean = s / (t1 - t0)
+      let sq = 0
+      for (let t = t0; t < t1; t++) sq += (row[t] - mean) ** 2
+      return Math.sqrt(sq / (t1 - t0)) / mean
+    }
+    const bin110 = Math.round((110 * n_fft) / sr)
+    const cvH = cv(HE[0])
+    const cvRaw = cv(S[bin110])
+    badge('f0-normalized: CV(h=1 row) < 0.25 AND raw 110 Hz bin CV > 2x it',
+      cvH < 0.25 && cvRaw > 2 * cvH,
+      `harmonic ${cvH.toFixed(3)} vs raw bin ${cvRaw.toFixed(3)} (${(cvRaw / cvH).toFixed(0)}x)`)
+
+    // ── render: log-frequency spectrogram + f0 overlay ───────────────────────
+    const spec = document.getElementById('spec')
+    const ctx = spec.getContext('2d')
+    const W = spec.width
+    const H = spec.height
+    let smax = 1e-12
+    for (const row of S) for (const v of row) if (v > smax) smax = v
+    const img = ctx.createImageData(W, H)
+    const binMin = 4 // ~43 Hz
+    const binMax = 200 // ~2153 Hz — the harmonics live down here
+    const fracToBin = (frac) =>
+      Math.round(Math.exp(Math.log(binMin) + frac * (Math.log(binMax) - Math.log(binMin))))
+    for (let yy = 0; yy < H; yy++) {
+      const k = fracToBin(1 - yy / (H - 1))
+      for (let x = 0; x < W; x++) {
+        const t = Math.floor((x / W) * (nT - 1))
+        const db = 20 * Math.log10(Math.max(S[k][t], 1e-10) / smax)
+        const v = Math.max(0, Math.min(1, db / 80 + 1)) * 255
+        const i = (yy * W + x) * 4
+        img.data[i] = v
+        img.data[i + 1] = v * 0.8
+        img.data[i + 2] = v * 0.5 + 30
+        img.data[i + 3] = 255
+      }
+    }
+    ctx.putImageData(img, 0, 0)
+    // f0 contour (white), mapped through the same log axis
+    const binOf = (f) => (f * n_fft) / sr
+    const yOfBin = (b) =>
+      (1 - (Math.log(b) - Math.log(binMin)) / (Math.log(binMax) - Math.log(binMin))) * (H - 1)
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    for (let t = 0; t < nT; t++) {
+      const x = (t / (nT - 1)) * W
+      const yy = yOfBin(Math.max(binMin, binOf(f0S[t])))
+      t ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy)
+    }
+    ctx.stroke()
+
+    // harmonic-energy heatmap (10 rows)
+    drawSpectrogram(document.getElementById('harm'), HE)
+    document.getElementById('status').textContent = 'done'
+
+    // ── resynthesis: additive oscillator bank (pitch_contour equivalent) ─────
+    const frameTimes = Float32Array.from({ length: nT }, (_, t) => (t * hop) / sr)
+    let heMax = 1e-12
+    for (const row of HE) for (const v of row) if (v > heMax) heMax = v
+    const playBank = (f0Curve) => {
+      const actx = new AudioContext({ sampleRate: sr })
+      const master = actx.createGain()
+      master.gain.value = 0.6
+      master.connect(actx.destination)
+      const start = actx.currentTime + 0.05
+      for (let h = 0; h < NH; h++) {
+        const osc = actx.createOscillator()
+        const g = actx.createGain()
+        const fCurve = Float32Array.from(frameTimes, (_, t) => f0Curve[t] * (h + 1))
+        const aCurve = Float32Array.from(frameTimes, (_, t) => (HE[h][t] / heMax) * 0.5)
+        osc.frequency.setValueCurveAtTime(fCurve, start, dur)
+        g.gain.setValueCurveAtTime(aCurve, start, dur)
+        osc.connect(g)
+        g.connect(master)
+        osc.start(start)
+        osc.stop(start + dur)
+      }
+      setTimeout(() => actx.close(), (dur + 0.3) * 1000)
+    }
+    document.getElementById('play-resynth').onclick = () => playBank(f0S)
+    document.getElementById('play-mono').onclick = () =>
+      playBank(new Float64Array(nT).fill(110))
+    document.getElementById('play-orig').onclick = () => {
+      const actx = new AudioContext({ sampleRate: sr })
+      const buf = actx.createBuffer(1, n, sr)
+      buf.getChannelData(0).set(y)
+      const src = actx.createBufferSource()
+      src.buffer = buf
+      src.connect(actx.destination)
+      src.start()
+      src.onended = () => actx.close()
+    }
+  </script>
+</body>
+</html>

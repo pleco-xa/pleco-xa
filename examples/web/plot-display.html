@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — specshow axis modes</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 78ch; }
+    .grid { display: grid; grid-template-columns: repeat(2, max-content); gap: 12px; }
+    canvas { border: 1px solid #333; display: block; }
+    .lbl { color: #999; font-size: 12px; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <h2>plot_display — specshow, canvas-native: axis modes that don't lie</h2>
+  <p>
+    A three-partial tone (440 + 880 + 1760 Hz) rendered four ways — the
+    four-panel specshow replica: linear-frequency STFT, log-frequency STFT,
+    mel spectrogram, chromagram. The proof is in the axis mapping: in log mode
+    the pixel-row distance 440→880 must equal 880→1760 (octaves equidistant,
+    ±2 px), while in linear mode 880→1760 must be 2× the 440→880 distance.
+    Peak rows are found from the actual STFT argmax bins, mapped with the same
+    functions that draw the pixels, then pixel-probed for brightness. Axis
+    ticks are cross-checked against fft_frequencies / frames_to_time. All
+    numerics node-verified.
+  </p>
+  <div id="badges"></div>
+  <div class="grid">
+    <div><canvas id="lin" width="420" height="400"></canvas><div class="lbl">STFT, linear frequency (dB)</div></div>
+    <div><canvas id="log" width="420" height="400"></canvas><div class="lbl">STFT, log frequency (dB)</div></div>
+    <div><canvas id="mel" width="420" height="200"></canvas><div class="lbl">mel spectrogram (power_to_db)</div></div>
+    <div><canvas id="chr" width="420" height="200"></canvas><div class="lbl">chroma_stft</div></div>
+  </div>
+
+  <script type="module">
+    import { stft, fft_frequencies, convert, feature } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawSpectrogram } from './_badge.js'
+
+    const sr = 22050, n_fft = 4096, hop = 512
+    const parts = [[440, 1.0], [880, 0.6], [1760, 0.4]]
+    const N = 2 * sr
+    const y = new Float32Array(N)
+    for (let i = 0; i < N; i++) {
+      let s = 0
+      for (const [f, a] of parts) s += a * Math.sin((2 * Math.PI * f * i) / sr)
+      y[i] = 0.3 * s
+    }
+
+    // STFT → per-cell dB magnitudes
+    const C = stft(y, n_fft, hop)
+    const nF = C.length, nT = C[0].length
+    const Sdb = Array.from({ length: nF }, (_, f) =>
+      Float64Array.from({ length: nT }, (_, t) => {
+        const c = C[f][t]
+        return 20 * Math.log10(Math.hypot(c.real, c.imag) + 1e-10)
+      }))
+    const freqs = fft_frequencies(sr, n_fft)
+
+    // mean power per bin → actual peak bins near each partial
+    const meanPow = new Float64Array(nF)
+    for (let f = 0; f < nF; f++) {
+      let a = 0
+      for (let t = 0; t < nT; t++) { const c = C[f][t]; a += c.real * c.real + c.imag * c.imag }
+      meanPow[f] = a / nT
+    }
+    const peakNear = (hz) => {
+      let best = Math.round((hz * n_fft) / sr)
+      for (let f = best - 4; f <= best + 4; f++) if (meanPow[f] > meanPow[best]) best = f
+      return best
+    }
+    const bins = parts.map(([f]) => peakNear(f))
+    badge('STFT peak bins land on the three partials',
+      bins.every((b, i) => Math.abs(freqs[b] - parts[i][0]) <= sr / n_fft),
+      bins.map((b) => freqs[b].toFixed(1) + ' Hz').join(', '))
+
+    // ── axis mappings (the SAME functions used to paint the pixels) ─────────
+    const H = 400, fmin = 32, fmax = sr / 2
+    const yLog = (f) => H * (1 - (Math.log(f) - Math.log(fmin)) / (Math.log(fmax) - Math.log(fmin)))
+    const yLin = (f) => H * (1 - f / fmax)
+
+    const db2v = (db, dbMax) => Math.max(0, Math.min(1, (db - dbMax + 80) / 80))
+    let dbMax = -Infinity
+    for (const row of Sdb) for (const v of row) if (v > dbMax) dbMax = v
+
+    function paint(canvas, rowToFreq) {
+      const ctx = canvas.getContext('2d')
+      const img = ctx.createImageData(canvas.width, canvas.height)
+      for (let py = 0; py < canvas.height; py++) {
+        const f = rowToFreq(py)
+        const bin = Math.max(0, Math.min(nF - 1, Math.round((f * n_fft) / sr)))
+        for (let px = 0; px < canvas.width; px++) {
+          const t = Math.floor((px / canvas.width) * nT)
+          const v = db2v(Sdb[bin][t], dbMax) * 255
+          const k = (py * canvas.width + px) * 4
+          img.data[k] = v; img.data[k + 1] = v * 0.8; img.data[k + 2] = v * 0.5 + 40; img.data[k + 3] = 255
+        }
+      }
+      ctx.putImageData(img, 0, 0)
+    }
+    const linCanvas = document.getElementById('lin')
+    const logCanvas = document.getElementById('log')
+    paint(linCanvas, (py) => fmax * (1 - py / H))
+    paint(logCanvas, (py) => fmin * Math.pow(fmax / fmin, 1 - py / H))
+
+    // ── the axis-honesty asserts, on the measured peak bins ────────────────
+    const fpx = bins.map((b) => freqs[b])
+    const dLog1 = yLog(fpx[0]) - yLog(fpx[1])
+    const dLog2 = yLog(fpx[1]) - yLog(fpx[2])
+    badge('log mode: 440→880 row distance == 880→1760 (±2 px)',
+      Math.abs(dLog1 - dLog2) <= 2, `${dLog1.toFixed(1)} vs ${dLog2.toFixed(1)} px`)
+    const dLin1 = yLin(fpx[0]) - yLin(fpx[1])
+    const dLin2 = yLin(fpx[1]) - yLin(fpx[2])
+    badge('linear mode: 880→1760 distance == 2× 440→880 (±0.1 ratio)',
+      Math.abs(dLin2 / dLin1 - 2) <= 0.1, `ratio ${(dLin2 / dLin1).toFixed(3)}`)
+
+    // pixel probe: partial rows are brighter than an off-band row (1245 Hz).
+    // Rows are probed ±3 px around the mapped position (linear mode moves
+    // ~2.6 STFT bins per pixel row, so exact-row rounding is not meaningful).
+    const probe = (canvas, yPix) => {
+      const cctx = canvas.getContext('2d')
+      let best = 0
+      for (let dy = -3; dy <= 3; dy++) {
+        const py = Math.max(0, Math.min(H - 1, Math.round(yPix) + dy))
+        best = Math.max(best, cctx.getImageData(Math.floor(canvas.width / 2), py, 1, 1).data[0])
+      }
+      return best
+    }
+    const offHz = 1245
+    const logBright = fpx.every((f) => probe(logCanvas, yLog(f)) > probe(logCanvas, yLog(offHz)) + 30)
+    const linBright = fpx.every((f) => probe(linCanvas, yLin(f)) > probe(linCanvas, yLin(offHz)) + 30)
+    badge('pixel probe: partial rows brighter than off-band in BOTH modes',
+      logBright && linBright)
+
+    // tick cross-check: labels derive from fft_frequencies / frames_to_time
+    const tickBin = bins[0]
+    badge('y tick for the 440 Hz bin == fft_frequencies value',
+      freqs[tickBin] === (tickBin * sr) / n_fft, `${freqs[tickBin].toFixed(4)} Hz`)
+    badge('x tick for frame 10 == frames_to_time value',
+      convert.frames_to_time(10, sr, hop) === (10 * hop) / sr,
+      `${convert.frames_to_time(10, sr, hop).toFixed(4)} s`)
+
+    // ── mel + chroma panels (the other half of the specshow replica) ────────
+    const mel = feature.melspectrogram(y, { sr, n_fft: 2048, hop_length: hop })
+    drawSpectrogram(document.getElementById('mel'), mel.map((r) => Array.from(r)))
+    const ch = feature.chroma_stft(y, { sr })
+    drawSpectrogram(document.getElementById('chr'), ch.map((r) => Array.from(r)))
+    // all three partials are A pitch class (440/880/1760) → chroma argmax == 9
+    const nCT = ch[0].length
+    const mid = Math.floor(nCT / 2)
+    let argmax = 0
+    for (let c = 1; c < 12; c++) if (ch[c][mid] > ch[argmax][mid]) argmax = c
+    badge('chroma argmax pitch class == 9 (A) — all partials are As', argmax === 9, `class ${argmax}`)
+  </script>
+</body>
+</html>

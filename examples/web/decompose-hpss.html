@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — decompose: HPSS spectrogram triptych</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  h2 { font-size: 0.95rem; color: #9ad; margin: 14px 0 2px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 4px 0; border: 1px solid #333; }
+</style>
+</head>
+<body>
+<h1>decompose/index.js — HPSS triptych: sine + click train separates cleanly</h1>
+<p>
+  1 s of 440 Hz sine + 10 broadband clicks → <code>stft(1024, 256)</code> →
+  magnitude → <code>hpss()</code>. The horizontal 440 Hz line must land in the
+  harmonic panel, the vertical click stripes in the percussive panel. Badges
+  mirror <code>examples/node/decompose-hpss.mjs</code>: 440 Hz-bin dominance,
+  click-column dominance, margin=1 complementarity (H + P == S per bin),
+  masks summing to exactly 1, and the power=∞ strict 0/1 hard mask.
+</p>
+<div id="badges"></div>
+<h2>mixture |S|</h2>
+<canvas id="mix" width="820" height="180"></canvas>
+<h2>harmonic (the 440 Hz line)</h2>
+<canvas id="harm" width="820" height="180"></canvas>
+<h2>percussive (the click stripes)</h2>
+<canvas id="perc" width="820" height="180"></canvas>
+
+<script type="module">
+import { decompose, stft } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawSpectrogram } from './_badge.js'
+
+const SR = 22050
+const N = SR
+const CLICK_TIMES = Array.from({ length: 10 }, (_, k) => 0.05 + 0.1 * k)
+
+const y = new Float32Array(N)
+for (let i = 0; i < N; i++) y[i] = 0.6 * Math.sin((2 * Math.PI * 440 * i) / SR)
+for (const t of CLICK_TIMES) {
+  const s = Math.round(t * SR)
+  for (let k = 0; k < 24; k++) y[s + k] += (k % 2 ? -0.9 : 0.9) * (1 - k / 24)
+}
+
+const N_FFT = 1024
+const HOP = 256
+const D = stft(y, N_FFT, HOP)
+const nFreq = D.length
+const nFrames = D[0].length
+const S = D.map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
+
+const { harmonic: H, percussive: P } = decompose.hpss(S)
+
+// only the audible band makes a readable plot; render rows 0..200 (~4.3 kHz)
+const crop = (M) => M.slice(0, 200)
+drawSpectrogram(document.getElementById('mix'), crop(S))
+drawSpectrogram(document.getElementById('harm'), crop(H))
+drawSpectrogram(document.getElementById('perc'), crop(P))
+
+// ── same asserts as the node twin ──────────────────────────────────────────
+const bin440 = Math.round((440 * N_FFT) / SR)
+const rowEnergy = (M, f) => M[f].reduce((a, v) => a + v * v, 0)
+const r440 = rowEnergy(H, bin440) / rowEnergy(P, bin440)
+badge('440 Hz-bin energy: harmonic/percussive > 100', r440 > 100, r440.toExponential(2))
+
+let clickPerc = 0, clickHarm = 0
+for (const t of CLICK_TIMES) {
+  const frame = Math.round((t * SR) / HOP)
+  for (let f = 40; f < nFreq; f++) {
+    clickPerc += P[f][frame] * P[f][frame]
+    clickHarm += H[f][frame] * H[f][frame]
+  }
+}
+badge('click-frame column energy (above the tone): percussive/harmonic > 10',
+  clickPerc / clickHarm > 10, (clickPerc / clickHarm).toExponential(2))
+
+let maxDev = 0
+for (let f = 0; f < nFreq; f++) for (let t = 0; t < nFrames; t++) {
+  maxDev = Math.max(maxDev, Math.abs(H[f][t] + P[f][t] - S[f][t]))
+}
+badge('margin=1: |H + P - S| max deviation < 1e-6 per bin', maxDev < 1e-6, maxDev.toExponential(2))
+
+const { harmonic: MH, percussive: MP } = decompose.hpss(S, { mask: true })
+let maxMaskDev = 0
+for (let f = 0; f < nFreq; f++) for (let t = 0; t < nFrames; t++) {
+  maxMaskDev = Math.max(maxMaskDev, Math.abs(MH[f][t] + MP[f][t] - 1))
+}
+badge('mask=true: maskH + maskP == 1 to 1e-12', maxMaskDev < 1e-12, maxMaskDev.toExponential(2))
+
+const { harmonic: HH, percussive: HP } = decompose.hpss(S, { mask: true, power: Infinity })
+let nonBinary = 0
+for (let f = 0; f < nFreq; f++) for (let t = 0; t < nFrames; t++) {
+  if ((HH[f][t] !== 0 && HH[f][t] !== 1) || (HP[f][t] !== 0 && HP[f][t] !== 1)) nonBinary++
+}
+badge('mask=true, power=∞: every mask value exactly 0 or 1 (hard mask)', nonBinary === 0, `${nonBinary} non-binary`)
+</script>
+</body>
+</html>

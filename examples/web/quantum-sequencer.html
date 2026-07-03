@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — quantum op-stream sequencer</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
+  button:hover { background: #37474f; }
+  canvas { display: block; margin: 10px 0; border: 1px solid #333; }
+  #ops { font: 12px/1.7 monospace; background: #111; padding: 8px; border-radius: 6px; word-break: break-word; }
+  #ops .done { color: #666; }
+  #ops .now { color: #ffd700; font-weight: bold; }
+  #status { font-family: monospace; color: #9ad; }
+</style>
+</head>
+<body>
+<h1>scripts/quantum-sequencer.js — quantum op-stream sequencer</h1>
+<p>
+  <code>buildQuantumOpList(128, 4)</code> seeds 128 random ops, warps them
+  through the vector-space quantum rhythm transform, and splices in 4 preset
+  bars. Badges assert the stream contract: exactly 128 ops, 100% closure over
+  <code>RHYTHM_VOCAB</code> (the warp can only emit vocabulary words), and at
+  least one verbatim 8-op preset bar surviving as a contiguous subsequence.
+  Play runs <code>buildQuantumSequence</code> over the golden WAV, stepped by
+  <code>GibClock</code>, with the live loop region overlaid on the waveform.
+  Step execution is headless-safe post-repair (injected phaser params, local
+  micro-stutter counter) — the same asserts spot-run in Node pre-ship.
+</p>
+<div id="badges"></div>
+<p id="status"></p>
+<canvas id="wave" width="820" height="120"></canvas>
+<div>
+  <button id="play">▶ play quantum sequence</button>
+  <button id="stop">■ stop</button>
+</div>
+<div id="ops"></div>
+
+<script type="module">
+import {
+  buildQuantumOpList, buildQuantumSequence, allPresets, RHYTHM_VOCAB,
+  GibClock, decodeWav,
+} from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawWave } from './_badge.js'
+
+// ── op-stream contract badges ──────────────────────────────────────────────
+const ops = buildQuantumOpList(128, 4)
+badge('op list length exactly 128', ops.length === 128, String(ops.length))
+
+const outOfVocab = ops.filter((op) => !RHYTHM_VOCAB.includes(op))
+badge('100% vocabulary closure (every op ∈ RHYTHM_VOCAB)', outOfVocab.length === 0,
+  outOfVocab.length ? outOfVocab.join(',') : `${ops.length}/${ops.length}`)
+
+const presetHit = allPresets.findIndex((bar) =>
+  ops.some((_, i) => i + bar.length <= ops.length && bar.every((op, j) => ops[i + j] === op)))
+badge('≥1 verbatim 8-op preset bar found as contiguous subsequence', presetHit >= 0,
+  presetHit >= 0 ? `preset #${presetHit}` : 'none found')
+
+// display the stream
+const opsDiv = document.getElementById('ops')
+const spans = ops.map((op) => {
+  const s = document.createElement('span')
+  s.textContent = op + ' '
+  opsDiv.appendChild(s)
+  return s
+})
+
+// ── audition: GibClock-stepped sequence over the golden WAV ────────────────
+const resp = await fetch('../../apps/demo/public/audio/Drive%20Through%20Beat.wav')
+const { channels, sampleRate: SR } = decodeWav(await resp.arrayBuffer())
+const waveCanvas = document.getElementById('wave')
+const status = document.getElementById('status')
+
+function draw(data, loop) {
+  drawWave(waveCanvas, data)
+  if (loop) {
+    const g = waveCanvas.getContext('2d')
+    g.fillStyle = 'rgba(255, 215, 0, 0.25)'
+    const x0 = (loop.startSample / data.length) * waveCanvas.width
+    const x1 = (loop.endSample / data.length) * waveCanvas.width
+    g.fillRect(x0, 0, Math.max(1, x1 - x0), waveCanvas.height)
+  }
+}
+draw(channels[0], null)
+
+let ctx = null
+let clock = null
+let source = null
+
+function stopAll() {
+  if (clock) { clock.stop(); clock = null }
+  if (source) { try { source.stop() } catch {} source = null }
+  spans.forEach((s) => { s.className = '' })
+  status.textContent = 'stopped'
+}
+
+document.getElementById('stop').onclick = stopAll
+
+document.getElementById('play').onclick = async () => {
+  stopAll()
+  ctx = ctx || new (window.AudioContext || window.webkitAudioContext)()
+  await ctx.resume()
+
+  // fresh working buffer (ops mutate it in place)
+  const buffer = ctx.createBuffer(channels.length, channels[0].length, SR)
+  for (let c = 0; c < channels.length; c++) buffer.getChannelData(c).set(channels[c])
+
+  const seq = buildQuantumSequence(buffer, ops)
+  let i = 0
+  const BEAT_MS = 160
+
+  clock = new GibClock(BEAT_MS)
+  clock.onTick(() => {
+    if (i >= seq.length) { stopAll(); status.textContent = 'sequence complete (128 ops)'; return }
+    const { buffer: b, loop, op } = seq[i]()
+    spans.forEach((s, j) => { s.className = j < i ? 'done' : j === i ? 'now' : '' })
+    status.textContent = `step ${i + 1}/128 — ${op} → loop [${loop.startSample}, ${loop.endSample}]`
+    draw(b.getChannelData(0), loop)
+    // restart the looping source on the new bounds
+    if (source) { try { source.stop() } catch {} }
+    source = ctx.createBufferSource()
+    source.buffer = b
+    source.loop = true
+    source.loopStart = loop.startSample / SR
+    source.loopEnd = loop.endSample / SR
+    source.connect(ctx.destination)
+    source.start(0, source.loopStart)
+    i++
+  })
+  clock.start()
+}
+</script>
+</body>
+</html>

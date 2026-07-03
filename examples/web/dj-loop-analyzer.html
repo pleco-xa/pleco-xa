@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — DJ crate analyzer</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 78ch; }
+    canvas { image-rendering: pixelated; border: 1px solid #333; }
+    table { border-collapse: collapse; font: 13px monospace; margin: 8px 0; }
+    th, td { border: 1px solid #333; padding: 4px 10px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    #status { color: #999; margin: 8px 0; }
+    .row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+    .lbl { color: #999; font-size: 12px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h2>scripts/dj-loop-analyzer.js — 6-loop crate: DTW similarity, tempo, key, Camelot</h2>
+  <p>
+    Six loops with known recipes: <b>A1/A2/A3</b> (120.19 BPM — 43 hops/beat on
+    the tempo lag grid — A-minor chord tones over a four-on-the-floor kick,
+    small pattern variations) and <b>B1/B2/B3</b> (147.66 BPM, E♭-major
+    16th-note arps with off-beat hats). Ground truth is built into the
+    recipes. <code>DJLoopAnalyzer</code> analyzes all six; badges assert the
+    similarity ranking, the block structure of the DTW similarity matrix,
+    exact tempo recovery, Krumhansl-Schmuckler key detection with NORMALIZED
+    confidence (post-repair), measured timbral proxies (post-repair — the old
+    code returned constants), Camelot key compatibility, and index-based DTW
+    k-means clustering (post-repair — the old code TypeError'd and silently
+    fell back to tempo bins). All numbers node-verified. Click a matrix cell
+    to audition that pair back-to-back.
+  </p>
+  <div id="badges"></div>
+  <div class="row">
+    <div>
+      <canvas id="simMatrix" width="360" height="360"></canvas>
+      <div class="lbl">DTW similarity matrix (bright = similar) — click a cell to play the pair</div>
+    </div>
+    <table id="loopTable">
+      <thead><tr><th>loop</th><th>bpm</th><th>key</th><th>key conf</th><th>energy</th><th>brightness</th><th>warmth</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div id="status">synthesizing crate…</div>
+
+  <script type="module">
+    import { DJLoopAnalyzer, compareLoops } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const status = document.getElementById('status')
+    const sr = 44100
+    // Tempi on the tempo() lag grid at hop 512 → ground truth is exact:
+    const BEAT_A = 43 * 512, BPM_A = 60 * sr / BEAT_A // 120.19
+    const BEAT_B = 35 * 512, BPM_B = 60 * sr / BEAT_B // 147.66
+    const AM = { A3: 220.0, C4: 261.63, E4: 329.63, A4: 440.0 }
+    const EB = { Eb4: 311.13, G4: 392.0, Bb4: 466.16, Eb5: 622.25 }
+    let seed = 1234
+    const lcg = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+
+    function synthA(pattern, kickGain) {
+      const n = BEAT_A * 4
+      const y = new Float32Array(n)
+      const eighth = BEAT_A / 2
+      for (let i = 0; i < n; i++) {
+        const tb = (i % BEAT_A) / sr
+        if (tb < 0.12) y[i] += kickGain * Math.exp(-tb * 40) * Math.sin(2 * Math.PI * 55 * tb)
+        const idx = Math.floor(i / eighth) % 8
+        const tn = (i % eighth) / sr
+        y[i] += 0.35 * Math.exp(-tn * 6) * Math.sin(2 * Math.PI * pattern[idx] * tn)
+      }
+      return y
+    }
+    function synthB(pattern, hatGain) {
+      const n = BEAT_B * 5
+      const y = new Float32Array(n)
+      const sixteenth = BEAT_B / 4
+      for (let i = 0; i < n; i++) {
+        const tb = (i % BEAT_B) / sr
+        if (tb < 0.08) y[i] += 0.8 * Math.exp(-tb * 60) * Math.sin(2 * Math.PI * 70 * tb)
+        const six = Math.floor((i % BEAT_B) / sixteenth)
+        const ts = (i % sixteenth) / sr
+        if (six === 2 && ts < 0.04) y[i] += hatGain * Math.exp(-ts * 120) * (lcg() * 2 - 1)
+        const idx = Math.floor(i / sixteenth) % 8
+        const tn = (i % sixteenth) / sr
+        y[i] += 0.3 * Math.exp(-tn * 10) * Math.sin(2 * Math.PI * pattern[idx % pattern.length] * tn)
+      }
+      return y
+    }
+    function mkBuf(y) {
+      const buf = new AudioBuffer({ numberOfChannels: 1, length: y.length, sampleRate: sr })
+      buf.copyToChannel(y, 0)
+      return buf
+    }
+
+    const recipes = {
+      A1: mkBuf(synthA([AM.A3, AM.C4, AM.E4, AM.A4, AM.C4, AM.E4, AM.A3, AM.E4], 0.9)),
+      A2: mkBuf(synthA([AM.A3, AM.C4, AM.E4, AM.A4, AM.E4, AM.C4, AM.A4, AM.E4], 0.85)),
+      A3: mkBuf(synthA([AM.A3, AM.E4, AM.C4, AM.A4, AM.C4, AM.E4, AM.A3, AM.C4], 0.95)),
+      B1: mkBuf(synthB([EB.Eb4, EB.G4, EB.Bb4, EB.Eb5, EB.G4, EB.Bb4], 0.5)),
+      B2: mkBuf(synthB([EB.Eb4, EB.Bb4, EB.G4, EB.Eb5, EB.Bb4, EB.G4], 0.45)),
+      B3: mkBuf(synthB([EB.G4, EB.Eb4, EB.Bb4, EB.Eb5, EB.Eb4, EB.G4], 0.55)),
+    }
+    const names = Object.keys(recipes)
+
+    // ── analyze the crate ─────────────────────────────────────────────────
+    const analyzer = new DJLoopAnalyzer()
+    const loops = {}
+    for (const [name, buf] of Object.entries(recipes)) {
+      status.textContent = `analyzing ${name}…`
+      await new Promise((r) => setTimeout(r))
+      loops[name] = await analyzer.analyzeLoop(buf, { name })
+    }
+
+    const tbody = document.querySelector('#loopTable tbody')
+    for (const name of names) {
+      const f = loops[name].features
+      const tr = document.createElement('tr')
+      for (const text of [
+        name, f.tempo.bpm.toFixed(2), f.key.key, f.key.confidence.toFixed(3),
+        loops[name].metadata.energy.toFixed(3),
+        f.spectral_features.brightness.toFixed(3),
+        f.spectral_features.warmth.toFixed(3),
+      ]) {
+        const td = document.createElement('td')
+        td.textContent = text
+        tr.appendChild(td)
+      }
+      tbody.appendChild(tr)
+    }
+
+    // ── similarity matrix heatmap ─────────────────────────────────────────
+    const M = analyzer.similarityMatrix // DTW distances, insertion order
+    const sim = (i, j) => (i === j ? 1 : 1 / (1 + M[i][j]))
+    const canvas = document.getElementById('simMatrix')
+    const ctx = canvas.getContext('2d')
+    const cell = canvas.width / 6
+    let simMax = 0
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) if (i !== j && sim(i, j) > simMax) simMax = sim(i, j)
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 6; j++) {
+        const v = i === j ? 1 : sim(i, j) / simMax
+        ctx.fillStyle = `rgb(${Math.round(25 + 220 * v)},${Math.round(18 + 120 * v)},${Math.round(60 + 60 * v)})`
+        ctx.fillRect(j * cell, i * cell, cell - 1, cell - 1)
+        ctx.fillStyle = '#fff'
+        ctx.font = '11px monospace'
+        ctx.fillText(`${names[i]}·${names[j]}`, j * cell + 4, i * cell + 14)
+        ctx.fillText(sim(i, j).toFixed(2), j * cell + 4, i * cell + 28)
+      }
+    }
+
+    // pair audition: click cell (i,j) → play loop i then loop j
+    let actx = null
+    canvas.onclick = (ev) => {
+      const rect = canvas.getBoundingClientRect()
+      const j = Math.floor(((ev.clientX - rect.left) / rect.width) * 6)
+      const i = Math.floor(((ev.clientY - rect.top) / rect.height) * 6)
+      actx = actx || new AudioContext()
+      const t0 = actx.currentTime + 0.05
+      for (const [k, name] of [[0, names[i]], [1, names[j]]]) {
+        const src = actx.createBufferSource()
+        src.buffer = recipes[name]
+        src.connect(actx.destination)
+        src.start(t0 + k * recipes[names[i]].duration)
+      }
+      status.textContent = `playing ${names[i]} then ${names[j]} back-to-back`
+    }
+
+    // ── proofs (all node-verified on these exact recipes) ─────────────────
+    // 1: similarity ranking
+    const ranking = analyzer.findSimilarLoops(loops.A1.id)
+    const top2 = ranking.slice(0, 2).map((s) => s.loop.metadata.name).sort()
+    badge('top-2 matches for A1 == {A2, A3}',
+      top2.join(',') === 'A2,A3',
+      ranking.map((s) => `${s.loop.metadata.name}:${s.similarity.toFixed(2)}`).join(' '))
+
+    // 2: block structure of the DTW similarity matrix
+    let minWithin = Infinity, maxCross = -Infinity
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) {
+      if (i === j) continue
+      const sameGroup = (i < 3) === (j < 3)
+      if (sameGroup) minWithin = Math.min(minWithin, sim(i, j))
+      else maxCross = Math.max(maxCross, sim(i, j))
+    }
+    badge('block structure: every within-group similarity > every cross-group similarity',
+      minWithin > maxCross, `min within ${minWithin.toFixed(4)} > max cross ${maxCross.toFixed(4)}`)
+
+    // 3: tempo ground truth (node-verified exact on the lag grid)
+    const tempoOk = names.every((name) => {
+      const truth = name[0] === 'A' ? BPM_A : BPM_B
+      return Math.abs(loops[name].features.tempo.bpm - truth) <= 2
+    })
+    badge('every detected tempo within ±2 BPM of its recipe (120.19 / 147.66)',
+      tempoOk, names.map((n) => loops[n].features.tempo.bpm.toFixed(2)).join(' '))
+
+    // 4: clone comparison
+    const cloneY = new Float32Array(recipes.A1.length)
+    recipes.A1.copyFromChannel(cloneY, 0)
+    const cmp = await compareLoops(recipes.A1, mkBuf(cloneY))
+    badge('compareLoops(A1, A1 clone).similarity > 0.9 + tempoMatch + keyCompatible',
+      cmp.similarity > 0.9 && cmp.tempoMatch && cmp.keyCompatible,
+      `similarity ${cmp.similarity.toFixed(3)} — "${cmp.recommendation}"`)
+
+    // 5: Camelot relative-key rule
+    const kc = analyzer.calculateKeyCompatibility({ key: 'A minor' }, { key: 'C major' })
+    badge('calculateKeyCompatibility(A minor, C major) == 0.9 (relative keys, 8A/8B)',
+      kc === 0.9, String(kc))
+
+    // 6: key detection with normalized confidence (post-repair)
+    const keysOk =
+      ['A1', 'A2', 'A3'].every((n) => loops[n].features.key.key === 'A minor') &&
+      ['B1', 'B2', 'B3'].every((n) => loops[n].features.key.key === 'D# major') &&
+      names.every((n) => loops[n].features.key.confidence > 0 && loops[n].features.key.confidence <= 1)
+    badge('keys: A crate → A minor, B crate → D♯(=E♭) major; confidence normalized to (0,1]',
+      keysOk, names.map((n) => `${loops[n].features.key.key}@${loops[n].features.key.confidence.toFixed(2)}`).join(' '))
+
+    // 7: timbral proxies are measured, not the old constants
+    const timbralOk = names.every((n) => {
+      const t = loops[n].features.spectral_features
+      return t.brightness > 0 && t.brightness < 1 && t.warmth > 0 && t.warmth < 1 &&
+        !(t.brightness === 0.5 && t.roughness === 0.3 && t.warmth === 0.7)
+    }) &&
+      ['B1', 'B2', 'B3'].every((b) => ['A1', 'A2', 'A3'].every((a) =>
+        loops[b].features.spectral_features.brightness > loops[a].features.spectral_features.brightness &&
+        loops[a].features.spectral_features.warmth > loops[b].features.spectral_features.warmth))
+    badge('timbral proxies measured (hat-driven B brighter, kick-driven A warmer — never constants)',
+      timbralOk,
+      `brightness A ${loops.A1.features.spectral_features.brightness.toFixed(3)} vs B ${loops.B1.features.spectral_features.brightness.toFixed(3)}`)
+
+    // 8: clustering (post-repair: index-based dtwKMeans, no tempo fallback).
+    // k-means init is random → standard n_init-style restarts, best by
+    // within-cluster DTW distance (sklearn's n_init practice).
+    status.textContent = 'clustering (5 restarts)…'
+    await new Promise((r) => setTimeout(r))
+    const dist = (a, b) => M[names.indexOf(a)][names.indexOf(b)]
+    let bestClusters = null
+    let bestScore = Infinity
+    for (let run = 0; run < 5; run++) {
+      const clusters = analyzer.clusterLoops(2)
+      if (!clusters.every((c) => 'center' in c)) continue // tempo fallback = fail
+      let score = 0
+      for (const c of clusters) {
+        for (const m1 of c.members) for (const m2 of c.members) {
+          score += dist(m1.metadata.name, m2.metadata.name)
+        }
+      }
+      if (score < bestScore) { bestScore = score; bestClusters = clusters }
+    }
+    const groups = bestClusters
+      ? bestClusters.map((c) => c.members.map((m) => m.metadata.name).sort().join(',')).sort()
+      : []
+    badge('DTW k-means (best of 5 restarts) splits the crate exactly A1,A2,A3 | B1,B2,B3',
+      groups.join(' | ') === 'A1,A2,A3 | B1,B2,B3', groups.join(' | ') || 'all runs fell back')
+
+    // 8b: cluster characteristics are measured from members (post-repair)
+    const charOk = bestClusters && bestClusters.every((c) => {
+      if (c.members.length === 0) return true
+      const avg = c.members.reduce((s, m) => s + m.features.tempo.bpm, 0) / c.members.length
+      return Math.abs(c.characteristics.avgTempo - avg) < 1e-9 &&
+        typeof c.characteristics.dominantKey === 'string'
+    })
+    badge('cluster characteristics measured from members (avgTempo == mean of member BPMs)',
+      !!charOk,
+      bestClusters ? bestClusters.map((c) => `${c.members.length} loops @ ${c.characteristics.avgTempo?.toFixed(1)} BPM ${c.characteristics.dominantKey ?? ''}`).join(' | ') : 'n/a')
+
+    status.textContent = 'done — click matrix cells to audition pairs'
+  </script>
+</body>
+</html>

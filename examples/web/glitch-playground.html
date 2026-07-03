@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — glitch playground (loopPlayground + beatGlitcher)</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    button { font: 14px system-ui; margin: 2px; padding: 6px 12px; }
+    input { font: 14px monospace; width: 6em; }
+    p { max-width: 76ch; }
+    canvas { display: block; margin: 6px 0; background: #111; }
+    #ticker { font: 12px monospace; color: #ffa726; min-height: 2.4em; max-width: 96ch; word-break: break-all; }
+    .status { color: #999; margin: 6px 0; }
+    h3 { margin-top: 26px; border-top: 1px solid #333; padding-top: 14px; }
+  </style>
+</head>
+<body>
+  <h2>Glitch playground — core/loopPlayground + core/beatGlitcher</h2>
+
+  <p>
+    Section 1 proves <code>randomSequence</code> (node-verified in
+    <code>examples/node/loop-playground.mjs</code>): seeded determinism —
+    identical op logs for the same seed, pinned golden log for seed 42 —
+    and a 500-step bounds fuzz with zero violations. Then it plays: a
+    GibClock drives step execution against live LoopPlayer playback of
+    <i>Drive Through Beat.wav</i>, with the moving loop overlay and a
+    scrolling op ticker. Same seed ⇒ same choreography.
+  </p>
+  <div id="badges"></div>
+
+  <h3>Live playground</h3>
+  <div>
+    seed <input id="seed" type="number" value="42" />
+    <button id="startBtn" disabled>Start glitch loop</button>
+    <button id="stopBtn">Stop</button>
+    <span class="status" id="pgStatus">loading + decoding WAV…</span>
+  </div>
+  <canvas id="wave" width="960" height="120"></canvas>
+  <div id="ticker"></div>
+
+  <h3>Section 2 — beatGlitcher: bar-synced glitch clock</h3>
+  <p>
+    A synthesized 120 BPM click buffer (sr 32768, so the 0.5 s beat is
+    exactly 16 energy frames — the internal fast BPM detector reads 120.0)
+    drives <code>startBeatGlitch({maxOpsPerBar: 1})</code>. Badges (asserts
+    node-verified: mean 1999.6 ms, 8/8 updates, 0 post-stop): mean bar
+    interval 2000 ± 40 ms over 8 bars, effective BPM 120 ± 2 derived from
+    the measured interval, onUpdate fired exactly once per bar, and the
+    stop handle silences the clock (no calls within 3 s). Runs
+    automatically — takes ~19 s; keep this tab focused (background-tab
+    timer throttling would corrupt the timing measurement).
+  </p>
+  <div class="status" id="bgStatus">beatGlitcher: waiting…</div>
+
+  <script type="module">
+    import {
+      randomSequence, startBeatGlitch, GibClock, LoopPlayer, playback,
+    } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const { createBufferLike } = playback
+
+    // Numerical-Recipes LCG → [0, 1), deterministic (same as the node proof)
+    const lcg = (seed) => {
+      let s = seed >>> 0
+      return () => (s = (1664525 * s + 1013904223) >>> 0) / 4294967296
+    }
+
+    // ─── Section 1 badges: determinism + fuzz (pure, content-independent) ───
+    const mkToneBuf = () => {
+      const b = createBufferLike(1, 44100, 44100)
+      const d = b.getChannelData(0)
+      for (let i = 0; i < 44100; i++) d[i] = 0.5 * Math.sin((2 * Math.PI * 220 * i) / 44100)
+      return b
+    }
+    const opLog = (seed, steps) =>
+      randomSequence(mkToneBuf(), { steps, rng: lcg(seed) }).map((f) => f.op).join(',')
+
+    const GOLDEN_42 = 'half,half,half,half,half,move,half,move'
+    const run1 = opLog(42, 8)
+    badge('seed 42 twice → identical op logs', run1 === opLog(42, 8), run1)
+    badge('seed 42 matches pinned golden log', run1 === GOLDEN_42)
+    badge('seed 7 → different log (rng is live)', opLog(7, 8) !== run1, opLog(7, 8))
+
+    {
+      const buf = mkToneBuf()
+      const minSamples = Math.floor(0.01 * 44100)
+      const seq = randomSequence(buf, { steps: 500, rng: lcg(42), minMs: 10 })
+      let violations = 0
+      for (const fn of seq) {
+        const { loop } = fn()
+        const len = loop.endSample - loop.startSample
+        if (!(loop.startSample >= 0 && loop.startSample < loop.endSample &&
+              loop.endSample <= buf.length && len >= minSamples)) violations++
+      }
+      badge('500-step bounds fuzz: 0 violations', violations === 0, `${violations} violations`)
+    }
+
+    // ─── Section 1 live playground ──────────────────────────────────────────
+    const pgStatus = document.getElementById('pgStatus')
+    const waveCanvas = document.getElementById('wave')
+    const ticker = document.getElementById('ticker')
+
+    let original = null
+    try {
+      const resp = await fetch('../../apps/demo/public/audio/Drive%20Through%20Beat.wav')
+      if (!resp.ok) throw new Error(`fetch ${resp.status}`)
+      const rawBytes = await resp.arrayBuffer()
+      const decodeCtx = new AudioContext()
+      original = await decodeCtx.decodeAudioData(rawBytes)
+      await decodeCtx.close()
+      pgStatus.textContent = `ready — ${original.duration.toFixed(1)} s @ ${original.sampleRate} Hz`
+      document.getElementById('startBtn').disabled = false
+    } catch (e) {
+      pgStatus.textContent = `WAV load failed (${e.message}) — serve the repo root over http for the live playground; badges above and the beatGlitcher section below are unaffected`
+    }
+
+    function drawLoop(buf, loop) {
+      const ctx = waveCanvas.getContext('2d')
+      const { width: w, height: h } = waveCanvas
+      const d = buf.getChannelData(0)
+      ctx.fillStyle = '#111'; ctx.fillRect(0, 0, w, h)
+      ctx.fillStyle = 'rgba(255,167,38,0.28)'
+      ctx.fillRect((loop.startSample / buf.length) * w, 0,
+        ((loop.endSample - loop.startSample) / buf.length) * w, h)
+      ctx.strokeStyle = '#4fc3f7'; ctx.beginPath()
+      const step = Math.floor(buf.length / w)
+      for (let x = 0; x < w; x++) {
+        let mn = 1, mx = -1
+        for (let i = x * step; i < (x + 1) * step; i += 16) {
+          if (d[i] < mn) mn = d[i]
+          if (d[i] > mx) mx = d[i]
+        }
+        ctx.moveTo(x + 0.5, h / 2 - mx * h * 0.45)
+        ctx.lineTo(x + 0.5, h / 2 - mn * h * 0.45)
+      }
+      ctx.stroke()
+    }
+    if (original) drawLoop(original, { startSample: 0, endSample: original.length })
+
+    let player = null
+    let clock = null
+
+    function stopPlayground() {
+      clock?.stop(); clock = null
+      player?.stop(); player = null
+      pgStatus.textContent = 'stopped'
+    }
+
+    document.getElementById('stopBtn').onclick = stopPlayground
+    document.getElementById('startBtn').onclick = () => {
+      stopPlayground()
+      ticker.textContent = ''
+      const seed = Number(document.getElementById('seed').value) || 42
+
+      // fresh AudioBuffer copy — reverse ops mutate it, keep the source clean
+      const buf = new AudioBuffer({
+        numberOfChannels: original.numberOfChannels,
+        length: original.length,
+        sampleRate: original.sampleRate,
+      })
+      for (let c = 0; c < original.numberOfChannels; c++) {
+        buf.copyToChannel(original.getChannelData(c), c)
+      }
+
+      const seq = randomSequence(buf, { steps: 64, rng: lcg(seed), minMs: 120 })
+      player = new LoopPlayer(buf)
+      let i = 0
+      clock = new GibClock(420)
+      clock.start(() => {
+        if (i >= seq.length) { stopPlayground(); pgStatus.textContent = 'sequence complete'; return }
+        const { loop, op } = seq[i]()
+        i++
+        const sr = buf.sampleRate
+        player.setLoopPoints(loop.startSample / sr, loop.endSample / sr)
+        player.play() // restart re-acquires mutated data (reverse ops audible)
+        drawLoop(buf, loop)
+        ticker.textContent = `${ticker.textContent} ${op}`.split(' ').slice(-48).join(' ')
+        pgStatus.textContent = `step ${i}/${seq.length} — ${op} → [${(loop.startSample / sr).toFixed(2)}s, ${(loop.endSample / sr).toFixed(2)}s]`
+      })
+    }
+
+    // ─── Section 2: beatGlitcher bar-sync measurement (auto-runs) ───────────
+    const bgStatus = document.getElementById('bgStatus')
+    {
+      const sr = 32768 // 0.5 s beat == 16384 samples == exactly 16 frames of 1024
+      const dur = 8
+      const buf = createBufferLike(1, sr * dur, sr)
+      const d = buf.getChannelData(0)
+      for (let beat = 0; beat < dur * 2; beat++) {
+        const start = (beat * sr) / 2
+        for (let i = 0; i < 512; i++) {
+          d[start + i] = Math.sin((2 * Math.PI * 1000 * i) / sr) * Math.exp(-i / 100)
+        }
+      }
+
+      const BARS = 8
+      const times = []
+      let stop
+      await new Promise((resolve) => {
+        stop = startBeatGlitch(buf, {
+          maxOpsPerBar: 1,
+          onUpdate: () => {
+            times.push(performance.now())
+            bgStatus.textContent = `beatGlitcher: bar ${times.length}/${BARS} (≈2 s per bar)…`
+            if (times.length === BARS) resolve()
+          },
+        })
+      })
+      stop()
+      const countAtStop = times.length
+      bgStatus.textContent = 'beatGlitcher: verifying stop handle (3 s of expected silence)…'
+      await new Promise((r) => setTimeout(r, 3000))
+      const postStop = times.length - countAtStop
+
+      const intervals = times.slice(1).map((t, i) => t - times[i])
+      const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length
+      const effBpm = 240000 / mean // 4 beats per bar
+
+      badge('bar interval mean == 2000 ± 40 ms over 8 bars', Math.abs(mean - 2000) <= 40, `${mean.toFixed(1)} ms`)
+      badge('effective BPM 120 ± 2 (from measured bar interval)', Math.abs(effBpm - 120) <= 2, effBpm.toFixed(2))
+      badge('onUpdate fired exactly once per bar (count == 8)', countAtStop === BARS, `${countAtStop}`)
+      badge('stop() → no further updates within 3 s', postStop === 0, `${postStop} post-stop`)
+      bgStatus.textContent = 'beatGlitcher: done'
+    }
+  </script>
+</body>
+</html>

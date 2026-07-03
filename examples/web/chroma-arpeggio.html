@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>feature/chroma.js — C-major arpeggio chromagram</title>
+</head>
+<body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
+  <h2>feature/chroma.js — C-major arpeggio chromagram</h2>
+  <p style="max-width:90ch">
+    A C4–E4–G4–C5 arpeggio (261.63 / 329.63 / 392.00 / 523.25 Hz, 0.5 s each) at
+    sr=22050 through <code>feature.chroma_stft</code> with tuning auto-estimated
+    (piptrack parabolic interpolation → pitch_tuning histogram, exactly librosa's
+    path). Each note must light its own pitch-class row: per-segment argmax must be
+    [0, 4, 7, 0] = [C, E, G, C], and <code>estimate_tuning</code> on these
+    A440-derived tones must be within 0.05 chroma bins of 0. Numeric asserts were
+    node-verified against dist before this page was written ([0,4,7,0], tuning −0.040).
+  </p>
+  <div id="badges"></div>
+  <p><button id="play">▶ play arpeggio</button></p>
+  <div>
+    <canvas id="heatmap" width="870" height="240" style="image-rendering:pixelated"></canvas>
+    <div id="rowlabels" style="font:12px monospace;color:#888"></div>
+  </div>
+  <script type="module">
+    import { feature } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge, drawSpectrogram } from './_badge.js'
+
+    const sr = 22050
+    const hop = 512
+    const NOTES = [
+      ['C4', 261.6255653005986], ['E4', 329.6275569128699],
+      ['G4', 392.0], ['C5', 523.2511306011972],
+    ]
+    const segDur = 0.5
+    const n = Math.round(NOTES.length * segDur * sr)
+    const y = new Float32Array(n)
+    for (let s = 0; s < NOTES.length; s++) {
+      const start = Math.round(s * segDur * sr)
+      const end = Math.round((s + 1) * segDur * sr)
+      for (let i = start; i < end; i++) {
+        y[i] = 0.5 * Math.sin((2 * Math.PI * NOTES[s][1] * (i - start)) / sr)
+      }
+    }
+
+    const C = feature.chroma_stft(y, { sr }) // 12 x n_frames, tuning auto-estimated
+    const nT = C[0].length
+    badge('chroma shape 12 x n_frames', C.length === 12 && nT === 1 + Math.floor(n / hop), `${C.length}x${nT}`)
+
+    // Per-segment mean chroma (segment interiors, ±0.1s guard) → argmax class
+    const frameTime = (t) => (t * hop) / sr
+    const expected = [0, 4, 7, 0]
+    const got = []
+    for (let s = 0; s < 4; s++) {
+      const acc = new Float64Array(12)
+      for (let t = 0; t < nT; t++) {
+        const tt = frameTime(t)
+        if (tt >= s * segDur + 0.1 && tt <= (s + 1) * segDur - 0.1) {
+          for (let c = 0; c < 12; c++) acc[c] += C[c][t]
+        }
+      }
+      let a = 0
+      for (let c = 1; c < 12; c++) if (acc[c] > acc[a]) a = c
+      got.push(a)
+    }
+    badge('per-segment argmax pitch class == [0,4,7,0] (C,E,G,C)',
+      got.every((v, i) => v === expected[i]), `got [${got.join(',')}]`)
+
+    const tuning = feature.estimate_tuning({ y, sr })
+    badge('estimate_tuning |A440-derived tones| < 0.05 bins', Math.abs(tuning) < 0.05,
+      `tuning ${tuning.toFixed(4)}`)
+
+    // Heatmap: pitch classes bottom-to-top C→B (drawSpectrogram flips y)
+    drawSpectrogram(document.getElementById('heatmap'), C)
+    document.getElementById('rowlabels').textContent =
+      'x: 0 → 2.0 s · y (bottom → top): C C# D D# E F F# G G# A A# B — expect C / E / G / C blocks'
+
+    // Audible proof: play the exact analyzed buffer
+    document.getElementById('play').onclick = () => {
+      const ctx = new AudioContext({ sampleRate: sr })
+      const buf = ctx.createBuffer(1, n, sr)
+      buf.getChannelData(0).set(y)
+      const src = ctx.createBufferSource()
+      src.buffer = buf
+      src.connect(ctx.destination)
+      src.start()
+      src.onended = () => ctx.close()
+    }
+  </script>
+</body>
+</html>

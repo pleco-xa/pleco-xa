@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — file IO: WAV save→reload, registry cache, chunked reader</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  h2 { font-size: 1.0rem; margin-top: 1.6rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 12px 0; border: 1px solid #333; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
+  button:hover { background: #37474f; }
+  pre { background: #222; padding: 8px; border-radius: 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>scripts/xa-file.js + scripts/xa-fileio.js — the file-IO corner</h1>
+<p>
+  Three automated proofs: (1) <code>saveAudio</code> (post-repair: delegates
+  to the canonical <code>io/wav.encodeWav</code> and returns the Blob) writes
+  a 1 s 440 Hz tone that <code>loadFile</code> reloads within the 16-bit
+  quantization bound — original and reloaded waveforms are overlaid below;
+  (2) <code>example()/exampleBuffer()</code> exercise the AudioCache against a
+  <em>local</em> fixture (<code>fixtures/trumpet.ogg</code> — WAV bytes; the
+  remote librosa.org registry stays unverified, see barrel note) proving
+  entries+1 after first load and a zero-network cache hit on the second;
+  (3) <code>fileio.stream()</code> (post-repair docs: chunked reader, NOT
+  librosa.stream semantics) splits a 3 s tone into exactly ⌈N/2048⌉ lossless
+  blocks. Chunk math node-verified 2026-07-02 via injected decoder (65 blocks,
+  bitwise re-concat). Saving triggers one real download of
+  <code>pleco-tone-440.wav</code> — that side effect is the point.
+</p>
+<div id="badges"></div>
+
+<h2>original (blue) vs reloaded (orange, drawn on top)</h2>
+<canvas id="overlay" width="720" height="140"></canvas>
+
+<h2>cache stats</h2>
+<pre id="stats"></pre>
+
+<h2>live mic RMS (manual, optional)</h2>
+<button id="mic">🎙 start mic RMS meter</button>
+<button id="micstop">■ stop mic</button>
+<canvas id="rms" width="720" height="80"></canvas>
+
+<script type="module">
+import { file, fileio, encodeWav, decodeWav } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawWave } from './_badge.js'
+
+const sr = 44100
+
+// ── (1) xa-file: WAV save → reload roundtrip ────────────────────────────────
+const y = new Float32Array(sr)
+for (let i = 0; i < sr; i++) y[i] = 0.8 * Math.sin((2 * Math.PI * 440 * i) / sr)
+
+const savedBlob = file.saveAudio(y, sr, 'pleco-tone-440.wav')
+badge('saveAudio returns the encoded Blob (io/wav tier)', savedBlob instanceof Blob && savedBlob.size === 44 + sr * 2, `${savedBlob.size} bytes`)
+
+// decode at the WAV's own rate so decodeAudioData cannot resample
+const decodeCtx = new OfflineAudioContext(1, 1, sr)
+const reloaded = await file.loadFile(savedBlob, decodeCtx)
+badge('loadFile length == original length exactly', reloaded.length === y.length, `${reloaded.length} samples`)
+
+const rl = reloaded.getChannelData(0)
+let maxErr = 0
+for (let i = 0; i < y.length; i++) maxErr = Math.max(maxErr, Math.abs(rl[i] - y[i]))
+badge('save→reload max |diff| ≤ 2/32768 (16-bit bound)', maxErr <= 2 / 32768, `maxErr ${maxErr.toExponential(3)}`)
+
+// overlay: original blue, reloaded orange on top (they must coincide)
+const overlay = document.getElementById('overlay')
+drawWave(overlay, y)
+{
+  const ctx = overlay.getContext('2d')
+  const { width: w, height: h } = overlay
+  ctx.strokeStyle = '#ffb300'; ctx.globalAlpha = 0.6; ctx.beginPath()
+  const step = Math.max(1, Math.floor(rl.length / w))
+  for (let x = 0; x < w; x++) { const v = rl[x * step] || 0; const yy = h / 2 - v * h * 0.45; x ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy) }
+  ctx.stroke(); ctx.globalAlpha = 1
+}
+
+// ── (2) xa-file: registry + AudioCache vs a LOCAL fixture ──────────────────
+const fm = file.cache()
+const statsBefore = fm.stats()
+const resCount = () => performance.getEntriesByType('resource').filter((e) => e.name.includes('trumpet.ogg')).length
+
+const buf1 = await file.exampleBuffer('trumpet', false, decodeCtx, './fixtures/')
+const statsAfter = fm.stats()
+badge('first exampleBuffer load: cache entries +1, bytes > 0',
+  statsAfter.entries === statsBefore.entries + 1 && statsAfter.sizeBytes > 0,
+  `entries ${statsBefore.entries}→${statsAfter.entries}, ${statsAfter.sizeBytes} B`)
+badge("cache().has('trumpet') after load", fm.has('trumpet') === true)
+
+const fetchesAfterFirst = resCount()
+const buf2 = await file.exampleBuffer('trumpet', false, decodeCtx, './fixtures/')
+badge('second load is the SAME AudioBuffer object (getBuffer hit)', buf2 === buf1)
+badge('second load made 0 network fetches (Resource Timing)', resCount() === fetchesAfterFirst, `${fetchesAfterFirst} fetch(es) total`)
+document.getElementById('stats').textContent =
+  `before: ${JSON.stringify(statsBefore)}\nafter:  ${JSON.stringify(fm.stats())}\nfixture decoded: ${buf1.length} samples @ ${buf1.sampleRate} Hz (${buf1.duration.toFixed(2)} s)`
+
+// ── (3) xa-fileio: chunked reader block math ────────────────────────────────
+const N3 = sr * 3
+const y3 = new Float32Array(N3)
+for (let i = 0; i < N3; i++) y3[i] = 0.8 * Math.sin((2 * Math.PI * 440 * i) / sr)
+const blob3 = new Blob([encodeWav([y3], sr)], { type: 'audio/wav' })
+
+const gen = await fileio.stream(blob3, { blockLength: 2048, hopLength: 2048, audioContext: new OfflineAudioContext(1, 1, sr) })
+const blocks = []
+for await (const b of gen) blocks.push(b)
+badge('stream block count == ⌈N/2048⌉', blocks.length === Math.ceil(N3 / 2048), `${blocks.length} blocks for ${N3} samples`)
+
+// re-concat must reproduce the decoded source sample-for-sample. The
+// reference is decodeAudioData on the same bytes — the exact signal stream()
+// chunked. (decodeWav is NOT a valid reference here: it maps positive int16
+// as s/0x7fff while Chrome maps s/32768, so the two decoders differ by up to
+// 1 LSB even though both are correct.)
+const refBuf = await new OfflineAudioContext(1, 1, sr).decodeAudioData(await blob3.arrayBuffer())
+const ref = refBuf.getChannelData(0)
+const cat = new Float32Array(blocks.length * 2048)
+blocks.forEach((b, i) => cat.set(b, i * 2048))
+let identical = ref.length === N3
+for (let i = 0; i < N3 && identical; i++) if (cat[i] !== ref[i]) identical = false
+let tailZero = true
+for (let i = N3; i < cat.length; i++) if (cat[i] !== 0) { tailZero = false; break }
+badge('re-concatenated blocks == decoded source, sample-for-sample', identical && tailZero,
+  identical ? 'bitwise identical, tail zero-filled' : 'MISMATCH')
+
+// and the whole path stays within the 16-bit quantization bound of the
+// original synthesized tone (package decodeWav agrees to the same bound)
+let pathErr = 0
+for (let i = 0; i < N3; i++) pathErr = Math.max(pathErr, Math.abs(cat[i] - y3[i]))
+const refWav = decodeWav(await blob3.arrayBuffer()).channels[0]
+let wavErr = 0
+for (let i = 0; i < N3; i++) wavErr = Math.max(wavErr, Math.abs(refWav[i] - y3[i]))
+badge('chunked path within 16-bit bound of original tone (≤ 1/32767)',
+  pathErr <= 1 / 32767 && wavErr <= 1 / 32767,
+  `stream ${pathErr.toExponential(2)}, decodeWav ${wavErr.toExponential(2)}`)
+
+// ── (4) optional live mic RMS meter (manual — needs permission) ─────────────
+let proc = null
+const rmsCanvas = document.getElementById('rms')
+const rctx = rmsCanvas.getContext('2d')
+rctx.fillStyle = '#111'; rctx.fillRect(0, 0, rmsCanvas.width, rmsCanvas.height)
+let rx = 0
+document.getElementById('mic').onclick = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  proc = fileio.createMediaStreamProcessor(stream, {
+    blockLength: 2048,
+    onBlock: (block) => {
+      let s = 0
+      for (let i = 0; i < block.length; i++) s += block[i] * block[i]
+      const rms = Math.sqrt(s / block.length)
+      rctx.fillStyle = '#4fc3f7'
+      rctx.fillRect(rx, rmsCanvas.height - rms * rmsCanvas.height * 4, 2, rms * rmsCanvas.height * 4)
+      rx = (rx + 2) % rmsCanvas.width
+      if (rx === 0) { rctx.fillStyle = '#111'; rctx.fillRect(0, 0, rmsCanvas.width, rmsCanvas.height) }
+    },
+  })
+  proc.start()
+}
+document.getElementById('micstop').onclick = () => {
+  if (!proc) return
+  proc.stop()
+  badge('mic processor.stop(): isRunning() flips false', proc.isRunning() === false)
+}
+</script>
+</body>
+</html>

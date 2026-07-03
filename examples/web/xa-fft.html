@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — xa-fft: FFT/STFT known-tone + spectrogram</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 12px 0; border: 1px solid #333; }
+</style>
+</head>
+<body>
+<h1>scripts/xa-fft.js — FFT/STFT known-tone proof</h1>
+<p>
+  A 440 Hz sine at sr=8192 with N=8192 makes bin index equal Hz exactly, so
+  the <code>fft()</code> peak bin must be 440 with zero tolerance.
+  <code>ifft(fft([1,2,3,4]))</code> must return 1,2,3,4 exactly.
+  The <code>stft(1024/256)</code> magnitude spectrogram below must show one
+  horizontal line at bin 55 (440 Hz at 8 Hz/bin), and <code>istft()</code>
+  must reconstruct the interior of the signal to maxErr &lt; 1e-4.
+  Same asserts run headless in <code>examples/node/xa-fft.mjs</code>.
+</p>
+<div id="badges"></div>
+<canvas id="spec" width="720" height="200"></canvas>
+<p id="specNote" style="color:#999;font-size:13px"></p>
+
+<script type="module">
+import { fft, ifft, stft, istft, magnitude, spectrogram } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawSpectrogram } from './_badge.js'
+
+const sr = 8192
+const N = 8192
+const y = new Float32Array(N)
+for (let i = 0; i < N; i++) y[i] = Math.sin((2 * Math.PI * 440 * i) / sr)
+
+// (1) fft peak bin == 440 exactly
+const mag = magnitude(fft(y))
+let peak = 0
+for (let k = 1; k <= N / 2; k++) if (mag[k] > mag[peak]) peak = k
+badge('fft peak bin == 440 Hz ±0', peak === 440, `bin ${peak}`)
+
+// (2) ifft identity, exact
+const rt = ifft(fft([1, 2, 3, 4])).map((b) => b.real)
+badge('ifft(fft([1,2,3,4])) == [1,2,3,4] exactly', JSON.stringify(rt) === '[1,2,3,4]', rt.join(','))
+
+// (3) stft spectrogram: render + interior peak-bin assert
+const S = spectrogram(y, 1024, 256)
+drawSpectrogram(document.getElementById('spec'), S)
+const nFrames = S[0].length
+const peakBins = []
+for (let t = 0; t < nFrames; t++) {
+  let p = 0
+  for (let f = 1; f < S.length; f++) if (S[f][t] > S[p][t]) p = f
+  peakBins.push(p)
+}
+const interior = peakBins.slice(2, -2)
+badge('every interior frame peak bin == 55 (440 Hz)', interior.every((b) => b === 55), `bins ${[...new Set(interior)].join(',')}`)
+document.getElementById('specNote').textContent =
+  `stft shape ${S.length}×${nFrames} — the bright line sits at bin 55 of 513 (440/${sr / 2} of the way up)`
+
+// (4) istft roundtrip
+const D = stft(y, 1024, 256)
+const yHat = istft(D, 256, null, 'hann', true, y.length)
+let maxErr = 0
+for (let i = 1024; i < N - 1024; i++) maxErr = Math.max(maxErr, Math.abs(yHat[i] - y[i]))
+badge('istft roundtrip OK (interior maxErr < 1e-4)', yHat.length === y.length && maxErr < 1e-4, `maxErr ${maxErr.toExponential(2)}`)
+</script>
+</body>
+</html>

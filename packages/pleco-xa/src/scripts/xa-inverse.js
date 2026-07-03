@@ -3,12 +3,17 @@
  * Convert features back to audio or spectrograms
  */
 
-import { mel_filterbank, hz_to_mel, mel_to_hz, dct, idct } from './xa-mel.js'
+import { mel_filterbank } from './xa-mel.js'
 import { griffinlim } from './xa-advanced.js'
-import { power_to_db, db_to_power } from './xa-convert.js'
+import { db_to_power } from './xa-convert.js'
 
 /**
- * Approximate STFT magnitude from a Mel power spectrogram
+ * Approximate STFT magnitude from a Mel power spectrogram.
+ *
+ * DIVERGENCE NOTE: librosa solves a non-negative least squares problem
+ * (nnls(mel_basis, M)); this implementation uses the filterbank TRANSPOSE as
+ * a pseudo-inverse — a rough approximation. Spectral shape (per-frame peak
+ * location, cosine similarity vs |stft|) survives; absolute magnitudes do not.
  * @param {Array} M - Mel spectrogram [n_mels x n_frames]
  * @param {number} sr - Sample rate
  * @param {number} n_fft - FFT size
@@ -137,11 +142,13 @@ export function mfcc_to_mel(
   // Copy MFCC to avoid modifying input
   let mfcc_unliftered = mfcc.map(row => Float32Array.from(row))
 
-  // Reverse liftering if applied
+  // Reverse liftering if applied — librosa indexing: sin(pi * (i + 1) / L)
+  // (matches the corrected xa-mel lifter_mfcc; the old sin(pi*i/L) was an
+  // off-by-one that left c0 unweighted)
   if (lifter > 0) {
     const lifter_weights = new Float32Array(n_mfcc)
     for (let i = 0; i < n_mfcc; i++) {
-      lifter_weights[i] = 1 + (lifter / 2) * Math.sin((Math.PI * i) / lifter)
+      lifter_weights[i] = 1 + (lifter / 2) * Math.sin((Math.PI * (i + 1)) / lifter)
     }
 
     // Divide by lifter weights to reverse the effect
@@ -152,23 +159,38 @@ export function mfcc_to_mel(
     }
   }
 
-  // Apply inverse DCT to each frame
+  // Zero-padded inverse DCT along the mel axis — librosa does
+  // scipy.fftpack.idct(mfcc, type=2, norm='ortho', n=n_mels): the n_mfcc
+  // coefficients are zero-padded to n_mels, then a DCT-III (the inverse of
+  // the ortho DCT-II used by the forward mfcc) expands each frame to n_mels.
+  // The old code called xa-mel idct(coeffs, type, norm) as idct(frame,
+  // n_mels, type, norm) — n_mels landed in `type` and threw 'Unsupported DCT
+  // type: 128'; and idct cannot expand length anyway. Only the librosa
+  // default (dct_type=2, norm='ortho') is implemented; anything else throws
+  // honestly instead of silently mis-scaling.
+  if (dct_type !== 2 || norm !== 'ortho') {
+    throw new Error(
+      `mfcc_to_mel: only dct_type=2 with norm='ortho' is implemented ` +
+        `(got dct_type=${dct_type}, norm=${norm})`,
+    )
+  }
+
   const mel_db = Array(n_mels).fill(null).map(() => new Float32Array(n_frames))
+  const scale0 = Math.sqrt(1 / n_mels)
+  const scaleK = Math.sqrt(2 / n_mels)
+  const kMax = Math.min(n_mfcc, n_mels) // scipy truncates when n < input length
 
   for (let t = 0; t < n_frames; t++) {
-    // Extract frame
-    const frame = new Float32Array(n_mfcc)
-    for (let i = 0; i < n_mfcc; i++) {
-      frame[i] = mfcc_unliftered[i][t]
-    }
-
-    // Inverse DCT (if dct_type is 2, inverse is DCT-III)
-    const inverse_type = dct_type === 2 ? 3 : 2
-    const mel_frame = idct(frame, n_mels, inverse_type, norm)
-
-    // Store in output
     for (let m = 0; m < n_mels; m++) {
-      mel_db[m][t] = mel_frame[m]
+      // DCT-III of the zero-padded coefficient vector (padded terms are 0)
+      let acc = scale0 * mfcc_unliftered[0][t]
+      for (let k = 1; k < kMax; k++) {
+        acc +=
+          scaleK *
+          mfcc_unliftered[k][t] *
+          Math.cos((Math.PI * k * (2 * m + 1)) / (2 * n_mels))
+      }
+      mel_db[m][t] = acc
     }
   }
 

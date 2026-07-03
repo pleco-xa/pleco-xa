@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — DTW warping path</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 72ch; }
+    canvas { image-rendering: pixelated; border: 1px solid #333; margin: 4px 8px 4px 0; }
+    .lbl { color: #999; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h2>sequence/dtw — cost matrix + warping path on a known time-warp</h2>
+  <p>
+    X is a 2-dim ramp (40 frames); Y duplicates frames 10–19 (known warp map).
+    The heatmap shows the accumulated-cost matrix D with the recovered warping
+    path overlaid — it must ride the zero-cost valley exactly: total cost 0,
+    every path pair obeying the duplication map, and subsequence DTW pinning an
+    embedded copy at its exact offset. Same asserts as
+    <code>examples/node/dtw.mjs</code> (node-verified).
+  </p>
+  <div id="badges"></div>
+  <div>
+    <canvas id="dmat" width="400" height="320"></canvas>
+    <div class="lbl">accumulated cost D (40×50, dark = cheap) with warping path in cyan</div>
+  </div>
+
+  <script type="module">
+    import { sequence } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+    const { dtw } = sequence
+
+    const N = 40
+    const X = [new Float64Array(N), new Float64Array(N)]
+    for (let i = 0; i < N; i++) { X[0][i] = i / 10; X[1][i] = 2 - i / 20 }
+
+    // case 1: self-alignment
+    const r1 = dtw(X, X)
+    badge('dtw(X,X): D[N−1][N−1] == 0', r1.D[N - 1][N - 1] === 0, String(r1.D[N - 1][N - 1]))
+    badge('dtw(X,X): path is the exact 40-step diagonal',
+      r1.wp.length === N && r1.wp.every(([i, j], k) => i === N - 1 - k && j === N - 1 - k))
+
+    // case 2: known duplication warp (Y = X with frames 10–19 duplicated)
+    const M = 50
+    const map = (j) => (j < 10 ? j : j < 30 ? 10 + Math.floor((j - 10) / 2) : j - 10)
+    const Y = [new Float64Array(M), new Float64Array(M)]
+    for (let j = 0; j < M; j++) { Y[0][j] = X[0][map(j)]; Y[1][j] = X[1][map(j)] }
+    const r2 = dtw(X, Y)
+    badge('warped pair: total cost == 0', r2.D[N - 1][M - 1] === 0, String(r2.D[N - 1][M - 1]))
+    badge('every path pair obeys the duplication map i == map(j)',
+      r2.wp.every(([i, j]) => i === map(j)), `${r2.wp.length} pairs`)
+
+    // heatmap of D with the path overlaid
+    const canvas = document.getElementById('dmat')
+    const ctx = canvas.getContext('2d')
+    const cw = canvas.width / M, ch = canvas.height / N
+    let dMax = 0
+    for (let i = 0; i < N; i++) for (let j = 0; j < M; j++) if (Number.isFinite(r2.D[i][j])) dMax = Math.max(dMax, r2.D[i][j])
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < M; j++) {
+        const v = Math.min(1, r2.D[i][j] / dMax)
+        ctx.fillStyle = `rgb(${30 + 225 * v}, ${20 + 90 * v}, ${60 + 30 * v})`
+        ctx.fillRect(j * cw, i * ch, cw + 1, ch + 1)
+      }
+    }
+    ctx.fillStyle = '#4fecec'
+    for (const [i, j] of r2.wp) ctx.fillRect(j * cw, i * ch, cw, ch)
+
+    // case 3: subsequence DTW finds the embedding offset
+    let seed = 7
+    const lcg = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+    const B = 100, OFFSET = 25
+    const Z = [new Float64Array(B), new Float64Array(B)]
+    for (let j = 0; j < B; j++) { Z[0][j] = lcg() * 8; Z[1][j] = lcg() * 8 }
+    for (let j = 0; j < N; j++) { Z[0][OFFSET + j] = X[0][j]; Z[1][OFFSET + j] = X[1][j] }
+    const r3 = dtw(X, Z, { subseq: true })
+    let minLast = Infinity, minCol = -1
+    for (let m = 0; m < B; m++) if (r3.D[N - 1][m] < minLast) { minLast = r3.D[N - 1][m]; minCol = m }
+    badge('subseq: min(D[last row]) == 0 at column OFFSET+N−1',
+      minLast === 0 && minCol === OFFSET + N - 1, `cost ${minLast} @ col ${minCol}`)
+    const startPair = r3.wp[r3.wp.length - 1]
+    badge('subseq: matched window starts at column 25 exactly',
+      startPair[0] === 0 && startPair[1] === OFFSET, `[${startPair}]`)
+  </script>
+</body>
+</html>

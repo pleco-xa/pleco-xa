@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — LoopPlayer</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    button { font: 14px system-ui; margin: 2px; padding: 6px 12px; }
+    p { max-width: 72ch; }
+    #status { color: #999; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h2>LoopPlayer — native seamless loop playback proof</h2>
+  <p>
+    Loads <i>Bassline For Doppler Song longer.wav</i> and plays the golden
+    loop (11.9886 s → 14.6008 s, cycle 2.6122 s) via LoopPlayer's native
+    <code>source.loop</code>. Press <b>Play</b>: (1) the suspended
+    AudioContext must resume inside play(); (2) setVolume(0.1) must land on
+    the gain node; (3) an AnalyserNode taps the source and records the RMS
+    energy envelope for ~9 s (3+ cycles) — the envelope's autocorrelation
+    peak (the recurring loop-start energy fingerprint) must sit at the loop
+    period 2.612 s ±20 ms, proving native looping honors the exact points.
+  </p>
+  <div id="badges"></div>
+  <div>
+    <button id="play" disabled>Play golden loop + verify</button>
+    <button id="stopBtn">Stop</button>
+  </div>
+  <div id="status">loading + decoding WAV…</div>
+
+  <script type="module">
+    import { LoopPlayer } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const LOOP_START = 11.9886
+    const LOOP_END = 14.6008
+    const CYCLE = LOOP_END - LOOP_START // 2.6122 s
+    const ENV_RATE = 100 // Hz
+    const status = document.getElementById('status')
+
+    // Autocorrelation peak of the mean-removed envelope, parabolic-refined.
+    // (Math spot-verified in node against the decoded WAV: 2.6118 s measured
+    // vs 2.6122 s expected on a simulated 3.3-cycle loop stream.)
+    function dominantPeriod(env, envRate, minLag = 2.0, maxLag = 3.2) {
+      const mean = env.reduce((a, b) => a + b, 0) / env.length
+      const x = Float32Array.from(env, (v) => v - mean)
+      const lo = Math.floor(minLag * envRate)
+      const hi = Math.min(Math.ceil(maxLag * envRate), x.length - 1)
+      const rs = new Float64Array(hi + 1)
+      let bestLag = lo, bestR = -Infinity
+      for (let lag = lo; lag <= hi; lag++) {
+        let r = 0
+        for (let i = 0; i + lag < x.length; i++) r += x[i] * x[i + lag]
+        rs[lag] = r / (x.length - lag)
+        if (rs[lag] > bestR) { bestR = rs[lag]; bestLag = lag }
+      }
+      let refined = bestLag
+      if (bestLag > lo && bestLag < hi) {
+        const a = rs[bestLag - 1], b = rs[bestLag], c = rs[bestLag + 1]
+        const denom = a - 2 * b + c
+        if (denom !== 0) refined = bestLag + (0.5 * (a - c)) / denom
+      }
+      return refined / envRate
+    }
+
+    // Resample jittery (t, rms) rAF samples onto a uniform envRate grid.
+    function toUniformEnvelope(samples, envRate) {
+      const t0 = samples[0].t
+      const t1 = samples[samples.length - 1].t
+      const n = Math.floor((t1 - t0) * envRate)
+      const env = new Float32Array(n)
+      let j = 0
+      for (let i = 0; i < n; i++) {
+        const t = t0 + i / envRate
+        while (j < samples.length - 2 && samples[j + 1].t < t) j++
+        const a = samples[j], b = samples[j + 1]
+        const w = (t - a.t) / Math.max(b.t - a.t, 1e-9)
+        env[i] = a.rms + w * (b.rms - a.rms)
+      }
+      return env
+    }
+
+    // Decode at load time so the player's own context is created WITHOUT a
+    // user gesture → it starts 'suspended' and play() must resume it.
+    const resp = await fetch('../../apps/demo/public/audio/Bassline%20For%20Doppler%20Song%20longer.wav')
+    const decodeCtx = new AudioContext()
+    const audioBuffer = await decodeCtx.decodeAudioData(await resp.arrayBuffer())
+    await decodeCtx.close()
+
+    const player = new LoopPlayer(audioBuffer)
+    player.setLoopPoints(LOOP_START, LOOP_END)
+    // Force the suspended state deterministically (autoplay policy may start
+    // the context 'running' if the origin already has user activation) so
+    // play() must actually exercise its resume path.
+    await player.audioContext.suspend()
+    const stateBefore = player.audioContext.state
+    status.textContent = `ready — buffer ${audioBuffer.duration.toFixed(2)} s @ ${audioBuffer.sampleRate} Hz, context '${stateBefore}'`
+    document.getElementById('play').disabled = false
+
+    let measuring = false
+    document.getElementById('play').onclick = async () => {
+      if (measuring) return
+      measuring = true
+
+      await player.play()
+
+      // (1) play() on a suspended context resumes it
+      badge(
+        "play() resumes suspended context → 'running'",
+        stateBefore === 'suspended' && player.audioContext.state === 'running',
+        `before='${stateBefore}' after='${player.audioContext.state}'`,
+      )
+
+      // (2) setVolume lands on the gain node (float32 storage tolerance)
+      player.setVolume(0.1)
+      badge('setVolume(0.1) → gainNode.gain.value == 0.1', Math.abs(player.gainNode.gain.value - 0.1) < 1e-6, player.gainNode.gain.value.toFixed(7))
+
+      // (3) loop-cycle timing via analyser energy fingerprint
+      const analyser = player.audioContext.createAnalyser()
+      analyser.fftSize = 2048
+      analyser.smoothingTimeConstant = 0
+      player.source.connect(analyser) // tap pre-gain, volume-independent
+      const bytes = new Uint8Array(analyser.fftSize)
+      const samples = []
+      const DURATION = 9 // s ≈ 3.4 cycles
+
+      const tick = () => {
+        analyser.getByteTimeDomainData(bytes)
+        let s = 0
+        for (let i = 0; i < bytes.length; i++) {
+          const v = (bytes[i] - 128) / 128
+          s += v * v
+        }
+        samples.push({ t: performance.now() / 1000, rms: Math.sqrt(s / bytes.length) })
+        const elapsed = samples[samples.length - 1].t - samples[0].t
+        status.textContent = `measuring loop cycles… ${elapsed.toFixed(1)} / ${DURATION} s`
+        if (elapsed < DURATION && player.isPlaying) {
+          requestAnimationFrame(tick)
+        } else {
+          const env = toUniformEnvelope(samples, ENV_RATE)
+          const period = dominantPeriod(env, ENV_RATE)
+          badge(
+            `loop cycle == ${CYCLE.toFixed(4)} s ±20 ms`,
+            Math.abs(period - CYCLE) <= 0.02,
+            `measured ${period.toFixed(4)} s (Δ ${((period - CYCLE) * 1000).toFixed(1)} ms, ${samples.length} rAF samples)`,
+          )
+          status.textContent = 'done — loop keeps playing; Stop to end it'
+          measuring = false
+        }
+      }
+      requestAnimationFrame(tick)
+    }
+
+    document.getElementById('stopBtn').onclick = () => player.stop()
+  </script>
+</body>
+</html>

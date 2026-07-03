@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>scripts/xa-mel.js — Slaney mel filterbank triangles</title>
+</head>
+<body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
+  <h2>scripts/xa-mel.js — Slaney mel filterbank triangles</h2>
+  <p style="max-width:80ch">
+    First 12 slaney-normalized triangles of <code>filters.mel_filterbank(22050, 2048, 40)</code>
+    (re-exported from scripts/xa-mel.js) plotted over a Hz axis — the librosa gallery classic.
+    Proofs: the Slaney boundary identities hz_to_mel(1000)=15 and mel_to_hz(15)=1000 (float-exact:
+    ≤1e-9; the raw float64 value is 15 − 1.8e-15 from 200/3 roundoff, matching librosa bit-for-bit),
+    filterbank shape 40 × 1025, every filter elementwise-matches an independent librosa-formula
+    reconstruction (mel grid rebuilt via xa-convert's separate hz_to_mel/mel_to_hz implementation)
+    within 1e-6, and each triangle's peak equals the Slaney area norm 2/(mel_f[i+2]−mel_f[i]):
+    never above it, and within the provable half-FFT-bin sampling bound below it (the continuous
+    apex falls between FFT bins, so a "peak == enorm within 1e-6" literal read is impossible on the
+    sampled grid — measured misses run up to 6%, exactly the bin-quantization bound predicts).
+  </p>
+  <div id="badges"></div>
+  <div>
+    <canvas id="plot" width="1000" height="280" style="width:100%;max-width:1000px;background:#111"></canvas>
+    <div id="axis" style="font:12px monospace;color:#888"></div>
+  </div>
+  <script type="module">
+    import { filters, convert } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const sr = 22050
+    const n_fft = 2048
+    const n_mels = 40
+    const fb = filters.mel_filterbank(sr, n_fft, n_mels)
+
+    badge('hz_to_mel(1000) == 15.0 (Slaney seam, float-exact)',
+      Math.abs(convert.hz_to_mel(1000) - 15) <= 1e-9, `got ${convert.hz_to_mel(1000)}`)
+    badge('mel_to_hz(15) == 1000.0 (float-exact)',
+      Math.abs(convert.mel_to_hz(15) - 1000) <= 1e-9, `got ${convert.mel_to_hz(15)}`)
+    badge('shape 40 x 1025', fb.length === n_mels && fb.every((r) => r.length === 1025),
+      `${fb.length} x ${fb[0].length}`)
+
+    // Independent reconstruction: librosa filters.mel formula written out here, with the
+    // mel grid from xa-convert (a separate implementation from xa-mel's internals).
+    const melMin = convert.hz_to_mel(0)
+    const melMax = convert.hz_to_mel(sr / 2)
+    const mel_f = Array.from({ length: n_mels + 2 },
+      (_, i) => convert.mel_to_hz(melMin + (i * (melMax - melMin)) / (n_mels + 1)))
+    const nBins = 1 + n_fft / 2
+    const fftfreqs = Array.from({ length: nBins }, (_, k) => (k * sr) / n_fft)
+
+    let maxDiff = 0
+    let maxPeakExcess = -Infinity
+    let peakBoundOk = true
+    const halfBin = sr / n_fft / 2
+    for (let i = 0; i < n_mels; i++) {
+      const enorm = 2 / (mel_f[i + 2] - mel_f[i])
+      let peak = 0
+      for (let j = 0; j < nBins; j++) {
+        const lower = (fftfreqs[j] - mel_f[i]) / (mel_f[i + 1] - mel_f[i])
+        const upper = (mel_f[i + 2] - fftfreqs[j]) / (mel_f[i + 2] - mel_f[i + 1])
+        const expected = Math.max(0, Math.min(lower, upper)) * enorm
+        maxDiff = Math.max(maxDiff, Math.abs(fb[i][j] - expected))
+        if (fb[i][j] > peak) peak = fb[i][j]
+      }
+      maxPeakExcess = Math.max(maxPeakExcess, peak - enorm)
+      // Nearest FFT bin sits within halfBin Hz of the continuous apex, so the sampled
+      // peak can fall below enorm by at most steepest-ramp-slope * halfBin.
+      const steepest = enorm * Math.max(1 / (mel_f[i + 1] - mel_f[i]), 1 / (mel_f[i + 2] - mel_f[i + 1]))
+      if (!(peak >= Math.max(0, enorm - steepest * halfBin) - 1e-12)) peakBoundOk = false
+    }
+    badge('every filter matches librosa formula elementwise (maxDiff < 1e-6)',
+      maxDiff < 1e-6, `maxDiff ${maxDiff.toExponential(2)}`)
+    badge('triangle peaks == slaney 2/(mel_f[i+2]-mel_f[i]): never above, within half-bin bound below',
+      maxPeakExcess <= 1e-9 && peakBoundOk, `max excess ${maxPeakExcess.toExponential(2)}`)
+
+    // Line plot: first 12 triangles over Hz. They only occupy the low end (~0–1100 Hz),
+    // so zoom the x-axis to the 14th band edge for the classic gallery look.
+    const canvas = document.getElementById('plot')
+    const ctx = canvas.getContext('2d')
+    const { width: w, height: h } = canvas
+    const fMaxPlot = mel_f[13]
+    const yMax = Math.max(...fb.slice(0, 12).map((row) => Math.max(...row))) * 1.1
+    for (let i = 0; i < 12; i++) {
+      ctx.strokeStyle = `hsl(${i * 30}, 80%, 60%)`
+      ctx.beginPath()
+      for (let j = 0; j < nBins && fftfreqs[j] <= fMaxPlot; j++) {
+        const x = (fftfreqs[j] / fMaxPlot) * w
+        const y = h - 10 - (fb[i][j] / yMax) * (h - 20)
+        j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+      }
+      ctx.stroke()
+    }
+    document.getElementById('axis').textContent =
+      `x: 0 → ${fMaxPlot.toFixed(0)} Hz · y: filter weight (slaney-normalized, peaks ≈ 2/bandwidth ≈ ${(2 / (mel_f[2] - mel_f[0])).toFixed(4)})`
+  </script>
+</body>
+</html>

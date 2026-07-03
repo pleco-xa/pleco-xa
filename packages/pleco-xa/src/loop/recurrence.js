@@ -106,16 +106,26 @@ export async function recurrenceLoop(audioBuffer, options = {}) {
  * Returns null when the path is too short to define a lag.
  */
 function rqaCandidateFromAudio(audioBuffer, hopLength) {
+  // stackMemory defaults — the embedding span below must match them.
+  const N_STEPS = 10
+  const DELAY = 3
+
   const chroma = computeChroma(audioBuffer, hopLength)
   if (!chroma.length) return null
-  const stacked = stackMemory(chroma)
+  const stacked = stackMemory(chroma, N_STEPS, DELAY)
   if (!stacked.length) return null
 
-  // Affinity mode keeps graded similarity for the RQA accumulator
+  // Affinity mode keeps graded similarity for the RQA accumulator.
+  //
+  // width: stacked vectors at |i−j| ≤ (nSteps−1)·delay share raw audio
+  // frames (the time-delay windows overlap), so that whole band is
+  // self-similar BY CONSTRUCTION — a width smaller than the embedding
+  // span lets the RQA path hug the overlap band and report a meaningless
+  // few-frame lag instead of a repetition lag.
   const sim = recurrenceMatrix(
     stacked,
     null,
-    3, // width: suppress near-diagonal self-matches
+    (N_STEPS - 1) * DELAY + 1, // 28: cover the full embedding overlap span
     'euclidean',
     false,
     -1,

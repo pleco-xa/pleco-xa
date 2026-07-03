@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — live speed: playbackRate vs resample tiers</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 820px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
+  button:hover { background: #37474f; }
+  #status { font-family: monospace; color: #9ad; }
+</style>
+</head>
+<body>
+<h1>scripts/live-speed-control.js — playbackRate vs resample tiers</h1>
+<p>
+  Two live speed tiers, each with an assertable signature.
+  <b>playbackRate tier</b>: <code>applyLiveDoubleSpeed()</code> crossfades to a
+  replacement source whose <code>playbackRate.value</code> must be exactly 2.0,
+  stopping the old source after the 50 ms fade (the audible octave jump).
+  <b>Resample tier</b> (<code>preservePitch: true</code>): the returned buffer
+  keeps the ORIGINAL length, <code>newLoopLength === floor(len/2)</code>, and
+  the trailing half must be exactly silent — 2× resampling writes the
+  compressed audio into the first half only; that silence is the tier's
+  assertable signature. <code>resetLiveSpeed()</code> restores rate 1.0.
+  Dependencies are injected explicitly (no window bus). Resample + error
+  contract asserts spot-run headless in Node pre-ship.
+</p>
+<div id="badges"></div>
+<p id="status">loading golden WAV…</p>
+<div>
+  <button id="run">▶ run proof (plays audio)</button>
+  <button id="stop">■ stop</button>
+</div>
+
+<script type="module">
+import { applyLiveDoubleSpeed, resetLiveSpeed } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge } from './_badge.js'
+
+const status = document.getElementById('status')
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+const ctx = new (window.AudioContext || window.webkitAudioContext)()
+const resp = await fetch('../../apps/demo/public/audio/Drive%20Through%20Beat.wav')
+const buffer = await ctx.decodeAudioData(await resp.arrayBuffer())
+status.textContent = `loaded: ${buffer.duration.toFixed(2)} s @ ${buffer.sampleRate} Hz — press run`
+
+let audioProcessor = null
+
+function startProcessor() {
+  const gainNode = ctx.createGain()
+  gainNode.gain.value = 0.5
+  gainNode.connect(ctx.destination)
+  const source = ctx.createBufferSource()
+  source.buffer = buffer
+  source.connect(gainNode)
+  const startedAt = ctx.currentTime
+  source.start()
+  audioProcessor = {
+    source,
+    gainNode,
+    isPlaying: true,
+    getCurrentTime: () => (ctx.currentTime - startedAt) % buffer.duration,
+  }
+}
+
+document.getElementById('stop').onclick = () => {
+  if (audioProcessor?.source) { try { audioProcessor.source.stop() } catch {} }
+  audioProcessor = null
+  status.textContent = 'stopped'
+}
+
+document.getElementById('run').onclick = async () => {
+  await ctx.resume()
+  startProcessor()
+  status.textContent = 'playing at 1× — doubling in 1 s…'
+  await sleep(1000)
+
+  // ── playbackRate tier ────────────────────────────────────────────────────
+  const oldSource = audioProcessor.source
+  let oldStopped = false
+  const origStop = oldSource.stop.bind(oldSource)
+  oldSource.stop = (...a) => { oldStopped = true; return origStop(...a) }
+
+  const res = await applyLiveDoubleSpeed({ audioContext: ctx, buffer, audioProcessor })
+  badge('applyLiveDoubleSpeed reports {speed: 2, method: playbackRate}',
+    res.speed === 2 && res.method === 'playbackRate', JSON.stringify(res))
+  status.textContent = 'crossfading to 2× (octave jump)…'
+  await sleep(300) // > the 50 ms crossfade
+
+  badge('replacement source installed on the processor', audioProcessor.source !== oldSource)
+  badge('replacement source playbackRate.value === 2.0 exactly',
+    audioProcessor.source.playbackRate.value === 2.0, String(audioProcessor.source.playbackRate.value))
+  badge('old source stopped after the 50 ms crossfade', oldStopped)
+
+  // ── resample tier (pitch-preserving) ─────────────────────────────────────
+  const r2 = await applyLiveDoubleSpeed({ audioContext: ctx, buffer, audioProcessor, preservePitch: true })
+  badge('resample: returned buffer.length === original length',
+    r2.buffer.length === buffer.length, `${r2.buffer.length} vs ${buffer.length}`)
+  badge('resample: newLoopLength === floor(len/2)',
+    r2.newLoopLength === Math.floor(buffer.length / 2), String(r2.newLoopLength))
+  let trailingEnergy = 0
+  const d = r2.buffer.getChannelData(0)
+  for (let i = Math.floor(buffer.length / 2); i < buffer.length; i++) trailingEnergy += d[i] * d[i]
+  badge('resample: RMS of trailing half === 0 (the resample-path signature)',
+    trailingEnergy === 0, trailingEnergy.toExponential(1))
+
+  // ── reset ────────────────────────────────────────────────────────────────
+  status.textContent = 'resetting to 1×…'
+  await resetLiveSpeed()
+  await sleep(300)
+  badge('resetLiveSpeed restores playbackRate.value === 1.0',
+    audioProcessor.source.playbackRate.value === 1.0, String(audioProcessor.source.playbackRate.value))
+
+  // ── error contract ───────────────────────────────────────────────────────
+  let msg = ''
+  try { await applyLiveDoubleSpeed({}) } catch (e) { msg = e.message }
+  badge('error contract: missing ctx/buffer throws the documented message',
+    msg === 'applyLiveDoubleSpeed: audioContext and buffer are required', msg)
+
+  status.textContent = 'proof complete — still playing at 1× (press stop)'
+}
+</script>
+</body>
+</html>

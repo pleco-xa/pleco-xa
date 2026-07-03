@@ -51,6 +51,32 @@ const COLORMAP_CONFIGS = {
   }
 };
 
+/** True for plain arrays AND typed arrays (Float32Array rows etc.). */
+function __is_vector(row) {
+  return Array.isArray(row) || (ArrayBuffer.isView(row) && !(row instanceof DataView));
+}
+
+/**
+ * Flatten 1-D or 2-D numeric data to a plain number[].
+ *
+ * Array.prototype.flat() does NOT flatten typed-array rows, and every xa
+ * feature module returns Array<Float32Array|Float64Array> — so cmap/specshow
+ * must flatten row-by-row instead of relying on .flat().
+ * @param {Array|Float32Array|Float64Array|Array<Array|Float32Array>} data
+ * @returns {number[]} flattened values
+ */
+function __flatten_data(data) {
+  if (Array.isArray(data) && data.length > 0 && __is_vector(data[0])) {
+    const out = [];
+    for (const row of data) {
+      for (let i = 0; i < row.length; i++) out.push(row[i]);
+    }
+    return out;
+  }
+  if (__is_vector(data)) return Array.from(data);
+  throw new TypeError('cmap: data must be an array or typed array');
+}
+
 /**
  * Get a default colormap from the given data
  *
@@ -81,15 +107,8 @@ export function cmap(data, robust = true, cmapSeq = 'magma', cmapBool = 'gray_r'
     throw new Error('cmap: data must be a non-empty array');
   }
 
-  // Flatten 2D arrays to 1D for analysis
-  let flatData;
-  if (Array.isArray(data) && Array.isArray(data[0])) {
-    flatData = data.flat();
-  } else if (data instanceof Float32Array || data instanceof Float64Array || Array.isArray(data)) {
-    flatData = Array.from(data);
-  } else {
-    throw new TypeError('cmap: data must be an array or typed array');
-  }
+  // Flatten 1-D/2-D (incl. typed-array rows) to a plain number[] for analysis
+  const flatData = __flatten_data(data);
 
   // Filter out NaN and Infinity values
   const validData = flatData.filter(v => Number.isFinite(v));
@@ -244,8 +263,9 @@ export function specshow(S, options = {}) {
   const numFreqBins = S.length;
   const numTimeFrames = S[0].length;
 
-  // Flatten data for colormap determination
-  const flatData = S.flat();
+  // Flatten data for colormap determination (typed-array-row aware —
+  // S.flat() silently returns the row objects for Array<Float32Array>)
+  const flatData = __flatten_data(S);
 
   // Get colormap
   const colormap = cmap(flatData, true, cmapName, 'gray_r', 'coolwarm');

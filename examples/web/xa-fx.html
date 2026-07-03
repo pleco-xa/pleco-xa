@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — xa-fx: FX audition with sample-exact badges</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  h2 { font-size: 1rem; color: #9ad; margin: 18px 0 4px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
+  button:hover { background: #37474f; }
+  canvas { display: block; margin: 6px 0; border: 1px solid #333; }
+</style>
+</head>
+<body>
+<h1>lib/effects/xa-fx.js — FX audition with sample-exact badges</h1>
+<p>
+  Loads a golden WAV, takes the loop region from <code>loop.detect</code>, and
+  runs each effect through <code>applyQuantumOp</code> on a fresh copy.
+  Badges are sample-exact: STUTTER must write the first-10 ms slice verbatim at
+  <code>start + k·span</code> (k=0..3); FRACTAL must equal a manual reverse of
+  the loop's first half with the rest untouched; PHASE must differ inside the
+  loop and stay bit-identical outside it (in-place containment). The phase
+  effect running at all proves the 2026-07-02 repair — parameters are now an
+  explicit options argument, not a <code>window.phaserParams</code> bus read
+  (it crashed headless before). Same asserts spot-run in Node pre-ship.
+</p>
+<p id="loopinfo"></p>
+<div id="badges"></div>
+<div id="rows"></div>
+
+<script type="module">
+import { applyQuantumOp, loop as loopNS, decodeWav } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawWave } from './_badge.js'
+
+const resp = await fetch('../../apps/demo/public/audio/Drive%20Through%20Beat.wav')
+const { channels, sampleRate: SR } = decodeWav(await resp.arrayBuffer())
+const mono = channels[0]
+
+// golden loop region from the flagship detector
+const det = await loopNS.detect(
+  { getChannelData: () => mono, sampleRate: SR, length: mono.length, duration: mono.length / SR },
+)
+const loop = { startSample: det.loopStartSample, endSample: det.loopEndSample }
+document.getElementById('loopinfo').textContent =
+  `loop.detect (${det.strategy}): [${loop.startSample}, ${loop.endSample}] samples, confidence ${det.confidence.toFixed(2)}`
+
+const makeBuf = () => {
+  const data = Float32Array.from(mono)
+  return { length: data.length, sampleRate: SR, numberOfChannels: 1, duration: data.length / SR, getChannelData: () => data }
+}
+
+let ctx = null
+function playLoop(data, seconds = 3) {
+  ctx = ctx || new (window.AudioContext || window.webkitAudioContext)()
+  ctx.resume()
+  const b = ctx.createBuffer(1, data.length, SR)
+  b.getChannelData(0).set(data)
+  const src = ctx.createBufferSource()
+  src.buffer = b
+  src.loop = true
+  src.loopStart = loop.startSample / SR
+  src.loopEnd = loop.endSample / SR
+  src.connect(ctx.destination)
+  src.start(0, src.loopStart)
+  src.stop(ctx.currentTime + seconds)
+}
+
+function row(title, data) {
+  const div = document.createElement('div')
+  const h = document.createElement('h2')
+  h.textContent = title
+  div.appendChild(h)
+  const c = document.createElement('canvas')
+  c.width = 820; c.height = 90
+  div.appendChild(c)
+  const before = document.createElement('button')
+  before.textContent = '▶ original loop'
+  before.onclick = () => playLoop(mono)
+  const after = document.createElement('button')
+  after.textContent = `▶ ${title.toLowerCase()} loop`
+  after.onclick = () => playLoop(data)
+  div.append(before, after)
+  document.getElementById('rows').appendChild(div)
+  drawWave(c, data)
+  // highlight the modified region
+  const g = c.getContext('2d')
+  g.fillStyle = 'rgba(255, 215, 0, 0.18)'
+  const x0 = (loop.startSample / data.length) * c.width
+  const x1 = (loop.endSample / data.length) * c.width
+  g.fillRect(x0, 0, x1 - x0, c.height)
+}
+
+// ── STUTTER ────────────────────────────────────────────────────────────────
+{
+  const buf = makeBuf()
+  applyQuantumOp('stutter', buf, { ...loop }) // repeats = 4
+  const d = buf.getChannelData(0)
+  const span = Math.min(Math.floor(0.01 * SR), loop.endSample - loop.startSample)
+  let ok = true
+  for (let r = 0; r < 4; r++) for (let i = 0; i < span; i++) {
+    if (d[loop.startSample + r * span + i] !== mono[loop.startSample + i]) ok = false
+  }
+  badge('STUTTER: samples at start+k·span exactly equal the first-10ms slice (k=0..3)', ok, `span=${span}`)
+  row('Stutter', d)
+}
+
+// ── FRACTAL ────────────────────────────────────────────────────────────────
+{
+  const buf = makeBuf()
+  applyQuantumOp('fractal', buf, { ...loop })
+  const d = buf.getChannelData(0)
+  const mid = Math.floor((loop.startSample + loop.endSample) / 2)
+  let rev = true, rest = true
+  for (let i = 0; i < mid - loop.startSample; i++) {
+    if (d[loop.startSample + i] !== mono[mid - 1 - i]) rev = false
+  }
+  for (let i = 0; i < loop.startSample; i++) if (d[i] !== mono[i]) rest = false
+  for (let i = mid; i < d.length; i++) if (d[i] !== mono[i]) rest = false
+  badge('FRACTAL: first half of loop == manual reverse of original first half', rev)
+  badge('FRACTAL: second half and everything outside untouched', rest)
+  row('Fractal', d)
+}
+
+// ── PHASE ──────────────────────────────────────────────────────────────────
+{
+  const buf = makeBuf()
+  let ran = true
+  try { applyQuantumOp('phase', buf, { ...loop }) } catch (e) { ran = false }
+  badge('PHASE runs with injected params (no window.phaserParams crash)', ran)
+  const d = buf.getChannelData(0)
+  let outside = true, inside = false
+  for (let i = 0; i < loop.startSample; i++) if (d[i] !== mono[i]) outside = false
+  for (let i = loop.endSample; i < d.length; i++) if (d[i] !== mono[i]) outside = false
+  for (let i = loop.startSample; i < loop.endSample; i++) if (d[i] !== mono[i]) { inside = true; break }
+  badge('PHASE: output differs inside the loop', inside)
+  badge('PHASE: bit-identical outside the loop bounds (in-place containment)', outside)
+  row('Phase', d)
+}
+</script>
+</body>
+</html>

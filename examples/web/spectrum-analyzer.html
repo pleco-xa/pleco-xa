@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — SpectrumAnalyzer</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    canvas { background: #111; display: block; margin: 8px 0; border: 1px solid #333; }
+    button { font: 14px system-ui; margin: 2px; padding: 6px 12px; }
+    p { max-width: 72ch; }
+  </style>
+</head>
+<body>
+  <h2>SpectrumAnalyzer — live oscillator peak-bin proof</h2>
+  <p>
+    Static proofs run on load with the repaired xa-fft-backed paths:
+    renderStaticSpectrum of a 1 kHz sine must report its peak within one FFT
+    bin (previously it always threw), and createSpectrogram of a 200→2000 Hz
+    chirp must produce the exact legacy frame count with a rising peak bin
+    (previously an O(n²) DFT that hung). Press <b>Start</b> for the live
+    proof: a 1000 Hz OscillatorNode feeds RealtimeSpectrumAnalyzer
+    (fftSize 4096) and the argmax of analyser.frequencyData must sit within
+    one bin (±10.8 Hz) of 1000 Hz. Sweep buttons retune the oscillator so you
+    can watch (and hear, quietly) the peak track.
+  </p>
+  <div id="badges"></div>
+  <div>
+    <button id="start">Start 1000 Hz + verify</button>
+    <button data-f="500">Sweep 500</button>
+    <button data-f="2000">Sweep 2000</button>
+    <button data-f="4000">Sweep 4000</button>
+    <button id="stop">Stop</button>
+    <span id="readout"></span>
+  </div>
+  <canvas id="live" width="800" height="240"></canvas>
+  <canvas id="static" width="800" height="200"></canvas>
+  <canvas id="sgram" width="800" height="240"></canvas>
+
+  <script type="module">
+    import {
+      RealtimeSpectrumAnalyzer, renderStaticSpectrum, createSpectrogram,
+    } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const sr = 44100
+    const argmax = (arr) => arr.reduce((m, v, i) => (v > arr[m] ? i : m), 0)
+
+    // ── static spectrum (repair proof: no OfflineAudioContext, no throw) ──
+    const tone = new AudioBuffer({ numberOfChannels: 1, length: sr, sampleRate: sr })
+    const tch = tone.getChannelData(0)
+    for (let i = 0; i < tch.length; i++) tch[i] = 0.8 * Math.sin(2 * Math.PI * 1000 * i / sr)
+    try {
+      const res = await renderStaticSpectrum(document.getElementById('static'), tone, { fftSize: 4096, style: 'line' })
+      badge('renderStaticSpectrum peak == 1000 Hz ±1 bin', Math.abs(res.peakFrequency - 1000) <= sr / 4096, `${res.peakFrequency.toFixed(1)} Hz`)
+    } catch (e) {
+      badge('renderStaticSpectrum peak == 1000 Hz ±1 bin', false, `threw: ${e.message}`)
+    }
+
+    // ── spectrogram (repair proof: stft-backed, exact legacy frame count) ──
+    const chirp = new AudioBuffer({ numberOfChannels: 1, length: 2 * sr, sampleRate: sr })
+    const cch = chirp.getChannelData(0)
+    for (let i = 0; i < cch.length; i++) {
+      const t = i / sr // f(t) = 200 + 900t (200 → 2000 Hz over 2 s)
+      cch[i] = 0.8 * Math.sin(2 * Math.PI * (200 * t + 450 * t * t))
+    }
+    const t0 = performance.now()
+    const spec = await createSpectrogram(document.getElementById('sgram'), chirp, { fftSize: 2048, hopLength: 512 })
+    const ms = (performance.now() - t0).toFixed(0)
+    const expFrames = Math.floor((2 * sr - 2048) / 512) + 1
+    badge('createSpectrogram frames == floor((N−nfft)/hop)+1', spec.timeFrames === expFrames, `${spec.timeFrames}/${expFrames} in ${ms} ms`)
+    const binHz = sr / 2048
+    const f1 = argmax(spec.data[2]) * binHz
+    const f2 = argmax(spec.data[Math.floor(expFrames / 2)]) * binHz
+    const f3 = argmax(spec.data[expFrames - 3]) * binHz
+    badge('chirp peak bin rises 200→2000 Hz', f1 < f2 && f2 < f3 && Math.abs(f2 - 1100) < 100, `${f1.toFixed(0)} → ${f2.toFixed(0)} → ${f3.toFixed(0)} Hz`)
+
+    // ── live oscillator proof ─────────────────────────────────────────────
+    let audio = null
+    let liveDone = false
+    const readout = document.getElementById('readout')
+
+    function measure(analyzer) {
+      const idx = argmax(analyzer.frequencyData)
+      return idx * (audio.ctx.sampleRate / analyzer.options.fftSize)
+    }
+
+    document.getElementById('start').onclick = async () => {
+      if (audio) return
+      const ctx = new AudioContext()
+      await ctx.resume()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      gain.gain.value = 0.05
+      osc.frequency.value = 1000
+      const analyzer = new RealtimeSpectrumAnalyzer(document.getElementById('live'), ctx, {
+        fftSize: 4096, style: 'bars', logScale: true, showGrid: true,
+      })
+      osc.connect(analyzer.getAnalyserNode())
+      analyzer.getAnalyserNode().connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      analyzer.start()
+      audio = { ctx, osc, analyzer }
+      setTimeout(() => {
+        const peak = measure(analyzer)
+        readout.textContent = ` live peak: ${peak.toFixed(1)} Hz`
+        if (!liveDone) {
+          liveDone = true
+          badge('live analyser argmax == 1000 Hz ±1 bin (±10.8 Hz)', Math.abs(peak - 1000) <= ctx.sampleRate / 4096, `${peak.toFixed(1)} Hz`)
+        }
+      }, 600)
+    }
+
+    for (const b of document.querySelectorAll('button[data-f]')) {
+      b.onclick = () => {
+        if (!audio) return
+        audio.osc.frequency.value = +b.dataset.f
+        setTimeout(() => {
+          readout.textContent = ` live peak: ${measure(audio.analyzer).toFixed(1)} Hz (osc @ ${b.dataset.f} Hz)`
+        }, 600)
+      }
+    }
+
+    document.getElementById('stop').onclick = () => {
+      if (!audio) return
+      audio.osc.stop(); audio.analyzer.stop(); audio.ctx.close(); audio = null
+    }
+  </script>
+</body>
+</html>

@@ -370,3 +370,136 @@ gen_phase_vocoder()
 gen_hpss()
 gen_dtw_segment()
 print("wave5 fixtures done")
+
+
+# ---------------- Missing-pieces goal: linalg, cluster, sequence, pcen ----------------
+
+def gen_linalg():
+    import scipy.linalg, scipy.sparse.csgraph
+    rng = np.random.default_rng(3)
+    # symmetric eigendecomposition ground truth (scipy.linalg.eigh)
+    M = rng.standard_normal((6, 6)); A = (M + M.T) / 2
+    evals, evecs = scipy.linalg.eigh(A)
+    # normalized graph Laplacian ground truth (scipy.sparse.csgraph.laplacian normed=True)
+    W = np.abs(rng.standard_normal((5, 5))); W = (W + W.T) / 2; np.fill_diagonal(W, 0)
+    L = scipy.sparse.csgraph.laplacian(W, normed=True)
+    Levals, Levecs = scipy.linalg.eigh(L)
+    write("linalg", "scipy.linalg.eigh + scipy.sparse.csgraph.laplacian(normed)", {}, [
+        {"input": {"fn": "eigh", "A": A.ravel().tolist(), "n": 6},
+         "eigenvalues": f32(evals), "reconstruct": A.ravel().tolist()},
+        {"input": {"fn": "laplacian_normed", "W": W.ravel().tolist(), "n": 5},
+         "expected": L.ravel().tolist(),
+         "L_eigenvalues": f32(Levals)},
+    ])
+
+
+def gen_cluster():
+    from sklearn.cluster import KMeans
+    rng = np.random.default_rng(0)
+    # three well-separated blobs so the partition is unique regardless of init
+    blobs = np.vstack([rng.standard_normal((20, 2)) * 0.3 + c
+                       for c in ([0, 0], [8, 8], [0, 8])])
+    km = KMeans(n_clusters=3, n_init=10, random_state=0).fit(blobs)
+    # canonical: sort clusters by centroid (x,y) so labels are comparable up to our own sort
+    order = np.lexsort((km.cluster_centers_[:, 1], km.cluster_centers_[:, 0]))
+    remap = {old: new for new, old in enumerate(order)}
+    labels = np.array([remap[l] for l in km.labels_])
+    centers = km.cluster_centers_[order]
+    write("cluster", "sklearn.cluster.KMeans (separable blobs)", {}, [{
+        "input": {"X": blobs.ravel().tolist(), "shape": list(blobs.shape), "k": 3},
+        "expected_labels": labels.tolist(),
+        "expected_centers": f32(centers.ravel()),
+        "expected_inertia": float(km.inertia_),
+    }])
+
+
+def gen_sequence_extra():
+    rng = np.random.default_rng(5)
+    n = 4
+    cases = [
+        {"input": {"fn": "transition_uniform", "n_states": n},
+         "expected": f32(librosa.sequence.transition_uniform(n).ravel())},
+        {"input": {"fn": "transition_loop", "n_states": n, "prob": 0.8},
+         "expected": f32(librosa.sequence.transition_loop(n, 0.8).ravel())},
+        {"input": {"fn": "transition_cycle", "n_states": n, "prob": 0.9},
+         "expected": f32(librosa.sequence.transition_cycle(n, 0.9).ravel())},
+        {"input": {"fn": "transition_local", "n_states": 6, "width": 3, "window": "triangle", "wrap": False},
+         "expected": f32(librosa.sequence.transition_local(6, 3, window="triangle", wrap=False).ravel())},
+    ]
+    # viterbi_discriminative: 3-state posterior over 12 frames + loopy transition
+    T, S = 12, 3
+    prob = rng.random((S, T)); prob /= prob.sum(axis=0, keepdims=True)
+    trans = librosa.sequence.transition_loop(S, 0.7)
+    path = librosa.sequence.viterbi_discriminative(prob, trans)
+    cases.append({"input": {"fn": "viterbi_discriminative", "prob": prob.ravel().tolist(),
+                            "shape": [S, T], "transition": trans.ravel().tolist()},
+                  "expected_path": np.asarray(path).tolist()})
+    write("sequence_extra", "librosa.sequence transition_* + viterbi_discriminative", {}, cases)
+
+
+def gen_pcen():
+    sigs = signals()
+    y = (sigs["sine440"][: SR // 2] * 0.6 + _click_signal(120.0, dur=0.5) * 0.7).astype(np.float32)
+    S = librosa.feature.melspectrogram(y=y, sr=SR, n_fft=2048, hop_length=512, n_mels=64)
+    P = librosa.pcen(S, sr=SR, hop_length=512)
+    write("pcen", "librosa.pcen (defaults on melspectrogram)", {}, [{
+        "input": {"y": f32(y), "sr": SR, "n_fft": 2048, "hop_length": 512, "n_mels": 64},
+        "S_shape": list(S.shape),
+        "expected": f32(P.ravel()),
+    }])
+
+
+gen_linalg()
+gen_cluster()
+gen_sequence_extra()
+gen_pcen()
+print("missing-pieces fixtures done")
+
+
+def gen_laplacian_seg_twofeat():
+    """librosa plot_segmentation spectral-clustering half on CONTROLLED two-feature
+    input (not CQT), so pleco's laplacianSegmentation({recurrenceFeatures,
+    pathFeatures}) can cross-check boundaries against librosa's own primitives."""
+    import scipy.linalg, scipy.sparse.csgraph, scipy.ndimage
+    from sklearn.cluster import KMeans
+    rng = np.random.default_rng(19)
+    n, k = 45, 3
+    # 3 sections of 15 frames; sections 0 & 2 share a repetition signature (ABA),
+    # section 1 distinct — recurrence sees the repeat, path sees smooth continuity.
+    sig = {0: np.array([1., 0, 0, 1, 0]), 1: np.array([0, 1., 1, 0, 0]), 2: np.array([1., 0, 0, 1, 0])}
+    rec = np.zeros((5, n)); pth = np.zeros((4, n))
+    for t in range(n):
+        s = t // 15
+        rec[:, t] = sig[s] + rng.standard_normal(5) * 0.05
+        pth[:, t] = np.array([s, np.sin(t * 0.3), np.cos(t * 0.2), s * 0.5]) + rng.standard_normal(4) * 0.02
+
+    # --- librosa/scipy/sklearn pipeline (plot_segmentation.py spectral half) ---
+    R = librosa.segment.recurrence_matrix(rec, width=3, mode='affinity', sym=True)
+    df = librosa.segment.timelag_filter(scipy.ndimage.median_filter)
+    Rf = df(R, size=(1, 7))
+    # path graph from pathFeatures
+    dist = np.sum(np.diff(pth, axis=1) ** 2, axis=0)
+    sigma = np.median(dist)
+    Rpath = np.zeros((n, n))
+    for i in range(n - 1):
+        w = np.exp(-dist[i] / sigma); Rpath[i, i + 1] = w; Rpath[i + 1, i] = w
+    A = 0.5 * Rf + 0.5 * Rpath
+    A = (A + A.T) / 2
+    L = scipy.sparse.csgraph.laplacian(A, normed=True)
+    _, evecs = scipy.linalg.eigh(L)
+    evecs = scipy.ndimage.median_filter(evecs, size=(9, 1))
+    Cnorm = np.cumsum(evecs ** 2, axis=1) ** 0.5
+    X = evecs[:, :k] / Cnorm[:, k - 1:k]
+    seg_ids = KMeans(n_clusters=k, n_init=10, random_state=0).fit_predict(X)
+    bounds = (1 + np.flatnonzero(seg_ids[:-1] != seg_ids[1:])).tolist()
+
+    write("laplacian_seg", "librosa plot_segmentation (two-feature, controlled)", {}, [{
+        "input": {"recurrenceFeatures": rec.ravel().tolist(), "rec_shape": [5, n],
+                  "pathFeatures": pth.ravel().tolist(), "path_shape": [4, n], "k": k, "width": 3, "mu": 0.5},
+        "expected_boundaries": bounds,
+        "expected_nsegments": int(len(set(seg_ids))),
+    }])
+
+
+gen_laplacian_seg_twofeat()
+print("laplacian-seg two-feature fixture done")

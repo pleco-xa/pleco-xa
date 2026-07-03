@@ -35,22 +35,12 @@ const MELA_MAP = {
 };
 
 /**
- * Melakarta svara patterns (degrees)
- * Each melakarta has a specific pattern of 7 svaras
- */
-const MELA_SVARA_PATTERNS = [
-  // Rows represent R, G, M, P, D, N patterns
-  // Format: [R, G, M, P, D, N] where each is 0-indexed degree
-  [0, 1, 2, 3, 4, 5, 6],  // Placeholder - will be computed
-];
-
-/**
  * Hindustani thaat database
  */
 const THAAT_MAP = {
   'bilaval': [0, 2, 4, 5, 7, 9, 11],
   'khamaj': [0, 2, 4, 5, 7, 9, 10],
-  'kafi': [0, 2, 3, 5, 7, 8, 10],
+  'kafi': [0, 2, 3, 5, 7, 9, 10],
   'asavari': [0, 2, 3, 5, 7, 8, 10],
   'bhairavi': [0, 1, 3, 5, 7, 8, 10],
   'kalyan': [0, 2, 4, 6, 7, 9, 11],
@@ -104,24 +94,19 @@ const KEY_DEGREES = {
 };
 
 /**
- * Note names for each chromatic degree in different keys
+ * Base note-name grids for key spelling (index == chromatic pitch class,
+ * 0 == C). Corrections extend these past 6 sharps / 6 flats, exactly like
+ * librosa.core.notation.key_to_notes.
  */
-const KEY_NOTE_NAMES = {
-  'C:maj': ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
-  'C#:maj': ['C#', 'D', 'D#', 'E', 'E#', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'B#'],
-  'Db:maj': ['Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B', 'C'],
-  'D:maj': ['D', 'D#', 'E', 'E#', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'B#', 'C#'],
-  'Eb:maj': ['Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B', 'C', 'C#', 'D'],
-  'E:maj': ['E', 'E#', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'B#', 'C#', 'D', 'D#'],
-  'F:maj': ['F', 'F#', 'G', 'G#', 'A', 'Bb', 'B', 'C', 'C#', 'D', 'D#', 'E'],
-  'F#:maj': ['F#', 'G', 'G#', 'A', 'A#', 'B', 'B#', 'C#', 'D', 'D#', 'E', 'E#'],
-  'Gb:maj': ['Gb', 'G', 'Ab', 'A', 'Bb', 'Cb', 'C', 'Db', 'D', 'Eb', 'E', 'F'],
-  'G:maj': ['G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'E#', 'F#'],
-  'Ab:maj': ['Ab', 'A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G'],
-  'A:maj': ['A', 'A#', 'B', 'B#', 'C#', 'D', 'D#', 'E', 'E#', 'F#', 'G', 'G#'],
-  'Bb:maj': ['Bb', 'B', 'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A'],
-  'B:maj': ['B', 'B#', 'C#', 'D', 'D#', 'E', 'E#', 'F#', 'G', 'G#', 'A', 'A#']
-};
+const NOTES_SHARP = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+const NOTES_FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+// Applied in order once the signature exceeds 6 sharps (e.g. F♯:maj is fine,
+// C♯:maj respells 5→E♯ and 0→B♯, G♯:maj adds 7→F𝄪, ...)
+const SHARP_CORRECTIONS = [[5, 'E♯'], [0, 'B♯'], [7, 'F𝄪'], [2, 'C𝄪'], [9, 'G𝄪'], [4, 'D𝄪'], [11, 'A𝄪']];
+// Applied in order once the signature exceeds 6 flats
+const FLAT_CORRECTIONS = [[11, 'C♭'], [4, 'F♭'], [9, 'B𝄫'], [2, 'E𝄫'], [7, 'A𝄫'], [0, 'D𝄫']];
+
+const PITCH_MAP = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
 
 /**
  * Construct the diatonic scale degrees for a given key
@@ -146,42 +131,75 @@ export function key_to_degrees(key) {
 }
 
 /**
- * List all 12 note names in the chromatic scale, as spelled according to a given key
- * @param {string} key - Key signature (e.g., 'C:maj', 'F#:min')
- * @param {boolean} unicode - If true, use unicode symbols for accidentals
- * @param {boolean} natural - If true, only use natural note names (C-B)
- * @returns {Array<string>} List of 12 note names
+ * List all 12 note names in the chromatic scale, as spelled according to a
+ * given key. Port of librosa.core.notation.key_to_notes (0.11): the returned
+ * array is indexed by pitch class (0 == C), NOT rotated to the tonic, and the
+ * sharp/flat choice follows the key's position on the circle of fifths
+ * (explicit accidental in the tonic forces the side). Unknown keys THROW \u2014
+ * the legacy silent C:maj fallback is repaired.
+ *
+ * @param {string} key - Key signature (e.g., 'C:maj', 'Eb:min', 'F\u266F:maj')
+ * @param {boolean} unicode - If true, use unicode symbols (\u266F/\uD834\uDD2A/\u266D/\uD834\uDD2B)
+ * @returns {Array<string>} List of 12 note names indexed by pitch class
  *
  * @example
- * key_to_notes('C:maj')     // ['C', 'C#', 'D', ...]
- * key_to_notes('F:maj')     // ['F', 'F#', 'G', 'G#', 'A', 'Bb', ...]
+ * key_to_notes('C:maj', false)   // ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
+ * key_to_notes('Eb:maj', false)  // ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B']
+ * key_to_notes('A:min', false)   // same spelling as C:maj (relative keys share a signature)
  */
-export function key_to_notes(key, unicode = true, natural = false) {
+export function key_to_notes(key, unicode = true) {
   if (typeof key !== 'string') {
     throw new TypeError('key must be a string');
   }
 
-  if (natural) {
-    // Return natural note names only
-    return ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const match = key.match(/^([A-Ga-g])([#\u266Fb!\u266D]?):(maj|min)(or)?$/);
+  if (!match) {
+    throw new Error(`Improper key format: ${key}. Use format like 'C:maj', 'Eb:min'`);
   }
 
-  // Get note names for this key signature
-  let notes = KEY_NOTE_NAMES[key];
+  const tonic = match[1].toUpperCase();
+  const acc = match[2];
+  const offset = (acc === '#' || acc === '\u266F') ? 1 : (acc === '') ? 0 : -1;
+  const major = match[3] === 'maj';
 
-  if (!notes) {
-    // Default to C major if key not found
-    notes = KEY_NOTE_NAMES['C:maj'];
+  // Steps clockwise on the circle of fifths == number of sharps (mod 12)
+  const raw = major
+    ? (PITCH_MAP[tonic] + offset) * 7
+    : (PITCH_MAP[tonic] + offset) * 7 + 9;
+  const tonicNumber = ((raw % 12) + 12) % 12;
+
+  // Explicit accidental in the tonic forces the accidental side
+  let useSharps;
+  if (offset < 0) useSharps = false;
+  else if (offset > 0) useSharps = true;
+  else useSharps = tonicNumber < 6;
+
+  // Mod-12 correction so B\u266F:maj (12 sharps) is not confused with C:maj (0)
+  let nSharps = tonicNumber;
+  if (tonicNumber === 0 && tonic === 'B') nSharps = 12;
+
+  let notes;
+  if (useSharps) {
+    notes = [...NOTES_SHARP];
+    for (let n = 0; n <= nSharps - 6; n++) {
+      const [index, name] = SHARP_CORRECTIONS[n];
+      notes[index] = name;
+    }
+  } else {
+    const nFlats = (12 - tonicNumber) % 12;
+    notes = [...NOTES_FLAT];
+    for (let n = 0; n <= nFlats - 6; n++) {
+      const [index, name] = FLAT_CORRECTIONS[n];
+      notes[index] = name;
+    }
   }
 
-  // Convert to unicode if requested
-  if (unicode) {
-    notes = notes.map(note => {
-      return note.replace('#', '\u266F').replace('b', '\u266D');
-    });
+  if (!unicode) {
+    notes = notes.map(note =>
+      note.replace('\u266F', '#').replace('\uD834\uDD2A', '##').replace('\u266D', 'b').replace('\uD834\uDD2B', 'bb'));
   }
 
-  return [...notes];
+  return notes;
 }
 
 /**
@@ -287,49 +305,35 @@ export function mela_to_degrees(mela) {
  * @returns {Array<string>} List of 7 svara names
  *
  * @example
- * mela_to_svara('kharaharapriya')           // ['S', 'R2', 'G2', 'M1', 'P', 'D2', 'N2']
- * mela_to_svara(22, true)                    // ['S', 'R2', 'G2', 'M1', 'P', 'D2', 'N2']
- * mela_to_svara(22, false)                   // ['Sa', 'Ri2', 'Ga2', 'Ma1', 'Pa', 'Dha2', 'Ni2']
+ * mela_to_svara('kharaharapriya')        // ['S', 'R₂', 'G₂', 'M₁', 'P', 'D₂', 'N₂']
+ * mela_to_svara(22, true, false)         // ['S', 'R2', 'G2', 'M1', 'P', 'D2', 'N2']
+ * mela_to_svara(22, false, false)        // ['Sa', 'Ri2', 'Ga2', 'Ma1', 'Pa', 'Dha2', 'Ni2']
  */
 export function mela_to_svara(mela, abbr = true, unicode = true) {
   const degrees = mela_to_degrees(mela);
 
-  // Map degrees to svara names
-  const SVARA_NAMES_ABBR = {
-    0: 'S',
-    1: 'R1', 2: 'R2', 3: 'R3',
-    4: 'G3',
-    5: 'M1', 6: 'M2',
-    7: 'P',
-    8: 'D1', 9: 'D2', 10: 'D3',
-    11: 'N3'
-  };
+  // SLOT-AWARE naming (librosa semantics): the same chromatic degree is
+  // spelled differently depending on which svara slot it fills. Degree 2 is
+  // R2 in the Ri slot but G1 in the Ga slot; degree 9 is D2 (Dha) but N1 (Ni).
+  // A single-valued degree→name map cannot emit G1/G2/N1/N2 — that was the
+  // repaired bug (mela 22 previously returned [S,R2,R3,M1,P,D2,D3]).
+  const [, R, G, M, , D, N] = degrees;
 
-  const SVARA_NAMES_FULL = {
-    0: 'Sa',
-    1: 'Ri1', 2: 'Ri2', 3: 'Ri3',
-    4: 'Ga3',
-    5: 'Ma1', 6: 'Ma2',
-    7: 'Pa',
-    8: 'Dha1', 9: 'Dha2', 10: 'Dha3',
-    11: 'Ni3'
-  };
+  const R_NUM = { 1: 1, 2: 2, 3: 3 };   // Ri slot: degrees 1/2/3
+  const G_NUM = { 2: 1, 3: 2, 4: 3 };   // Ga slot: degrees 2/3/4
+  const M_NUM = { 5: 1, 6: 2 };         // Ma slot: degrees 5/6
+  const D_NUM = { 8: 1, 9: 2, 10: 3 };  // Dha slot: degrees 8/9/10
+  const N_NUM = { 9: 1, 10: 2, 11: 3 }; // Ni slot: degrees 9/10/11
 
-  // Note: degrees contain [S, R, G, M, P, D, N] but R/G/D/N can be variants
-  // We need to determine which variant based on the actual degree value
-  const [S, R, G, M, P, D, N] = degrees;
+  // librosa renders variant numbers as unicode subscripts when unicode=true
+  const sub = (n) => (unicode ? ['₁', '₂', '₃'][n - 1] : String(n));
 
-  const svaras = abbr ? SVARA_NAMES_ABBR : SVARA_NAMES_FULL;
-
-  return [
-    svaras[S],
-    svaras[R],
-    svaras[G],
-    svaras[M],
-    svaras[P],
-    svaras[D],
-    svaras[N]
-  ];
+  if (abbr) {
+    return ['S', `R${sub(R_NUM[R])}`, `G${sub(G_NUM[G])}`, `M${sub(M_NUM[M])}`,
+      'P', `D${sub(D_NUM[D])}`, `N${sub(N_NUM[N])}`];
+  }
+  return ['Sa', `Ri${sub(R_NUM[R])}`, `Ga${sub(G_NUM[G])}`, `Ma${sub(M_NUM[M])}`,
+    'Pa', `Dha${sub(D_NUM[D])}`, `Ni${sub(N_NUM[N])}`];
 }
 
 /**
@@ -909,49 +913,49 @@ export function __simplify_note(key, additional_acc = '', unicode = true) {
  * @returns {string} The resulting note name
  *
  * @example
- * fifths_to_note('C', 1)  // 'G'   (up one fifth)
- * fifths_to_note('C', -1) // 'F'   (down one fifth)
- * fifths_to_note('C', 7)  // 'B'   (circle of fifths)
+ * fifths_to_note('C', 1)        // 'G'   (up one fifth)
+ * fifths_to_note('C', -1)       // 'F'   (down one fifth)
+ * fifths_to_note('C', 7, false) // 'C#'  (7 fifths = one sharp on the tonic letter)
+ * fifths_to_note('B', 1, false) // 'F#'  (crossing the B→F♯ boundary adds the sharp)
+ * fifths_to_note('G', -3, false)// 'Bb'  (librosa docstring golden)
  */
 export function fifths_to_note(unison, fifths, unicode = true) {
-  // Circle of fifths: C, G, D, A, E, B, F#/Gb, C#/Db, G#/Ab, D#/Eb, A#/Bb, F
-  const notes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-  const unison_upper = unison[0].toUpperCase();
+  // Letters ordered by fifths. A note's absolute circle-of-fifths index is
+  // its letter position plus 7 per sharp (minus 7 per flat); adding `fifths`
+  // and converting back gives both the new letter AND the accidental count.
+  // This is exact for any distance — the legacy floor((fifths+1)/7) formula
+  // ignored the unison's own circle position (B+1 wrongly returned 'F').
+  const FIFTHS_ORDER = ['F', 'C', 'G', 'D', 'A', 'E', 'B'];
 
-  // Find the starting note index
-  let start_idx = notes.indexOf(unison_upper);
-  if (start_idx === -1) {
+  if (typeof unison !== 'string' || unison.length === 0) {
     throw new Error(`Invalid unison note: ${unison}`);
   }
-
-  // Each fifth moves us 7 semitones up (or 5 down)
-  // In terms of note names, it cycles through the circle of fifths
-  // C -> G -> D -> A -> E -> B -> F# -> C# -> G# -> D# -> A# -> F -> C
-
-  // Simplified approach: use the fifth_search helper
-  const interval = Math.pow(1.5, fifths); // (3/2)^fifths
-  const tolerance = 65.0 / 63.0;
-
-  const computed_fifths = __fifth_search(interval, tolerance);
-
-  // Build note name from fifths
-  // Pattern: each +1 fifth = +7 semitones = +4 note letters (mod 7)
-  const letter_offset = (fifths * 4) % 7;
-  const octave_offset = Math.floor((fifths * 4) / 7);
-
-  const new_letter_idx = (start_idx + letter_offset + 7) % 7;
-  let note_name = notes[new_letter_idx];
-
-  // Calculate accidentals: each 7 fifths = +1 sharp (or -1 flat if negative)
-  const accidentals = Math.floor((fifths + 1) / 7);
-
-  if (accidentals > 0) {
-    const symbol = unicode ? '♯' : '#';
-    note_name += symbol.repeat(accidentals);
-  } else if (accidentals < 0) {
-    const symbol = unicode ? '♭' : 'b';
-    note_name += symbol.repeat(Math.abs(accidentals));
+  const pos = FIFTHS_ORDER.indexOf(unison[0].toUpperCase());
+  if (pos === -1) {
+    throw new Error(`Invalid unison note: ${unison}`);
+  }
+  if (!Number.isInteger(fifths)) {
+    throw new Error(`fifths must be an integer, got ${fifths}`);
   }
 
-  return __simplify_note(note_name, '', unicode);
+  // Accidentals on the unison shift its circle index by ±7 each
+  let unisonAcc = 0;
+  for (let i = 1; i < unison.length; i++) {
+    const c = unison[i];
+    if (c === '#' || c === '♯') unisonAcc += 1;
+    else if (c === 'b' || c === '♭') unisonAcc -= 1;
+    else throw new Error(`Invalid accidental '${c}' in unison note: ${unison}`);
+  }
+
+  const idx = pos + 7 * unisonAcc + fifths;
+  const letter = FIFTHS_ORDER[((idx % 7) + 7) % 7];
+  const accidentals = Math.floor(idx / 7);
+
+  if (accidentals > 0) {
+    return letter + (unicode ? '♯' : '#').repeat(accidentals);
+  }
+  if (accidentals < 0) {
+    return letter + (unicode ? '♭' : 'b').repeat(-accidentals);
+  }
+  return letter;
 }

@@ -56,9 +56,13 @@ export async function playQuantumOps(buffer, ctx, applyLoop, beatMs = 160) {
   const ops = buildQuantumOpList(128, 4); // 128 steps, 4 preset injections
   console.log('🌌 Quantum sequence:', ops.join(' '));
 
-  // Track quantum state for dynamic timing
+  // Track quantum state for dynamic timing.
+  // Tier-2 repair (2026-07-02): the micro-stutter counter is per-invocation
+  // local state — the legacy window.quantumSequenceCount global bus crashed
+  // headless and violated the Wave-6 explicit-injection convention.
   let quantumPhase = 0;
   let complexity = 0;
+  let quantumCount = 0;
 
   for (let i = 0; i < ops.length; i++) {
     const op = ops[i];
@@ -97,16 +101,15 @@ export async function playQuantumOps(buffer, ctx, applyLoop, beatMs = 160) {
     const minTiming = 100; // Higher minimum for quantum operations
     const maxQuantumSequence = 3; // Lower tolerance 
     if (timing < minTiming) {
-      const quantumCount = (window.quantumSequenceCount || 0) + 1;
-      window.quantumSequenceCount = quantumCount;
-      
+      quantumCount++;
+
       if (quantumCount > maxQuantumSequence) {
         timing = beatMs * 2; // Longer quantum breathing space
-        window.quantumSequenceCount = 0;
+        quantumCount = 0;
         console.log('🌌 Quantum field stabilized - breaking micro-loop');
       }
     } else {
-      window.quantumSequenceCount = 0;
+      quantumCount = 0;
     }
     
     // Additional quantum safety - absolute minimum

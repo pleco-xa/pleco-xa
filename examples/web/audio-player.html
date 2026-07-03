@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — AudioPlayer event contract</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 820px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
+  button:hover { background: #37474f; }
+  #status { font-family: monospace; color: #9ad; }
+</style>
+</head>
+<body>
+<h1>scripts/analysis/AudioPlayer.ts — event-contract player proof</h1>
+<p>
+  Event-driven contract on the 15 s golden WAV. Badges assert the EVENT
+  payloads, not internal state: (1) <code>setLoop(10, 9999)</code> fires
+  <code>loopchange</code> with end clamped to <code>buffer.duration</code>
+  exactly; (2) during looped playback 200 consecutive
+  <code>timeupdate</code> values all land inside [loop.start, loop.end] —
+  this exercises the 2026-07-02 clock repair (the wall-clock reference now
+  tracks the actual start offset, so even first-cycle values are in bounds);
+  (3) <code>pause()/play()</code> continuity — the clock resumes within 60 ms
+  of the paused position (resume now also continues the AUDIO from the paused
+  position instead of silently restarting the loop); (4) the
+  <code>state</code> getter mirrors the last events. Clamp + state asserts
+  spot-run headless in Node pre-ship.
+</p>
+<div id="badges"></div>
+<p id="status">press run</p>
+<div>
+  <button id="run">▶ run proof (plays the looped region)</button>
+  <button id="pauseBtn">⏸ pause</button>
+  <button id="playBtn">▶ resume</button>
+  <button id="stopBtn">■ stop</button>
+</div>
+
+<script type="module">
+import { AudioPlayer } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge } from './_badge.js'
+
+const status = document.getElementById('status')
+const player = new AudioPlayer({ volume: 0.5 })
+
+document.getElementById('pauseBtn').onclick = () => player.pause()
+document.getElementById('playBtn').onclick = () => player.play()
+document.getElementById('stopBtn').onclick = () => { player.stop(); status.textContent = 'stopped' }
+
+document.getElementById('run').onclick = async () => {
+  await player.audioContext.resume()
+  status.textContent = 'loading…'
+  await player.load('../../apps/demo/public/audio/Drive%20Through%20Beat.wav')
+  const duration = player.audioBuffer.duration
+  status.textContent = `loaded ${duration.toFixed(3)} s`
+
+  // ── (1) clamp proof via the loopchange EVENT payload ─────────────────────
+  let loopPayload = null
+  player.on('loopchange', (l) => { loopPayload = l })
+  player.setLoop(10, 9999)
+  badge('setLoop(10, 9999) loopchange payload == {start: 10, end: duration} exactly',
+    loopPayload && loopPayload.start === 10 && loopPayload.end === duration,
+    JSON.stringify(loopPayload))
+
+  // ── (2) 200 timeupdate values inside the loop ────────────────────────────
+  status.textContent = 'collecting 200 timeupdate events…'
+  const values = []
+  const collected = new Promise((resolve) => {
+    const onTime = (t) => {
+      values.push(t)
+      if (values.length === 200) { player.off('timeupdate', onTime); resolve() }
+    }
+    player.on('timeupdate', onTime)
+  })
+  player.play()
+  await collected
+  const inBounds = values.filter((t) => t >= loopPayload.start && t <= loopPayload.end).length
+  badge('200/200 timeupdate values within [loop.start, loop.end]',
+    inBounds === 200, `${inBounds}/200, range [${Math.min(...values).toFixed(3)}, ${Math.max(...values).toFixed(3)}]`)
+
+  // ── (3) pause/play continuity ────────────────────────────────────────────
+  player.pause()
+  const pausedAt = player.getCurrentTime()
+  player.play()
+  const resumedAt = player.getCurrentTime()
+  badge('pause()/play() continuity: resume within 60 ms of the paused position',
+    Math.abs(resumedAt - pausedAt) < 0.06,
+    `paused ${pausedAt.toFixed(3)} → resumed ${resumedAt.toFixed(3)}`)
+
+  // ── (4) state getter mirrors the events ──────────────────────────────────
+  const st = player.state
+  badge('state getter coherent: isPlaying, !isPaused, loop deep-equals the event payload',
+    st.isPlaying === true && st.isPaused === false &&
+    JSON.stringify(st.loop) === JSON.stringify(loopPayload))
+
+  status.textContent = 'proof complete — loop [10 s, 15 s] audible (pause/resume/stop above)'
+}
+</script>
+</body>
+</html>

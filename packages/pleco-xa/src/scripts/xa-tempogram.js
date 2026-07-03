@@ -1,24 +1,110 @@
 /**
- * Port of librosa.feature.tempogram
- * Tempogram and tempo analysis for rhythm tracking
- * Librosa-compatible tempogram computation for JavaScript
+ * Port of librosa.feature.tempogram (0.11.0) — local autocorrelation
+ * tempogram over an onset-strength envelope, plus the Fourier tempogram and
+ * a prior-weighted tempo estimator.
+ *
+ * Tier-3 proof-of-work repairs (2026-07-02):
+ *   1. tempogram(): linear_ramp padding (was zero-pad), full win_length lag
+ *      rows (was win_length/2+1), per-column inf-norm with the float64-tiny
+ *      guard — exactly the math the fixture-gated canonical tempo() consumes
+ *      (xa-beat-tracker.js meanTempogram now DELEGATES here, so the parity
+ *      fixture tempo_beats.json gates this module too).
+ *   2. fourier_tempogram(): STFT of the onset envelope at hop_length=1
+ *      (librosa semantics — the previous code passed the audio hop_length,
+ *      collapsing a 431-frame envelope to a single column).
+ *   3. estimate_tempo(): librosa's pseudo-log-normal tempo prior
+ *      (start_bpm=120, std_bpm=1.0 in log2 space) + max_tempo mask over the
+ *      time-mean tempogram (the previous raw argmax returned the 60 BPM
+ *      subharmonic on a plain 120 BPM click train).
+ *   4. The private simplified onset_strength duplicate is gone — the
+ *      librosa-parity onset_strength from ./xa-onset.js is used instead.
+ *   5. tempogram_ratio(): honest not-implemented throw (the previous body
+ *      was not librosa's tempogram_ratio algorithm at all).
+ *
+ * Proof: examples/web/xa-tempogram.html (tempo-jump heatmap + ridge).
  */
 
-import { stft, hann_window } from './xa-fft.js'
-import { frames_to_time } from './xa-convert.js'
+import { stft } from './xa-fft.js'
+import { onset_strength } from './xa-onset.js'
+
+// np.finfo(np.float64).tiny — threshold used by util.normalize on the
+// (float64) tempogram columns.
+const FLOAT64_TINY = 2.2250738585072014e-308
+
+/* ------------------------------------------------------------------------ *
+ * numpy-faithful helpers (shared with xa-beat-tracker via tempogram())
+ * ------------------------------------------------------------------------ */
 
 /**
- * Compute the tempogram: local autocorrelation of the onset strength envelope
- * Port of librosa.feature.tempogram
- * @param {Float32Array} y - Audio time series (optional if onset_envelope provided)
- * @param {number} sr - Sample rate
- * @param {Array} onset_envelope - Pre-computed onset strength envelope
- * @param {number} hop_length - Hop length for frame analysis
- * @param {number} win_length - Window length for temporal autocorrelation
- * @param {boolean} center - Center the autocorrelation windows
- * @param {string} window - Window function type
- * @param {number} norm - Normalization parameter (Infinity = max norm)
- * @returns {Array} Tempogram [win_length/2 + 1, n_frames]
+ * Periodic Hann window: scipy.signal.get_window('hann', n, fftbins=True).
+ * @private
+ */
+function hannPeriodic(n) {
+  const w = new Float64Array(n)
+  for (let i = 0; i < n; i++) {
+    w[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / n)
+  }
+  return w
+}
+
+/**
+ * Full (unbounded) autocorrelation of a real signal:
+ * ac[lag] = sum_i x[i] * x[i + lag]. Direct O(n^2) evaluation — numerically
+ * identical to librosa's FFT path up to float roundoff.
+ * @private
+ */
+function autocorrelate(x) {
+  const n = x.length
+  const ac = new Float64Array(n)
+  for (let lag = 0; lag < n; lag++) {
+    let sum = 0
+    for (let i = 0; i < n - lag; i++) {
+      sum += x[i] * x[i + lag]
+    }
+    ac[lag] = sum
+  }
+  return ac
+}
+
+/**
+ * librosa.convert.tempo_frequencies: BPM value of each autocorrelation lag.
+ * Bin 0 is +Infinity (lag 0).
+ * @private
+ */
+function tempoFrequencies(nBins, hopLength, sr) {
+  const bpms = new Float64Array(nBins)
+  bpms[0] = Infinity
+  for (let k = 1; k < nBins; k++) {
+    bpms[k] = (60.0 * sr) / (hopLength * k)
+  }
+  return bpms
+}
+
+/* ------------------------------------------------------------------------ *
+ * tempogram — librosa.feature.tempogram parity
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Local autocorrelation tempogram of the onset strength envelope.
+ * Port of librosa.feature.tempogram (0.11.0).
+ *
+ * Legacy positional signature preserved.
+ *
+ * @param {Float32Array|Array|null} y - audio time series (optional if
+ *   onset_envelope provided)
+ * @param {number} sr - sample rate
+ * @param {Float32Array|Array|null} onset_envelope - pre-computed
+ *   librosa-parity onset strength envelope
+ * @param {number} hop_length - hop length used for the onset envelope
+ * @param {number} win_length - autocorrelation window in frames
+ * @param {boolean} center - center the analysis windows (linear_ramp pad)
+ * @param {string} window - window function ('hann' only)
+ * @param {number|null} norm - Infinity for per-column max-normalization
+ *   (librosa default), null for raw autocorrelation
+ * @returns {Array<Float64Array>} tempogram [win_length][n_frames] — row k is
+ *   lag k; convert with convert.tempo_frequencies(win_length, hop_length, sr)
+ * @throws {Error} on invalid parameters or an envelope shorter than one
+ *   analysis window — never returns a fabricated result
  */
 export function tempogram(
   y = null,
@@ -30,533 +116,242 @@ export function tempogram(
   window = 'hann',
   norm = Infinity,
 ) {
-  let oenv = onset_envelope
+  if (!Number.isInteger(win_length) || win_length < 1) {
+    throw new Error(`win_length=${win_length} must be a positive integer`)
+  }
+  if (window !== 'hann') {
+    throw new Error(
+      `tempogram: window='${window}' is not supported (periodic hann only)`,
+    )
+  }
+  if (norm !== Infinity && norm !== null) {
+    throw new Error('tempogram: norm must be Infinity (librosa default) or null')
+  }
 
-  // Compute onset envelope if not provided
+  let oenv = onset_envelope
   if (oenv === null) {
     if (y === null) {
       throw new Error('Either y or onset_envelope must be provided')
     }
-    oenv = onset_strength(y, sr, hop_length)
+    oenv = onset_strength(y, { sr, hop_length })
   }
 
-  // Get window function
-  const win = get_window(window, win_length)
+  const n = oenv.length
 
-  // Pad onset envelope if centering
-  let padded_oenv = oenv
+  // np.pad(..., mode='linear_ramp', end_values=[0, 0]) when centering
+  const half = Math.floor(win_length / 2)
+  let padded
   if (center) {
-    const pad_width = Math.floor(win_length / 2)
-    padded_oenv = pad_constant(oenv, pad_width, 0)
+    padded = new Float64Array(n + 2 * half)
+    const first = oenv[0]
+    const last = oenv[n - 1]
+    for (let j = 0; j < half; j++) {
+      padded[j] = (first * j) / half
+      padded[half + n + j] = (last * (half - 1 - j)) / half
+    }
+    for (let i = 0; i < n; i++) {
+      padded[half + i] = oenv[i]
+    }
+  } else {
+    padded = Float64Array.from(oenv)
   }
 
-  // Compute number of frames
-  const n_frames = Math.max(1, padded_oenv.length - win_length + 1)
-  const n_lags = Math.floor(win_length / 2) + 1
+  // librosa frames the padded envelope at hop 1, then trims to n columns
+  const nCols = center
+    ? Math.min(n, padded.length - win_length + 1)
+    : padded.length - win_length + 1
+  if (nCols < 1) {
+    throw new Error(
+      `onset envelope too short (${n} frames) for tempogram win_length=${win_length}`,
+    )
+  }
 
-  // Initialize tempogram output [n_lags][n_frames]
-  const tgram = Array(n_lags)
+  const win = hannPeriodic(win_length)
+  const tg = Array(win_length)
     .fill(null)
-    .map(() => new Float32Array(n_frames))
+    .map(() => new Float64Array(nCols))
 
-  // Compute local autocorrelation for each frame
-  for (let t = 0; t < n_frames; t++) {
-    // Extract windowed frame
-    const frame = padded_oenv.slice(t, t + win_length)
-    const windowed = frame.map((val, i) => val * win[i])
+  const frame = new Float64Array(win_length)
+  for (let t = 0; t < nCols; t++) {
+    for (let k = 0; k < win_length; k++) {
+      frame[k] = padded[t + k] * win[k]
+    }
+    const ac = autocorrelate(frame)
 
-    // Compute autocorrelation via FFT
-    const ac = autocorrelate(windowed)
-
-    // Keep only positive lags
-    for (let lag = 0; lag < n_lags; lag++) {
-      tgram[lag][t] = ac[lag]
+    if (norm === Infinity) {
+      // util.normalize(..., norm=np.inf, axis=-2): divide by max |value|,
+      // leaving all-(near-)zero columns unnormalized (fill=None semantics).
+      let maxAbs = 0
+      for (let k = 0; k < win_length; k++) {
+        const a = Math.abs(ac[k])
+        if (a > maxAbs) maxAbs = a
+      }
+      const scale = maxAbs < FLOAT64_TINY ? 1 : maxAbs
+      for (let k = 0; k < win_length; k++) {
+        tg[k][t] = ac[k] / scale
+      }
+    } else {
+      for (let k = 0; k < win_length; k++) {
+        tg[k][t] = ac[k]
+      }
     }
   }
 
-  // Apply normalization
-  if (norm !== null) {
-    return normalize_tempogram(tgram, norm)
-  }
-
-  return tgram
+  return tg
 }
 
+/* ------------------------------------------------------------------------ *
+ * fourier_tempogram — librosa.feature.fourier_tempogram parity
+ * ------------------------------------------------------------------------ */
+
 /**
- * Compute Fourier tempogram
- * Port of librosa.feature.fourier_tempogram
- * @param {Float32Array} y - Audio time series (optional if onset_envelope provided)
- * @param {number} sr - Sample rate
- * @param {Array} onset_envelope - Pre-computed onset strength envelope
- * @param {number} hop_length - Hop length for frame analysis
- * @param {number} win_length - Window length for STFT
- * @param {boolean} center - Center the STFT windows
- * @param {string} window - Window function type
- * @returns {Array} Fourier tempogram [n_freq, n_frames] as complex values
+ * Fourier tempogram: STFT of the onset strength envelope at hop 1.
+ * Port of librosa.feature.fourier_tempogram (0.11.0):
+ *   stft(onset_envelope, n_fft=win_length, hop_length=1, center, window)
+ *
+ * DIVERGENCE NOTE: pleco's radix-2 stft zero-pads non-power-of-2 FFT sizes,
+ * which would silently regrid the tempo axis — so win_length must be a power
+ * of two here (default 512 instead of librosa's 384; the tempo axis is
+ * convert.fourier_tempo_frequencies(sr, win_length, hop_length)).
+ *
+ * @param {Float32Array|Array|null} y - audio time series (optional if
+ *   onset_envelope provided)
+ * @param {number} sr - sample rate
+ * @param {Float32Array|Array|null} onset_envelope - pre-computed envelope
+ * @param {number} hop_length - hop length used for the onset envelope
+ * @param {number} win_length - STFT window in envelope frames (power of 2)
+ * @param {boolean} center - center the STFT windows
+ * @param {string} window - window function type
+ * @returns {Array<Array<{real:number, imag:number}>>} complex Fourier
+ *   tempogram [win_length/2 + 1][n_envelope_frames + 1] (center=true)
+ * @throws {Error} if win_length is not a power of two
  */
 export function fourier_tempogram(
   y = null,
   sr = 22050,
   onset_envelope = null,
   hop_length = 512,
-  win_length = 384,
+  win_length = 512,
   center = true,
   window = 'hann',
 ) {
-  let oenv = onset_envelope
+  if (!Number.isInteger(win_length) || win_length < 2 || (win_length & (win_length - 1)) !== 0) {
+    throw new Error(
+      `fourier_tempogram: win_length=${win_length} must be a power of two ` +
+        '(pleco stft is radix-2; a non-power-of-2 size would silently regrid the tempo axis)',
+    )
+  }
 
-  // Compute onset envelope if not provided
+  let oenv = onset_envelope
   if (oenv === null) {
     if (y === null) {
       throw new Error('Either y or onset_envelope must be provided')
     }
-    oenv = onset_strength(y, sr, hop_length)
+    oenv = onset_strength(y, { sr, hop_length })
   }
 
-  // Compute STFT of onset envelope
-  // Convert Float32Array to regular array if needed
-  const oenv_array = Array.isArray(oenv) ? oenv : Array.from(oenv)
-
-  const ftgram = stft(
-    new Float32Array(oenv_array),
+  // librosa: stft(oenv, n_fft=win_length, hop_length=1, ...)
+  return stft(
+    oenv instanceof Float32Array ? oenv : Float32Array.from(oenv),
     win_length,
-    hop_length,
+    1,
     null,
     window,
     center,
     'constant',
   )
-
-  return ftgram
 }
 
+/* ------------------------------------------------------------------------ *
+ * tempogram_ratio — honest not-implemented stub
+ * ------------------------------------------------------------------------ */
+
 /**
- * Compute tempogram ratio (VQT-based)
- * Port of librosa.feature.tempogram_ratio
- * @param {Array} tg - Tempogram [n_lags, n_frames]
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @param {number} win_length - Window length
- * @returns {Object} {ratio: Array, loc: Array} - ratio matrix and local maxima locations
+ * librosa.feature.tempogram_ratio is NOT implemented to parity. The previous
+ * body here was not librosa's algorithm (it ranked raw local maxima and
+ * emitted lag-ratio matrices with unrelated semantics), so it now fails
+ * honestly instead of returning plausible-looking garbage.
+ * @throws {Error} always
  */
-export function tempogram_ratio(tg, sr = 22050, hop_length = 512, win_length = 384) {
-  const n_lags = tg.length
-  const n_frames = tg[0] ? tg[0].length : 0
-
-  // Compute tempo frequencies (lags to BPM)
-  const tempo_frequencies = new Float32Array(n_lags)
-  for (let i = 0; i < n_lags; i++) {
-    // Convert lag to BPM
-    const samples_per_lag = hop_length
-    const lag_seconds = (i * samples_per_lag) / sr
-    if (lag_seconds > 0) {
-      tempo_frequencies[i] = 60.0 / lag_seconds
-    } else {
-      tempo_frequencies[i] = 0
-    }
-  }
-
-  // Compute ratio matrix
-  const ratio = Array(n_lags)
-    .fill(null)
-    .map(() => new Float32Array(n_frames))
-
-  const loc = Array(n_lags)
-    .fill(null)
-    .map(() => new Int32Array(n_frames))
-
-  // For each frame, find local maxima and compute ratios
-  for (let t = 0; t < n_frames; t++) {
-    const frame = tg.map((lag_band) => lag_band[t])
-
-    // Find peaks in tempogram
-    const peaks = find_peaks(frame)
-
-    if (peaks.length === 0) {
-      continue
-    }
-
-    // Get primary tempo (strongest peak)
-    const primary_idx = peaks[0]
-
-    // Compute ratios for all lags relative to primary
-    for (let lag = 0; lag < n_lags; lag++) {
-      if (tempo_frequencies[primary_idx] > 0) {
-        ratio[lag][t] = tempo_frequencies[lag] / tempo_frequencies[primary_idx]
-      }
-      loc[lag][t] = primary_idx
-    }
-  }
-
-  return { ratio, loc }
+export function tempogram_ratio() {
+  throw new Error(
+    'tempogram_ratio: not implemented to librosa parity — the previous ' +
+      'implementation was not librosa\'s algorithm. Use tempogram() with ' +
+      'convert.tempo_frequencies() instead.',
+  )
 }
 
-/**
- * Compute onset strength envelope (simplified)
- * @param {Float32Array} y - Audio signal
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @returns {Float32Array} Onset strength envelope
- */
-function onset_strength(y, sr = 22050, hop_length = 512) {
-  // Compute STFT
-  const D = stft(y, 2048, hop_length, null, 'hann', true, 'constant')
-
-  const n_freq = D.length
-  const n_frames = D[0] ? D[0].length : 0
-
-  // Compute magnitude spectrogram
-  const mag = Array(n_freq)
-    .fill(null)
-    .map(() => new Float32Array(n_frames))
-
-  for (let f = 0; f < n_freq; f++) {
-    for (let t = 0; t < n_frames; t++) {
-      const bin = D[f][t]
-      mag[f][t] = Math.sqrt(bin.real * bin.real + bin.imag * bin.imag)
-    }
-  }
-
-  // Compute spectral flux (onset strength)
-  const oenv = new Float32Array(n_frames)
-
-  for (let t = 1; t < n_frames; t++) {
-    let flux = 0
-    for (let f = 0; f < n_freq; f++) {
-      const diff = mag[f][t] - mag[f][t - 1]
-      flux += Math.max(0, diff) // Half-wave rectification
-    }
-    oenv[t] = flux
-  }
-
-  return oenv
-}
+/* ------------------------------------------------------------------------ *
+ * estimate_tempo — prior-weighted tempo from a tempogram
+ * ------------------------------------------------------------------------ */
 
 /**
- * Autocorrelation via FFT
- * @param {Array} x - Input signal
- * @returns {Array} Autocorrelation
- */
-function autocorrelate(x) {
-  const N = x.length
-
-  // Pad to next power of 2 for efficiency
-  const fft_size = Math.pow(2, Math.ceil(Math.log2(2 * N - 1)))
-  const padded = new Float32Array(fft_size)
-  padded.set(x)
-
-  // Compute FFT
-  const X = fft_real(padded)
-
-  // Compute power spectrum
-  for (let i = 0; i < X.length; i++) {
-    const mag_sq = X[i].real * X[i].real + X[i].imag * X[i].imag
-    X[i].real = mag_sq
-    X[i].imag = 0
-  }
-
-  // Inverse FFT
-  const ac = ifft_real(X)
-
-  // Normalize and return first N lags
-  const result = new Array(N)
-  if (ac[0] > 0) {
-    for (let i = 0; i < N; i++) {
-      result[i] = ac[i] / ac[0]
-    }
-  } else {
-    result.fill(0)
-  }
-
-  return result
-}
-
-/**
- * Simple real FFT (uses complex FFT)
- * @param {Float32Array} x - Real input
- * @returns {Array} Complex FFT result
- */
-function fft_real(x) {
-  const N = x.length
-
-  // Base case
-  if (N <= 1) {
-    return [{ real: x[0] || 0, imag: 0 }]
-  }
-
-  // Pad to power of 2 if needed
-  const fft_size = Math.pow(2, Math.ceil(Math.log2(N)))
-  const padded = new Float32Array(fft_size)
-  padded.set(x)
-
-  return fft_recursive(padded)
-}
-
-/**
- * Recursive FFT implementation
- * @param {Float32Array} signal - Input signal (power of 2 length)
- * @returns {Array} FFT result
- */
-function fft_recursive(signal) {
-  const N = signal.length
-
-  if (N <= 1) {
-    return [{ real: signal[0] || 0, imag: 0 }]
-  }
-
-  // Divide
-  const even = new Float32Array(N / 2)
-  const odd = new Float32Array(N / 2)
-
-  for (let i = 0; i < N / 2; i++) {
-    even[i] = signal[2 * i]
-    odd[i] = signal[2 * i + 1]
-  }
-
-  // Conquer
-  const evenFFT = fft_recursive(even)
-  const oddFFT = fft_recursive(odd)
-
-  // Combine
-  const result = new Array(N)
-  for (let k = 0; k < N / 2; k++) {
-    const t = (-2 * Math.PI * k) / N
-    const wReal = Math.cos(t)
-    const wImag = Math.sin(t)
-
-    const oddReal = wReal * oddFFT[k].real - wImag * oddFFT[k].imag
-    const oddImag = wReal * oddFFT[k].imag + wImag * oddFFT[k].real
-
-    result[k] = {
-      real: evenFFT[k].real + oddReal,
-      imag: evenFFT[k].imag + oddImag,
-    }
-
-    result[k + N / 2] = {
-      real: evenFFT[k].real - oddReal,
-      imag: evenFFT[k].imag - oddImag,
-    }
-  }
-
-  return result
-}
-
-/**
- * Inverse FFT for real signals
- * @param {Array} X - Complex FFT result
- * @returns {Float32Array} Real signal
- */
-function ifft_real(X) {
-  const N = X.length
-
-  // Conjugate
-  const X_conj = X.map((bin) => ({ real: bin.real, imag: -bin.imag }))
-
-  // Forward FFT
-  const result = fft_recursive_complex(X_conj)
-
-  // Conjugate and scale
-  const output = new Float32Array(N)
-  for (let i = 0; i < N; i++) {
-    output[i] = result[i].real / N
-  }
-
-  return output
-}
-
-/**
- * Recursive FFT for complex input
- * @param {Array} signal - Complex input
- * @returns {Array} FFT result
- */
-function fft_recursive_complex(signal) {
-  const N = signal.length
-
-  if (N <= 1) {
-    return signal
-  }
-
-  // Divide
-  const even = new Array(N / 2)
-  const odd = new Array(N / 2)
-
-  for (let i = 0; i < N / 2; i++) {
-    even[i] = signal[2 * i]
-    odd[i] = signal[2 * i + 1]
-  }
-
-  // Conquer
-  const evenFFT = fft_recursive_complex(even)
-  const oddFFT = fft_recursive_complex(odd)
-
-  // Combine
-  const result = new Array(N)
-  for (let k = 0; k < N / 2; k++) {
-    const t = (-2 * Math.PI * k) / N
-    const wReal = Math.cos(t)
-    const wImag = Math.sin(t)
-
-    const oddReal = wReal * oddFFT[k].real - wImag * oddFFT[k].imag
-    const oddImag = wReal * oddFFT[k].imag + wImag * oddFFT[k].real
-
-    result[k] = {
-      real: evenFFT[k].real + oddReal,
-      imag: evenFFT[k].imag + oddImag,
-    }
-
-    result[k + N / 2] = {
-      real: evenFFT[k].real - oddReal,
-      imag: evenFFT[k].imag - oddImag,
-    }
-  }
-
-  return result
-}
-
-/**
- * Get window function
- * @param {string} window_type - Window type
- * @param {number} length - Window length
- * @returns {Float32Array} Window
- */
-function get_window(window_type, length) {
-  if (window_type === 'hann') {
-    return hann_window(length)
-  }
-  // Default to rectangular window
-  return new Float32Array(length).fill(1.0)
-}
-
-/**
- * Pad array with constant value
- * @param {Array|Float32Array} arr - Input array
- * @param {number} pad_width - Padding width on each side
- * @param {number} value - Padding value
- * @returns {Array} Padded array
- */
-function pad_constant(arr, pad_width, value) {
-  const result = new Float32Array(arr.length + 2 * pad_width)
-  result.fill(value)
-  result.set(arr, pad_width)
-  return result
-}
-
-/**
- * Normalize tempogram
- * @param {Array} tgram - Tempogram [n_lags][n_frames]
- * @param {number} norm - Normalization type
- * @returns {Array} Normalized tempogram
- */
-function normalize_tempogram(tgram, norm) {
-  const n_lags = tgram.length
-  const n_frames = tgram[0] ? tgram[0].length : 0
-
-  const result = Array(n_lags)
-    .fill(null)
-    .map(() => new Float32Array(n_frames))
-
-  if (norm === Infinity) {
-    // Max normalization per frame
-    for (let t = 0; t < n_frames; t++) {
-      let max_val = 0
-      for (let lag = 0; lag < n_lags; lag++) {
-        max_val = Math.max(max_val, Math.abs(tgram[lag][t]))
-      }
-
-      if (max_val > 0) {
-        for (let lag = 0; lag < n_lags; lag++) {
-          result[lag][t] = tgram[lag][t] / max_val
-        }
-      } else {
-        for (let lag = 0; lag < n_lags; lag++) {
-          result[lag][t] = tgram[lag][t]
-        }
-      }
-    }
-  } else {
-    // No normalization
-    return tgram
-  }
-
-  return result
-}
-
-/**
- * Find peaks in 1D array (simplified)
- * @param {Array} arr - Input array
- * @returns {Array} Peak indices sorted by magnitude
- */
-function find_peaks(arr) {
-  const peaks = []
-
-  for (let i = 1; i < arr.length - 1; i++) {
-    if (arr[i] > arr[i - 1] && arr[i] > arr[i + 1]) {
-      peaks.push(i)
-    }
-  }
-
-  // Sort by magnitude (descending)
-  peaks.sort((a, b) => arr[b] - arr[a])
-
-  return peaks
-}
-
-/**
- * Estimate tempo from tempogram
- * @param {Array} tgram - Tempogram [n_lags, n_frames]
- * @param {number} sr - Sample rate
- * @param {number} hop_length - Hop length
- * @param {number} win_length - Window length used for tempogram
- * @param {number} start_bpm - Minimum BPM to consider
- * @param {number} max_tempo - Maximum BPM to consider
- * @returns {Object} {tempo: number, strength: number}
+ * Estimate the global tempo from a (lag) tempogram using librosa's
+ * feature.tempo scoring: time-mean of the tempogram, pseudo-log-normal prior
+ *   logprior = -0.5 * ((log2(bpm) - log2(start_bpm)) / std_bpm)^2
+ * and argmax of log1p(1e6 * mean) + logprior with tempi at/above max_tempo
+ * masked out. (The previous raw argmax had no prior and returned the 60 BPM
+ * subharmonic on a plain 120 BPM click train.)
+ *
+ * @param {Array<Float64Array|Float32Array|Array>} tgram - tempogram
+ *   [n_lags][n_frames] as returned by tempogram()
+ * @param {number} sr - sample rate
+ * @param {number} hop_length - hop length used for the onset envelope
+ * @param {number} start_bpm - center of the log-normal prior
+ * @param {number} std_bpm - prior standard deviation (log2 space)
+ * @param {number|null} max_tempo - mask tempi at/above this value
+ * @returns {{tempo: number, strength: number}} tempo in BPM and the measured
+ *   mean-tempogram value at the chosen lag (never a fabricated confidence)
+ * @throws {Error} on empty input or when every lag is masked
  */
 export function estimate_tempo(
   tgram,
   sr = 22050,
   hop_length = 512,
-  win_length = 384,
-  start_bpm = 30,
-  max_tempo = 300,
+  start_bpm = 120,
+  std_bpm = 1.0,
+  max_tempo = 320.0,
 ) {
   const n_lags = tgram.length
   const n_frames = tgram[0] ? tgram[0].length : 0
+  if (n_lags < 2 || n_frames < 1) {
+    throw new Error('estimate_tempo: tempogram must be [n_lags>=2][n_frames>=1]')
+  }
+  if (!(start_bpm > 0) || !(std_bpm > 0)) {
+    throw new Error('estimate_tempo: start_bpm and std_bpm must be positive')
+  }
 
-  // Average tempogram across frames
-  const avg_tgram = new Float32Array(n_lags)
-  for (let lag = 0; lag < n_lags; lag++) {
+  // Time-mean tempogram (librosa aggregate=np.mean)
+  const mean = new Float64Array(n_lags)
+  for (let k = 0; k < n_lags; k++) {
     let sum = 0
-    for (let t = 0; t < n_frames; t++) {
-      sum += tgram[lag][t]
-    }
-    avg_tgram[lag] = sum / n_frames
+    for (let t = 0; t < n_frames; t++) sum += tgram[k][t]
+    mean[k] = sum / n_frames
   }
 
-  // Convert lags to BPM
-  const bpm_per_lag = new Float32Array(n_lags)
-  for (let lag = 0; lag < n_lags; lag++) {
-    const lag_seconds = (lag * hop_length) / sr
-    if (lag_seconds > 0) {
-      bpm_per_lag[lag] = 60.0 / lag_seconds
+  const bpms = tempoFrequencies(n_lags, hop_length, sr)
+  const log2Start = Math.log2(start_bpm)
+
+  let best = -1
+  let bestScore = -Infinity
+  for (let k = 0; k < n_lags; k++) {
+    if (max_tempo !== null && max_tempo !== undefined && !(bpms[k] < max_tempo)) {
+      continue
     }
-  }
-
-  // Find peak within BPM range
-  let best_lag = 0
-  let best_strength = 0
-
-  for (let lag = 1; lag < n_lags; lag++) {
-    const bpm = bpm_per_lag[lag]
-    if (bpm >= start_bpm && bpm <= max_tempo) {
-      if (avg_tgram[lag] > best_strength) {
-        best_strength = avg_tgram[lag]
-        best_lag = lag
-      }
+    const d = (Math.log2(bpms[k]) - log2Start) / std_bpm
+    const score = Math.log1p(1e6 * mean[k]) - 0.5 * d * d
+    if (score > bestScore) {
+      bestScore = score
+      best = k
     }
   }
 
-  return {
-    tempo: bpm_per_lag[best_lag] || 120,
-    strength: best_strength,
+  if (best < 0) {
+    throw new Error(
+      `estimate_tempo: no lag bin below max_tempo=${max_tempo} — ` +
+        'tempogram too short for the requested tempo range',
+    )
   }
+
+  return { tempo: bpms[best], strength: mean[best] }
 }

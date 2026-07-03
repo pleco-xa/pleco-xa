@@ -573,8 +573,14 @@ function sliceAxis(arr, axis, start, end) {
   if (axis === 0) {
     return arr.slice(start, end)
   }
-  // For other axes, would need more complex slicing
-  throw new ParameterError('Multi-axis slicing not fully implemented')
+  if (axis === 1) {
+    // 2D [rows][time]: slice each row along the time axis. NOTE: returns
+    // COPIES — librosa's zero-copy stride view does not transfer to JS.
+    // Repaired 2026-07-02 (Tier-1 proof-of-work): frame() on a spectrogram
+    // previously threw here, so 2D patch extraction never worked.
+    return arr.map((row) => row.slice(start, end))
+  }
+  throw new ParameterError('Slicing beyond 2 dimensions is not implemented')
 }
 
 function padArray1D(arr, leftPad, rightPad, mode, constantValue) {
@@ -1022,8 +1028,12 @@ export function fill_off_diagonal(x, radius, value = 0) {
  * Robustly compute a soft-mask operation
  * Port of librosa.util.softmask
  *
- * Computes the soft mask: X / (X + X_ref)^power
- * Used for source separation and masking
+ * Computes the soft mask: X^power / (X^power + X_ref^power)
+ *
+ * Tier-2 proof-of-work repair (2026-07-02): this copy previously computed
+ * X / (X + X_ref)^power, which diverges from librosa whenever power != 1.
+ * It now delegates to the librosa-correct implementation in xa-normalize.js
+ * (verified in examples/node/normalize-goldens.mjs).
  *
  * @param {Array} X - Input array (numerator)
  * @param {Array} X_ref - Reference array (denominator)
@@ -1031,44 +1041,7 @@ export function fill_off_diagonal(x, radius, value = 0) {
  * @param {boolean} split_zeros - If true, use 0.5 when both are zero (default false = 0.0)
  * @returns {Array} Soft mask array
  */
-export function softmask(X, X_ref, power = 1, split_zeros = false) {
-  const is_1d = !Array.isArray(X[0])
-
-  if (is_1d) {
-    const result = new Array(X.length)
-    for (let i = 0; i < X.length; i++) {
-      const num = X[i]
-      const denom = Math.pow(X[i] + X_ref[i], power)
-
-      if (denom === 0) {
-        result[i] = split_zeros ? 0.5 : 0.0
-      } else {
-        result[i] = num / denom
-      }
-    }
-    return result
-  }
-
-  // 2D array
-  const n_rows = X.length
-  const n_cols = X[0].length
-  const result = Array(n_rows).fill(null).map(() => new Array(n_cols))
-
-  for (let i = 0; i < n_rows; i++) {
-    for (let j = 0; j < n_cols; j++) {
-      const num = X[i][j]
-      const denom = Math.pow(X[i][j] + X_ref[i][j], power)
-
-      if (denom === 0) {
-        result[i][j] = split_zeros ? 0.5 : 0.0
-      } else {
-        result[i][j] = num / denom
-      }
-    }
-  }
-
-  return result
-}
+export { softmask } from './xa-normalize.js'
 
 /**
  * Return a row-sparse matrix approximating the input
@@ -2489,9 +2462,9 @@ export function show_versions() {
   const versionInfo = {
     library: 'pleco-audio',
     version: '1.0.0',
-    librosaParity: '100%',
-    implementedFunctions: 512,
-    totalFunctions: 512,
+    // Tier-2 proof-of-work repair (2026-07-02): removed fictional
+    // 'librosaParity: 100%, 512/512 functions' claims — parity status lives
+    // in PARITY.md and the fixture-gated test suite, not hard-coded numbers.
     environment: isNode ? 'node' : isBrowser ? 'browser' : 'unknown',
 
     // Browser APIs
@@ -2521,7 +2494,6 @@ export function show_versions() {
   console.log('pleco-audio version information:');
   console.log('================================');
   console.log(`Library: ${versionInfo.library} v${versionInfo.version}`);
-  console.log(`Librosa parity: ${versionInfo.librosaParity} (${versionInfo.implementedFunctions}/${versionInfo.totalFunctions} functions)`);
   console.log(`Environment: ${versionInfo.environment}`);
   console.log(`Platform: ${versionInfo.platform}`);
   console.log('');

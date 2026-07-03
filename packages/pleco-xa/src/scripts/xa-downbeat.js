@@ -25,9 +25,12 @@ export function findDownbeatPhase(audioData, beats, tempo, sampleRate) {
 
   // For each onset, find which beat phase it's closest to
   for (const onset of onsets) {
-    // Find the beat phase (0-3) this onset falls on
+    // Find the beat phase (0-3) this onset falls on.
+    // Repair (2026-07-02 proof-of-work): Math.round of values like 3.6 yields
+    // 4, which the old `phase < 4` guard silently discarded — biasing scoring
+    // against phase 0. Wrap the rounded value back into [0, beatsPerBar).
     const beatsSinceStart = onset / beatDuration
-    const phase = Math.round(beatsSinceStart % beatsPerBar)
+    const phase = Math.round(beatsSinceStart % beatsPerBar) % beatsPerBar
 
     if (phase >= 0 && phase < 4) {
       // Weight by onset strength at this position
@@ -71,12 +74,20 @@ export function findDownbeatPhase(audioData, beats, tempo, sampleRate) {
 }
 
 /**
- * Get onset strength at a specific sample position
+ * Get onset strength at a specific sample position.
+ *
+ * Repair (2026-07-02 proof-of-work): onsetDetect() uses an UNCENTERED STFT,
+ * so its reported times are frame-start times — the detected transient lies
+ * in [samplePos, samplePos + frameLength), not around samplePos. The old
+ * centered window [pos-1024, pos+1024) ended before the transient even
+ * began, so on sparse material every accent weight read silence and phase
+ * scoring degenerated to all-zeros. Measure energy forward from the
+ * reported position, matching the detector's own frame convention.
  */
 function getOnsetStrength(audioData, samplePos, _sampleRate) {
   const windowSize = 2048
-  const start = Math.max(0, samplePos - windowSize / 2)
-  const end = Math.min(audioData.length, samplePos + windowSize / 2)
+  const start = Math.max(0, samplePos)
+  const end = Math.min(audioData.length, samplePos + windowSize)
 
   // Simple energy calculation
   let energy = 0

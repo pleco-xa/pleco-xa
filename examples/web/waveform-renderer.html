@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — WaveformRenderer + WaveformData</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    canvas { background: #111; display: block; margin: 8px 0; border: 1px solid #333; }
+    p { max-width: 72ch; }
+  </style>
+</head>
+<body>
+  <h2>WaveformRenderer + WaveformData — pixel-probed render proof</h2>
+  <p>
+    A 3 s 440 Hz sine with a <em>silent middle third</em> is rendered via
+    getWaveformPeaks → renderWaveform (peaks/mirror), then addLoopRegions
+    overlays the 1.0–2.0 s window. Badges probe actual canvas pixels: the loud
+    third must be waveform-colored, the silent third must be blank before the
+    overlay (amplitude→pixel mapping), and carry the loop tint after it
+    (time→x mapping). Below: analyzeWaveform stats vs closed-form sine truth
+    from a real AudioBuffer, the repaired renderStereoWaveform, and the
+    repaired idempotent HiDPI resize.
+  </p>
+  <div id="badges"></div>
+  <canvas id="mono" width="800" height="200"></canvas>
+  <canvas id="stereo" width="800" height="210"></canvas>
+  <canvas id="interactive" width="800" height="140"></canvas>
+
+  <script type="module">
+    import {
+      getWaveformPeaks, getStereoWaveformPeaks, analyzeWaveform,
+      renderWaveform, renderStereoWaveform, addLoopRegions,
+      createInteractiveRenderer,
+    } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const sr = 44100
+    const px = (ctx, x, y) => ctx.getImageData(x, y, 1, 1).data
+
+    // ── 3 s 440 Hz sine, silent middle third ──────────────────────────────
+    const buf = new AudioBuffer({ numberOfChannels: 1, length: 3 * sr, sampleRate: sr })
+    const ch = buf.getChannelData(0)
+    for (let i = 0; i < ch.length; i++) {
+      const t = i / sr
+      ch[i] = t < 1 || t >= 2 ? 0.8 * Math.sin(2 * Math.PI * 440 * t) : 0
+    }
+
+    const canvas = document.getElementById('mono')
+    const ctx = canvas.getContext('2d')
+    const peaks = getWaveformPeaks(buf, { width: 800 })
+    renderWaveform(canvas, peaks.data, { style: 'peaks', mirror: true, pixelRatio: 1 })
+
+    // probe (a): mid-height inside the loud first third = waveform color #3498db
+    const a = px(ctx, 100, 100)
+    badge('loud third pixel is waveform-colored', Math.abs(a[0] - 52) <= 3 && Math.abs(a[1] - 152) <= 3 && Math.abs(a[2] - 219) <= 3 && a[3] === 255, `rgba(${a.join(',')})`)
+
+    // probe (b): same row inside the silent third = untouched (alpha 0)
+    const b = px(ctx, 400, 100)
+    badge('silent third pixel is background (pre-overlay)', b[3] === 0, `alpha=${b[3]}`)
+
+    // overlay 1.0–2.0 s, then probe (c): silent-third pixel carries the tint
+    addLoopRegions(canvas, [{ start: 1.0, end: 2.0 }], 3)
+    const c = px(ctx, 400, 100)
+    badge('loop overlay tints 1.0–2.0 s (time→x mapping)', c[0] > 200 && c[2] < 60 && c[3] > 40 && c[3] < 100, `rgba(${c.join(',')})`)
+
+    // ── WaveformData stats vs analytic truth (real AudioBuffer) ───────────
+    const buf2 = new AudioBuffer({ numberOfChannels: 1, length: 2 * sr, sampleRate: sr })
+    const ch2 = buf2.getChannelData(0)
+    for (let i = 0; i < ch2.length; i++) ch2[i] = 0.5 * Math.sin(2 * Math.PI * 440 * i / sr)
+    const st = analyzeWaveform(buf2)
+    badge('peak == 0.500 ±0.002', Math.abs(st.peak - 0.5) <= 0.002, st.peak.toFixed(4))
+    badge('rms == A/√2 ±0.002', Math.abs(st.rms - 0.5 / Math.SQRT2) <= 0.002, st.rms.toFixed(4))
+    badge('zcr == 2f/sr ±0.0005', Math.abs(st.zeroCrossingRate - 880 / sr) <= 0.0005, st.zeroCrossingRate.toFixed(5))
+    badge('crest == √2 ±0.01', Math.abs(st.crestFactor - Math.SQRT2) <= 0.01, st.crestFactor.toFixed(4))
+    const p2 = getWaveformPeaks(buf2, { width: 800 })
+    badge('800 peaks, normalized max == 1', p2.length === 800 && Math.max(...p2.data) === 1)
+
+    // ── repaired renderStereoWaveform (no ctx.clipRect crash) ─────────────
+    const sBuf = new AudioBuffer({ numberOfChannels: 2, length: 2 * sr, sampleRate: sr })
+    const L = sBuf.getChannelData(0), R = sBuf.getChannelData(1)
+    for (let i = 0; i < L.length; i++) {
+      L[i] = 0.8 * Math.sin(2 * Math.PI * 440 * i / sr)
+      R[i] = 0.8 * Math.sin(2 * Math.PI * 220 * i / sr)
+    }
+    const sCanvas = document.getElementById('stereo')
+    let stereoOk = true, stereoDetail = ''
+    try {
+      renderStereoWaveform(sCanvas, getStereoWaveformPeaks(sBuf, { width: 800 }))
+      const sctx = sCanvas.getContext('2d')
+      const top = px(sctx, 50, 50)   // left channel half → #e74c3c
+      const bot = px(sctx, 50, 160)  // right channel half → #3498db
+      stereoOk = Math.abs(top[0] - 231) <= 3 && Math.abs(top[2] - 60) <= 3 &&
+                 Math.abs(bot[0] - 52) <= 3 && Math.abs(bot[2] - 219) <= 3
+      stereoDetail = `top rgba(${top.join(',')}) bottom rgba(${bot.join(',')})`
+    } catch (e) {
+      stereoOk = false
+      stereoDetail = e.message
+    }
+    badge('renderStereoWaveform paints both channel halves', stereoOk, stereoDetail)
+
+    // ── repaired HiDPI resize is idempotent ───────────────────────────────
+    const hCanvas = document.createElement('canvas')
+    hCanvas.width = 400; hCanvas.height = 100
+    renderWaveform(hCanvas, peaks.data, { pixelRatio: 2 })
+    const w1 = hCanvas.width
+    renderWaveform(hCanvas, peaks.data, { pixelRatio: 2 })
+    badge('HiDPI re-render does not compound canvas size', w1 === 800 && hCanvas.width === 800, `after 1st=${w1}, 2nd=${hCanvas.width} (expect 800)`)
+
+    // ── createInteractiveRenderer: drag-select → time mapping ──────────────
+    // Instantiate the interactive renderer on a real 800×140 canvas, set a 3 s
+    // duration, then DRIVE it with synthetic mouse events. A drag from x=200 to
+    // x=600 must emit select(start,end) = (200/800·3, 600/800·3) = (0.75, 2.25).
+    // (The exact selection math is node-spot-verified in examples/node against
+    // a stub canvas that runs these same handlers.)
+    const iCanvas = document.getElementById('interactive')
+    let selOk = false, selDetail = ''
+    try {
+      const r = createInteractiveRenderer(iCanvas, { enableSelection: true, enablePlayhead: true })
+      r.setDuration(3)
+      r.render(peaks.data)
+      let emitted = null
+      r.on('select', (start, end) => { emitted = { start, end } })
+
+      const rect = iCanvas.getBoundingClientRect()
+      const at = (x) => ({ clientX: rect.left + x, clientY: rect.top + 70, bubbles: true })
+      iCanvas.dispatchEvent(new MouseEvent('mousedown', at(200)))
+      iCanvas.dispatchEvent(new MouseEvent('mousemove', at(600)))
+      iCanvas.dispatchEvent(new MouseEvent('mouseup', at(600)))
+
+      const state = r.getSelection()
+      const near = (a, b) => Math.abs(a - b) < 1e-6
+      selOk = emitted && near(emitted.start, 0.75) && near(emitted.end, 2.25) &&
+              near(state.start, 0.75) && near(state.end, 2.25)
+      selDetail = emitted ? `select(${emitted.start.toFixed(3)}, ${emitted.end.toFixed(3)})` : 'no select event fired'
+
+      r.clearSelection()
+      const cleared = r.getSelection()
+      badge('clearSelection() resets the selection to (0, 0)',
+        cleared.start === 0 && cleared.end === 0, `(${cleared.start}, ${cleared.end})`)
+      r.destroy()
+    } catch (e) {
+      selOk = false
+      selDetail = e.message
+    }
+    badge('createInteractiveRenderer drag-select maps x→time (0.75 s .. 2.25 s)', selOk, selDetail)
+  </script>
+</body>
+</html>

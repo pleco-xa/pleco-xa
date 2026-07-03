@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — segment recurrence (A-B-A)</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 72ch; }
+    canvas { image-rendering: pixelated; border: 1px solid #333; margin: 4px 8px 4px 0; }
+    .row { display: flex; align-items: flex-start; }
+    .lbl { color: #999; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h2>segment — recurrence heatmap of an A-B-A pattern + exact Ward boundaries</h2>
+  <p>
+    A 60-frame, 12-dim feature matrix planted as A(20)-B(20)-A(20) with small
+    deterministic jitter. <code>recurrenceMatrix(mode 'affinity', sym)</code>
+    must light the A↔A repeat as bright off-diagonal blocks, keep the
+    |i−j|&lt;width band exactly zero and the matrix exactly symmetric; the lag
+    shear must round-trip bit-exactly; <code>agglomerative(data, 3)</code> must
+    return exactly [0, 20, 40]. Same asserts as
+    <code>examples/node/segment-recurrence.mjs</code> (node-verified).
+  </p>
+  <div id="badges"></div>
+  <div class="row">
+    <div><canvas id="rec" width="240" height="240"></canvas><div class="lbl">recurrence (affinity, sym)</div></div>
+    <div><canvas id="lag" width="240" height="480"></canvas><div class="lbl">lag matrix (2t × t shear)</div></div>
+  </div>
+
+  <script type="module">
+    import { segment } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+    const { recurrenceMatrix, recurrenceToLag, lagToRecurrence, agglomerative } = segment
+
+    // deterministic A-B-A features (identical to the node proof)
+    const D = 12, T = 60
+    let seed = 42
+    const lcg = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+    const baseA = Array.from({ length: D }, () => lcg() * 2 - 1)
+    const baseB = Array.from({ length: D }, () => lcg() * 2 - 1)
+    const data = Array.from({ length: D }, () => new Float64Array(T))
+    for (let t = 0; t < T; t++) {
+      const base = t < 20 || t >= 40 ? baseA : baseB
+      for (let f = 0; f < D; f++) data[f][t] = base[f] + (lcg() * 2 - 1) * 0.05
+    }
+
+    const width = 3
+    const R = recurrenceMatrix(data, { mode: 'affinity', sym: true, width })
+
+    // heatmap render (matrix → canvas, magma-ish single hue)
+    function drawMatrix(canvas, M) {
+      const ctx = canvas.getContext('2d')
+      const rows = M.length, cols = M[0].length
+      const img = ctx.createImageData(canvas.width, canvas.height)
+      let max = 1e-12
+      for (const row of M) for (const v of row) if (v > max) max = v
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const i = Math.floor((y / canvas.height) * rows)
+          const j = Math.floor((x / canvas.width) * cols)
+          const v = M[i][j] / max
+          const k = (y * canvas.width + x) * 4
+          img.data[k] = 30 + 225 * v
+          img.data[k + 1] = 20 + 120 * v
+          img.data[k + 2] = 60 + 60 * v
+          img.data[k + 3] = 255
+        }
+      }
+      ctx.putImageData(img, 0, 0)
+    }
+    drawMatrix(document.getElementById('rec'), R)
+
+    // ── the node-verified asserts, as badges ────────────────────────────────
+    let bandMax = 0
+    for (let i = 0; i < T; i++) for (let j = 0; j < T; j++) if (Math.abs(i - j) < width) bandMax = Math.max(bandMax, R[i][j])
+    badge('|i−j| < width band exactly zero', bandMax === 0, `max ${bandMax}`)
+
+    let symExact = true
+    for (let i = 0; i < T; i++) for (let j = 0; j < T; j++) if (R[i][j] !== R[j][i]) symExact = false
+    badge('sym=true → exactly symmetric', symExact)
+
+    const meanBlock = (r0, r1, c0, c1) => {
+      let s = 0, n = 0
+      for (let i = r0; i < r1; i++) for (let j = c0; j < c1; j++) { s += R[i][j]; n++ }
+      return s / n
+    }
+    const mAA = meanBlock(0, 20, 40, 60)
+    const mAB = (meanBlock(0, 20, 20, 40) + meanBlock(40, 60, 20, 40)) / 2
+    badge('A↔A repeat block > 5× A↔B affinity', mAA > 5 * mAB && mAA > 0,
+      `${mAA.toFixed(4)} vs ${mAB.toFixed(6)}`)
+
+    const lag = recurrenceToLag(R)
+    drawMatrix(document.getElementById('lag'), lag)
+    const R2 = lagToRecurrence(lag)
+    let rtExact = true
+    for (let i = 0; i < T; i++) for (let j = 0; j < T; j++) if (R2[i][j] !== R[i][j]) rtExact = false
+    badge('lag shear round-trips bit-exactly', rtExact, `lag ${lag.length}×${lag[0].length}`)
+
+    const bounds = Array.from(agglomerative(data, 3))
+    badge('agglomerative(data, 3) == [0, 20, 40]', JSON.stringify(bounds) === '[0,20,40]', `[${bounds}]`)
+  </script>
+</body>
+</html>

@@ -28,14 +28,12 @@
  */
 
 import { onset_strength } from './xa-onset.js'
+import { tempogram } from './xa-tempogram.js'
 import { debugLog } from './debug.js'
 
 // np.finfo(np.float32).tiny — librosa envelopes are float32, and
 // __normalize_onsets adds util.tiny(onsets) to the standard deviation.
 const FLOAT32_TINY = 1.1754943508222875e-38
-// np.finfo(np.float64).tiny — threshold used by util.normalize on the
-// (float64) tempogram columns.
-const FLOAT64_TINY = 2.2250738585072014e-308
 
 /* ------------------------------------------------------------------------ *
  * numpy-faithful helpers
@@ -51,18 +49,6 @@ function bankersRound(x) {
     return floor % 2 === 0 ? floor : floor + 1
   }
   return Math.round(x)
-}
-
-/**
- * Periodic Hann window: scipy.signal.get_window('hann', n, fftbins=True).
- * @private
- */
-function hannPeriodic(n) {
-  const w = new Float64Array(n)
-  for (let i = 0; i < n; i++) {
-    w[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / n)
-  }
-  return w
 }
 
 /**
@@ -111,25 +97,6 @@ function tempoFrequencies(nBins, hopLength, sr) {
 }
 
 /**
- * Full (unbounded) autocorrelation of a real signal:
- * ac[lag] = sum_i x[i] * x[i + lag]. Direct O(n^2) evaluation — numerically
- * identical to librosa's FFT path up to float roundoff.
- * @private
- */
-function autocorrelate(x) {
-  const n = x.length
-  const ac = new Float64Array(n)
-  for (let lag = 0; lag < n; lag++) {
-    let sum = 0
-    for (let i = 0; i < n - lag; i++) {
-      sum += x[i] * x[i + lag]
-    }
-    ac[lag] = sum
-  }
-  return ac
-}
-
-/**
  * Validate an audio/envelope input array.
  * @private
  */
@@ -160,55 +127,26 @@ function assertSampleRate(sr) {
 
 /**
  * Mean (over time) of the inf-normalized local autocorrelation tempogram.
+ * Delegates to the canonical librosa-parity tempogram() in xa-tempogram.js
+ * (tier-3 proof-of-work, 2026-07-02) — identical padding/window/normalize
+ * math, summed over columns in the same order, so the tempo_beats.json
+ * parity fixture gates both modules.
  * @private
  * @param {Float32Array|Float64Array|Array} onsetEnvelope
  * @param {number} winLength - autocorrelation window in frames
  * @returns {Float64Array} length winLength
  */
 function meanTempogram(onsetEnvelope, winLength) {
-  const n = onsetEnvelope.length
-  const half = Math.floor(winLength / 2)
-
-  // np.pad(..., mode='linear_ramp', end_values=[0, 0])
-  const padded = new Float64Array(n + 2 * half)
-  const first = onsetEnvelope[0]
-  const last = onsetEnvelope[n - 1]
-  for (let j = 0; j < half; j++) {
-    padded[j] = (first * j) / half
-    padded[half + n + j] = (last * (half - 1 - j)) / half
-  }
-  for (let i = 0; i < n; i++) {
-    padded[half + i] = onsetEnvelope[i]
-  }
-
-  const window = hannPeriodic(winLength)
-  const nCols = Math.min(n, padded.length - winLength + 1)
-  if (nCols < 1) {
-    throw new Error(
-      `onset envelope too short (${n} frames) for tempogram win_length=${winLength}`,
-    )
-  }
-
+  const tg = tempogram(
+    null, 22050, onsetEnvelope, 512, winLength, true, 'hann', Infinity,
+  )
+  const nCols = tg[0].length
   const acc = new Float64Array(winLength)
-  const frame = new Float64Array(winLength)
   for (let t = 0; t < nCols; t++) {
     for (let k = 0; k < winLength; k++) {
-      frame[k] = padded[t + k] * window[k]
-    }
-    const ac = autocorrelate(frame)
-    // util.normalize(..., norm=np.inf, axis=-2): divide by max |value|,
-    // leaving all-(near-)zero columns unnormalized (fill=None semantics).
-    let maxAbs = 0
-    for (let k = 0; k < winLength; k++) {
-      const a = Math.abs(ac[k])
-      if (a > maxAbs) maxAbs = a
-    }
-    const scale = maxAbs < FLOAT64_TINY ? 1 : maxAbs
-    for (let k = 0; k < winLength; k++) {
-      acc[k] += ac[k] / scale
+      acc[k] += tg[k][t]
     }
   }
-
   for (let k = 0; k < winLength; k++) {
     acc[k] /= nCols
   }
@@ -242,7 +180,12 @@ function meanTempogram(onsetEnvelope, winLength) {
  * @param {number} [opts.stdBpm=1.0] - prior standard deviation (log2 space)
  * @param {number} [opts.acSize=8.0] - autocorrelation window in seconds
  * @param {number|null} [opts.maxTempo=320.0] - mask tempi at/above this value
- * @returns {number} estimated tempo in BPM
+ * @param {'mean'|null} [opts.aggregate='mean'] - librosa's aggregate
+ *   parameter: 'mean' (default) scores the time-mean tempogram and returns a
+ *   single BPM; null skips aggregation and returns a per-frame Float64Array
+ *   of BPM estimates (librosa aggregate=None — dynamic tempo)
+ * @returns {number|Float64Array} estimated tempo in BPM (scalar for
+ *   aggregate='mean', one BPM per onset-envelope frame for aggregate=null)
  * @throws {Error} on missing/empty input or invalid parameters — never
  *   returns a fabricated default
  */
@@ -262,6 +205,7 @@ export function tempo(y, opts = {}) {
     stdBpm = 1.0,
     acSize = 8.0,
     maxTempo = 320.0,
+    aggregate = 'mean',
   } = opts
 
   assertSampleRate(sr)
@@ -273,6 +217,12 @@ export function tempo(y, opts = {}) {
   }
   if (!(stdBpm > 0)) {
     throw new Error('stdBpm must be strictly positive')
+  }
+  if (aggregate !== 'mean' && aggregate !== null) {
+    throw new Error(
+      `aggregate=${aggregate} is not supported — use 'mean' (librosa default) ` +
+        'or null (per-frame dynamic tempo)',
+    )
   }
 
   let env = onsetEnvelope
@@ -289,7 +239,6 @@ export function tempo(y, opts = {}) {
     throw new Error(`acSize=${acSize} too small for sr=${sr}, hop=${hopLength}`)
   }
 
-  const tg = meanTempogram(env, winLength)
   const bpms = tempoFrequencies(winLength, hopLength, sr)
 
   // Pseudo-log-normal prior; bin 0 (infinite BPM) gets -Infinity naturally.
@@ -308,6 +257,28 @@ export function tempo(y, opts = {}) {
       logprior[k] = -Infinity
     }
   }
+
+  if (aggregate === null) {
+    // librosa aggregate=None: argmax per tempogram COLUMN → per-frame BPM.
+    const tgFull = tempogram(null, sr, env, hopLength, winLength, true, 'hann', Infinity)
+    const nCols = tgFull[0].length
+    const out = new Float64Array(nCols)
+    for (let t = 0; t < nCols; t++) {
+      let best = 0
+      let bestScore = -Infinity
+      for (let k = 0; k < winLength; k++) {
+        const score = Math.log1p(1e6 * tgFull[k][t]) + logprior[k]
+        if (score > bestScore) {
+          bestScore = score
+          best = k
+        }
+      }
+      out[t] = bpms[best]
+    }
+    return out
+  }
+
+  const tg = meanTempogram(env, winLength)
 
   // argmax(log1p(1e6 * tg) + logprior) — first maximum, like np.argmax
   let best = 0
@@ -351,26 +322,53 @@ function normalizeOnsets(env) {
 /**
  * __beat_local_score: same-mode convolution with a Gaussian beat-expectation
  * window, replicating librosa's numba loop bounds exactly (including the
- * exclusive upper bound `min(i + K//2, K)`).
+ * exclusive upper bound `min(i + K//2, K)`). Like librosa, framesPerBeat is
+ * an ARRAY: length 1 → static tempo (vanilla convolution), length N →
+ * time-varying tempo (the filter is rebuilt per frame from framesPerBeat[i]).
  * @private
+ * @param {Float64Array} env
+ * @param {Array<number>|Float64Array} framesPerBeat - length 1 or env.length
  */
 function beatLocalScore(env, framesPerBeat) {
   const N = env.length
-  const K = 2 * framesPerBeat + 1
-  const halfK = framesPerBeat // K // 2
-  const window = new Float64Array(K)
-  for (let k = 0; k < K; k++) {
-    const z = ((k - framesPerBeat) * 32.0) / framesPerBeat
-    window[k] = Math.exp(-0.5 * z * z)
+  const localscore = new Float64Array(N)
+
+  if (framesPerBeat.length === 1) {
+    // Static tempo mode — vanilla same-mode convolution
+    const fpb = framesPerBeat[0]
+    const K = 2 * fpb + 1
+    const halfK = fpb // K // 2
+    const window = new Float64Array(K)
+    for (let k = 0; k < K; k++) {
+      const z = ((k - fpb) * 32.0) / fpb
+      window[k] = Math.exp(-0.5 * z * z)
+    }
+
+    for (let i = 0; i < N; i++) {
+      let sum = 0
+      const kStart = Math.max(0, i + halfK - N + 1)
+      const kEnd = Math.min(i + halfK, K) // exclusive (librosa quirk preserved)
+      for (let k = kStart; k < kEnd; k++) {
+        sum += window[k] * env[i + halfK - k]
+      }
+      localscore[i] = sum
+    }
+    return localscore
   }
 
-  const localscore = new Float64Array(N)
+  // Time-varying tempo: not exactly a convolution anymore — the Gaussian
+  // window is rebuilt from framesPerBeat[i] at every frame (librosa's
+  // __beat_local_score time-varying branch, loop bounds preserved).
   for (let i = 0; i < N; i++) {
+    const fpb = framesPerBeat[i]
+    const K = 2 * fpb + 1
+    const halfK = fpb
     let sum = 0
     const kStart = Math.max(0, i + halfK - N + 1)
-    const kEnd = Math.min(i + halfK, K) // exclusive (librosa quirk preserved)
+    const kEnd = Math.min(i + halfK, K)
     for (let k = kStart; k < kEnd; k++) {
-      sum += window[k] * env[i + halfK - k]
+      const z = ((k - fpb) * 32.0) / fpb
+      sum += Math.exp(-0.5 * z * z) * env[i + halfK - k]
     }
     localscore[i] = sum
   }
@@ -378,7 +376,10 @@ function beatLocalScore(env, framesPerBeat) {
 }
 
 /**
- * __beat_track_dp: core dynamic program.
+ * __beat_track_dp: core dynamic program. framesPerBeat is an array of
+ * length 1 (static tempo) or localscore.length (time-varying tempo) — the
+ * `tv` indexing trick is librosa's: tv=0 pins every lookup to
+ * framesPerBeat[0], tv=1 makes the search window follow framesPerBeat[i].
  * @private
  */
 function beatTrackDP(localscore, framesPerBeat, tightness) {
@@ -396,11 +397,14 @@ function beatTrackDP(localscore, framesPerBeat, tightness) {
   backlink[0] = -1
   cumscore[0] = localscore[0]
 
-  const logFpb = Math.log(framesPerBeat)
-  const searchOffset = bankersRound(framesPerBeat / 2)
-  const searchStop = 2 * framesPerBeat // last candidate is i - 2*fpb (inclusive)
+  const tv = framesPerBeat.length > 1 ? 1 : 0
 
   for (let i = 0; i < N; i++) {
+    const fpb = framesPerBeat[tv * i]
+    const logFpb = Math.log(fpb)
+    const searchOffset = bankersRound(fpb / 2)
+    const searchStop = 2 * fpb // last candidate is i - 2*fpb (inclusive)
+
     let bestScore = -Infinity
     let beatLocation = -1
 
@@ -508,22 +512,34 @@ function trimBeats(localscore, beats, trim) {
 /**
  * __beat_tracker: full Ellis DP pipeline over an onset envelope.
  * @private
+ * @param {Array<number>|Float64Array} bpm - tempo array: length 1 (static)
+ *   or onsetEnvelope.length (time-varying), librosa's shape rule
  * @returns {Array<boolean>} dense beat indicator array
  */
 function ellisBeatTracker(onsetEnvelope, bpm, frameRate, tightness, trim) {
-  if (typeof bpm !== 'number' || !Number.isFinite(bpm) || bpm <= 0) {
-    throw new Error(`bpm=${bpm} must be strictly positive`)
+  for (const b of bpm) {
+    if (typeof b !== 'number' || !Number.isFinite(b) || b <= 0) {
+      throw new Error(`bpm=${b} must be strictly positive`)
+    }
+  }
+  if (bpm.length !== 1 && bpm.length !== onsetEnvelope.length) {
+    throw new Error(
+      `Invalid bpm shape=(${bpm.length}) does not match onset envelope ` +
+        `shape=(${onsetEnvelope.length}) — pass a scalar or one BPM per frame`,
+    )
   }
   if (!(tightness > 0)) {
     throw new Error('tightness must be strictly positive')
   }
 
   // np.round(frame_rate * 60 / bpm)
-  const framesPerBeat = bankersRound((frameRate * 60.0) / bpm)
-  if (framesPerBeat < 1) {
-    throw new Error(
-      `bpm=${bpm} implies < 1 frame per beat at frame rate ${frameRate}`,
-    )
+  const framesPerBeat = Array.from(bpm, (b) => bankersRound((frameRate * 60.0) / b))
+  for (let i = 0; i < framesPerBeat.length; i++) {
+    if (framesPerBeat[i] < 1) {
+      throw new Error(
+        `bpm=${bpm[i]} implies < 1 frame per beat at frame rate ${frameRate}`,
+      )
+    }
   }
 
   const localscore = beatLocalScore(normalizeOnsets(onsetEnvelope), framesPerBeat)
@@ -560,12 +576,16 @@ function ellisBeatTracker(onsetEnvelope, bpm, frameRate, tightness, trim) {
  * @param {number} [opts.startBpm=120] - prior center for tempo estimation
  * @param {number} [opts.tightness=100] - beat distribution tightness
  * @param {boolean} [opts.trim=true] - trim weak leading/trailing beats
- * @param {number} [opts.bpm=null] - known tempo (skips estimation).
- *   Time-varying (array) tempo is not supported and throws.
+ * @param {number|Array<number>|Float64Array} [opts.bpm=null] - known tempo
+ *   (skips estimation). A scalar tracks a static tempo; an ARRAY of
+ *   per-frame BPM values (length 1 or one per onset-envelope frame, e.g.
+ *   the output of tempo(..., {aggregate: null})) tracks time-varying tempo,
+ *   exactly like librosa 0.11's beat_track(bpm=array).
  * @param {string} [opts.units='frames'] - 'frames' | 'samples' | 'time'
  *   (librosa default is 'frames')
  * @param {boolean} [opts.sparse=true] - sparse indices vs dense boolean array
- * @returns {{tempo: number, beats: Array<number>|Array<boolean>}}
+ * @returns {{tempo: number|Array<number>|Float64Array, beats: Array<number>|Array<boolean>}}
+ *   tempo echoes a caller-provided bpm as given; when estimated it is a scalar
  * @throws {Error} on missing/empty input or invalid parameters
  */
 export function beat_track(y, sr = 22050, opts = {}) {
@@ -587,10 +607,19 @@ export function beat_track(y, sr = 22050, opts = {}) {
   if (units !== 'frames' && units !== 'samples' && units !== 'time') {
     throw new Error(`Invalid unit type: ${units}`)
   }
-  if (bpm !== null && typeof bpm !== 'number') {
-    throw new Error(
-      'time-varying bpm arrays are not supported yet; pass a scalar bpm',
-    )
+  // np.atleast_1d(bpm): scalar → [bpm]; arrays pass through (validated in
+  // the tracker against the envelope length, librosa's shape rule).
+  let bpmArray = null
+  if (bpm !== null) {
+    if (typeof bpm === 'number') {
+      bpmArray = [bpm]
+    } else if (bpm != null && typeof bpm.length === 'number' && bpm.length > 0) {
+      bpmArray = bpm
+    } else {
+      throw new Error(
+        'bpm must be a positive number or a non-empty array of per-frame BPM values',
+      )
+    }
   }
 
   let env = onsetEnvelope
@@ -622,8 +651,9 @@ export function beat_track(y, sr = 22050, opts = {}) {
     bpm !== null
       ? bpm
       : tempo(null, { sr, onsetEnvelope: env, hopLength, startBpm })
+  const trackerBpm = bpmArray !== null ? bpmArray : [estimatedBpm]
 
-  const dense = ellisBeatTracker(env, estimatedBpm, sr / hopLength, tightness, trim)
+  const dense = ellisBeatTracker(env, trackerBpm, sr / hopLength, tightness, trim)
 
   if (!sparse) {
     return { tempo: estimatedBpm, beats: dense }
@@ -639,7 +669,9 @@ export function beat_track(y, sr = 22050, opts = {}) {
     beats = beats.map((b) => (b * hopLength) / sr)
   }
 
-  debugLog(`beat_track: ${estimatedBpm.toFixed(2)} BPM, ${beats.length} beats`)
+  debugLog(
+    `beat_track: ${typeof estimatedBpm === 'number' ? estimatedBpm.toFixed(2) + ' BPM' : `time-varying bpm[${estimatedBpm.length}]`}, ${beats.length} beats`,
+  )
   return { tempo: estimatedBpm, beats }
 }
 

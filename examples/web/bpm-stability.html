@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — xa-bpm-algorithm: tempo-stability map tracks a 100→140 BPM jump</title>
+<style>
+  body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
+  canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
+  code { color: #8fd }
+  progress { width: 100%; height: 14px }
+  #peaks { font: 13px monospace; color: #ffb74d }
+</style>
+</head>
+<body>
+<h2>xa-bpm-algorithm — lb tempo-stability map: does windowed tempo track a 100&rarr;140 BPM jump?</h2>
+<p>
+  8s of 100 BPM clicks + 8s of 140 BPM clicks run through <code>bpm.analyzeWithProgress(y, sr, 4, 1)</code>.
+  Repairs proven here (2026-07-02): the constrained per-window estimator used to reduce each 4s window
+  to ~15 energy points while its BPM search needed lags &ge; ~17, so the loop never executed and every
+  window silently echoed the global tempo; it now autocorrelates the raw onset envelope. The global
+  estimator's 70&ndash;180 hard cap also picked the 69.8 subharmonic on this material; an octave
+  correction now prefers the double when it carries &ge;70% of the correlation.
+  Proofs (node-verified): windows fully inside each region average within 8 BPM of 100 / 140
+  (measured 99.4 / 143.6), the tracked jump exceeds 25 BPM, the Fourier-tempogram top-3 peaks
+  include ~100.9 and ~141.3, and every window confidence is measured in (0, 0.95].
+  NOTE: the plan's original "mean(t&lt;7s)" criterion is replaced by the stronger fully-inside-region
+  criterion — the window starting at 6.99s legitimately straddles the tempo boundary.
+</p>
+<progress id="prog" max="1" value="0"></progress>
+<div id="badges"></div>
+<canvas id="plot" width="820" height="220"></canvas>
+<div id="peaks"></div>
+
+<script type="module">
+import { bpm } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge } from './_badge.js'
+
+const sr = 22050, winLen = 4
+function clicks(y, bpmVal, durSec, offsetSec) {
+  const period = 60 / bpmVal
+  for (let t = 0; t < durSec; t += period) {
+    const s0 = Math.round((offsetSec + t) * sr)
+    for (let i = 0; i < Math.round(0.005 * sr) && s0 + i < y.length; i++) {
+      y[s0 + i] += Math.sin((2 * Math.PI * 1000 * i) / sr) * Math.exp(-i / (0.001 * sr))
+    }
+  }
+}
+const y = new Float32Array(16 * sr)
+clicks(y, 100, 8, 0)
+clicks(y, 140, 8, 8)
+
+// analyzeWithProgress yields to the event loop between stages/windows; animate
+// the bar while it runs (it does not expose granular progress callbacks).
+const prog = document.getElementById('prog')
+const timer = setInterval(() => { prog.value = (prog.value + 0.02) % 0.95 }, 100)
+const res = await bpm.analyzeWithProgress(y, sr, winLen, 1)
+clearInterval(timer)
+prog.value = 1
+
+const mean = (a) => a.reduce((x, v) => x + v, 0) / a.length
+const firstRegion = res.tempo.filter((_, i) => res.times[i] + winLen <= 8)
+const secondRegion = res.tempo.filter((_, i) => res.times[i] >= 8)
+const peaks = res.tempogram.peakTempos.slice(0, 3).map((p) => p.bpm)
+
+badge('first-region windows average within 8 BPM of 100', Math.abs(mean(firstRegion) - 100) <= 8, `mean=${mean(firstRegion).toFixed(2)}`)
+badge('second-region windows average within 8 BPM of 140', Math.abs(mean(secondRegion) - 140) <= 8, `mean=${mean(secondRegion).toFixed(2)}`)
+badge('tempo jump tracked (second - first > 25 BPM)', mean(secondRegion) - mean(firstRegion) > 25, `Δ=${(mean(secondRegion) - mean(firstRegion)).toFixed(1)}`)
+badge('tempogram top-3 peaks include ~100.9 (±2)', peaks.some((p) => Math.abs(p - 100.9) <= 2), peaks.map((p) => p.toFixed(1)).join(', '))
+badge('tempogram top-3 peaks include ~141.3 (±2)', peaks.some((p) => Math.abs(p - 141.3) <= 2))
+badge('every window confidence measured in (0, 0.95]', res.confidence.every((c) => c > 0 && c <= 0.95))
+
+// Line plot: windowed tempo vs time with 100/140 reference lines
+const cv = document.getElementById('plot'), ctx = cv.getContext('2d')
+const { width: w, height: h } = cv
+const bpmLo = 60, bpmHi = 180
+const yOf = (b) => h - ((b - bpmLo) / (bpmHi - bpmLo)) * (h - 20) - 10
+const xOf = (t) => (t / 16) * w
+ctx.fillStyle = '#111'; ctx.fillRect(0, 0, w, h)
+ctx.strokeStyle = '#444'; ctx.setLineDash([4, 4])
+for (const ref of [100, 140]) {
+  ctx.beginPath(); ctx.moveTo(0, yOf(ref)); ctx.lineTo(w, yOf(ref)); ctx.stroke()
+  ctx.fillStyle = '#666'; ctx.font = '11px monospace'; ctx.fillText(`${ref} BPM`, 6, yOf(ref) - 4)
+}
+ctx.setLineDash([])
+ctx.strokeStyle = '#4fc3f7'; ctx.beginPath()
+res.tempo.forEach((b, i) => {
+  const x = xOf(res.times[i] + winLen / 2), yy = yOf(b)
+  i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy)
+})
+ctx.stroke()
+ctx.fillStyle = '#4fc3f7'
+res.tempo.forEach((b, i) => ctx.fillRect(xOf(res.times[i] + winLen / 2) - 2, yOf(b) - 2, 4, 4))
+ctx.fillStyle = '#888'; ctx.font = '11px monospace'
+ctx.fillText('windowed tempo (4s windows, 1s hop) vs time — dashed: true tempi', 8, h - 8)
+
+document.getElementById('peaks').textContent =
+  `global ${res.globalTempo.toFixed(2)} BPM — Fourier tempogram top peaks: ${res.tempogram.peakTempos.slice(0, 5).map((p) => `${p.bpm.toFixed(1)}`).join(', ')} BPM`
+</script>
+</body>
+</html>

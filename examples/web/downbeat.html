@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — xa-downbeat: find beat 1 of an accent-shifted 4/4 pattern</title>
+<style>
+  body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
+  canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
+  code { color: #8fd }
+  button { font: 14px system-ui; padding: 6px 14px; margin: 8px 4px 8px 0; border-radius: 6px; border: 1px solid #555; background: #2a2a2a; color: #ddd; cursor: pointer }
+  button:hover { background: #3a3a3a }
+</style>
+</head>
+<body>
+<h2>xa-downbeat — find the TRUE beat 1: accent-shifted 4/4, known downbeat phase</h2>
+<p>
+  A seeded 8-bar 4/4 pattern at 120 BPM (sr=22050) puts the accented hit — a loud 60Hz kick +
+  noise burst — on beat index 1 of every bar, with quiet hats elsewhere. The true beat grid
+  (every 0.5s) plus audio goes into <code>findDownbeatPhase(y, beats, 120, sr)</code>.
+  Proofs (node-verified): <code>phase === 1</code> with a decisive score margin, one downbeat
+  per bar (8 total), and <code>findFirstDownbeat</code> on a signal with one silent leading bar
+  returns 2.000s exactly (&plusmn;0.25s asserted). Repairs proven here (2026-07-02): phase
+  rounding wraps 4&rarr;0 instead of silently discarding, and accent strength is measured
+  forward from the (uncentered, frame-start) onset time — the old centered window read pure
+  silence on sparse material and scored every phase 0. The play button thumps on each reported
+  downbeat so the "boom on 1" is audible.
+</p>
+<div id="badges"></div>
+<canvas id="wave" width="820" height="140"></canvas>
+<button id="play">Play with downbeat thumps</button>
+
+<script type="module">
+import { findDownbeatPhase, findFirstDownbeat } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawWave } from './_badge.js'
+
+const sr = 22050, beatDur = 0.5, bars = 8
+let seed = 7
+const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return (seed / 4294967296) * 2 - 1 }
+
+function addKick(y, t) { // loud low kick + noise burst, 50ms
+  const s0 = Math.round(t * sr)
+  for (let i = 0; i < Math.round(0.05 * sr) && s0 + i < y.length; i++) {
+    const decay = Math.exp(-i / (0.012 * sr))
+    y[s0 + i] += (0.9 * Math.sin((2 * Math.PI * 60 * i) / sr) + 0.5 * rand()) * decay
+  }
+}
+function addHat(y, t) { // quiet hat, 10ms noise
+  const s0 = Math.round(t * sr)
+  for (let i = 0; i < Math.round(0.01 * sr) && s0 + i < y.length; i++) {
+    y[s0 + i] += 0.12 * rand() * Math.exp(-i / (0.003 * sr))
+  }
+}
+
+// Pattern A: accent on beat index 1 of every bar
+const y = new Float32Array(bars * 4 * beatDur * sr)
+const beats = []
+for (let b = 0; b < bars * 4; b++) {
+  const t = b * beatDur
+  beats.push(t)
+  if (b % 4 === 1) addKick(y, t); else addHat(y, t)
+}
+
+const res = findDownbeatPhase(y, beats, 120, sr)
+badge('downbeat phase === 1 (known accent placement)', res.phase === 1, `phase=${res.phase}, scores=[${res.phaseScores.map((s) => s.toFixed(2)).join(', ')}]`)
+badge('one downbeat per bar (8 total)', res.downbeats.length === Math.round(beats.length / 4), `n=${res.downbeats.length}`)
+
+// Pattern B: one silent leading bar, then accents on bar boundaries
+seed = 7
+const y2 = new Float32Array(10 * sr)
+for (let bar = 1; bar < 5; bar++) {
+  const t0 = bar * 2.0
+  for (let b = 0; b < 4; b++) {
+    if (b === 0) addKick(y2, t0); else addHat(y2, t0 + b * beatDur)
+  }
+}
+const first = findFirstDownbeat(y2, 120, sr)
+badge('findFirstDownbeat within 0.25s of the 2.000s bar boundary', Math.abs(first - 2.0) <= 0.25, `t=${first.toFixed(3)}s`)
+
+// Waveform with reported downbeat markers
+const cv = document.getElementById('wave')
+drawWave(cv, y)
+const ctx = cv.getContext('2d')
+const dur = y.length / sr
+ctx.strokeStyle = '#ffb74d'; ctx.lineWidth = 2
+for (const t of res.downbeats) {
+  const x = (t / dur) * cv.width
+  ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x, cv.height - 2); ctx.stroke()
+}
+ctx.fillStyle = '#888'; ctx.font = '11px monospace'
+ctx.fillText('orange lines = reported downbeats (beat 1 of each bar)', 8, cv.height - 8)
+
+// Audible proof: thump (80Hz burst) on each reported downbeat
+document.getElementById('play').onclick = () => {
+  const ac = new AudioContext()
+  const buf = ac.createBuffer(1, y.length, sr)
+  buf.getChannelData(0).set(y)
+  const src = ac.createBufferSource()
+  src.buffer = buf
+  src.connect(ac.destination)
+  const t0 = ac.currentTime + 0.05
+  for (const t of res.downbeats) {
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.frequency.value = 80
+    g.gain.setValueAtTime(0.6, t0 + t)
+    g.gain.exponentialRampToValueAtTime(1e-4, t0 + t + 0.12)
+    osc.connect(g).connect(ac.destination)
+    osc.start(t0 + t); osc.stop(t0 + t + 0.15)
+  }
+  src.start(t0)
+}
+</script>
+</body>
+</html>
