@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — xa-advanced: Griffin-Lim reconstruction A/B</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  h2 { font-size: 0.95rem; color: #9ad; margin: 14px 0 2px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 4px 0; border: 1px solid #333; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 6px 12px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #eee; cursor: pointer; }
+  button:hover { background: #37474f; }
+</style>
+</head>
+<body>
+<h1>scripts/xa-advanced.js — Griffin-Lim reconstruction A/B (post-repair)</h1>
+<p>
+  A 440 + 660 Hz chord's <code>|STFT(1024, 256)|</code> goes through
+  <code>griffinlim(32)</code> with deterministic zero-phase init. Before the
+  repair this returned <b>one sample</b> (istft arg-shift put
+  <code>center=true</code> into <code>length</code>). Badges mirror
+  <code>examples/node/xa-advanced.mjs</code>: audio-length output, strictly
+  decreasing spectral convergence over iterations 1–8, &lt;10% relative L2
+  magnitude error after 32 iterations, and an FFT-peak pitch within 1% of
+  440 Hz. A/B the audio yourself — phase is invented, pitch must survive.
+</p>
+<div id="badges"></div>
+<div>
+  <button id="playOrig" disabled>play original chord</button>
+  <button id="playRecon" disabled>play Griffin-Lim reconstruction</button>
+</div>
+<h2>target |STFT| (original)</h2>
+<canvas id="specOrig" width="820" height="180"></canvas>
+<h2>|STFT| of the 32-iteration reconstruction</h2>
+<canvas id="specRecon" width="820" height="180"></canvas>
+<h2>spectral-convergence error vs iteration (k = 1..8, deterministic)</h2>
+<canvas id="convergence" width="820" height="140"></canvas>
+
+<script type="module">
+import { stft, griffinlim, fft } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawSpectrogram } from './_badge.js'
+
+const SR = 22050
+const N = SR
+const N_FFT = 1024
+const HOP = 256
+
+const y = new Float32Array(N)
+for (let i = 0; i < N; i++) {
+  y[i] = 0.6 * Math.sin((2 * Math.PI * 440 * i) / SR) + 0.3 * Math.sin((2 * Math.PI * 660 * i) / SR)
+}
+
+const D = stft(y, N_FFT, HOP)
+const S = D.map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
+
+function relErr(rec) {
+  const D2 = stft(rec, N_FFT, HOP)
+  let num = 0
+  let den = 0
+  for (let f = 0; f < S.length; f++) {
+    for (let t = 0; t < S[f].length; t++) {
+      const bin = D2[f] && D2[f][t] ? D2[f][t] : { real: 0, imag: 0 }
+      const m2 = Math.hypot(bin.real, bin.imag)
+      num += (m2 - S[f][t]) ** 2
+      den += S[f][t] ** 2
+    }
+  }
+  return Math.sqrt(num / den)
+}
+
+// (S, n_iter, hop, win_length, n_fft, window, center, dtype, length, pad_mode, momentum, init)
+const gl = (iters) =>
+  griffinlim(S, iters, HOP, null, null, 'hann', true, null, N, 'constant', 0.99, null)
+
+const y32 = gl(32)
+badge('griffinlim(32) length == 22050 (NOT the 1-sample regression)', y32.length === N, `len ${y32.length}`)
+badge('reconstruction all finite', Array.from(y32).every(Number.isFinite))
+
+const errs = []
+for (let k = 1; k <= 8; k++) errs.push(relErr(gl(k)))
+const strictlyDecreasing = errs.every((e, i) => i === 0 || e < errs[i - 1])
+badge('convergence error strictly decreases over iterations 1–8', strictlyDecreasing,
+  errs.map((e) => e.toFixed(3)).join(' > '))
+
+const e32 = relErr(y32)
+badge('relative L2 error of |STFT(recon)| vs target < 0.1 after 32 iters', e32 < 0.1, e32.toFixed(4))
+
+const M = 16384
+const spec = fft(y32.slice(0, M))
+let pk = 1
+for (let i = 1; i < M / 2; i++) {
+  if (Math.hypot(spec[i].real, spec[i].imag) > Math.hypot(spec[pk].real, spec[pk].imag)) pk = i
+}
+const peakHz = (pk * SR) / M
+badge('FFT-peak pitch of reconstruction within 1% of 440 Hz',
+  Math.abs(peakHz - 440) / 440 < 0.01, `${peakHz.toFixed(2)} Hz`)
+
+// ── spectrogram A/B (audible band only: rows 0..80 ≈ 0–1.7 kHz) ─────────────
+const D32 = stft(y32, N_FFT, HOP)
+const S32 = D32.map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
+const crop = (Mx) => Mx.slice(0, 80)
+drawSpectrogram(document.getElementById('specOrig'), crop(S))
+drawSpectrogram(document.getElementById('specRecon'), crop(S32))
+
+// ── convergence line plot ───────────────────────────────────────────────────
+{
+  const cv = document.getElementById('convergence')
+  const ctx = cv.getContext('2d')
+  const { width: w, height: h } = cv
+  ctx.fillStyle = '#111'
+  ctx.fillRect(0, 0, w, h)
+  const eMax = Math.max(...errs)
+  const eMin = Math.min(...errs)
+  ctx.strokeStyle = '#4fc3f7'
+  ctx.beginPath()
+  errs.forEach((e, i) => {
+    const x = 30 + (i / (errs.length - 1)) * (w - 60)
+    const yy = h - 20 - ((e - eMin) / (eMax - eMin)) * (h - 40)
+    i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy)
+  })
+  ctx.stroke()
+  ctx.fillStyle = '#9ad'
+  ctx.font = '11px monospace'
+  errs.forEach((e, i) => {
+    const x = 30 + (i / (errs.length - 1)) * (w - 60)
+    const yy = h - 20 - ((e - eMin) / (eMax - eMin)) * (h - 40)
+    ctx.fillText(e.toFixed(3), x - 16, yy - 8)
+  })
+}
+
+// ── A/B playback ────────────────────────────────────────────────────────────
+let ctx2 = null
+function play(data) {
+  ctx2 = ctx2 || new AudioContext({ sampleRate: SR })
+  const buf = ctx2.createBuffer(1, data.length, SR)
+  buf.getChannelData(0).set(data)
+  const src = ctx2.createBufferSource()
+  src.buffer = buf
+  src.connect(ctx2.destination)
+  src.start()
+}
+const bOrig = document.getElementById('playOrig')
+const bRecon = document.getElementById('playRecon')
+bOrig.disabled = false
+bRecon.disabled = false
+bOrig.onclick = () => play(y)
+bRecon.onclick = () => play(y32)
+</script>
+</body>
+</html>

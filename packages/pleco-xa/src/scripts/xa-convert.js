@@ -624,23 +624,26 @@ export function blocks_to_time(blocks, block_length, hop_length, sr) {
 }
 
 /**
- * Compute the frequencies (in BPM) corresponding to tempogram bins
- * @param {number} n_bins - Number of tempo bins
- * @param {number} hop_length - Hop length
+ * Compute the frequencies (in BPM) corresponding to LAG-tempogram bins.
+ * Port of librosa.convert.tempo_frequencies: bin k is autocorrelation lag k,
+ * so bpm[k] = 60 * sr / (hop_length * k), and bin 0 (lag 0) is +Infinity.
+ *
+ * Tier-3 repair (2026-07-02): the previous body computed a LINEAR Fourier
+ * frequency grid (fourier_tempo_frequencies math with a fabricated
+ * win_length = 2*(n_bins-1)) — every BPM axis drawn with it was wrong.
+ * For Fourier tempograms use fourier_tempo_frequencies().
+ *
+ * @param {number} n_bins - Number of lag bins (tempogram rows)
+ * @param {number} hop_length - Hop length of the onset envelope
  * @param {number} sr - Sample rate
- * @returns {Float32Array} Tempo frequencies in BPM
+ * @returns {Float64Array} Tempo frequencies in BPM (bin 0 = Infinity)
  */
 export function tempo_frequencies(n_bins, hop_length = 512, sr = 22050) {
-  const freqs = new Float32Array(n_bins)
-  const win_length = 2 * (n_bins - 1)
-
-  for (let i = 0; i < n_bins; i++) {
-    // Fourier frequency for this bin
-    const freq_hz = (sr * i) / (hop_length * win_length)
-    // Convert to BPM
-    freqs[i] = freq_hz * 60.0
+  const freqs = new Float64Array(n_bins)
+  freqs[0] = Infinity
+  for (let i = 1; i < n_bins; i++) {
+    freqs[i] = (60.0 * sr) / (hop_length * i)
   }
-
   return freqs
 }
 

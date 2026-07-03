@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — loop.detect() strategy shootout</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 78ch; }
+    canvas { border: 1px solid #333; display: block; margin: 8px 0; }
+    table { border-collapse: collapse; font: 13px monospace; margin: 8px 0; }
+    th, td { border: 1px solid #333; padding: 5px 10px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: #2a2a2a; }
+    tbody tr.playing { background: #1b3a5c; }
+    .sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; }
+    #status { color: #999; margin: 8px 0; }
+    button { font: 14px system-ui; padding: 6px 12px; }
+  </style>
+</head>
+<body>
+  <h2>loop.detect() — four-strategy shootout on <i>Drive Through Beat.wav</i> + golden lock</h2>
+  <p>
+    One buffer, one entry point, four explicit strategies. The WAV is decoded
+    with the package's own <code>decodeWav</code> (no browser resampling), then
+    <code>loop.detect(buffer, {strategy})</code> runs 'fast', 'precise',
+    'musical' and 'recurrence'. Each result is painted as a colored region on
+    the shared waveform. The <b>fast</b> row is asserted against
+    <code>tools/parity/fixtures/loop_goldens.json</code> (±441 samples, bpm
+    ±0.1) — the same golden lock as <code>examples/node/loop-detect.mjs</code>
+    (node-verified: Δ ≤ 1 sample on all four golden WAVs). Recurrence must
+    report NO bpm field: it is tempo-free by contract and never invents one.
+    Click a table row to audition that strategy's loop via LoopPlayer.
+  </p>
+  <div id="badges"></div>
+  <canvas id="wave" width="960" height="220"></canvas>
+  <table id="results">
+    <thead><tr><th>strategy</th><th>loopStart (s)</th><th>loopEnd (s)</th><th>confidence</th><th>bpm</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <button id="stopBtn">Stop audition</button>
+  <div id="status">loading + decoding WAV…</div>
+
+  <script type="module">
+    import { loop, decodeWav, LoopPlayer } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const status = document.getElementById('status')
+    const COLORS = { fast: '#4fc3f7', precise: '#ffb74d', musical: '#aed581', recurrence: '#f06292' }
+
+    // Decode with the package decoder so analysis is bit-identical to Node
+    // (AudioContext.decodeAudioData would resample 48 kHz to the device rate).
+    const [wavResp, goldResp] = await Promise.all([
+      fetch('../../apps/demo/public/audio/Drive%20Through%20Beat.wav'),
+      fetch('../../tools/parity/fixtures/loop_goldens.json'),
+    ])
+    const goldens = await goldResp.json()
+    const golden = goldens.files['Drive Through Beat.wav']
+    const TOL = goldens.meta.toleranceSamples // 441
+
+    const { channels, sampleRate } = decodeWav(await wavResp.arrayBuffer())
+    const audioBuffer = new AudioBuffer({
+      numberOfChannels: channels.length,
+      length: channels[0].length,
+      sampleRate,
+    })
+    channels.forEach((ch, i) => audioBuffer.copyToChannel(ch, i))
+    const data = channels[0]
+    const duration = data.length / sampleRate
+
+    // ── waveform ──────────────────────────────────────────────────────────
+    const canvas = document.getElementById('wave')
+    const ctx = canvas.getContext('2d')
+    function drawBase() {
+      const { width: w, height: h } = canvas
+      ctx.fillStyle = '#111'
+      ctx.fillRect(0, 0, w, h)
+      ctx.strokeStyle = '#888'
+      ctx.beginPath()
+      const step = Math.floor(data.length / w)
+      for (let x = 0; x < w; x++) {
+        let min = 1, max = -1
+        for (let i = x * step; i < (x + 1) * step; i += 16) {
+          const v = data[i]
+          if (v < min) min = v
+          if (v > max) max = v
+        }
+        ctx.moveTo(x + 0.5, h / 2 - max * h * 0.45)
+        ctx.lineTo(x + 0.5, h / 2 - min * h * 0.45)
+      }
+      ctx.stroke()
+    }
+    drawBase()
+
+    function overlay(res, slot) {
+      const { width: w, height: h } = canvas
+      const x0 = (res.loopStart / duration) * w
+      const x1 = (res.loopEnd / duration) * w
+      const bandH = h / 4
+      ctx.fillStyle = COLORS[res.strategy] + '55'
+      ctx.fillRect(x0, slot * bandH, Math.max(2, x1 - x0), bandH - 2)
+      ctx.strokeStyle = COLORS[res.strategy]
+      ctx.strokeRect(x0, slot * bandH, Math.max(2, x1 - x0), bandH - 2)
+      ctx.fillStyle = COLORS[res.strategy]
+      ctx.font = '11px monospace'
+      ctx.fillText(res.strategy, x0 + 4, slot * bandH + 12)
+    }
+
+    // ── run the shootout ──────────────────────────────────────────────────
+    const tbody = document.querySelector('#results tbody')
+    const player = new LoopPlayer(audioBuffer)
+    let playingRow = null
+    document.getElementById('stopBtn').onclick = () => {
+      player.stop()
+      playingRow?.classList.remove('playing')
+      playingRow = null
+    }
+
+    function addRow(strategy, res) {
+      const tr = document.createElement('tr')
+      const name = document.createElement('td')
+      const sw = document.createElement('span')
+      sw.className = 'sw'
+      sw.style.background = COLORS[strategy]
+      name.append(sw, strategy)
+      tr.appendChild(name)
+      for (const text of [
+        res.loopStart.toFixed(4),
+        res.loopEnd.toFixed(4),
+        res.confidence.toFixed(4),
+        'bpm' in res ? res.bpm.toFixed(2) : 'tempo-free',
+      ]) {
+        const td = document.createElement('td')
+        td.textContent = text
+        tr.appendChild(td)
+      }
+      tr.onclick = async () => {
+        player.stop()
+        player.setLoopPoints(res.loopStart, res.loopEnd)
+        await player.play()
+        playingRow?.classList.remove('playing')
+        tr.classList.add('playing')
+        playingRow = tr
+        status.textContent = `auditioning '${strategy}' loop ${res.loopStart.toFixed(3)}–${res.loopEnd.toFixed(3)} s`
+      }
+      tbody.appendChild(tr)
+    }
+
+    const results = []
+    let threw = null
+    for (const [slot, strategy] of loop.STRATEGIES.entries()) {
+      status.textContent = `running strategy '${strategy}'…`
+      await new Promise((r) => setTimeout(r)) // let the status paint
+      try {
+        const res = await loop.detect(audioBuffer, { strategy })
+        results.push(res)
+        overlay(res, slot)
+        addRow(strategy, res)
+      } catch (e) {
+        threw = `${strategy}: ${e.message}`
+        break
+      }
+    }
+    status.textContent = 'shootout done — click a row to audition its loop'
+
+    // ── proofs ────────────────────────────────────────────────────────────
+    badge('all four strategies complete without throwing',
+      results.length === 4 && !threw, threw || `${results.length}/4`)
+
+    const fast = results.find((r) => r.strategy === 'fast')
+    const dStart = Math.abs(fast.loopStart * sampleRate - golden.loopStartSamples)
+    const dEnd = Math.abs(fast.loopEnd * sampleRate - golden.loopEndSamples)
+    badge(`GOLDEN: fast loop points within ±${TOL} samples of fixture`,
+      dStart <= TOL && dEnd <= TOL, `Δstart=${dStart.toFixed(0)} Δend=${dEnd.toFixed(0)}`)
+    badge(`GOLDEN: fast bpm == ${golden.bpm.toFixed(2)} ± 0.1`,
+      Math.abs(fast.bpm - golden.bpm) <= 0.1, fast.bpm.toFixed(4))
+
+    const rec = results.find((r) => r.strategy === 'recurrence')
+    badge("recurrence is tempo-free — result has NO 'bpm' key",
+      rec !== undefined && !('bpm' in rec), rec ? Object.keys(rec).join(',') : 'missing')
+
+    badge('every confidence on the unified 0..1 scale',
+      results.every((r) => r.confidence >= 0 && r.confidence <= 1),
+      results.map((r) => r.confidence.toFixed(3)).join(' '))
+
+    badge('every strategy yields a valid ordered region inside the buffer',
+      results.every((r) => r.loopStart >= 0 && r.loopEnd > r.loopStart && r.loopEnd <= duration + 1e-6),
+      results.map((r) => `${r.loopStart.toFixed(2)}→${r.loopEnd.toFixed(2)}`).join('  '))
+  </script>
+</body>
+</html>

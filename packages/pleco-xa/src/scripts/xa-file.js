@@ -498,10 +498,17 @@ export function createVisualization(audioData, points = 1000, sampleRate = 22050
 
 /**
  * Utility function to check if Web Audio API is available
+ *
+ * Coverage close-out repair (2026-07-02): guarded the bare `window` read —
+ * an environment-detection predicate must ANSWER the question in Node and
+ * workers (false), not crash with a ReferenceError.
  * @returns {boolean} True if Web Audio API is supported
  */
 export function isWebAudioSupported() {
-  return !!(window.AudioContext || window.webkitAudioContext)
+  return (
+    typeof window !== 'undefined' &&
+    !!(window.AudioContext || window.webkitAudioContext)
+  )
 }
 
 /**

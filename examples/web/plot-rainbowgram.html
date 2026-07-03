@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>plot_rainbowgram — Rainbowgram: phase you can see</title>
+</head>
+<body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
+  <h2>plot_rainbowgram — Rainbowgram: phase you can see</h2>
+  <p style="max-width:95ch">
+    Replica of librosa's <em>Rainbowgrams</em> gallery page (the NSynth
+    visualization): hue = demodulated phase differential
+    diff(unwrap(∠D − 2πft)), alpha = amplitude_to_db(|D|)/80 + 1 on black.
+    Signal: a linear chirp 32 → 1024 Hz (the gallery's chirp) plus a steady
+    440 Hz partial, at sr 16384 / n_fft 2048 so 440 Hz is EXACTLY bin 55 —
+    a bin-centered partial has zero demodulated drift, so its band renders
+    one constant hue while the chirp sweeps the full color wheel.
+    Quantitative badges (node-verified against dist first): mean
+    |demodulated Δφ| at the 440 Hz bin &lt; 0.05 rad over ALL frames
+    (measured 0.0139 — the only contribution is the chirp crossing the band;
+    away from the crossing it measures 0.0002), and a deliberately detuned
+    452 Hz partial measured at bin 56 (448 Hz) drifts at exactly
+    2π·Δf·hop/sr = π/4 rad/frame ±10% (measured ratio 1.000, per-frame
+    deviation ≈ 0) — the rainbow's hue gradient is the frequency offset,
+    verified.
+  </p>
+  <div id="badges"></div>
+  <p><button id="play">▶ play chirp + 440 Hz partial</button> <span id="status">computing…</span></p>
+  <div>
+    <canvas id="rainbow" width="900" height="360" style="background:#000"></canvas>
+    <div style="font:12px monospace;color:#888">
+      x: 0 → 6 s · y: log frequency 16 Hz → 8192 Hz · hue: phase drift
+      (−π red↓ … 0 cyan-ish … +π red↑) · brightness: magnitude (dB) ·
+      flat-hue horizontal band = the bin-locked 440 Hz partial
+    </div>
+  </div>
+  <script type="module">
+    import { stft } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const sr = 16384
+    const n_fft = 2048
+    const hop = 512
+    const dur = 6
+    const n = dur * sr
+    const F0 = 32
+    const F1 = 1024 // librosa gallery: chirp(fmin=32, fmax=32*2**5, linear=True)
+
+    // chirp + bin-centered partial (440 = 55 * sr/n_fft exactly)
+    const y = new Float32Array(n)
+    for (let i = 0; i < n; i++) {
+      const t = i / sr
+      const chirpPhase = 2 * Math.PI * (F0 * t + ((F1 - F0) * t * t) / (2 * dur))
+      y[i] = 0.3 * Math.sin(chirpPhase) + 0.3 * Math.sin(2 * Math.PI * 440 * t)
+    }
+
+    const D = stft(y, n_fft, hop)
+    const nF = D.length
+    const nT = D[0].length
+    badge('stft shape == [1025, 193]', nF === 1025 && nT === 193, `${nF}x${nT}`)
+
+    const wrap = (x) => {
+      let v = x % (2 * Math.PI)
+      if (v > Math.PI) v -= 2 * Math.PI
+      if (v <= -Math.PI) v += 2 * Math.PI
+      return v
+    }
+
+    // magnitude + demodulated phase differential for every bin
+    // d[k][t] = wrap(θ[k][t+1] − θ[k][t] − 2π f_k hop/sr)  (nT−1 columns)
+    const mag = []
+    const dphi = []
+    let magMax = 1e-12
+    for (let k = 0; k < nF; k++) {
+      const row = D[k]
+      const m = new Float64Array(nT)
+      const d = new Float64Array(nT - 1)
+      const step = (2 * Math.PI * ((k * sr) / n_fft) * hop) / sr
+      let prevTh = Math.atan2(row[0].imag, row[0].real)
+      m[0] = Math.hypot(row[0].real, row[0].imag)
+      if (m[0] > magMax) magMax = m[0]
+      for (let t = 1; t < nT; t++) {
+        const th = Math.atan2(row[t].imag, row[t].real)
+        d[t - 1] = wrap(th - prevTh - step)
+        prevTh = th
+        m[t] = Math.hypot(row[t].real, row[t].imag)
+        if (m[t] > magMax) magMax = m[t]
+      }
+      mag.push(m)
+      dphi.push(d)
+    }
+
+    // ── badge 1: the bin-locked 440 Hz partial is color-stable ──────────────
+    const bin440 = 55
+    let sum = 0
+    for (const v of dphi[bin440]) sum += Math.abs(v)
+    const mean440 = sum / dphi[bin440].length
+    badge('mean |demod Δφ| at the exact 440 Hz bin < 0.05 rad (all frames)',
+      mean440 < 0.05, `${mean440.toFixed(4)} rad`)
+
+    // ── badge 2: detuned partial drifts at exactly 2π·Δf·hop/sr ─────────────
+    const nB = 4 * sr
+    const yB = new Float32Array(nB)
+    for (let i = 0; i < nB; i++) yB[i] = 0.5 * Math.sin((2 * Math.PI * 452 * i) / sr)
+    const DB = stft(yB, n_fft, hop)
+    const bin452 = 56 // 448 Hz — the detuned partial sits Δf = 4 Hz above it
+    const f56 = (bin452 * sr) / n_fft
+    const stepB = (2 * Math.PI * f56 * hop) / sr
+    const drifts = []
+    for (let t = 5; t < DB[0].length - 4; t++) {
+      const th1 = Math.atan2(DB[bin452][t].imag, DB[bin452][t].real)
+      const th0 = Math.atan2(DB[bin452][t - 1].imag, DB[bin452][t - 1].real)
+      drifts.push(wrap(th1 - th0 - stepB))
+    }
+    const meanDrift = drifts.reduce((a, b) => a + b, 0) / drifts.length
+    const expected = (2 * Math.PI * (452 - f56) * hop) / sr // = π/4
+    badge('452 Hz partial: constant drift == 2π·Δf·hop/sr ±10%',
+      Math.abs(meanDrift / expected - 1) < 0.10,
+      `expected ${expected.toFixed(4)}, measured ${meanDrift.toFixed(4)} rad/frame`)
+
+    // ── render: hue = Δφ, alpha = db/80 + 1, log-frequency axis, black bg ────
+    const canvas = document.getElementById('rainbow')
+    const ctx = canvas.getContext('2d')
+    const W = canvas.width
+    const H = canvas.height
+    const img = ctx.createImageData(W, H)
+    const hsv2rgb = (h /* 0..1 */, s, v) => {
+      const i = Math.floor(h * 6)
+      const f = h * 6 - i
+      const p = v * (1 - s)
+      const q = v * (1 - f * s)
+      const u = v * (1 - (1 - f) * s)
+      switch (i % 6) {
+        case 0: return [v, u, p]
+        case 1: return [q, v, p]
+        case 2: return [p, v, u]
+        case 3: return [p, q, v]
+        case 4: return [u, p, v]
+        default: return [v, p, q]
+      }
+    }
+    const binMin = 2 // 16 Hz
+    const binMax = nF - 1
+    for (let yy = 0; yy < H; yy++) {
+      // log-frequency: top = binMax, bottom = binMin
+      const frac = 1 - yy / (H - 1)
+      const k = Math.round(Math.exp(Math.log(binMin) + frac * (Math.log(binMax) - Math.log(binMin))))
+      for (let x = 0; x < W; x++) {
+        const t = Math.min(nT - 2, Math.floor((x / W) * (nT - 1)))
+        // amplitude_to_db(mag, ref=max)/80 + 1, clamped — the gallery's alpha
+        const db = 20 * Math.log10(Math.max(mag[k][t + 1], 1e-10) / magMax)
+        const alpha = Math.max(0, Math.min(1, db / 80 + 1))
+        const hue = (dphi[k][t] + Math.PI) / (2 * Math.PI)
+        const [r, g, b] = hsv2rgb(hue, 1, 1)
+        const i = (yy * W + x) * 4
+        img.data[i] = r * 255 * alpha
+        img.data[i + 1] = g * 255 * alpha
+        img.data[i + 2] = b * 255 * alpha
+        img.data[i + 3] = 255
+      }
+    }
+    ctx.putImageData(img, 0, 0)
+    document.getElementById('status').textContent = 'done'
+
+    // ── audible proof: play the exact analyzed buffer ────────────────────────
+    document.getElementById('play').onclick = () => {
+      const actx = new AudioContext({ sampleRate: sr })
+      const buf = actx.createBuffer(1, n, sr)
+      buf.getChannelData(0).set(y)
+      const src = actx.createBufferSource()
+      src.buffer = buf
+      src.connect(actx.destination)
+      src.start()
+      src.onended = () => actx.close()
+    }
+  </script>
+</body>
+</html>

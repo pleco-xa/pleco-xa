@@ -20,6 +20,117 @@ export {
   reconstructVocal,
 } from '../scripts/xa-vocal-separation.js'
 
+import { recurrenceMatrix } from '../segment/index.js'
+
+/** Resolve nn_filter's aggregate option to a (values, weights) reducer. @private */
+function resolveAggregate(aggregate) {
+  if (typeof aggregate === 'function') return aggregate
+  if (aggregate === 'mean') {
+    return (values) => {
+      let s = 0
+      for (let i = 0; i < values.length; i++) s += values[i]
+      return s / values.length
+    }
+  }
+  if (aggregate === 'median') {
+    return (values) => {
+      const sorted = Array.from(values).sort((a, b) => a - b)
+      const n = sorted.length
+      return n % 2 === 1 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+    }
+  }
+  if (aggregate === 'average') {
+    // librosa's np.average branch: weighted by the recurrence-matrix values
+    return (values, weights) => {
+      let s = 0
+      let w = 0
+      for (let i = 0; i < values.length; i++) {
+        s += values[i] * weights[i]
+        w += weights[i]
+      }
+      if (w === 0) throw new Error("nn_filter: aggregate='average' with all-zero weights")
+      return s / w
+    }
+  }
+  throw new Error(
+    `nn_filter: aggregate='${aggregate}' is not supported ` +
+      `(supported: 'mean', 'median', 'average', or a (values, weights) => number function)`,
+  )
+}
+
+/**
+ * Nearest-neighbor filtering — port of librosa.decompose.nn_filter.
+ *
+ * Each frame (column) of S is replaced by aggregating its nearest neighbors
+ * in feature space, as selected by librosa.segment.recurrence_matrix
+ * semantics: for output frame i the neighbor set is { j : rec[i][j] != 0 },
+ * exactly librosa's CSR-row walk in __nn_filter_helper (frames with an empty
+ * neighbor set pass through unchanged). aggregate='median' with a cosine
+ * metric and a width-in-frames exclusion band is the REPET-SIM configuration
+ * (Rafii & Pardo 2012) used by librosa's vocal-separation gallery example.
+ *
+ * The recurrence graph itself comes from segment.recurrenceMatrix (Wave-5
+ * fixture-gated); this function adds only the neighbor-aggregation walk.
+ * NOTE: no direct librosa fixture for the composition yet — behavior is
+ * proven against planted-repetition structure in
+ * examples/web/plot-vocal-separation.html (node-spot-run first).
+ *
+ * @param {Array<ArrayLike<number>>} S - Feature matrix [features][frames]
+ * @param {Object} [options]
+ * @param {Array<ArrayLike<number>>|null} [options.rec=null] - Precomputed
+ *   recurrence matrix [frames][frames] (librosa orientation); computed from S
+ *   via recurrenceMatrix when null.
+ * @param {string|Function} [options.aggregate='mean'] - 'mean' | 'median' |
+ *   'average' (weighted by rec values) | custom (values, weights) => number.
+ * @param {...*} [options.rest] - Remaining options (metric, width, k, sym,
+ *   mode, bandwidth, self, full) forward to recurrenceMatrix.
+ * @returns {Float64Array[]} Filtered matrix, same shape as S
+ * @throws {Error} On empty input, bad rec shape, or unknown aggregate
+ */
+export function nn_filter(S, options = {}) {
+  const { rec = null, aggregate = 'mean', ...recOptions } = options
+  if (!S || S.length === 0 || !S[0] || S[0].length === 0) {
+    throw new Error('nn_filter: input matrix must be non-empty')
+  }
+  const nFeat = S.length
+  const nFrames = S[0].length
+
+  const R = rec === null ? recurrenceMatrix(S, recOptions) : rec
+  if (R.length !== nFrames || !R[0] || R[0].length !== nFrames) {
+    throw new Error(
+      `nn_filter: invalid self-similarity matrix shape ${R.length}x${R[0]?.length} ` +
+        `for S ${nFeat}x${nFrames}`,
+    )
+  }
+
+  const aggFn = resolveAggregate(aggregate)
+  const out = Array.from({ length: nFeat }, () => new Float64Array(nFrames))
+
+  for (let i = 0; i < nFrames; i++) {
+    const ri = R[i]
+    const targets = []
+    for (let j = 0; j < nFrames; j++) {
+      if (ri[j] !== 0) targets.push(j)
+    }
+
+    if (targets.length === 0) {
+      // librosa: frames with no neighbors pass through unchanged
+      for (let f = 0; f < nFeat; f++) out[f][i] = S[f][i]
+      continue
+    }
+
+    const weights = targets.map((j) => ri[j])
+    const values = new Float64Array(targets.length)
+    for (let f = 0; f < nFeat; f++) {
+      const row = S[f]
+      for (let t = 0; t < targets.length; t++) values[t] = row[targets[t]]
+      out[f][i] = aggFn(values, weights)
+    }
+  }
+
+  return out
+}
+
 /** Smallest usable float32 (np.finfo(np.float32).tiny) — librosa computes in
  *  float32, so the softmask underflow threshold must match that dtype. */
 const FLOAT32_TINY = 1.1754943508222875e-38

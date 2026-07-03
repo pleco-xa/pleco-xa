@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pleco-xa proof — FLAGSHIP: multi-scale fingerprint vocal separation</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  h2 { font-size: 0.95rem; color: #9ad; margin: 14px 0 2px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
+  canvas { display: block; margin: 4px 0; border: 1px solid #333; }
+  button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 6px 12px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #eee; cursor: pointer; }
+  button:hover { background: #37474f; }
+  table { border-collapse: collapse; font: 13px monospace; margin: 8px 0; }
+  td, th { border: 1px solid #444; padding: 4px 10px; text-align: right; }
+  th { color: #9ad; }
+</style>
+</head>
+<body>
+<h1>scripts/xa-vocal-separation.js — FLAGSHIP: fingerprint separation on a known synthetic mix</h1>
+<p>
+  Known "vocal" (440 Hz carrier, 5 Hz vibrato ±30 cents, 2 harmonic partials) +
+  known "backing" (110 Hz bass + 4 Hz click train), mixture = sum.
+  <code>processAudioToFingerprints</code> on vocal and mixture →
+  <code>optimizeEqCurves</code> (100 iters) → <code>reconstructVocal</code> on
+  the mixture STFT. Everything below is measured against the known parts.
+  <b>Honest note:</b> the optimizer is plain full-batch gradient descent with
+  NO input normalization — stability requires <code>lr &lt; 1/max(|STFT|)²</code>.
+  At the natural signal levels here that means <code>lr = 1e-5</code>
+  (node-verified: lr 0.01 slams the EQ against its clip bounds and the loss
+  oscillates 294↔594 instead of descending).
+</p>
+<div id="badges"></div>
+<div>
+  <button id="pVocal" disabled>play vocal</button>
+  <button id="pBacking" disabled>play backing</button>
+  <button id="pMix" disabled>play mixture</button>
+  <button id="pRecon" disabled>play reconstruction</button>
+</div>
+<h2>suppression scoreboard</h2>
+<div id="scoreboard"></div>
+<h2>mixture |STFT| (0–2.6 kHz)</h2>
+<canvas id="specMix" width="820" height="200"></canvas>
+<h2>reconstruction |STFT| (0–2.6 kHz) — bass line + clicks should fade, vibrato partials stay</h2>
+<canvas id="specRecon" width="820" height="200"></canvas>
+<h2>optimizer loss (external evaluation at checkpoints k = 0,10,…,100)</h2>
+<canvas id="lossCurve" width="820" height="140"></canvas>
+
+<script type="module">
+import { decompose, stft } from '../../packages/pleco-xa/dist/pleco-xa.js'
+import { badge, drawSpectrogram } from './_badge.js'
+
+const { processAudioToFingerprints, optimizeEqCurves, reconstructVocal } = decompose
+
+const SR = 22050
+const DUR = 4
+const N = SR * DUR
+const N_FFT = 2048
+const HOP = 1024
+const LR = 1e-5 // stability bound: lr < 1/max(|STFT|)² ≈ 1.5e-5 at these levels
+
+// ── known "vocal": 440 Hz carrier, 5 Hz vibrato ±30 cents, 2 partials ────────
+const vocal = new Float32Array(N)
+{
+  let ph1 = 0, ph2 = 0, ph3 = 0
+  for (let i = 0; i < N; i++) {
+    const t = i / SR
+    const f0 = 440 * Math.pow(2, (30 / 1200) * Math.sin(2 * Math.PI * 5 * t))
+    ph1 += (2 * Math.PI * f0) / SR
+    ph2 += (2 * Math.PI * 2 * f0) / SR
+    ph3 += (2 * Math.PI * 3 * f0) / SR
+    vocal[i] = 0.5 * Math.sin(ph1) + 0.25 * Math.sin(ph2) + 0.15 * Math.sin(ph3)
+  }
+}
+
+// ── known "backing": 110 Hz bass + click train (4 Hz, 5 ms noise bursts) ─────
+const backing = new Float32Array(N)
+{
+  let seed = 7
+  const rand = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+  for (let i = 0; i < N; i++) backing[i] = 0.4 * Math.sin((2 * Math.PI * 110 * i) / SR)
+  for (let c = 0; c < DUR * 4; c++) {
+    const s = Math.round(c * 0.25 * SR)
+    for (let k = 0; k < 110 && s + k < N; k++) backing[s + k] += (rand() * 2 - 1) * 0.5 * (1 - k / 110)
+  }
+}
+
+const mixture = new Float32Array(N)
+for (let i = 0; i < N; i++) mixture[i] = vocal[i] + backing[i]
+
+const mockBuf = (data) => ({ getChannelData: () => data, sampleRate: SR, length: data.length })
+
+const vocalFp = processAudioToFingerprints(mockBuf(vocal), N_FFT, HOP)
+const mixFp = processAudioToFingerprints(mockBuf(mixture), N_FFT, HOP)
+
+// ── external loss evaluation (exactly the optimizer's objective) ─────────────
+function evalLoss(eqCurves) {
+  let total = 0
+  for (let w = 0; w < mixFp.numWindows; w++) {
+    const vfp = vocalFp.fingerprints['slice_0_raw'][w]['freq_profile_400']
+    const col = mixFp.magnitudeSpec.map((row) => row[w])
+    let loss = 0
+    for (let i = 0; i < 400; i++) {
+      const targetFreq = (i / 399) * (SR / 2)
+      const srcIdx = (targetFreq / (SR / 2)) * (col.length - 1)
+      const idx = Math.floor(srcIdx)
+      const frac = srcIdx - idx
+      let val = 0
+      if (idx < col.length - 1) val = col[idx] * (1 - frac) + col[idx + 1] * frac
+      else if (idx < col.length) val = col[idx]
+      const adj = val * (eqCurves ? eqCurves[w][i] : 1)
+      loss += (adj - vfp[i]) ** 2
+    }
+    total += loss / 400
+  }
+  return total / mixFp.numWindows
+}
+
+// loss curve at checkpoints via deterministic re-runs (full-batch GD)
+const ks = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+const losses = ks.map((k) =>
+  k === 0
+    ? evalLoss(null)
+    : evalLoss(optimizeEqCurves(vocalFp.fingerprints, mixFp.fingerprints, mixFp.magnitudeSpec, mixFp.numWindows, SR, k, LR)),
+)
+const eq = optimizeEqCurves(vocalFp.fingerprints, mixFp.fingerprints, mixFp.magnitudeSpec, mixFp.numWindows, SR, 100, LR)
+const recon = reconstructVocal(mixFp.stftResult, eq, SR, N_FFT, HOP)
+
+// ── badge 1: optimizer actually descends ─────────────────────────────────────
+badge('final optimizer loss < initial loss (100 iters, lr 1e-5)',
+  losses[losses.length - 1] < losses[0],
+  `${losses[0].toFixed(1)} → ${losses[losses.length - 1].toFixed(1)}`)
+
+// ── badge 2: selectivity — backing band suppressed ≥6 dB more than vocal band ─
+const bandE = (sig, lo, hi) => {
+  const D = stft(sig, N_FFT, HOP)
+  let e = 0
+  for (let f = 0; f < D.length; f++) {
+    const hz = (f * SR) / N_FFT
+    if (hz < lo || hz > hi) continue
+    for (let t = 0; t < D[f].length; t++) e += D[f][t].real ** 2 + D[f][t].imag ** 2
+  }
+  return e
+}
+const dBass = 10 * Math.log10(bandE(recon, 90, 130) / bandE(mixture, 90, 130))
+const dVoc = 10 * Math.log10(bandE(recon, 400, 900) / bandE(mixture, 400, 900))
+badge('110 Hz-band out/in at least 6 dB below the 400–900 Hz-band out/in',
+  dBass <= dVoc - 6, `gap ${(dVoc - dBass).toFixed(1)} dB (node spot-run: 14.4 dB)`)
+
+// ── badge 3: reconstruction correlates with the vocal, not the backing ───────
+const corr = (a, b) => {
+  const n = Math.min(a.length, b.length)
+  let sa = 0, sb = 0
+  for (let i = 0; i < n; i++) { sa += a[i]; sb += b[i] }
+  const ma = sa / n, mb = sb / n
+  let num = 0, da = 0, db = 0
+  for (let i = 0; i < n; i++) { const x = a[i] - ma, y = b[i] - mb; num += x * y; da += x * x; db += y * y }
+  return num / Math.sqrt(da * db)
+}
+const cV = corr(recon, vocal)
+const cB = corr(recon, backing)
+badge('corr(reconstruction, vocal) > corr(reconstruction, backing)',
+  cV > cB, `${cV.toFixed(3)} vs ${cB.toFixed(3)}`)
+
+// ── scoreboard (DOM-built) ────────────────────────────────────────────────────
+{
+  const rows = [
+    ['measure', 'value'],
+    ['110 Hz band (backing) out/in', `${dBass.toFixed(2)} dB`],
+    ['400–900 Hz band (vocal) out/in', `${dVoc.toFixed(2)} dB`],
+    ['selectivity gap', `${(dVoc - dBass).toFixed(2)} dB`],
+    ['corr(recon, vocal)', cV.toFixed(4)],
+    ['corr(recon, backing)', cB.toFixed(4)],
+    ['optimizer loss initial → final', `${losses[0].toFixed(2)} → ${losses[losses.length - 1].toFixed(2)}`],
+  ]
+  const table = document.createElement('table')
+  rows.forEach(([a, b], i) => {
+    const tr = document.createElement('tr')
+    for (const text of [a, b]) {
+      const cell = document.createElement(i === 0 ? 'th' : 'td')
+      cell.textContent = text
+      tr.appendChild(cell)
+    }
+    table.appendChild(tr)
+  })
+  document.getElementById('scoreboard').appendChild(table)
+}
+
+// ── spectrogram A/B (rows 0..240 ≈ 0–2.6 kHz) ────────────────────────────────
+const magOf = (sig) => stft(sig, N_FFT, HOP).map((row) => Float64Array.from(row, (c) => Math.hypot(c.real, c.imag)))
+drawSpectrogram(document.getElementById('specMix'), mixFp.magnitudeSpec.slice(0, 240))
+drawSpectrogram(document.getElementById('specRecon'), magOf(recon).slice(0, 240))
+
+// ── loss curve ────────────────────────────────────────────────────────────────
+{
+  const cv = document.getElementById('lossCurve')
+  const ctx = cv.getContext('2d')
+  const { width: w, height: h } = cv
+  ctx.fillStyle = '#111'
+  ctx.fillRect(0, 0, w, h)
+  const lMax = Math.max(...losses)
+  const lMin = Math.min(...losses)
+  ctx.strokeStyle = '#4fc3f7'
+  ctx.beginPath()
+  losses.forEach((l, i) => {
+    const x = 30 + (i / (losses.length - 1)) * (w - 60)
+    const yy = h - 20 - ((l - lMin) / (lMax - lMin)) * (h - 40)
+    i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy)
+  })
+  ctx.stroke()
+  ctx.fillStyle = '#9ad'
+  ctx.font = '11px monospace'
+  losses.forEach((l, i) => {
+    if (i % 2) return
+    const x = 30 + (i / (losses.length - 1)) * (w - 60)
+    const yy = h - 20 - ((l - lMin) / (lMax - lMin)) * (h - 40)
+    ctx.fillText(l.toFixed(0), x - 10, yy - 8)
+  })
+}
+
+// ── audition ──────────────────────────────────────────────────────────────────
+let actx = null
+function play(data) {
+  actx = actx || new AudioContext({ sampleRate: SR })
+  const buf = actx.createBuffer(1, data.length, SR)
+  buf.getChannelData(0).set(data)
+  const src = actx.createBufferSource()
+  src.buffer = buf
+  src.connect(actx.destination)
+  src.start()
+}
+for (const [id, data] of [['pVocal', vocal], ['pBacking', backing], ['pMix', mixture], ['pRecon', recon]]) {
+  const b = document.getElementById(id)
+  b.disabled = false
+  b.onclick = () => play(data)
+}
+</script>
+</body>
+</html>

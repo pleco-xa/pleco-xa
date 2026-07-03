@@ -88,11 +88,22 @@ export { delta_features } from './scripts/xa-mel.js'
 // fastLoopAnalysis export is kept (delegating) for demo compatibility.
 export * as loop from './loop/index.js'
 export { fastLoopAnalysis } from './loop/fast.js'
+// Recurrence-pipeline internals (chroma → time-delay embedding → matrix →
+// lag candidates) promoted so demos can render the exact matrix the
+// 'recurrence' strategy analyzed — same functions, same parameters.
+// Proof: examples/node/loop-recurrence.mjs + examples/web/loop-recurrence.html.
+export * as recurrence from './scripts/xa-recurrence.js'
 
 // Sequence analysis — Wave 3+5 (fixture-gated: rqa.json, dtw_segment.json —
 // dtw cumulative cost bit-exact, paths exact)
 export * as sequence from './sequence/index.js'
 export { rqa } from './sequence/rqa.js'
+
+// DJ crate tooling: DTW-similarity loop analyzer (2026-07-02 repairs:
+// index-based dtwKMeans clustering, measured cluster characteristics &
+// timbral proxies, Krumhansl-Schmuckler correlation key confidence).
+// Proof: examples/web/dj-loop-analyzer.html.
+export { DJLoopAnalyzer, compareLoops } from './scripts/dj-loop-analyzer.js'
 
 // Structural segmentation — Wave 5 (fixture-gated: dtw_segment.json —
 // recurrence/lag/agglomerative exact)
@@ -277,3 +288,39 @@ export {
 // Fourier-tempogram PLP (proof: examples/node/rhythm-plp.mjs — beat_sync
 // goldens [2.5, 6.5] / [4, 8] exact).
 export { plp, beat_sync } from './scripts/xa-rhythm.js'
+
+// ─── Tier-3 proof-of-work promotions: advanced spectrum corner (2026-07-02) ──
+
+// Griffin-Lim phase reconstruction (istft/stft arg-order repaired 2026-07-02;
+// the old call sliced output to 1 sample — proof: examples/node/xa-advanced.mjs
+// + examples/web/xa-advanced.html). pcen is a real streaming PCEN with
+// zi/return_zf filter-state carry (proof: examples/node/pcen-stream.mjs —
+// block-wise == one-shot bit-exactly) but is NOT librosa-parity: the smoother
+// coefficient is exp(-1/t_frames) where librosa uses the sqrt steady-state
+// formula (same 1/t leading term, diverges at small time constants), and
+// warmup starts from state 0 where librosa seeds lfilter_zi with frame 0.
+// No librosa fixture yet — divergences documented, not hidden.
+export { griffinlim, pcen } from './scripts/xa-advanced.js'
+
+// ─── Tier-3 proof-of-work promotions: tempogram + CQT (2026-07-02) ──────────
+
+// Tempogram (librosa.feature.tempogram parity — linear_ramp padding, full
+// win_length lag rows, per-column inf-norm). The canonical tempo() consumes
+// this exact math (xa-beat-tracker meanTempogram delegates here, so the
+// tempo_beats.json parity fixture gates it). fourier_tempogram runs at hop=1
+// (power-of-2 win_length required — radix-2 stft, divergence documented);
+// estimate_tempo applies librosa's log-normal tempo prior over the time-mean
+// tempogram. tempogram_ratio throws honestly (previous body was not
+// librosa's algorithm). Proof: examples/web/xa-tempogram.html.
+export {
+  tempogram, fourier_tempogram, estimate_tempo,
+} from './scripts/xa-tempogram.js'
+
+// Constant-Q transform (repaired 2026-07-02: frequency-domain filter basis
+// like librosa __vqt_filter_fft — the old code multiplied time-domain
+// wavelets against STFT bins and peaked a 440 Hz sine at the wrong bin with
+// a monotonic ramp). Single-pass evaluation (no octave recursion), hann
+// only, sparsity accepted-not-applied — divergences documented in-module.
+// icqt/griffinlim_cqt throw honestly (inverse path not minimally
+// repairable). Proof: examples/node/xa-constantq.mjs.
+export { cqt } from './scripts/xa-constantq.js'

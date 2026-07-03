@@ -10,7 +10,11 @@ import { analyze_groove } from './xa-tempo.js'
 import { tempo, beat_track } from './xa-beat-tracker.js'
 import { onset_strength } from './xa-onset.js'
 import { debugLog } from './debug.js'
-import { spectral_centroid } from '../feature/spectral.js'
+import {
+  spectral_centroid,
+  spectral_flatness,
+  spectral_rolloff,
+} from '../feature/spectral.js'
 
 /**
  * Complete DJ Loop Analyzer Class
@@ -376,28 +380,24 @@ export class DJLoopAnalyzer {
       nClusters = Math.max(1, this.loops.size)
     }
 
-    const sequences = Array.from(this.loops.values()).map(
-      (loop) => loop.features.enhanced_chroma,
-    )
+    const loopArray = Array.from(this.loops.values())
+    const sequences = loopArray.map((loop) => loop.features.enhanced_chroma)
 
     try {
-      const clustering = dtwKMeans(sequences, nClusters)
+      // dtwKMeans returns { assignments, centers, clusters }; membership is
+      // resolved by INDEX via assignments (array identity on the sequence
+      // objects was fragile and is not relied on).
+      const { assignments, centers } = dtwKMeans(sequences, nClusters)
 
-      // Add loop metadata to clusters
-      const enrichedClusters = clustering.map((cluster, index) => ({
-        id: index,
-        center: cluster.center,
-        members: cluster.members
-          .map((_, memberIndex) => {
-            const loopArray = Array.from(this.loops.values())
-            return loopArray.find(
-              (loop) =>
-                loop.features.enhanced_chroma === cluster.members[memberIndex],
-            )
-          })
-          .filter(Boolean),
-        characteristics: this.analyzeClusterCharacteristics(cluster.members),
-      }))
+      const enrichedClusters = centers.map((center, index) => {
+        const members = loopArray.filter((_, i) => assignments[i] === index)
+        return {
+          id: index,
+          center,
+          members,
+          characteristics: this.analyzeClusterCharacteristics(members),
+        }
+      })
 
       this.clusters = enrichedClusters
       return enrichedClusters
@@ -409,19 +409,47 @@ export class DJLoopAnalyzer {
   }
 
   /**
-   * Analyze cluster characteristics
-   * @param {Array} members - Cluster members
+   * Analyze cluster characteristics — every value is measured from the
+   * member loops (no fabricated defaults).
+   * @param {Array} members - Cluster member loop objects
    * @returns {Object} Cluster characteristics
    */
   analyzeClusterCharacteristics(members) {
     if (members.length === 0) return {}
 
-    // This would analyze the actual loop objects if properly linked
+    const tempos = members.map((loop) => loop.features.tempo.bpm)
+    const energies = members.map((loop) => loop.metadata.energy)
+
+    const keyCounts = new Map()
+    for (const loop of members) {
+      const key = loop.features.key.key
+      keyCounts.set(key, (keyCounts.get(key) || 0) + 1)
+    }
+    let dominantKey = null
+    let bestCount = 0
+    for (const [key, count] of keyCounts) {
+      if (count > bestCount) {
+        bestCount = count
+        dominantKey = key
+      }
+    }
+
+    // Tags shared by at least half the members
+    const tagCounts = new Map()
+    for (const loop of members) {
+      for (const tag of loop.tags) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1)
+      }
+    }
+    const commonTags = [...tagCounts]
+      .filter(([, count]) => count >= Math.ceil(members.length / 2))
+      .map(([tag]) => tag)
+
     return {
-      avgTempo: 120, // Placeholder
-      dominantKey: 'C major',
-      energyRange: [0.3, 0.7],
-      commonTags: ['house', 'melodic'],
+      avgTempo: tempos.reduce((a, b) => a + b, 0) / tempos.length,
+      dominantKey,
+      energyRange: [Math.min(...energies), Math.max(...energies)],
+      commonTags,
     }
   }
 
@@ -597,6 +625,12 @@ export class DJLoopAnalyzer {
     return (rhythmicComplexity + harmonicComplexity) / 2
   }
 
+  /**
+   * Krumhansl-Schmuckler key estimation: Pearson correlation between the
+   * mean chroma vector and each rotated key profile. Confidence is the best
+   * correlation clamped to [0, 1] — a normalized figure, not the raw
+   * (scale-dependent) profile dot product.
+   */
   estimateKey(chroma) {
     // Simplified key detection using chroma mean
     const chromaMean = this.computeChromaMean(chroma)
@@ -629,14 +663,38 @@ export class DJLoopAnalyzer {
     let bestKey = 'C major'
     let bestScore = -Infinity
 
+    // Pearson correlation between two 12-vectors
+    const correlate = (x, y) => {
+      let mx = 0
+      let my = 0
+      for (let i = 0; i < 12; i++) {
+        mx += x[i]
+        my += y[i]
+      }
+      mx /= 12
+      my /= 12
+      let num = 0
+      let dx = 0
+      let dy = 0
+      for (let i = 0; i < 12; i++) {
+        const a = x[i] - mx
+        const b = y[i] - my
+        num += a * b
+        dx += a * a
+        dy += b * b
+      }
+      const denom = Math.sqrt(dx * dy)
+      return denom > 0 ? num / denom : 0
+    }
+
     // Test all 24 keys
     for (let tonic = 0; tonic < 12; tonic++) {
       for (let mode of ['major', 'minor']) {
-        let score = 0
+        const rotated = new Array(12)
         for (let i = 0; i < 12; i++) {
-          const profileIdx = (i - tonic + 12) % 12
-          score += chromaMean[i] * keyProfiles[mode][profileIdx]
+          rotated[i] = keyProfiles[mode][(i - tonic + 12) % 12]
         }
+        const score = correlate(chromaMean, rotated)
 
         if (score > bestScore) {
           bestScore = score
@@ -647,18 +705,35 @@ export class DJLoopAnalyzer {
 
     return {
       key: bestKey,
-      confidence: bestScore,
+      confidence: Math.max(0, Math.min(1, bestScore)),
       mode: bestKey.includes('major') ? 'major' : 'minor',
       tonic: bestKey.split(' ')[0],
     }
   }
 
+  /**
+   * Timbral descriptors, measured from the signal (documented proxies):
+   *   - brightness: mean spectral centroid normalized by Nyquist (0..1)
+   *   - roughness:  mean spectral flatness (0 tonal .. 1 noisy)
+   *   - warmth:     1 − mean spectral rolloff (85%) / Nyquist (0..1)
+   * @param {Float32Array} audioData
+   * @param {number} sampleRate
+   * @returns {{brightness: number, roughness: number, warmth: number}}
+   */
   extractTimbralFeatures(audioData, sampleRate) {
-    // Placeholder for timbral feature extraction
+    const nyquist = sampleRate / 2
+    const mean = (arr) => {
+      let sum = 0
+      for (const v of arr) sum += v
+      return arr.length ? sum / arr.length : 0
+    }
+    const centroid = spectral_centroid(audioData, { sr: sampleRate })
+    const flatness = spectral_flatness(audioData)
+    const rolloff = spectral_rolloff(audioData, { sr: sampleRate })
     return {
-      brightness: 0.5,
-      roughness: 0.3,
-      warmth: 0.7,
+      brightness: mean(centroid) / nyquist,
+      roughness: mean(flatness),
+      warmth: 1 - mean(rolloff) / nyquist,
     }
   }
 

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>pleco-xa proof — recurrence matrix loop detection</title>
+  <style>
+    body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
+    p { max-width: 78ch; }
+    canvas { image-rendering: pixelated; border: 1px solid #333; display: block; margin: 8px 0; }
+    table { border-collapse: collapse; font: 13px monospace; margin: 8px 0; }
+    th, td { border: 1px solid #333; padding: 4px 10px; text-align: right; }
+    #status { color: #999; margin: 8px 0; }
+    button { font: 14px system-ui; padding: 6px 12px; margin-right: 6px; }
+    .lbl { color: #999; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h2>loop/recurrence.js — chroma recurrence heatmap + tempo-free lag proof (<i>Drive Through Beat.wav</i>)</h2>
+  <p>
+    <code>loop.detect(buffer, {strategy:'recurrence'})</code> finds the loop of
+    <i>Drive Through Beat.wav</i> from repetition structure alone — no beat
+    tracking, no BPM. The page then rebuilds the EXACT matrix the strategy
+    analyzed, using the same promoted pipeline functions with the same
+    parameters (<code>recurrence.computeChroma → stackMemory →
+    recurrenceMatrix(affinity)</code> at the effective hop reported in the
+    result diagnostics), renders it as a frames×frames heatmap, and draws the
+    winning lag as the off-diagonal stripe. Badges assert the detected loop
+    duration equals the winning lag × hop / sr (to within one hop: the final
+    bounds get sample-level refinement + zero-crossing snap), that the stripe
+    is measurably brighter than the off-diagonal background, and that the
+    result honors the tempo-free contract (NO bpm field, ever). Same pipeline
+    node-verified in <code>examples/node/loop-recurrence.mjs</code>.
+    Audition the detected loop to hear that the lag is the real cycle.
+  </p>
+  <div id="badges"></div>
+  <div>
+    <canvas id="rec" width="520" height="520"></canvas>
+    <div class="lbl">chroma recurrence matrix (affinity, time-delay embedded) — pink stripe = winning lag</div>
+  </div>
+  <table id="cands">
+    <thead><tr><th>candidate</th><th>lagFrames</th><th>duration (s)</th><th>confidence (audio NCC)</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <button id="play">Audition detected loop</button>
+  <button id="stopBtn">Stop</button>
+  <div id="status">loading + decoding WAV…</div>
+
+  <script type="module">
+    import { loop, recurrence, decodeWav, LoopPlayer } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const status = document.getElementById('status')
+
+    const resp = await fetch('../../apps/demo/public/audio/Drive%20Through%20Beat.wav')
+    const { channels, sampleRate } = decodeWav(await resp.arrayBuffer())
+    const audioBuffer = new AudioBuffer({
+      numberOfChannels: channels.length,
+      length: channels[0].length,
+      sampleRate,
+    })
+    channels.forEach((ch, i) => audioBuffer.copyToChannel(ch, i))
+
+    status.textContent = 'running recurrence strategy…'
+    await new Promise((r) => setTimeout(r))
+    const res = await loop.detect(audioBuffer, { strategy: 'recurrence' })
+    const { hopLength: hop, stackedFrames } = res.details.diagnostics
+    const winner = res.details.candidates[0]
+
+    // ── rebuild the strategy's exact matrix via the promoted pipeline ─────
+    status.textContent = 'rebuilding the recurrence matrix for display…'
+    await new Promise((r) => setTimeout(r))
+    const chroma = recurrence.computeChroma(audioBuffer, hop)
+    const stacked = recurrence.stackMemory(chroma)
+    const R = recurrence.recurrenceMatrix(stacked, null, 1, 'euclidean', false, -1, false, 'affinity')
+    const N = R.length
+
+    // heatmap
+    const canvas = document.getElementById('rec')
+    const ctx = canvas.getContext('2d')
+    const img = ctx.createImageData(canvas.width, canvas.height)
+    let maxV = 1e-12
+    for (const row of R) for (const v of row) if (v > maxV) maxV = v
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const i = Math.floor((y / canvas.height) * (N - 1))
+        const j = Math.floor((x / canvas.width) * (N - 1))
+        const v = R[i][j] / maxV
+        const k = (y * canvas.width + x) * 4
+        img.data[k] = 20 + 235 * v
+        img.data[k + 1] = 15 + 130 * v
+        img.data[k + 2] = 55 + 70 * v
+        img.data[k + 3] = 255
+      }
+    }
+    ctx.putImageData(img, 0, 0)
+    // winning-lag stripe: the diagonal j = i + lag
+    const s = canvas.width / N
+    ctx.strokeStyle = '#f06292'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(winner.lagFrames * s, 0)
+    ctx.lineTo((N - 1) * s, (N - 1 - winner.lagFrames) * s)
+    ctx.stroke()
+
+    // candidate table
+    const tbody = document.querySelector('#cands tbody')
+    res.details.candidates.forEach((c, idx) => {
+      const tr = document.createElement('tr')
+      for (const text of [
+        idx === 0 ? 'winner' : `#${idx + 1}`,
+        String(c.lagFrames),
+        (c.loopEnd - c.loopStart).toFixed(4),
+        c.confidence.toFixed(4),
+      ]) {
+        const td = document.createElement('td')
+        td.textContent = text
+        tr.appendChild(td)
+      }
+      tbody.appendChild(tr)
+    })
+
+    // audition
+    const player = new LoopPlayer(audioBuffer)
+    player.setLoopPoints(res.loopStart, res.loopEnd)
+    document.getElementById('play').onclick = async () => {
+      await player.play()
+      status.textContent = `auditioning detected loop ${res.loopStart.toFixed(3)}–${res.loopEnd.toFixed(3)} s`
+    }
+    document.getElementById('stopBtn').onclick = () => player.stop()
+    status.textContent = 'done — audition the loop to hear the winning lag'
+
+    // ── proofs (spot-verified in Node on this exact file) ─────────────────
+    badge("tempo-free contract: result has NO 'bpm' key",
+      !('bpm' in res), Object.keys(res).join(','))
+
+    badge('page matrix is the strategy matrix: square, size == diagnostics.stackedFrames',
+      N === stackedFrames && R.every((row) => row.length === N),
+      `${N}×${R[0]?.length} vs ${stackedFrames}`)
+
+    const lagSeconds = (winner.lagFrames * hop) / sampleRate
+    const dur = res.loopEnd - res.loopStart
+    badge('detected loop duration == winning lag × hop / sr (±1 hop)',
+      Math.abs(dur - lagSeconds) <= hop / sampleRate,
+      `dur ${dur.toFixed(4)} s vs lag ${lagSeconds.toFixed(4)} s (Δ ${(Math.abs(dur - lagSeconds) * 1000).toFixed(1)} ms)`)
+
+    // stripe brightness: winning-lag diagonal vs off-diagonal background
+    // (outside the |i−j| ≤ 27 time-delay-embedding overlap band)
+    let stripe = 0, nStripe = 0
+    for (let i = 0; i + winner.lagFrames < N; i++) { stripe += R[i][i + winner.lagFrames]; nStripe++ }
+    let off = 0, nOff = 0
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 28; j < N; j += 17) { off += R[i][j]; nOff++ }
+    }
+    const stripeMean = stripe / nStripe
+    const offMean = off / nOff
+    badge('winning-lag stripe > 1.15× off-diagonal background affinity',
+      stripeMean > 1.15 * offMean,
+      `stripe ${stripeMean.toFixed(4)} vs background ${offMean.toFixed(4)} (${(stripeMean / offMean).toFixed(2)}×)`)
+
+    // the promoted helpers reproduce the strategy's lag candidates
+    const lagView = recurrence.recurrenceToLag(R)
+    const reLags = recurrence.findLoopCandidates(lagView, hop / sampleRate, stacked[0].length)
+      .map((c) => c.lagFrames)
+    badge('recomputed lag peaks contain every detect() candidate lag',
+      res.details.candidates.every((c) => reLags.includes(c.lagFrames)),
+      `[${reLags.slice(0, 6)}] ⊇ [${res.details.candidates.map((c) => c.lagFrames)}]`)
+
+    badge('confidence is audio-validated NCC in (0, 1]',
+      res.confidence > 0 && res.confidence <= 1, res.confidence.toFixed(4))
+  </script>
+</body>
+</html>

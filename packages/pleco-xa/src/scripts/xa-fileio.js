@@ -204,8 +204,35 @@ export async function find_files(directory, options = {}) {
 
   const files = [];
 
-  // Check if File System Access API is available
-  if ('showDirectoryPicker' in window) {
+  // Recursive collector shared by the handle-injection and picker paths.
+  async function collectFiles(handle) {
+    for await (const entry of handle.values()) {
+      if (entry.kind === 'file') {
+        const file = await entry.getFile();
+        const fileName = caseSensitive ? file.name : file.name.toLowerCase();
+
+        // Check if file matches any extension
+        const matches = normalizedExt.some(ext => fileName.endsWith(ext));
+
+        if (matches) {
+          files.push(file);
+        }
+      } else if (entry.kind === 'directory' && recurse) {
+        // Recursively search subdirectory
+        await collectFiles(entry);
+      }
+    }
+  }
+
+  // Coverage close-out repair (2026-07-02): a caller-provided
+  // DirectoryHandle-shaped object ({kind: 'directory', values()}) is honored
+  // FIRST and works in ANY environment. Previously this path sat behind
+  // `'showDirectoryPicker' in window`, which (a) crashed with a
+  // ReferenceError in Node/workers and (b) silently IGNORED an injected
+  // handle in browsers without the File System Access API.
+  if (directory && typeof directory === 'object' && directory.kind === 'directory') {
+    await collectFiles(directory);
+  } else if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
     let dirHandle;
 
     // Get directory handle
@@ -222,35 +249,17 @@ export async function find_files(directory, options = {}) {
         }
         throw err;
       }
-    } else if (directory.kind === 'directory') {
-      // Use provided directory handle
-      dirHandle = directory;
     } else {
       throw new TypeError('find_files: directory must be "select" string or a DirectoryHandle');
     }
 
-    // Recursive function to collect files
-    async function collectFiles(handle) {
-      for await (const entry of handle.values()) {
-        if (entry.kind === 'file') {
-          const file = await entry.getFile();
-          const fileName = caseSensitive ? file.name : file.name.toLowerCase();
-
-          // Check if file matches any extension
-          const matches = normalizedExt.some(ext => fileName.endsWith(ext));
-
-          if (matches) {
-            files.push(file);
-          }
-        } else if (entry.kind === 'directory' && recurse) {
-          // Recursively search subdirectory
-          await collectFiles(entry);
-        }
-      }
-    }
-
     await collectFiles(dirHandle);
 
+  } else if (typeof document === 'undefined') {
+    // Non-browser environment without an injected handle: fail honestly.
+    throw new TypeError(
+      'find_files: in non-browser environments pass a DirectoryHandle-shaped object ({kind: "directory", values()})',
+    );
   } else {
     // Fallback: Use input element for directory selection (limited browser support)
     console.warn('find_files: File System Access API not available. Using input element fallback.');
