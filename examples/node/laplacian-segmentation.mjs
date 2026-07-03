@@ -179,8 +179,8 @@ checkTrue('re-running is deterministic (identical segmentIds)',
 checkTrue('re-running is deterministic (identical boundaries)',
   JSON.stringify(boundaries) === JSON.stringify(rerun.boundaries))
 
-// The McFee-Ellis headline: build contiguous segment runs, prove a label RECURS
-// across ≥2 non-adjacent runs (a returning section — impossible for the
+// The McFee-Ellis headline: build contiguous segment runs, find a label that
+// RECURS across ≥2 non-adjacent runs (a returning section — impossible for the
 // contiguous agglomerative sibling).
 const runs = [] // { label, c0, c1 }
 {
@@ -191,10 +191,63 @@ const runs = [] // { label, c0, c1 }
 }
 const runsPerLabel = new Map()
 for (const r of runs) runsPerLabel.set(r.label, (runsPerLabel.get(r.label) || 0) + 1)
-const recurringLabel = [...runsPerLabel.entries()].find(([, count]) => count >= 2)
-checkTrue('a section RECURS: some label owns ≥2 non-adjacent segments (chorus return)',
-  !!recurringLabel,
-  recurringLabel ? `label ${recurringLabel[0]} appears in ${recurringLabel[1]} segments` : 'none')
+const recurring = [...runsPerLabel.entries()].find(([, count]) => count >= 2)
+// Existence is only a PRECONDITION (with more runs than labels, pigeonhole
+// alone forces some label to repeat — that fact proves nothing about content).
+checkTrue('precondition: a label owns ≥2 non-adjacent segments',
+  !!recurring, recurring ? `label ${recurring[0]} in ${recurring[1]} segments` : 'none')
+const recurringLabel = recurring[0]
+
+// STRENGTHENED PROOF (defeats the pigeonhole objection): the returning section
+// must be a genuine FEATURE-SPACE match, not a counting artifact. Represent
+// each run by its centroid in the (z-scored chroma+MFCC) feature space, then
+// show the recurring label's segments are closer to EACH OTHER than they are to
+// other-label segments — and tighter than a typical segment pair. A random /
+// pigeonhole labeling would NOT satisfy this; real recurrence does.
+const D = feats.length
+const runCentroid = (r) => {
+  const c = new Float64Array(D)
+  for (let f = 0; f < D; f++) {
+    let s = 0
+    for (let t = r.c0; t < r.c1; t++) s += feats[f][t]
+    c[f] = s / (r.c1 - r.c0)
+  }
+  return c
+}
+const l2 = (a, b) => {
+  let s = 0
+  for (let f = 0; f < D; f++) { const d = a[f] - b[f]; s += d * d }
+  return Math.sqrt(s)
+}
+const centroids = runs.map(runCentroid)
+const recIdx = runs.map((r, i) => (r.label === recurringLabel ? i : -1)).filter((i) => i >= 0)
+const otherIdx = runs.map((r, i) => (r.label === recurringLabel ? -1 : i)).filter((i) => i >= 0)
+
+const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length
+const intraPairs = []
+for (let a = 0; a < recIdx.length; a++)
+  for (let b = a + 1; b < recIdx.length; b++)
+    intraPairs.push(l2(centroids[recIdx[a]], centroids[recIdx[b]]))
+const interPairs = []
+for (const ri of recIdx) for (const oi of otherIdx) interPairs.push(l2(centroids[ri], centroids[oi]))
+const allPairs = []
+for (let a = 0; a < runs.length; a++)
+  for (let b = a + 1; b < runs.length; b++) allPairs.push(l2(centroids[a], centroids[b]))
+
+const intraMean = mean(intraPairs)
+const interMean = mean(interPairs)
+const globalMean = mean(allPairs)
+
+checkTrue(
+  'RECURRING segments are closer to each other than to other-label segments (real content match)',
+  intraMean < interMean,
+  `intra ${intraMean.toFixed(3)} < inter ${interMean.toFixed(3)}`,
+)
+checkTrue(
+  'RECURRING segments are tighter than a typical segment pair (below the global mean)',
+  intraMean < globalMean,
+  `intra ${intraMean.toFixed(3)} < global-mean ${globalMean.toFixed(3)}`,
+)
 
 // ── Qualitative output: the segment table (label, start_time, end_time) ──
 const colStartTime = (col) => convert.frames_to_time(segBounds[col], sr, HOP)

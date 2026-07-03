@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>pyin — probabilistic YIN pitch tracking (HMM/Viterbi)</title>
+  <style>
+    body { background:#0d0d0f; color:#ddd; font:14px/1.5 system-ui, sans-serif; margin:0; padding:24px; max-width:920px }
+    h2 { margin:0 0 4px }
+    p { color:#aaa }
+    code { color:#ffd479 }
+    canvas { display:block; background:#111; border-radius:8px; margin:10px 0; width:100%; max-width:880px }
+    button { font:14px monospace; background:#1f6feb; color:#fff; border:0; border-radius:6px; padding:8px 14px; margin:4px 6px 4px 0; cursor:pointer }
+    button:hover { background:#388bfd }
+    #badges { margin:12px 0 }
+    .legend { font:12px monospace; color:#888 }
+    .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:middle; margin:0 4px 0 12px }
+  </style>
+</head>
+<body>
+  <h2>pyin — probabilistic YIN (real HMM / Viterbi decode)</h2>
+  <p>
+    A synthetic <b>220 Hz tone that steps to 330 Hz</b>, then a <b>silent tail</b>
+    — exactly librosa's pyin parity fixture. <code>pyin(y, 80, 500)</code> builds a
+    beta/Boltzmann observation matrix over a log-spaced pitch grid + an unvoiced
+    state block, then Viterbi-decodes it through a
+    <code>transition_local ⊗ voiced/unvoiced-switch</code> matrix. The white
+    contour is the decoded f0; green/gray bands are the decoded voicing.
+    This is the same math the <code>pyin.json</code> parity test gates — voiced
+    f0 lands grid-exact on librosa (&lt;0.1 semitone), and the silence decodes
+    unvoiced.
+  </p>
+
+  <div id="badges"></div>
+
+  <div>
+    <button id="play-orig">▶ play source (220 → 330 → silence)</button>
+    <button id="play-resynth">▶ play decoded f0 (resynthesized)</button>
+  </div>
+
+  <canvas id="contour" width="880" height="300"></canvas>
+  <div class="legend">
+    log-Hz f0 contour (white). <span class="sw" style="background:#1b5e20"></span>voiced
+    <span class="sw" style="background:#333"></span>unvoiced · dashed refs at 220 &amp; 330 Hz
+  </div>
+
+  <script type="module">
+    import { pyin } from '../../packages/pleco-xa/dist/pleco-xa.js'
+    import { badge } from './_badge.js'
+
+    const sr = 22050
+    const dur = 1.5
+    const n = Math.round(dur * sr)
+    const third = Math.floor(n / 3)
+
+    // 220 → 330 Hz step, silent final third (0.7 amplitude).
+    const y = new Float32Array(n)
+    for (let i = 0; i < third; i++) y[i] = Math.sin((2 * Math.PI * 220 * i) / sr)
+    for (let i = third; i < 2 * third; i++) y[i] = Math.sin((2 * Math.PI * 330 * i) / sr)
+    for (let i = 0; i < n; i++) y[i] *= 0.7
+
+    const fmin = 80, fmax = 500, hop = 512
+    const { f0, voiced_flag, voiced_prob } = pyin(y, fmin, fmax, sr, {
+      frame_length: 2048, hop_length: hop,
+    })
+    const nFrames = f0.length
+    const timeOf = (i) => (i * hop) / sr
+    const t1 = third / sr
+    const t2 = (2 * third) / sr
+
+    // ── proof badges ─────────────────────────────────────────────────────────
+    const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s[Math.floor(s.length / 2)] }
+    const semi = (a, b) => Math.abs(12 * Math.log2(a / b))
+    const lo = [], hi = []
+    for (let i = 0; i < nFrames; i++) {
+      if (!voiced_flag[i] || !Number.isFinite(f0[i])) continue
+      const t = timeOf(i)
+      if (t > 0.05 && t < t1 - 0.05) lo.push(f0[i])
+      else if (t > t1 + 0.05 && t < t2 - 0.05) hi.push(f0[i])
+    }
+    const loMed = median(lo), hiMed = median(hi)
+    let silent = 0, silentVoiced = 0
+    for (let i = 0; i < nFrames; i++) {
+      if (timeOf(i) > t2 + 0.05) { silent++; if (voiced_flag[i]) silentVoiced++ }
+    }
+    const probOk = Array.from(voiced_prob).every((p) => p >= 0 && p <= 1)
+
+    badge('220 Hz plateau within 1 semitone', semi(loMed, 220) < 1, `${semi(loMed, 220).toFixed(3)} st (${loMed.toFixed(2)} Hz)`)
+    badge('330 Hz plateau within 1 semitone', semi(hiMed, 330) < 1, `${semi(hiMed, 330).toFixed(3)} st (${hiMed.toFixed(2)} Hz)`)
+    badge('HMM resolves the step (330 > 220 by >3 st)', semi(hiMed, loMed) > 3, `${semi(hiMed, loMed).toFixed(2)} st`)
+    badge('silent tail decodes UNVOICED', silent > 0 && silentVoiced === 0, `${silent} frames, ${silentVoiced} wrong`)
+    badge('voiced_prob ∈ [0,1] every frame', probOk, `${nFrames} frames`)
+
+    // ── contour rendering (log-Hz axis) ──────────────────────────────────────
+    const cv = document.getElementById('contour')
+    const ctx = cv.getContext('2d')
+    const W = cv.width, H = cv.height, pad = 34
+    const yLo = Math.log2(fmin), yHi = Math.log2(fmax)
+    const hzToY = (hz) => H - pad - ((Math.log2(hz) - yLo) / (yHi - yLo)) * (H - 2 * pad)
+    const frameToX = (i) => pad + (i / (nFrames - 1)) * (W - 2 * pad)
+
+    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H)
+
+    // voiced/unvoiced background bands
+    for (let i = 0; i < nFrames; i++) {
+      const x0 = frameToX(i - 0.5), x1 = frameToX(i + 0.5)
+      ctx.fillStyle = voiced_flag[i] ? '#1b5e20' : '#333'
+      ctx.globalAlpha = voiced_flag[i] ? 0.35 : 0.5
+      ctx.fillRect(x0, pad, x1 - x0, H - 2 * pad)
+    }
+    ctx.globalAlpha = 1
+
+    // reference lines
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = '#ffd47955'; ctx.fillStyle = '#ffd479'; ctx.font = '11px monospace'
+    for (const ref of [220, 330]) {
+      const yy = hzToY(ref); ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(W - pad, yy); ctx.stroke()
+      ctx.fillText(`${ref} Hz`, W - pad - 42, yy - 3)
+    }
+    ctx.setLineDash([])
+
+    // f0 contour (break the line across unvoiced gaps)
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath()
+    let pen = false
+    for (let i = 0; i < nFrames; i++) {
+      if (voiced_flag[i] && Number.isFinite(f0[i])) {
+        const x = frameToX(i), yy = hzToY(f0[i])
+        pen ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); pen = true
+      } else pen = false
+    }
+    ctx.stroke()
+
+    // axis frame
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.strokeRect(pad, pad, W - 2 * pad, H - 2 * pad)
+    ctx.fillStyle = '#888'; ctx.fillText('f0 (log Hz)', 4, pad - 8); ctx.fillText('time →', W - pad - 40, H - pad + 16)
+
+    // ── audio ────────────────────────────────────────────────────────────────
+    let ac
+    const ctxAudio = () => (ac ||= new (window.AudioContext || window.webkitAudioContext)())
+    function playBuffer(data) {
+      const a = ctxAudio()
+      const buf = a.createBuffer(1, data.length, sr)
+      buf.getChannelData(0).set(data)
+      const src = a.createBufferSource(); src.buffer = buf; src.connect(a.destination); src.start()
+    }
+    document.getElementById('play-orig').onclick = () => playBuffer(y)
+    document.getElementById('play-resynth').onclick = () => {
+      // Resynthesize a sine that follows the decoded f0 (silent where unvoiced).
+      const out = new Float32Array(n)
+      let phase = 0
+      for (let i = 0; i < n; i++) {
+        const fr = Math.min(nFrames - 1, Math.floor(i / hop))
+        const hz = voiced_flag[fr] && Number.isFinite(f0[fr]) ? f0[fr] : 0
+        if (hz > 0) { phase += (2 * Math.PI * hz) / sr; out[i] = 0.5 * Math.sin(phase) }
+        else phase = 0
+      }
+      playBuffer(out)
+    }
+  </script>
+</body>
+</html>

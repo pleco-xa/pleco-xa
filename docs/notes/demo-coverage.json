@@ -1,25 +1,9 @@
 {
- "generated": "2026-07-03T06:22:00.076Z",
- "total": 334,
- "coveredOrLedgered": 319,
- "pct": "95.5",
- "uncovered": [
-  "cluster.kmeans",
-  "convert.A_weighting",
-  "convert.B_weighting",
-  "convert.C_weighting",
-  "convert.D_weighting",
-  "convert.Z_weighting",
-  "feature.pitch_tuning",
-  "generateChaotic",
-  "generateFibonacci",
-  "generatePrimeRhythm",
-  "generateWaveform",
-  "linalg.eigh",
-  "linalg.laplacian",
-  "loop.DynamicZeroCrossing",
-  "recurrence.framesToTime"
- ],
+ "generated": "2026-07-03T06:58:51.076Z",
+ "total": 336,
+ "coveredOrLedgered": 336,
+ "pct": "100.0",
+ "uncovered": [],
  "nonCallable": [
   "RHYTHM_VOCAB",
   "allPresets",
@@ -285,7 +269,7 @@
   },
   {
    "member": "cluster.kmeans",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -325,27 +309,27 @@
   },
   {
    "member": "convert.A_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "convert.B_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "convert.C_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "convert.D_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "convert.Z_weighting",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -810,7 +794,7 @@
   },
   {
    "member": "feature.pitch_tuning",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1010,22 +994,22 @@
   },
   {
    "member": "generateChaotic",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "generateFibonacci",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "generatePrimeRhythm",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "generateWaveform",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1140,12 +1124,12 @@
   },
   {
    "member": "linalg.eigh",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
    "member": "linalg.laplacian",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1160,7 +1144,7 @@
   },
   {
    "member": "loop.DynamicZeroCrossing",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1454,6 +1438,11 @@
    "ledgered": null
   },
   {
+   "member": "pyin",
+   "covered": true,
+   "ledgered": null
+  },
+  {
    "member": "quickTempo",
    "covered": true,
    "ledgered": null
@@ -1485,7 +1474,7 @@
   },
   {
    "member": "recurrence.framesToTime",
-   "covered": false,
+   "covered": true,
    "ledgered": null
   },
   {
@@ -1680,6 +1669,11 @@
   },
   {
    "member": "tempogram",
+   "covered": true,
+   "ledgered": null
+  },
+  {
+   "member": "tempogram_ratio",
    "covered": true,
    "ledgered": null
   },

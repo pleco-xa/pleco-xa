@@ -37,9 +37,10 @@ export { findKickSnareHit } from './scripts/kick-snare-detector.js'
 // Musical timing: loop-length vs BPM alignment scoring (pure function).
 export { calculateBeatAlignment } from './scripts/musical-timing.js'
 
-// Pitch: YIN fundamental-frequency estimator (verified on known tones).
-// pyin is intentionally NOT exported until it is a real pYIN (HMM/Viterbi).
-export { yin } from './scripts/xa-pitch.js'
+// Pitch: YIN + probabilistic YIN (pYIN) fundamental-frequency estimators.
+// pyin is a real HMM/Viterbi port (observation matrix → transition_local band →
+// viterbi decode), grid-exact vs librosa; fixture-gated (pyin.json).
+export { yin, pyin } from './scripts/xa-pitch.js'
 
 // Streaming analyzers (worker-safe, incremental push API)
 export { createRmsMeter, createFluxAnalyzer } from './streaming/analyzers.js'
@@ -324,10 +325,11 @@ export { griffinlim, pcen } from './scripts/xa-advanced.js'
 // tempo_beats.json parity fixture gates it). fourier_tempogram runs at hop=1
 // (power-of-2 win_length required — radix-2 stft, divergence documented);
 // estimate_tempo applies librosa's log-normal tempo prior over the time-mean
-// tempogram. tempogram_ratio throws honestly (previous body was not
-// librosa's algorithm). Proof: examples/web/xa-tempogram.html.
+// tempogram. tempogram_ratio samples the tempogram at harmonic/subharmonic
+// ratios of the per-frame tempo (Prockup'15 factor table); fixture-gated
+// (tempogram_ratio.json, 7.5e-8 vs librosa). Proof: examples/web/xa-tempogram.html.
 export {
-  tempogram, fourier_tempogram, estimate_tempo,
+  tempogram, fourier_tempogram, estimate_tempo, tempogram_ratio,
 } from './scripts/xa-tempogram.js'
 
 // Constant-Q transform (repaired 2026-07-02: frequency-domain filter basis
