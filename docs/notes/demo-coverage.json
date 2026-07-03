@@ -1,9 +1,37 @@
 {
- "generated": "2026-07-03T04:52:41.270Z",
- "total": 353,
- "coveredOrLedgered": 353,
- "pct": "100.0",
- "uncovered": [],
+ "generated": "2026-07-03T06:22:00.076Z",
+ "total": 334,
+ "coveredOrLedgered": 319,
+ "pct": "95.5",
+ "uncovered": [
+  "cluster.kmeans",
+  "convert.A_weighting",
+  "convert.B_weighting",
+  "convert.C_weighting",
+  "convert.D_weighting",
+  "convert.Z_weighting",
+  "feature.pitch_tuning",
+  "generateChaotic",
+  "generateFibonacci",
+  "generatePrimeRhythm",
+  "generateWaveform",
+  "linalg.eigh",
+  "linalg.laplacian",
+  "loop.DynamicZeroCrossing",
+  "recurrence.framesToTime"
+ ],
+ "nonCallable": [
+  "RHYTHM_VOCAB",
+  "allPresets",
+  "liveSpeedController.currentSpeed",
+  "liveSpeedController.isActive",
+  "liveSpeedController.originalBuffer",
+  "liveSpeedController.speedBuffer",
+  "liveSpeedController.audioContext",
+  "liveSpeedController.audioProcessor",
+  "liveSpeedController.source",
+  "loop.STRATEGIES"
+ ],
  "rows": [
   {
    "member": "AudioPlayer",
@@ -41,11 +69,6 @@
    "ledgered": null
   },
   {
-   "member": "RHYTHM_VOCAB",
-   "covered": true,
-   "ledgered": null
-  },
-  {
    "member": "RealtimeSpectrumAnalyzer",
    "covered": true,
    "ledgered": null
@@ -57,11 +80,6 @@
   },
   {
    "member": "addLoopRegions",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "allPresets",
    "covered": true,
    "ledgered": null
   },
@@ -112,11 +130,6 @@
   },
   {
    "member": "audioio.clicks",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "audioio.default",
    "covered": true,
    "ledgered": null
   },
@@ -272,7 +285,7 @@
   },
   {
    "member": "cluster.kmeans",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
@@ -312,27 +325,27 @@
   },
   {
    "member": "convert.A_weighting",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "convert.B_weighting",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "convert.C_weighting",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "convert.D_weighting",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "convert.Z_weighting",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
@@ -797,7 +810,7 @@
   },
   {
    "member": "feature.pitch_tuning",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
@@ -997,22 +1010,22 @@
   },
   {
    "member": "generateChaotic",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "generateFibonacci",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "generatePrimeRhythm",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "generateWaveform",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
@@ -1086,16 +1099,6 @@
    "ledgered": null
   },
   {
-   "member": "intervals.__harmonic_distance",
-   "covered": false,
-   "ledgered": "internal helper leaked into the intervals namespace (__-mangled private): Tenney harmonic-distance metric for canonical plimit_intervals selection"
-  },
-  {
-   "member": "intervals._crystal_tie_break",
-   "covered": false,
-   "ledgered": "internal helper leaked into the intervals namespace (_-prefixed private): crystal-growth tie-break for canonical plimit_intervals selection"
-  },
-  {
    "member": "intervals.compareTuningSystems",
    "covered": true,
    "ledgered": null
@@ -1137,47 +1140,12 @@
   },
   {
    "member": "linalg.eigh",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "linalg.laplacian",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "liveSpeedController.currentSpeed",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "liveSpeedController.isActive",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "liveSpeedController.originalBuffer",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "liveSpeedController.speedBuffer",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "liveSpeedController.audioContext",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "liveSpeedController.audioProcessor",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "liveSpeedController.source",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
@@ -1192,16 +1160,11 @@
   },
   {
    "member": "loop.DynamicZeroCrossing",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {
    "member": "loop.LoopController",
-   "covered": true,
-   "ledgered": null
-  },
-  {
-   "member": "loop.STRATEGIES",
    "covered": true,
    "ledgered": null
   },
@@ -1304,36 +1267,6 @@
    "member": "moveForward",
    "covered": true,
    "ledgered": null
-  },
-  {
-   "member": "notation.__bo_fold",
-   "covered": false,
-   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): FJS balanced octave-fold, exercised indirectly by canonical hz_to_fjs / interval_to_fjs"
-  },
-  {
-   "member": "notation.__fifth_search",
-   "covered": false,
-   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): FJS fifth-shift search, exercised indirectly by canonical hz_to_fjs / interval_to_fjs"
-  },
-  {
-   "member": "notation.__mode_to_key",
-   "covered": false,
-   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): key-signature speller for canonical key_to_notes"
-  },
-  {
-   "member": "notation.__note_to_degree",
-   "covered": false,
-   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): circle-of-fifths degree lookup for canonical key_to_notes / fifths_to_note"
-  },
-  {
-   "member": "notation.__o_fold",
-   "covered": false,
-   "ledgered": "internal helper leaked into the notation namespace (Python __-mangled private): FJS octave-fold reducer, exercised indirectly by canonical hz_to_fjs / interval_to_fjs"
-  },
-  {
-   "member": "notation.__simplify_note",
-   "covered": false,
-   "ledgered": "internal helper leaked into the notation namespace (__-mangled private): accidental simplifier for canonical key_to_notes spelling"
   },
   {
    "member": "notation.fifths_to_note",
@@ -1552,7 +1485,7 @@
   },
   {
    "member": "recurrence.framesToTime",
-   "covered": true,
+   "covered": false,
    "ledgered": null
   },
   {

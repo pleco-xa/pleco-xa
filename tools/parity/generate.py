@@ -503,3 +503,40 @@ def gen_laplacian_seg_twofeat():
 
 gen_laplacian_seg_twofeat()
 print("laplacian-seg two-feature fixture done")
+
+
+def gen_pyin():
+    """librosa.pyin ground truth on a known-pitch signal for the HMM/Viterbi port."""
+    # 220 Hz then 330 Hz (a clear pitch step), plus a silent tail (unvoiced)
+    t = np.arange(int(1.5 * SR)) / SR
+    y = np.zeros_like(t, dtype=np.float32)
+    half = len(t) // 3
+    y[:half] = np.sin(2 * np.pi * 220.0 * t[:half])
+    y[half:2 * half] = np.sin(2 * np.pi * 330.0 * t[half:2 * half])
+    # last third silent → unvoiced
+    y = (y * 0.7).astype(np.float32)
+    f0, vflag, vprob = librosa.pyin(y, fmin=80, fmax=500, sr=SR, frame_length=2048, hop_length=512)
+    write("pyin", "librosa.pyin", {"fmin": 80, "fmax": 500, "frame_length": 2048, "hop_length": 512}, [{
+        "input": {"y": f32(y), "sr": SR},
+        "expected_f0": [None if (x != x) else float(x) for x in f0],  # NaN → None
+        "expected_voiced": [bool(v) for v in vflag],
+        "n_frames": int(len(f0)),
+    }])
+
+
+def gen_tempogram_ratio():
+    y = _click_signal(120.0, dur=4.0)
+    oenv = librosa.onset.onset_strength(y=y, sr=SR, hop_length=512)
+    tg = librosa.feature.tempogram(onset_envelope=oenv, sr=SR, hop_length=512)
+    tgr = librosa.feature.tempogram_ratio(tg=tg, sr=SR, hop_length=512)
+    write("tempogram_ratio", "librosa.feature.tempogram_ratio", {"hop_length": 512}, [{
+        "input": {"y": f32(y), "sr": SR, "hop_length": 512},
+        "tg_shape": list(tg.shape),
+        "expected_shape": list(tgr.shape),
+        "expected": f32(tgr.ravel()),
+    }])
+
+
+gen_pyin()
+gen_tempogram_ratio()
+print("pyin + tempogram_ratio fixtures done")

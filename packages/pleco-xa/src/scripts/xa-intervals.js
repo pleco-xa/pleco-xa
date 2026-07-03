@@ -693,7 +693,7 @@ export function pythagorean_intervals(
  * @param {Array<number>} b - Second interval as prime exponents [n_primes]
  * @returns {number} Harmonic distance between intervals
  */
-export function __harmonic_distance(logs, a, b) {
+function __harmonic_distance(logs, a, b) {
   const a_arr = Array.isArray(a) ? a : [a]
   const b_arr = Array.isArray(b) ? b : [b]
 
@@ -732,7 +732,7 @@ export function __harmonic_distance(logs, a, b) {
  * @param {Array<number>} logs - Log2 of prime basis [n_primes]
  * @returns {boolean} True if a should be preferred over b
  */
-export function _crystal_tie_break(a, b, logs) {
+function _crystal_tie_break(a, b, logs) {
   let height_a = 0
   let height_b = 0
 

@@ -701,7 +701,7 @@ export function note_to_svara_h(notes, Sa, abbr = true, octave = true, unicode =
  * @param {number} d - Interval ratio
  * @returns {number} Octave-folded interval in range [1, 2)
  */
-export function __o_fold(d) {
+function __o_fold(d) {
   return d * Math.pow(2.0, -Math.floor(Math.log2(d)))
 }
 
@@ -717,7 +717,7 @@ export function __o_fold(d) {
  * @param {number} d - Interval ratio
  * @returns {number} Balanced octave-folded interval in range [sqrt(2)/2, sqrt(2))
  */
-export function __bo_fold(d) {
+function __bo_fold(d) {
   return d * Math.pow(2.0, -Math.round(Math.log2(d)))
 }
 
@@ -734,7 +734,7 @@ export function __bo_fold(d) {
  * @param {number} tolerance - Tolerance for approximation
  * @returns {number} Number of fifths (positive or negative)
  */
-export function __fifth_search(interval, tolerance) {
+function __fifth_search(interval, tolerance) {
   const log_tolerance = Math.abs(Math.log2(tolerance))
 
   for (let power = 0; power < 32; power++) {
@@ -760,7 +760,7 @@ export function __fifth_search(interval, tolerance) {
  * @param {boolean} unicode - Return accidentals as unicode (default: true)
  * @returns {string} Equivalent major key
  */
-export function __mode_to_key(signature, unicode = true) {
+function __mode_to_key(signature, unicode = true) {
   // Parse mode signature
   const parts = signature.split(':')
   if (parts.length !== 2) {
@@ -806,7 +806,7 @@ export function __mode_to_key(signature, unicode = true) {
  * @param {string|Array<string>} key - Note name(s)
  * @returns {number|Array<number>} Scale degree(s) [0-11]
  */
-export function __note_to_degree(key) {
+function __note_to_degree(key) {
   const isScalar = typeof key === 'string'
   const keys = isScalar ? [key] : key
 
@@ -854,7 +854,7 @@ export function __note_to_degree(key) {
  * @param {boolean} unicode - Use unicode symbols for output (default: true)
  * @returns {string|Array<string>} Simplified note name(s)
  */
-export function __simplify_note(key, additional_acc = '', unicode = true) {
+function __simplify_note(key, additional_acc = '', unicode = true) {
   const isScalar = typeof key === 'string'
   const keys = isScalar ? [key] : key
 
