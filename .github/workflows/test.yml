@@ -32,3 +32,6 @@ jobs:
 
       - name: Build demo (consumer e2e)
         run: npm run build -w @pleco-xa/demo
+
+      - name: Build docs site (Starlight + TypeDoc API reference)
+        run: npm run build -w @pleco-xa/docs

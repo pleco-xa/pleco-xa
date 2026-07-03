@@ -1,0 +1,59 @@
+name: Deploy Docs
+
+# Builds the Starlight docs site (guides + auto-generated API reference +
+# the live example gallery) and publishes it to GitHub Pages at plecoxa.com.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/docs/**'
+      - 'packages/pleco-xa/**'
+      - 'examples/web/**'
+      - 'apps/demo/public/audio/**'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One in-flight deploy at a time; newer pushes supersede older ones.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # The gallery demos import packages/pleco-xa/dist — build it first so
+      # copy-demos.mjs (docs prebuild) has a bundle to mirror into public/.
+      - name: Build library
+        run: npm run build:lib
+
+      - name: Build docs site (Starlight + TypeDoc API + demo mirror)
+        run: npm run build -w @pleco-xa/docs
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/docs/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
