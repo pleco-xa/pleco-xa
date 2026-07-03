@@ -540,3 +540,34 @@ def gen_tempogram_ratio():
 gen_pyin()
 gen_tempogram_ratio()
 print("pyin + tempogram_ratio fixtures done")
+
+
+def gen_f0_harmonics():
+    rng = np.random.default_rng(23)
+    cases = []
+    # Case 1: ascending FFT-like grid, per-frame f0 array (existing demo shape)
+    freqs1 = np.linspace(0, 800, 9)
+    x1 = rng.random((9, 4))
+    f0arr = np.array([200., 210., 190., 205.])
+    cases.append({"input": {"name": "fft_perframe", "x": x1.ravel().tolist(), "x_shape": [9, 4],
+                            "freqs": freqs1.tolist(), "f0": f0arr.tolist(), "harmonics": [1, 2, 3]},
+                  "expected_shape": [3, 4],
+                  "expected": f32(librosa.f0_harmonics(x1, freqs=freqs1, f0=f0arr, harmonics=[1, 2, 3], axis=-2).ravel())})
+    # Case 2: ascending grid, SCALAR f0 (pleco currently throws)
+    cases.append({"input": {"name": "fft_scalar", "x": x1.ravel().tolist(), "x_shape": [9, 4],
+                            "freqs": freqs1.tolist(), "f0": 200.0, "harmonics": [1, 2]},
+                  "expected_shape": [2, 4],
+                  "expected": f32(librosa.f0_harmonics(x1, freqs=freqs1, f0=200.0, harmonics=[1, 2], axis=-2).ravel())})
+    # Case 3: tempo grid with +Inf head, scalar in-range f0 (pleco currently throws)
+    freqs3 = librosa.tempo_frequencies(8, hop_length=512, sr=SR)  # freqs[0] = inf
+    x3 = np.arange(8 * 3, dtype=float).reshape(8, 3)
+    cases.append({"input": {"name": "tempo_infhead", "x": x3.ravel().tolist(), "x_shape": [8, 3],
+                            "freqs": [None if not np.isfinite(v) else float(v) for v in freqs3],
+                            "f0": 500.0, "harmonics": [1, 2]},
+                  "expected_shape": [2, 3],
+                  "expected": f32(librosa.f0_harmonics(x3, freqs=freqs3, f0=500.0, harmonics=[1, 2], axis=-2).ravel())})
+    write("f0_harmonics", "librosa.f0_harmonics (scalar/array f0, inf-head grid)", {}, cases)
+
+
+gen_f0_harmonics()
+print("f0_harmonics fixture done")
