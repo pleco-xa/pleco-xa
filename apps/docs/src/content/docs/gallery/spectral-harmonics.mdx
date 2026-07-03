@@ -1,0 +1,19 @@
+---
+title: Spectral harmonics
+description: Track a fundamental with YIN, then sample energy at each of its harmonics across the spectrum — a pitch-normalized view that survives a gliding f0.
+---
+
+import DemoEmbed from '../../../components/DemoEmbed.astro'
+
+Once you know an instrument's fundamental, its overtones sit at integer
+multiples of it. This demo tracks a fundamental that glides from 110 Hz to 165
+Hz, then samples the spectrogram at that moving f0 and its harmonics. The
+harmonic amplitudes follow the expected 1/h falloff, and the f0-normalized view
+stays coherent even as the raw pitch slides — the whole point of harmonic
+tracking over fixed-frequency bins.
+
+<DemoEmbed src="plot-spectral-harmonics.html" title="Harmonic spectrum tracking" height={760} />
+
+Pitch comes from `yin`; the overtone sampling is `f0_harmonics` evaluated on FFT
+frequencies. Good voice-range parameters are `fmin` 50 / `fmax` 300 with
+harmonics 1..30.

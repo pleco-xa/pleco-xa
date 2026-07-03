@@ -1,0 +1,20 @@
+---
+title: Loop detection
+description: Pleco-Xa's signature capability — one loop.detect() call, four selectable strategies, and a single honest 0..1 confidence score, golden-locked against fixed loop points.
+---
+
+import DemoEmbed from '../../../components/DemoEmbed.astro'
+
+Finding the point where a piece of audio repeats is the thing Pleco-Xa was built
+to do, and it's something an offline batch library never has to solve. This demo
+runs all four loop strategies against *Drive Through Beat.wav* and locks the
+results to a golden fixture (`loop_goldens.json`, ±441 samples), so you can see
+that the fast, precise, musical, and recurrence paths agree with the reference
+loop points to the sample.
+
+<DemoEmbed src="loop-detect.html" title="loop.detect() four-strategy shootout" height={720} />
+
+The one entry point is `loop.detect(buffer, { strategy })`; the available
+strategies live in `loop.STRATEGIES`. Every result carries a real, measured
+`confidence` in `[0, 1]` — when a loop leaves too little trailing audio to
+correlate against, it honestly reports `0` rather than inventing a number.

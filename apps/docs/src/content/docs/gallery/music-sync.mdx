@@ -1,0 +1,19 @@
+---
+title: Music sync (DTW)
+description: Dynamic time warping realigns a performance with its 1.25× time-stretched twin — recovering a straight warp path whose slope is exactly the stretch factor.
+---
+
+import DemoEmbed from '../../../components/DemoEmbed.astro'
+
+Two takes of the same music rarely line up in time. Dynamic time warping finds
+the correspondence between them. This demo takes an audio segment, stretches a
+copy to 1.25× its length with a phase vocoder, computes chroma for both, and
+warps one onto the other. The recovered path is a straight line with slope ≈
+1.25 (R² > 0.99) that pins the aligned frames far below the cost of random
+pairs — a self-checking proof that the alignment is real.
+
+<DemoEmbed src="plot-music-sync.html" title="DTW alignment of a stretched performance" height={780} />
+
+The alignment uses `sequence.dtw` over `feature.chroma_stft`, with
+`effects.time_stretch` producing the stretched twin. The accumulated cost matrix
+and the warp path are drawn on top of each other so the diagonal is visible.

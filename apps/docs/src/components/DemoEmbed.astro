@@ -1,0 +1,64 @@
+---
+// Embeds a live example demo (copied into public/demos by scripts/copy-demos.mjs)
+// inside a sandboxed, lazily-loaded iframe with an "open in new tab" escape hatch.
+interface Props {
+  /** File name under public/demos, e.g. "loop-detect.html". */
+  src: string
+  /** Iframe height in pixels. */
+  height?: number
+  /** Accessible title for the iframe + caption. */
+  title: string
+}
+
+const { src, height = 640, title } = Astro.props
+const url = `/demos/${src}`
+---
+
+<figure class="demo-embed">
+  <iframe
+    src={url}
+    title={title}
+    height={height}
+    loading="lazy"
+    sandbox="allow-scripts allow-same-origin allow-downloads"
+  ></iframe>
+  <figcaption>
+    <span class="demo-embed__label">{title}</span>
+    <a href={url} target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
+  </figcaption>
+</figure>
+
+<style>
+  .demo-embed {
+    margin: 1.5rem 0;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--sl-color-black);
+  }
+
+  .demo-embed iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+  }
+
+  .demo-embed__label {
+    font-weight: 600;
+  }
+
+  .demo-embed figcaption {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--sl-text-sm);
+    border-top: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-gray-6);
+  }
+
+  .demo-embed figcaption a {
+    white-space: nowrap;
+  }
+</style>

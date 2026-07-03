@@ -1,0 +1,56 @@
+---
+title: Quickstart
+description: Load audio, detect tempo and beats, and find a loop — the whole pipeline in a few lines.
+---
+
+Pleco-Xa's analysis functions take raw samples and a sample rate — arrays in,
+arrays out — so the same calls work in the browser, Node, and Web Workers.
+
+## In the browser
+
+Decode a file into an `AudioBuffer` with the Web Audio API, then hand its channel
+data to the library.
+
+```js
+import { beat_track, tempo, loop } from 'pleco-xa'
+
+const ctx = new AudioContext()
+const audioBuffer = await ctx.decodeAudioData(await (await fetch('song.mp3')).arrayBuffer())
+const y = audioBuffer.getChannelData(0)
+const sr = audioBuffer.sampleRate
+
+// Tempo + beats — the canonical, librosa-parity Ellis DP tracker
+const { bpm, beats } = beat_track(y, sr)
+console.log(`${bpm.toFixed(1)} BPM, ${beats.length} beats`)
+
+// The signature feature: find the best loop point
+const result = loop.detect(audioBuffer, { strategy: 'fast' })
+console.log(`loop ${result.start.toFixed(2)}s → ${result.end.toFixed(2)}s`)
+```
+
+## In Node
+
+There is no `AudioContext` in Node, so decode a WAV with the built-in
+`decodeWav`, then call the same analysis functions.
+
+```js
+import { decodeWav, feature, tempo } from 'pleco-xa'
+import { readFileSync } from 'node:fs'
+
+const buf = readFileSync('clip.wav')
+const { channels, sampleRate } = decodeWav(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength))
+const y = channels[0]
+
+console.log('tempo:', tempo(y, sampleRate))
+const mfcc = feature.mfcc(y, { sr: sampleRate })   // [n_mfcc][n_frames]
+```
+
+## Explicit tiers, never silent
+
+Quality is the default path. Where a fast or live variant exists it is a
+separate, named call — for example `quickTempo` for a ~5–10 s live estimate —
+never a silent fallback. If a quality gate can't be met, the function throws
+with diagnostics rather than returning a fabricated number.
+
+Every function used here is validated against librosa. See
+[Coming from librosa](/start/coming-from-librosa/) for the full map.
