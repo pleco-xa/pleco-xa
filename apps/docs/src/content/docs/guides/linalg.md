@@ -5,7 +5,7 @@ description: pleco-xa's linalg namespace — a pure-JS symmetric eigensolver (Ja
 
 `linalg` is pleco-xa's small, exact linear-algebra corner: a symmetric-matrix eigensolver
 and the normalized graph Laplacian. These are the two dependency-free primitives that the
-[Laplacian segmentation](/api/pleco-xa/namespaces/segment/functions/laplacianSegmentation/)
+[Laplacian segmentation](/api/pleco-xa/namespaces/segment/functions/laplaciansegmentation/)
 pipeline surfaced — pure JavaScript, no native BLAS, and numerically matched to SciPy's
 output so the structural-clustering demo produces the same boundaries in Node and the
 browser.
@@ -59,6 +59,6 @@ const fiedler = vectors.map((row) => row[1])
 
 ## API reference
 
-Full signatures: [linalg namespace](/api/pleco-xa/namespaces/linalg/readme/) — namely
+Full signatures: [linalg namespace](/api-by-category/) — namely
 [`eigh`](/api/pleco-xa/namespaces/linalg/functions/eigh/) and
 [`laplacian`](/api/pleco-xa/namespaces/linalg/functions/laplacian/).

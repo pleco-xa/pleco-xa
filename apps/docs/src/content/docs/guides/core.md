@@ -79,4 +79,4 @@ convert.frames_to_time([0, 1, 2], sr, 512) // frame indices -> seconds
   2.0 dB offset leaves a ~3e-4 residual. "Zero at 1 kHz" holds to three
   decimals.
 
-See the [API reference](/api/) for full signatures and defaults.
+See the [API reference](/api-by-category/) for full signatures and defaults.

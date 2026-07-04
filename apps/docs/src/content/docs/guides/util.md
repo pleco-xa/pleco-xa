@@ -67,4 +67,4 @@ sync(feats, [0, 3, 6], mean) // [[1, 4], [10, 20]]  ([features][segments])
 - These are Tier-1 promotions to the curated public surface, fixture-verified
   before shipping.
 
-See the [API reference](/api/) for full signatures and defaults.
+See the [API reference](/api-by-category/) for full signatures and defaults.

@@ -32,7 +32,7 @@ All verified against the built barrel (`effects` namespace):
 - **`pitch_shift(y, sr, n_steps, opts)`** → same length as `y`, duration preserved.
 - **`hpss(y, opts)`** / **`harmonic(y, opts)`** / **`percussive(y, opts)`** —
   waveform-level harmonic/percussive separation (returns time-domain signals; the
-  spectrogram-level version lives in [`decompose`](/api/pleco-xa/namespaces/decompose/readme/)).
+  spectrogram-level version lives in [`decompose`](/api-by-category/)).
 
 ## Example
 
@@ -69,7 +69,7 @@ const swapped = effects.remix(clean, [
 
 ## API reference
 
-Full signatures and per-option defaults: [effects namespace](/api/pleco-xa/namespaces/effects/readme/)
+Full signatures and per-option defaults: [effects namespace](/api-by-category/)
 — e.g. [`time_stretch`](/api/pleco-xa/namespaces/effects/functions/time_stretch/),
 [`pitch_shift`](/api/pleco-xa/namespaces/effects/functions/pitch_shift/),
 [`trim`](/api/pleco-xa/namespaces/effects/functions/trim/).

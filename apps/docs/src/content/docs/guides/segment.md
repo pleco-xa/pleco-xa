@@ -7,8 +7,8 @@ description: pleco-xa's segment namespace — recurrence and cross-similarity ma
 cross-similarity graphs, the recurrence↔lag shear, temporally-constrained agglomerative
 boundaries, and the full **McFee-Ellis Laplacian spectral segmentation** built on top of
 them. It is the structural-analysis layer that the segmentation demo surfaced, and it is
-where pleco-xa's [`linalg`](/api/pleco-xa/namespaces/linalg/readme/) and
-[`cluster`](/api/pleco-xa/namespaces/cluster/readme/) primitives earn their keep.
+where pleco-xa's [`linalg`](/api-by-category/) and
+[`cluster`](/api-by-category/) primitives earn their keep.
 
 Recurrence, the recurrence↔lag conversions, and agglomerative boundaries are fixture-gated
 in CI (`dtw_segment.json`, case 2): connectivity exact, affinity toleranced,
@@ -71,7 +71,7 @@ const seg2 = segment.laplacianSegmentation(
 
 ## API reference
 
-Full signatures: [segment namespace](/api/pleco-xa/namespaces/segment/readme/) — e.g.
-[`recurrenceMatrix`](/api/pleco-xa/namespaces/segment/functions/recurrenceMatrix/),
-[`laplacianSegmentation`](/api/pleco-xa/namespaces/segment/functions/laplacianSegmentation/),
+Full signatures: [segment namespace](/api-by-category/) — e.g.
+[`recurrenceMatrix`](/api/pleco-xa/namespaces/segment/functions/recurrencematrix/),
+[`laplacianSegmentation`](/api/pleco-xa/namespaces/segment/functions/laplaciansegmentation/),
 [`agglomerative`](/api/pleco-xa/namespaces/segment/functions/agglomerative/).

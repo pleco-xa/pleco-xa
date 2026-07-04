@@ -6,6 +6,27 @@ const [starlightTypeDoc, typeDocSidebarGroup] = createStarlightTypeDocPlugin()
 
 export default defineConfig({
   site: 'https://plecoxa.com',
+  redirects: {
+    '/api': '/api/readme/',
+    '/api/pleco-xa/namespaces/audioio/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/bpm/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/cluster/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/convert/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/decompose/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/effects/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/feature/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/file/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/fileio/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/filters/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/intervals/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/linalg/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/loop/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/notation/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/playback/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/recurrence/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/segment/readme': '/api-by-category/',
+    '/api/pleco-xa/namespaces/sequence/readme': '/api-by-category/',
+  },
   integrations: [
     starlight({
       title: 'Pleco-Xa',

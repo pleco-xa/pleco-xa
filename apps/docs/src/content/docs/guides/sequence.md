@@ -63,7 +63,7 @@ const path = sequence.viterbi_discriminative(prob, trans) // prob: [state][frame
 
 ## API reference
 
-Full signatures: [sequence namespace](/api/pleco-xa/namespaces/sequence/readme/) — e.g.
+Full signatures: [sequence namespace](/api-by-category/) — e.g.
 [`dtw`](/api/pleco-xa/namespaces/sequence/functions/dtw/),
 [`rqa`](/api/functions/rqa/),
 [`viterbi`](/api/pleco-xa/namespaces/sequence/functions/viterbi/),

@@ -35,4 +35,4 @@ section says so precisely.
   `mel_filterbank`, `chroma`, and `get_window`.
 
 For the full generated signature reference of every export, see the
-[API reference](/api/).
+[API reference](/api-by-category/).

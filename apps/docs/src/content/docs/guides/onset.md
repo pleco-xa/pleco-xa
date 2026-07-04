@@ -63,4 +63,4 @@ const { onsetTimes } = onsetDetect(y, sr, { hopLength: 512, delta: 0.07 })
   invisible at the default `hop=512` — use a ~5 ms hop (`sr/200`) for the
   contrast to appear.
 
-See the [API reference](/api/) for full signatures and defaults.
+See the [API reference](/api-by-category/) for full signatures and defaults.

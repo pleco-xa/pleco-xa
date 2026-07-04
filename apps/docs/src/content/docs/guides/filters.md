@@ -43,4 +43,4 @@ const win = filters.get_window('hann', 2048)
   `feature.chroma_stft` use internally; exposing them lets you build custom
   feature stacks without re-deriving the matrices.
 
-See the [API reference](/api/) for full signatures.
+See the [API reference](/api-by-category/) for full signatures.

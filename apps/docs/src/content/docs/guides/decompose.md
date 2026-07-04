@@ -68,7 +68,7 @@ const foreground = decompose.nn_filter(S, {
   (fingerprints → mixture magnitude → EQ curves → reconstruction) is shown end-to-end in the
   vocal-separation demo.
 - **`nn_filter` builds its recurrence graph from
-  [`segment.recurrenceMatrix`](/api/pleco-xa/namespaces/segment/functions/recurrenceMatrix/)**;
+  [`segment.recurrenceMatrix`](/api/pleco-xa/namespaces/segment/functions/recurrencematrix/)**;
   frames with no neighbours pass through unchanged. Supported `aggregate` values are `'mean'`,
   `'median'`, `'average'` (weighted by the graph), or a custom `(values, weights) => number`.
 - **NMF decomposition is deliberately out of scope** (the merged marathon NMF converges
@@ -76,8 +76,8 @@ const foreground = decompose.nn_filter(S, {
 
 ## API reference
 
-Full signatures: [decompose namespace](/api/pleco-xa/namespaces/decompose/readme/) — e.g.
+Full signatures: [decompose namespace](/api-by-category/) — e.g.
 [`hpss`](/api/pleco-xa/namespaces/decompose/functions/hpss/),
 [`softmask`](/api/pleco-xa/namespaces/decompose/functions/softmask/),
 [`nn_filter`](/api/pleco-xa/namespaces/decompose/functions/nn_filter/),
-[`processAudioToFingerprints`](/api/pleco-xa/namespaces/decompose/functions/processAudioToFingerprints/).
+[`processAudioToFingerprints`](/api/pleco-xa/namespaces/decompose/functions/processaudiotofingerprints/).

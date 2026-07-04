@@ -57,5 +57,5 @@ const chroma = feature.chroma_stft(y, { sr })             // [12][n_frames]
 - MFCC deltas: `delta_features` (exported top-level) is a width-9
   Savitzky-Golay slope on interior frames; edges use clamp replication.
 
-See the [API reference](/api/) for every function's full signature and
+See the [API reference](/api-by-category/) for every function's full signature and
 per-option defaults.

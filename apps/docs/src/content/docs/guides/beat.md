@@ -78,4 +78,4 @@ const quick = quickTempo(y, sr)
   `onset_strength` + `tempo`) is the canonical engine; the old standalone
   BPM detector is superseded.
 
-See the [API reference](/api/) for full signatures and defaults.
+See the [API reference](/api-by-category/) for full signatures and defaults.
