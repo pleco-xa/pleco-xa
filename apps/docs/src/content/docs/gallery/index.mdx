@@ -1,62 +1,113 @@
 ---
 title: Gallery
-description: Live, in-browser demos of Pleco-Xa — loop detection, vocal separation, structural segmentation, pitch tracking, tempograms, and real-time meters, each running the real library on real audio.
+description: Fifty live, in-browser demos of pleco-xa — every one runs the real npm bundle on real audio, no server and no Python. Click any demo to open it full-page.
 ---
 
 import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
 
-Every demo below runs the actual `pleco-xa` bundle in your browser — no
-server, no Python, no pre-baked results. Each page loads the same code you'd
-`npm install`, points it at real audio, and shows the analysis live. Open any
-of them, then hit "view source" on the demo to see the exact calls.
+**Fifty live demos.** Every card opens the actual demo full-page — it loads the same `pleco-xa` bundle you'd `npm install`, points it at real audio, and computes in your browser. Nothing is pre-rendered or faked; each demo asserts real results with pass/fail badges.
+
+## Loop detection & DJ
 
 <CardGrid>
-  <LinkCard
-    title="Loop detection"
-    href="/gallery/loop-detect/"
-    description="One entry point, four strategies, one honest confidence score — golden-locked against fixed loop points."
-  />
-  <LinkCard
-    title="Vocal separation"
-    href="/gallery/vocal-separation/"
-    description="REPET-SIM foreground/background masking vs. Pleco's fingerprint reconstruction, on a real multitrack song."
-  />
-  <LinkCard
-    title="Laplacian segmentation"
-    href="/gallery/laplacian-segmentation/"
-    description="McFee–Ellis spectral clustering finds a song's sections — and labels the returning chorus."
-  />
-  <LinkCard
-    title="pYIN pitch tracking"
-    href="/gallery/pyin/"
-    description="Probabilistic YIN with HMM smoothing draws a clean f0 contour and voiced/unvoiced bands."
-  />
-  <LinkCard
-    title="Music sync (DTW)"
-    href="/gallery/music-sync/"
-    description="Dynamic time warping realigns a tempo-stretched performance to the original, path and all."
-  />
-  <LinkCard
-    title="Spectral harmonics"
-    href="/gallery/spectral-harmonics/"
-    description="Track a fundamental with pYIN, then sample energy at its harmonics across the spectrum."
-  />
-  <LinkCard
-    title="Tempogram"
-    href="/gallery/tempogram/"
-    description="A tempogram heatmap whose ridge follows a live 100→140 BPM tempo jump."
-  />
-  <LinkCard
-    title="Streaming meters"
-    href="/gallery/streaming-meters/"
-    description="Chunk-size-invariant RMS and spectral-flux meters that match the offline analysis bit-for-bit."
-  />
+  <LinkCard title="Loop detection" href="/demos/loop-detect.html" description="loop.detect() strategy shootout" />
+  <LinkCard title="Recurrence loop matrix" href="/demos/loop-recurrence.html" description="recurrence matrix loop detection" />
+  <LinkCard title="DJ crate analyzer" href="/demos/dj-loop-analyzer.html" description="DJ crate analyzer" />
+  <LinkCard title="Loop player" href="/demos/loop-player.html" description="LoopPlayer" />
+  <LinkCard title="Loop buffer builder" href="/demos/audio-utils.html" description="audio-utils: loop buffer builder" />
 </CardGrid>
 
-## Run the demos locally
+## Vocal separation & decomposition
 
-The gallery mirrors the standalone example pages in
-[`examples/web/`](https://github.com/brookcs3/pleco-xa/tree/main/examples/web).
-Serve the repository root over HTTP and open any file there directly, or run
-the docs site — the `predev`/`prebuild` hooks copy the demos, the built bundle,
-and the audio corpus into place automatically.
+<CardGrid>
+  <LinkCard title="Vocal separation (flagship)" href="/demos/vocal-separation.html" description="FLAGSHIP: multi-scale fingerprint vocal separation" />
+  <LinkCard title="REPET-SIM vs fingerprint" href="/demos/plot-vocal-separation.html" description="plot_vocal_separation: REPET-SIM vs fingerprint on a real mix" />
+  <LinkCard title="Vocal sep on real stems" href="/demos/vocal-separation-real.html" description="vocal separation on REAL Orphans stems (REPET-SIM vs fingerprint)" />
+  <LinkCard title="HPSS decomposition" href="/demos/decompose-hpss.html" description="decompose: HPSS spectrogram triptych" />
+  <LinkCard title="HPSS margins" href="/demos/plot-hprss.html" description="HPSS margins" />
+</CardGrid>
+
+## Rhythm & tempo
+
+<CardGrid>
+  <LinkCard title="Beat tracking" href="/demos/beat-tracker.html" description="xa-beat-tracker: click train in, beat grid out" />
+  <LinkCard title="Beats through a tempo change" href="/demos/plot-dynamic-beat.html" description="plot-dynamic-beat: beat tracking through a tempo change" />
+  <LinkCard title="Tempo-stability map" href="/demos/bpm-stability.html" description="xa-bpm-algorithm: tempo-stability map tracks a 100→140 BPM jump" />
+  <LinkCard title="Downbeat detection" href="/demos/downbeat.html" description="xa-downbeat: find beat 1 of an accent-shifted 4/4 pattern" />
+  <LinkCard title="Tempogram heatmap" href="/demos/xa-tempogram.html" description="scripts/xa-tempogram.js" />
+  <LinkCard title="Onset detection" href="/demos/xa-onset.html" description="xa-onset: click-train onset detection" />
+  <LinkCard title="SuperFlux (vibrato-immune)" href="/demos/superflux.html" description="superflux vibrato immunity" />
+</CardGrid>
+
+## Pitch & chroma
+
+<CardGrid>
+  <LinkCard title="pYIN pitch tracking" href="/demos/pyin.html" description="pyin" />
+  <LinkCard title="Chromagram" href="/demos/chroma-arpeggio.html" description="feature/chroma.js" />
+  <LinkCard title="Enhanced chroma" href="/demos/plot-chroma.html" description="plot_chroma" />
+  <LinkCard title="Harmonic spectrum" href="/demos/plot-spectral-harmonics.html" description="plot_spectral_harmonics" />
+</CardGrid>
+
+## Spectral & transforms
+
+<CardGrid>
+  <LinkCard title="FFT / STFT" href="/demos/xa-fft.html" description="xa-fft: FFT/STFT known-tone + spectrogram" />
+  <LinkCard title="MFCC + mel spectrogram" href="/demos/mfcc-specshow.html" description="feature/mfcc.js + scripts/xa-display.js" />
+  <LinkCard title="Mel filterbank" href="/demos/mel-filterbank.html" description="scripts/xa-mel.js" />
+  <LinkCard title="Chroma filterbank" href="/demos/chroma-filterbank.html" description="filters/index.js" />
+  <LinkCard title="Rainbowgram" href="/demos/plot-rainbowgram.html" description="plot_rainbowgram" />
+  <LinkCard title="specshow axis modes" href="/demos/plot-display.html" description="specshow axis modes" />
+  <LinkCard title="Spectrum analyzer" href="/demos/spectrum-analyzer.html" description="SpectrumAnalyzer" />
+  <LinkCard title="Griffin-Lim reconstruction" href="/demos/xa-advanced.html" description="xa-advanced: Griffin-Lim reconstruction A/B" />
+</CardGrid>
+
+## Structure & sequence
+
+<CardGrid>
+  <LinkCard title="Laplacian segmentation" href="/demos/laplacian-segmentation.html" description="laplacian_segmentation: McFee-Ellis spectral clustering on real structure" />
+  <LinkCard title="Structure discovery" href="/demos/plot-segmentation.html" description="plot_segmentation: structure discovery on an AABA form" />
+  <LinkCard title="Segment recurrence" href="/demos/segment-recurrence.html" description="segment recurrence (A-B-A)" />
+  <LinkCard title="DTW warping path" href="/demos/dtw.html" description="DTW warping path" />
+  <LinkCard title="Align two performances (DTW)" href="/demos/plot-music-sync.html" description="plot_music_sync" />
+</CardGrid>
+
+## Effects
+
+<CardGrid>
+  <LinkCard title="Effects suite" href="/demos/effects.html" description="effects: trim/split/preemph/stretch/shift/hpss/remix" />
+  <LinkCard title="FX audition" href="/demos/xa-fx.html" description="xa-fx: FX audition with sample-exact badges" />
+  <LinkCard title="Time/pitch compression" href="/demos/compression.html" description="compression: pitch-changing vs pitch-preserving" />
+</CardGrid>
+
+## Audio I/O & playback
+
+<CardGrid>
+  <LinkCard title="Audio I/O" href="/demos/audio-io.html" description="xa-audioio: synthesize, analyze, play" />
+  <LinkCard title="WAV save / reload / stream" href="/demos/file-io.html" description="file IO: WAV save→reload, registry cache, chunked reader" />
+  <LinkCard title="AudioPlayer" href="/demos/audio-player.html" description="AudioPlayer event contract" />
+  <LinkCard title="Hear your analysis" href="/demos/plot-audio-playback.html" description="hear your analysis" />
+  <LinkCard title="Playback ops" href="/demos/playback-ops.html" description="playback/ops" />
+  <LinkCard title="Live speed control" href="/demos/live-speed-control.html" description="live speed: playbackRate vs resample tiers" />
+  <LinkCard title="Load / draw / loop" href="/demos/xa-audio-core.html" description="xa-audio-core: load → draw → loop" />
+  <LinkCard title="Waveform renderer" href="/demos/waveform-renderer.html" description="WaveformRenderer + WaveformData" />
+</CardGrid>
+
+## Real-time & streaming
+
+<CardGrid>
+  <LinkCard title="Streaming meters" href="/demos/streaming-meters.html" description="streaming/analyzers: chunk-size invariance" />
+</CardGrid>
+
+## Creative play layer
+
+<CardGrid>
+  <LinkCard title="Signature choreography" href="/demos/demo-sequences.html" description="core/demoSequences.js" />
+  <LinkCard title="Glitch playground" href="/demos/glitch-playground.html" description="glitch playground (loopPlayground + beatGlitcher)" />
+  <LinkCard title="Quantum sequencer" href="/demos/quantum-sequencer.html" description="quantum op-stream sequencer" />
+</CardGrid>
+
+## Getting started
+
+<CardGrid>
+  <LinkCard title="Tutorial quickstart" href="/demos/tutorial.html" description="tutorial quickstart" />
+</CardGrid>

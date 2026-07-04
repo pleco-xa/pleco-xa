@@ -21,7 +21,7 @@ export default defineConfig({
             excludeInternal: true,
           },
           output: 'api',
-          sidebar: { label: 'API Reference', collapsed: true },
+          sidebar: { label: 'API Reference', collapsed: false },
         }),
       ],
       sidebar: [
