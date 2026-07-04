@@ -19,7 +19,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { decodeWav } from '../../packages/pleco-xa/src/io/wav.js'
-import { fastLoopAnalysis } from '../../packages/pleco-xa/src/scripts/xa-loop.js'
+import { fastLoopAnalysis } from '../../packages/pleco-xa/src/loop/fast.js'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const AUDIO_DIR = `${ROOT}apps/demo/public/audio/`

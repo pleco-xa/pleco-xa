@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { xaLoopAnalysis } from '../src/scripts/loop-analyzer.js'
+import { xaLoopAnalysis } from '../src/loop/legacy.js'
 import { AudioContext } from 'web-audio-test-api'
 
 // Minimal stub for OfflineAudioContext used in spectrum analysis

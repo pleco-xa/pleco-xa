@@ -15,17 +15,7 @@ import {
   lagToRecurrence,
   agglomerative,
 } from '../src/segment/index.js'
-import {
-  Matcher,
-  quickMatchEvents,
-  match_events,
-  match_intervals,
-} from '../src/scripts/xa-matching.js'
 import { dtw as dtwLegacy } from '../src/scripts/xa-dtw.js'
-import {
-  recurrenceMatrix as recurrenceMatrixShim,
-  agglomerative as agglomerativeShim,
-} from '../src/scripts/xa-temporal.js'
 
 describe('matchEvents (librosa.util.match_events)', () => {
   it('matches fractional-second events without integer truncation', () => {
@@ -123,41 +113,6 @@ describe('matchIntervals (librosa.util.match_intervals)', () => {
     expect(() => matchIntervals([[0, 1]], [])).toThrow(/empty/)
     expect(() => matchIntervals([[2, 1]], [[0, 1]])).toThrow(/start/)
     expect(() => matchIntervals([[0]], [[0, 1]])).toThrow(/2-element/)
-  })
-})
-
-describe('xa-matching shim (Matcher / snake_case exports)', () => {
-  it('Matcher.matchEvents keeps fractional precision', () => {
-    const matcher = new Matcher()
-    const out = matcher.matchEvents([1.4, 1.9], [1.0, 1.5, 2.0])
-    expect(Array.from(out)).toEqual([1, 2])
-  })
-
-  it('quickMatchEvents delegates to the repaired engine', () => {
-    expect(Array.from(quickMatchEvents([0.12, 0.48], [0.1, 0.5]))).toEqual([0, 1])
-  })
-
-  it('match_events / match_intervals follow librosa semantics', () => {
-    // ties resolve to the middle index, as in librosa 0.11 (verified live)
-    expect(Array.from(match_events([0.5, 1.5, 2.5], [0, 1, 2, 3]))).toEqual([
-      1, 2, 3,
-    ])
-    expect(
-      Array.from(
-        match_intervals(
-          [[0.5, 1.75]],
-          [
-            [0.0, 0.6],
-            [1.6, 2.5],
-          ],
-        ),
-      ),
-    ).toEqual([1])
-  })
-
-  it('Matcher wraps engine failures in ParameterError', () => {
-    const matcher = new Matcher()
-    expect(() => matcher.matchEvents([], [1])).toThrow(matcher.ParameterError)
   })
 })
 
@@ -325,35 +280,5 @@ describe('segment explicit-throw paths and shear round-trips', () => {
     expect(Array.from(agglomerative(blocks, 2))).toEqual([0, 4])
     // k == n: every frame is its own segment
     expect(Array.from(agglomerative(blocks, 8))).toEqual([0, 1, 2, 3, 4, 5, 6, 7])
-  })
-
-  it('xa-temporal shim: flat returns, sym is MUTUAL (never denser than union)', () => {
-    const flat = recurrenceMatrixShim(feats, { k: 5, sym: true })
-    expect(flat).toBeInstanceOf(Float32Array)
-    expect(flat.length).toBe(n * n)
-    const asym = recurrenceMatrixShim(feats, { k: 5, sym: false })
-    let symLinks = 0
-    let asymLinks = 0
-    for (let i = 0; i < flat.length; i++) {
-      if (flat[i] !== 0) symLinks++
-      if (asym[i] !== 0) asymLinks++
-    }
-    expect(symLinks).toBeLessThanOrEqual(asymLinks)
-    // symmetric output
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        expect(flat[i * n + j]).toBe(flat[j * n + i])
-      }
-    }
-  })
-
-  it('xa-temporal shim: agglomerative works (legacy Float32Array.splice crash is gone)', () => {
-    const bounds = agglomerativeShim(feats, 5)
-    expect(bounds).toBeInstanceOf(Uint32Array)
-    expect(bounds.length).toBe(5)
-    expect(bounds[0]).toBe(0)
-    expect(() => agglomerativeShim(feats, 5, { linkage: 'average' })).toThrow(
-      /not supported/,
-    )
   })
 })

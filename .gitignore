@@ -82,3 +82,12 @@ lb/
 LibrosaDemo-PR1/
 .DS_Store
 tools/parity/.venv/
+
+# Personal AI dev tooling + editor config (local only, not part of the public library)
+AGENTS.md
+CLAUDE.md
+.claude/
+.obsidian/
+# Internal planning/process history (kept local, out of the public repo)
+docs/superpowers/
+docs/notes/
