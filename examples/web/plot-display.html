@@ -12,10 +12,10 @@
   </style>
 </head>
 <body>
-  <h2>plot_display — specshow, canvas-native: axis modes that don't lie</h2>
+  <h2>specshow, canvas-native — axis modes that don't lie</h2>
   <p>
     A three-partial tone (440 + 880 + 1760 Hz) rendered four ways — the
-    four-panel specshow replica: linear-frequency STFT, log-frequency STFT,
+    four-panel specshow layout: linear-frequency STFT, log-frequency STFT,
     mel spectrogram, chromagram. The proof is in the axis mapping: in log mode
     the pixel-row distance 440→880 must equal 880→1760 (octaves equidistant,
     ±2 px), while in linear mode 880→1760 must be 2× the 440→880 distance.
@@ -139,7 +139,7 @@
       convert.frames_to_time(10, sr, hop) === (10 * hop) / sr,
       `${convert.frames_to_time(10, sr, hop).toFixed(4)} s`)
 
-    // ── mel + chroma panels (the other half of the specshow replica) ────────
+    // ── mel + chroma panels (the other two specshow panels) ─────────────────
     const mel = feature.melspectrogram(y, { sr, n_fft: 2048, hop_length: hop })
     drawSpectrogram(document.getElementById('mel'), mel.map((r) => Array.from(r)))
     const ch = feature.chroma_stft(y, { sr })

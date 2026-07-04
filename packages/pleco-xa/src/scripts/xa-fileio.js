@@ -3,6 +3,8 @@
  * Browser-compatible file I/O and streaming using Web APIs.
  */
 
+import { debugWarn } from './debug.js'
+
 /**
  * Chunked audio reader (NOT true streaming — honesty note, 2026-07-02).
  *
@@ -155,7 +157,9 @@ export async function stream(source, options = {}) {
  * Uses the File System Access API (Chrome 86+, Edge 86+) for directory access.
  * Falls back to input element for older browsers.
  *
- * @param {DirectoryHandle|string} directory - Directory handle or picker options
+ * @param {FileSystemDirectoryHandle|Object|string} directory - Directory handle
+ *   (or a DirectoryHandle-shaped object in non-browser environments), or the
+ *   string 'select' to open the browser picker
  * @param {Object} options - Search options
  * @param {string|Array<string>} options.ext - File extensions to match (default: common audio formats)
  * @param {boolean} options.recurse - Search subdirectories recursively (default: true)
@@ -261,7 +265,7 @@ export async function find_files(directory, options = {}) {
     );
   } else {
     // Fallback: Use input element for directory selection (limited browser support)
-    console.warn('find_files: File System Access API not available. Using input element fallback.');
+    debugWarn('find_files: File System Access API not available. Using input element fallback.');
 
     return new Promise((resolve, reject) => {
       // Create hidden input element
@@ -336,7 +340,7 @@ export async function find_files(directory, options = {}) {
  */
 export function cite(version = null) {
   // Metadata mirrors packages/pleco-xa/package.json (name, author, repository).
-  const libVersion = version || '2.0.2';
+  const libVersion = version || '2.0.3';
 
   const citation = `@software{pleco_xa,
   title        = {pleco-xa: Browser-native audio analysis engine},

@@ -1,5 +1,5 @@
 /**
- * plot_superflux — Superflux vs vanilla flux: vibrato immunity.
+ * SuperFlux vs vanilla flux — vibrato immunity.
  *
  * Four notes with heavy vibrato (±30 cents at 6 Hz) at known onset times,
  * analyzed at the gallery's ~5 ms hop (sr/200 — vanilla flux only "hears"
@@ -73,4 +73,4 @@ checkTrue(`each superflux onset within ±2 hops (${(tol * 1000).toFixed(1)} ms) 
 checkTrue('default ODF fires > 4 (vibrato false positives)', defTimes.length > 4,
   `${defTimes.length} detections`)
 
-summary('plot_superflux — vibrato immunity, node run')
+summary('superflux — vibrato immunity, node run')

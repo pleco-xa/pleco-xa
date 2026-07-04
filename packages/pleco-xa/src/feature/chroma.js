@@ -17,6 +17,7 @@
 import { stft, fft, fft_frequencies } from '../scripts/xa-fft.js'
 import { chroma as chromaFilterbank } from '../filters/index.js'
 import { ParameterError } from './spectral.js'
+import { debugWarn } from '../scripts/debug.js'
 
 /** float32 tiny — util.normalize threshold on the f32 pipeline */
 const TINY = 1.1754943508222875e-38
@@ -134,7 +135,7 @@ export function pitch_tuning(frequencies, options = {}) {
   for (const f of frequencies) if (f > 0) freqs.push(f)
   if (freqs.length === 0) {
     // Warns and returns 0.0 here for an empty frequency set.
-    console.warn('pitch_tuning: trying to estimate tuning from empty frequency set')
+    debugWarn('pitch_tuning: trying to estimate tuning from empty frequency set')
     return 0.0
   }
 

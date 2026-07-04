@@ -20,13 +20,12 @@ export async function POST({ request }) {
 
     // Validate file type
     const allowedTypes = [
-      'assets/audio/mpeg',
+      'audio/mpeg',
       'audio/wav',
-      'assets/audio/mp4',
-      'assets/audio/m4a',
-      'assets/audio/aiff',
-      'assets/audio/x-aiff',
-
+      'audio/mp4',
+      'audio/m4a',
+      'audio/aiff',
+      'audio/x-aiff',
     ]
     if (!allowedTypes.includes(audioFile.type)) {
       return new Response(JSON.stringify({ error: 'Invalid file type' }), {

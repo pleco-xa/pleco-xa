@@ -290,6 +290,16 @@ export function randomLocal(buffer, loop, { minMs = 100 } = {}) {
   return { buffer, loop, op: 'randomLocal', subOps };
 }
 
+/**
+ * Run a timed burst of random loop glitch operations.
+ * @param {AudioBuffer|Object} buffer - buffer to glitch
+ * @param {Object} [options]
+ * @param {AudioContext} [options.ctx] - audio context used for playback timing
+ * @param {number} [options.durationMs=8000] - total burst length (ms)
+ * @param {number} [options.minMs=100] - minimum loop length (ms)
+ * @param {number} [options.maxMs] - maximum loop length (ms; defaults to buffer duration)
+ * @param {() => void} [options.onUpdate] - called after each applied op
+ */
 export function glitchBurst(buffer, {
   ctx,
   durationMs = 8000,

@@ -2,6 +2,7 @@
 // Wave 6: all dependencies (audioContext, buffer, audioProcessor) are
 // injected explicitly — this module performs no window.* bus reads.
 import { detectLoop } from '../core/index.js';
+import { debugLog } from './debug.js';
 
 class LiveSpeedController {
   constructor() {
@@ -36,7 +37,7 @@ class LiveSpeedController {
       throw new Error('Speed controller not initialized');
     }
 
-    console.log(`🏃 Applying live speed change: ${this.currentSpeed} → ${targetSpeed}`);
+    debugLog(`🏃 Applying live speed change: ${this.currentSpeed} → ${targetSpeed}`);
 
     if (method === 'playbackRate') {
       // Method 1: Use Web Audio playbackRate (fast but changes pitch)
@@ -109,7 +110,7 @@ class LiveSpeedController {
     const loopEnd = loop.endSample;
     const loopLength = loopEnd - loopStart;
 
-    console.log(`🔄 Resampling buffer at ${targetSpeed}x speed`);
+    debugLog(`🔄 Resampling buffer at ${targetSpeed}x speed`);
 
     // Create new buffer with adjusted length
     const newLength = Math.floor(loopLength / targetSpeed);
@@ -211,6 +212,14 @@ export const liveSpeedController = new LiveSpeedController();
 
 // Helper functions for easy use. Dependencies are explicit arguments
 // (no global bus): pass the session's audioContext / buffer / audioProcessor.
+/**
+ * Apply half-speed playback using the injected session dependencies.
+ * @param {Object} [options]
+ * @param {AudioContext} options.audioContext - required (throws when missing)
+ * @param {AudioBuffer} options.buffer - required (throws when missing)
+ * @param {Object|null} [options.audioProcessor=null]
+ * @param {boolean} [options.preservePitch=false]
+ */
 export async function applyLiveHalfSpeed({
   audioContext,
   buffer,
@@ -225,6 +234,14 @@ export async function applyLiveHalfSpeed({
   return await liveSpeedController.halfSpeed(preservePitch);
 }
 
+/**
+ * Apply double-speed playback using the injected session dependencies.
+ * @param {Object} [options]
+ * @param {AudioContext} options.audioContext - required (throws when missing)
+ * @param {AudioBuffer} options.buffer - required (throws when missing)
+ * @param {Object|null} [options.audioProcessor=null]
+ * @param {boolean} [options.preservePitch=false]
+ */
 export async function applyLiveDoubleSpeed({
   audioContext,
   buffer,

@@ -30,7 +30,7 @@ build step — a bare `<script type="module">` is enough.
 
 ```html
 <script type="module">
-  import { beat_track, loop } from 'https://cdn.jsdelivr.net/npm/pleco-xa@2.0.1/dist/pleco-xa.js'
+  import { beat_track, loop } from 'https://cdn.jsdelivr.net/npm/pleco-xa@2.0.3/dist/pleco-xa.js'
   // ...
 </script>
 ```
@@ -40,10 +40,10 @@ the main bundle:
 
 ```js
 // unpkg
-import * as pleco from 'https://unpkg.com/pleco-xa@2.0.1/dist/pleco-xa.js'
+import * as pleco from 'https://unpkg.com/pleco-xa@2.0.3/dist/pleco-xa.js'
 
 // minified build (either CDN)
-import * as pleco from 'https://cdn.jsdelivr.net/npm/pleco-xa@2.0.1/dist/pleco-xa.min.js'
+import * as pleco from 'https://cdn.jsdelivr.net/npm/pleco-xa@2.0.3/dist/pleco-xa.min.js'
 ```
 
 :::tip
@@ -64,7 +64,7 @@ import { beat_track, feature } from 'pleco-xa'
 
 // y: Float32Array of mono samples, sr: sample rate in Hz
 const { tempo, beats } = beat_track(y, sr)
-const mel = feature.melspectrogram(y, sr)   // Array<Float32Array>, [freq][time]
+const mel = feature.melspectrogram(y, { sr })   // Array<Float32Array>, [freq][time]
 ```
 
 The exact same import line and the exact same call run in Node and in the

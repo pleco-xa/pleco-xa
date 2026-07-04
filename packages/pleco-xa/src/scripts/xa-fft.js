@@ -1,10 +1,107 @@
 /**
  * FFT and STFT implementations for JavaScript
- * Fast Fourier Transform using Cooley-Tukey algorithm
+ * Fast Fourier Transform: iterative in-place radix-2 Cooley-Tukey
+ * (bit-reversal permutation + butterfly stages over flat Float64Array
+ * real/imag pairs). Complex {real, imag} objects only exist at the public
+ * API boundary — the transform itself never allocates per-bin objects, so
+ * long signals no longer exhaust the heap the way the old recursive
+ * implementation did (one boxed object per bin per recursion level).
  */
 
+/** Next power of 2 >= n (n >= 1). */
+function nextPow2(n) {
+  return Math.pow(2, Math.ceil(Math.log2(n)))
+}
+
+// Twiddle-factor tables (cos/sin of -2*pi*k/n for k in [0, n/2)), cached per
+// transform size. Sizes above the cap are computed per call instead of cached
+// so a one-shot giant transform can't permanently pin hundreds of MB.
+const TWIDDLE_CACHE_MAX = 65536
+const twiddleCache = new Map()
+
+function getTwiddles(n) {
+  const cached = twiddleCache.get(n)
+  if (cached) return cached
+  const half = n >> 1
+  const cos = new Float64Array(half)
+  const sin = new Float64Array(half)
+  for (let k = 0; k < half; k++) {
+    const t = (-2 * Math.PI * k) / n
+    cos[k] = Math.cos(t)
+    sin[k] = Math.sin(t)
+  }
+  const tables = { cos, sin }
+  if (n <= TWIDDLE_CACHE_MAX) twiddleCache.set(n, tables)
+  return tables
+}
+
 /**
- * Fast Fourier Transform using Cooley-Tukey algorithm (radix-2).
+ * Iterative in-place radix-2 DIT FFT core.
+ * Operates directly on flat real/imag arrays — zero allocations.
+ * @param {Float64Array} re - Real parts (length n, power of 2), transformed in place
+ * @param {Float64Array} im - Imag parts (length n), transformed in place
+ * @param {number} n - Transform size (power of 2)
+ * @param {Float64Array} cosT - Twiddle cosines, length n/2
+ * @param {Float64Array} sinT - Twiddle sines, length n/2
+ */
+function fftCore(re, im, n, cosT, sinT) {
+  // Bit-reversal permutation
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1
+    for (; j & bit; bit >>= 1) j ^= bit
+    j ^= bit
+    if (i < j) {
+      const tr = re[i]
+      re[i] = re[j]
+      re[j] = tr
+      const ti = im[i]
+      im[i] = im[j]
+      im[j] = ti
+    }
+  }
+
+  // Butterfly stages
+  for (let len = 2; len <= n; len <<= 1) {
+    const half = len >> 1
+    const stride = n / len
+    for (let start = 0; start < n; start += len) {
+      for (let k = 0; k < half; k++) {
+        const wr = cosT[k * stride]
+        const wi = sinT[k * stride]
+        const i0 = start + k
+        const i1 = i0 + half
+        const oddReal = re[i1] * wr - im[i1] * wi
+        const oddImag = re[i1] * wi + im[i1] * wr
+        re[i1] = re[i0] - oddReal
+        im[i1] = im[i0] - oddImag
+        re[i0] += oddReal
+        im[i0] += oddImag
+      }
+    }
+  }
+}
+
+/**
+ * Throw a clear diagnostic if the signal contains NaN/Infinity. The old
+ * implementation silently laundered NaN to 0 at the recursion base case,
+ * which let NaN-corrupted audio produce plausible fabricated spectra.
+ * Failures must throw with diagnostics rather than fabricate.
+ * @param {Float32Array|Array} signal - Input samples
+ * @param {string} fnName - Calling function name for the diagnostic
+ */
+function assertFiniteSignal(signal, fnName) {
+  for (let i = 0; i < signal.length; i++) {
+    const v = signal[i]
+    if (!Number.isFinite(v)) {
+      throw new Error(
+        `${fnName}: input contains non-finite values at index ${i} (value: ${v})`,
+      )
+    }
+  }
+}
+
+/**
+ * Fast Fourier Transform using Cooley-Tukey algorithm (radix-2, iterative).
  *
  * Zero-padding contract: this is a radix-2 transform, so inputs whose length
  * is not already a power of 2 are zero-padded UP to the next power of 2. The
@@ -12,6 +109,9 @@
  * non-power-of-2 input is LONGER than the input. This padding is intentional
  * (not a silent best-guess): pass a power-of-2-length signal to get a spectrum
  * of exactly that length, or account for the padded length in the caller.
+ *
+ * Non-finite policy: NaN/Infinity in the input throws with the offending
+ * index — corrupted audio is never laundered into a plausible spectrum.
  *
  * @param {Float32Array|Array} signal - Input signal
  * @returns {Array} FFT result as complex numbers; length = next power of 2 >= N
@@ -27,6 +127,8 @@ export function fft(signal) {
     throw new Error('fft: input signal must not be empty')
   }
 
+  assertFiniteSignal(signal, 'fft')
+
   // Base case. Array.from (not signal.map) so typed-array inputs still
   // produce an array of {real, imag} objects instead of coerced NaNs.
   if (N === 1) {
@@ -36,152 +138,114 @@ export function fft(signal) {
   // Pad to power of 2 (radix-2 requirement — see the zero-padding contract in
   // the JSDoc above). When N is already a power of 2, paddedLength === N and no
   // padding occurs, so the spectrum length matches the input exactly.
-  const paddedLength = Math.pow(2, Math.ceil(Math.log2(N)))
-  const padded = new Float32Array(paddedLength)
-  padded.set(signal)
-
-  return fftRecursive(padded)
-}
-
-/**
- * Recursive FFT implementation
- * @param {Float32Array} signal - Input signal (power of 2 length)
- * @returns {Array} FFT result
- */
-function fftRecursive(signal) {
-  const N = signal.length
-
-  if (N <= 1) {
-    return [{ real: signal[0] || 0, imag: 0 }]
+  // Math.fround preserves the previous implementation's numerics, which
+  // round the input to float32 on entry (a no-op for Float32Array input).
+  const paddedLength = nextPow2(N)
+  const re = new Float64Array(paddedLength)
+  const im = new Float64Array(paddedLength)
+  for (let i = 0; i < N; i++) {
+    re[i] = Math.fround(signal[i])
   }
 
-  // Divide
-  const even = new Float32Array(N / 2)
-  const odd = new Float32Array(N / 2)
+  const tw = getTwiddles(paddedLength)
+  fftCore(re, im, paddedLength, tw.cos, tw.sin)
 
-  for (let i = 0; i < N / 2; i++) {
-    even[i] = signal[2 * i]
-    odd[i] = signal[2 * i + 1]
+  // Box into {real, imag} objects only at the public boundary.
+  const result = new Array(paddedLength)
+  for (let k = 0; k < paddedLength; k++) {
+    result[k] = { real: re[k], imag: im[k] }
   }
-
-  // Conquer
-  const evenFFT = fftRecursive(even)
-  const oddFFT = fftRecursive(odd)
-
-  // Combine
-  const result = new Array(N)
-  for (let k = 0; k < N / 2; k++) {
-    const t = (-2 * Math.PI * k) / N
-    const wReal = Math.cos(t)
-    const wImag = Math.sin(t)
-
-    const oddReal = wReal * oddFFT[k].real - wImag * oddFFT[k].imag
-    const oddImag = wReal * oddFFT[k].imag + wImag * oddFFT[k].real
-
-    result[k] = {
-      real: evenFFT[k].real + oddReal,
-      imag: evenFFT[k].imag + oddImag,
-    }
-
-    result[k + N / 2] = {
-      real: evenFFT[k].real - oddReal,
-      imag: evenFFT[k].imag - oddImag,
-    }
-  }
-
-  return result
-}
-
-/**
- * Recursive FFT over complex input ({real, imag} array, power-of-2 length)
- * @param {Array<{real: number, imag: number}>} x - Complex input
- * @returns {Array<{real: number, imag: number}>} FFT result
- */
-function fftComplexRecursive(x) {
-  const N = x.length
-
-  if (N <= 1) {
-    return [{ real: x[0] ? x[0].real : 0, imag: x[0] ? x[0].imag : 0 }]
-  }
-
-  const even = new Array(N / 2)
-  const odd = new Array(N / 2)
-  for (let i = 0; i < N / 2; i++) {
-    even[i] = x[2 * i]
-    odd[i] = x[2 * i + 1]
-  }
-
-  const evenFFT = fftComplexRecursive(even)
-  const oddFFT = fftComplexRecursive(odd)
-
-  const result = new Array(N)
-  for (let k = 0; k < N / 2; k++) {
-    const t = (-2 * Math.PI * k) / N
-    const wReal = Math.cos(t)
-    const wImag = Math.sin(t)
-
-    const oddReal = wReal * oddFFT[k].real - wImag * oddFFT[k].imag
-    const oddImag = wReal * oddFFT[k].imag + wImag * oddFFT[k].real
-
-    result[k] = {
-      real: evenFFT[k].real + oddReal,
-      imag: evenFFT[k].imag + oddImag,
-    }
-    result[k + N / 2] = {
-      real: evenFFT[k].real - oddReal,
-      imag: evenFFT[k].imag - oddImag,
-    }
-  }
-
   return result
 }
 
 /**
  * Inverse Fast Fourier Transform (complex input preserved — no component discarded)
  * ifft(X) = conj(fft(conj(X))) / N
+ *
+ * Non-finite policy: a missing bin or a bin with NaN/Infinity components
+ * throws with the offending index (the old recursive implementation silently
+ * treated missing bins as 0).
+ *
  * @param {Array<{real: number, imag: number}>} spectrum - Complex spectrum (power-of-2 length)
  * @returns {Array<{real: number, imag: number}>} IFFT result
  */
 export function ifft(spectrum) {
+  if (spectrum == null || typeof spectrum.length !== 'number') {
+    throw new Error('ifft: input must be an array of {real, imag} bins')
+  }
   const N = spectrum.length
   if (N === 0) return []
   if ((N & (N - 1)) !== 0) {
     throw new Error(`ifft requires power-of-2 length, got ${N}`)
   }
 
-  const conjugated = spectrum.map((bin) => ({
-    real: bin.real,
-    imag: -bin.imag,
-  }))
+  const re = new Float64Array(N)
+  const im = new Float64Array(N)
+  for (let i = 0; i < N; i++) {
+    const bin = spectrum[i]
+    if (
+      bin == null ||
+      !Number.isFinite(bin.real) ||
+      !Number.isFinite(bin.imag)
+    ) {
+      throw new Error(
+        `ifft: spectrum contains a missing or non-finite bin at index ${i}`,
+      )
+    }
+    // Conjugate on the way in (ifft via forward transform)
+    re[i] = bin.real
+    im[i] = -bin.imag
+  }
 
-  const result = fftComplexRecursive(conjugated)
+  const tw = getTwiddles(N)
+  fftCore(re, im, N, tw.cos, tw.sin)
 
-  return result.map((bin) => ({
-    real: bin.real / N,
-    imag: -bin.imag / N,
-  }))
+  const result = new Array(N)
+  for (let k = 0; k < N; k++) {
+    result[k] = { real: re[k] / N, imag: -im[k] / N }
+  }
+  return result
 }
 
 /**
- * Short-Time Fourier Transform
- * @param {Float32Array} y - Audio signal
+ * Shared STFT frame engine: validates input, prepares the analysis window,
+ * then streams windowed frames through the iterative FFT core using two
+ * reusable Float64Array scratch buffers (zero per-frame allocations beyond
+ * whatever the consumer callback builds).
+ *
+ * Padding for center=true is virtual — boundary samples are computed from the
+ * same index mapping pad_signal uses ('constant', 'reflect', 'edge'), without
+ * materializing a padded copy of the signal. Windowed samples go through
+ * Math.fround to preserve the previous implementation's float32 numerics.
+ *
+ * @param {Float32Array|Array} y - Audio signal
  * @param {number} n_fft - FFT window size
- * @param {number} hop_length - Hop length (default: n_fft/4)
- * @param {number} win_length - Window length (default: n_fft)
+ * @param {number|null} hop_length - Hop length (default: n_fft/4)
+ * @param {number|null} win_length - Window length (default: n_fft)
  * @param {string} window - Window type
  * @param {boolean} center - Whether to center the signal
  * @param {string} pad_mode - Padding mode ('reflect', 'constant', 'edge')
- * @returns {Array} STFT matrix [freq, time]
+ * @param {Function} setup - Called once with (n_freq, num_frames); must return
+ *   an onFrame(t, re, im) callback that consumes each transformed frame.
+ *   re/im are scratch buffers reused across frames — copy, don't retain.
  */
-export function stft(
+function runStftFrames(
   y,
-  n_fft = 2048,
-  hop_length = null,
-  win_length = null,
-  window = 'hann',
-  center = true,
-  pad_mode = 'constant',
+  n_fft,
+  hop_length,
+  win_length,
+  window,
+  center,
+  pad_mode,
+  setup,
 ) {
+  if (y == null || typeof y.length !== 'number') {
+    throw new Error('stft: input must be an array or typed array of samples')
+  }
+  if (y.length === 0) {
+    throw new Error('stft: input signal must not be empty')
+  }
+
   // Set defaults
   if (hop_length === null) {
     hop_length = Math.floor(n_fft / 4)
@@ -205,41 +269,169 @@ export function stft(
     win = win.slice(offset, offset + n_fft)
   }
 
-  // Pad the signal if center is true
-  let padded_y = y
-  if (center) {
-    const pad_length = Math.floor(n_fft / 2)
-    padded_y = pad_signal(y, pad_length, pad_mode)
-  }
+  // NaN/Infinity in the signal would otherwise flow through every
+  // overlapping frame — throw once, up front, with the offending index.
+  assertFiniteSignal(y, 'stft')
 
-  // Compute STFT frames
-  const num_frames = Math.floor((padded_y.length - n_fft) / hop_length) + 1
+  const L = y.length
+  const pad = center ? Math.floor(n_fft / 2) : 0
+  const paddedLength = L + 2 * pad
+  const num_frames = Math.floor((paddedLength - n_fft) / hop_length) + 1
   const n_freq = Math.floor(n_fft / 2) + 1
 
-  // Initialize output matrix as [freq][time]
-  const stft_matrix = Array(n_freq)
-  for (let f = 0; f < n_freq; f++) {
-    stft_matrix[f] = new Array(num_frames)
-  }
+  const onFrame = setup(n_freq, num_frames)
 
-  // Compute STFT for each frame
+  // Radix-2 requirement: frames whose n_fft is not a power of 2 are
+  // zero-padded up (same contract as fft()); only bins [0, n_freq) are read.
+  const P = nextPow2(n_fft)
+  const re = new Float64Array(P)
+  const im = new Float64Array(P)
+  const tw = getTwiddles(P)
+
   for (let t = 0; t < num_frames; t++) {
     const start = t * hop_length
-    const frame = padded_y.slice(start, start + n_fft)
 
-    // Apply window
-    const windowed_frame = frame.map((sample, i) => sample * win[i])
-
-    // Compute FFT
-    const fft_result = fft(windowed_frame)
-
-    // Extract positive frequencies and store in [freq][time] format
-    for (let f = 0; f < n_freq; f++) {
-      stft_matrix[f][t] = fft_result[f]
+    for (let i = 0; i < n_fft; i++) {
+      const p = start + i
+      let v
+      if (!center) {
+        v = y[p]
+      } else {
+        const s = p - pad
+        if (s >= 0 && s < L) {
+          v = Math.fround(y[s])
+        } else if (s < 0) {
+          // Left pad (same index mapping as pad_signal)
+          if (pad_mode === 'reflect') {
+            v = Math.fround(y[Math.min(-s, L - 1)])
+          } else if (pad_mode === 'edge') {
+            v = Math.fround(y[0])
+          } else {
+            v = 0 // 'constant'
+          }
+        } else {
+          // Right pad (same index mapping as pad_signal)
+          const j = s - L
+          if (pad_mode === 'reflect') {
+            v = Math.fround(y[Math.max(0, L - 2 - j)])
+          } else if (pad_mode === 'edge') {
+            v = Math.fround(y[L - 1])
+          } else {
+            v = 0 // 'constant'
+          }
+        }
+      }
+      re[i] = Math.fround(v * win[i])
+      im[i] = 0
     }
-  }
+    for (let i = n_fft; i < P; i++) {
+      re[i] = 0
+      im[i] = 0
+    }
 
+    fftCore(re, im, P, tw.cos, tw.sin)
+    onFrame(t, re, im)
+  }
+}
+
+/**
+ * Short-Time Fourier Transform
+ * @param {Float32Array} y - Audio signal
+ * @param {number} n_fft - FFT window size
+ * @param {number} hop_length - Hop length (default: n_fft/4)
+ * @param {number} win_length - Window length (default: n_fft)
+ * @param {string} window - Window type
+ * @param {boolean} center - Whether to center the signal
+ * @param {string} pad_mode - Padding mode ('reflect', 'constant', 'edge')
+ * @returns {Array} STFT matrix [freq, time]
+ */
+export function stft(
+  y,
+  n_fft = 2048,
+  hop_length = null,
+  win_length = null,
+  window = 'hann',
+  center = true,
+  pad_mode = 'constant',
+) {
+  let stft_matrix
+  runStftFrames(
+    y,
+    n_fft,
+    hop_length,
+    win_length,
+    window,
+    center,
+    pad_mode,
+    (n_freq, num_frames) => {
+      // Initialize output matrix as [freq][time]
+      stft_matrix = Array(n_freq)
+      for (let f = 0; f < n_freq; f++) {
+        stft_matrix[f] = new Array(num_frames)
+      }
+      return (t, re, im) => {
+        // Box positive frequencies into {real, imag} at the public boundary
+        for (let f = 0; f < n_freq; f++) {
+          stft_matrix[f][t] = { real: re[f], imag: im[f] }
+        }
+      }
+    },
+  )
   return stft_matrix
+}
+
+/**
+ * Power spectrogram computed frame-by-frame on flat arrays — the memory-lean
+ * path for feature extractors (melspectrogram, onset strength, beat tracking)
+ * that only need |STFT|^power. Unlike stft(), no per-bin {real, imag} objects
+ * are ever created: a 10-minute 44.1 kHz track yields ~53M bins, and boxing
+ * them costs ~4 GB of heap that feature pipelines never look at.
+ *
+ * Same framing, windowing, padding, and numerics as stft().
+ *
+ * @param {Float32Array} y - Audio signal
+ * @param {number} n_fft - FFT window size
+ * @param {number} hop_length - Hop length (default: n_fft/4)
+ * @param {number} win_length - Window length (default: n_fft)
+ * @param {string} window - Window type
+ * @param {boolean} center - Whether to center the signal
+ * @param {string} pad_mode - Padding mode ('reflect', 'constant', 'edge')
+ * @param {number} power - Exponent applied to the magnitude (2.0 = power)
+ * @returns {Array<Float32Array>} Power spectrogram [freq][time]
+ */
+export function stft_power(
+  y,
+  n_fft = 2048,
+  hop_length = null,
+  win_length = null,
+  window = 'hann',
+  center = true,
+  pad_mode = 'constant',
+  power = 2.0,
+) {
+  let power_spec
+  runStftFrames(
+    y,
+    n_fft,
+    hop_length,
+    win_length,
+    window,
+    center,
+    pad_mode,
+    (n_freq, num_frames) => {
+      power_spec = Array(n_freq)
+      for (let f = 0; f < n_freq; f++) {
+        power_spec[f] = new Float32Array(num_frames)
+      }
+      return (t, re, im) => {
+        for (let f = 0; f < n_freq; f++) {
+          const mag = Math.sqrt(re[f] * re[f] + im[f] * im[f])
+          power_spec[f][t] = Math.pow(mag, power)
+        }
+      }
+    },
+  )
+  return power_spec
 }
 
 /**

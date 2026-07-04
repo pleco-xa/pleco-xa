@@ -4,7 +4,7 @@
  */
 
 import { _amax } from './_arrstat.js'
-import { debugLog } from './debug.js'
+import { debugLog, debugError } from './debug.js'
 
 /**
  * Detect BPM from audio.
@@ -57,7 +57,7 @@ export async function detectBPM(input, options = {}) {
       original: quickResult.bpm
     };
   } catch (error) {
-    console.error('BPM detection failed:', error);
+    debugError('BPM detection failed:', error);
 
     // Return error instead of fake fallback
     return {

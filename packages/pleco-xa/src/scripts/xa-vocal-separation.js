@@ -5,6 +5,7 @@
 
 import { _amax } from './_arrstat.js'
 import { stft, istft } from './xa-fft.js'
+import { debugLog } from './debug.js'
 
 /**
  * 2D Convolution for spectrograms
@@ -477,11 +478,11 @@ export function processAudioToFingerprints(audioBuffer, nFft = 2048, hopLength =
  * @returns {Array<Array<number>>} Optimized EQ curves
  */
 export function optimizeEqCurves(vocalFps, mixtureFps, mixtureMag, numWindows, sr, numIterations = 100, learningRate = 0.01) {
-  console.log(`\n${'='.repeat(70)}`)
-  console.log(`PHASE 3: OPTIMIZATION (Matching Mixture to Vocal)`)
-  console.log('='.repeat(70))
-  console.log(`\nOptimizing ${numWindows} windows × 400 EQ points...`)
-  console.log(`Target: Match mixture fingerprint to vocal fingerprint\n`)
+  debugLog(`\n${'='.repeat(70)}`)
+  debugLog(`PHASE 3: OPTIMIZATION (Matching Mixture to Vocal)`)
+  debugLog('='.repeat(70))
+  debugLog(`\nOptimizing ${numWindows} windows × 400 EQ points...`)
+  debugLog(`Target: Match mixture fingerprint to vocal fingerprint\n`)
 
   // Initialize EQ curves (unity gain)
   const eqCurves = Array.from({ length: numWindows }, () => new Array(400).fill(1.0))
@@ -537,14 +538,14 @@ export function optimizeEqCurves(vocalFps, mixtureFps, mixtureMag, numWindows, s
     losses.push(avgLoss)
 
     if (iteration % 20 === 0) {
-      console.log(`  Iteration ${iteration.toString().padStart(3)}: Loss = ${avgLoss.toFixed(6)}`)
+      debugLog(`  Iteration ${iteration.toString().padStart(3)}: Loss = ${avgLoss.toFixed(6)}`)
     }
   }
 
-  console.log(`\n✓ Optimization complete!`)
-  console.log(`  Final loss: ${losses[losses.length - 1].toFixed(6)}`)
-  console.log(`  Initial loss: ${losses[0].toFixed(6)}`)
-  console.log(`  Improvement: ${((1 - losses[losses.length - 1] / losses[0]) * 100).toFixed(1)}%`)
+  debugLog(`\n✓ Optimization complete!`)
+  debugLog(`  Final loss: ${losses[losses.length - 1].toFixed(6)}`)
+  debugLog(`  Initial loss: ${losses[0].toFixed(6)}`)
+  debugLog(`  Improvement: ${((1 - losses[losses.length - 1] / losses[0]) * 100).toFixed(1)}%`)
 
   return eqCurves
 }
@@ -559,10 +560,10 @@ export function optimizeEqCurves(vocalFps, mixtureFps, mixtureMag, numWindows, s
  * @returns {Float32Array} Reconstructed audio
  */
 export function reconstructVocal(mixtureStft, eqCurves, sr, nFft = 2048, hopLength = 1024) {
-  console.log(`\n${'='.repeat(70)}`)
-  console.log(`PHASE 4: RECONSTRUCTION`)
-  console.log('='.repeat(70))
-  console.log('\nApplying learned EQ curves to mixture...')
+  debugLog(`\n${'='.repeat(70)}`)
+  debugLog(`PHASE 4: RECONSTRUCTION`)
+  debugLog('='.repeat(70))
+  debugLog('\nApplying learned EQ curves to mixture...')
 
   const numFreqBins = mixtureStft.length
   const numWindows = mixtureStft[0].length
@@ -617,7 +618,7 @@ export function reconstructVocal(mixtureStft, eqCurves, sr, nFft = 2048, hopLeng
     }
   }
 
-  console.log('  ✓ EQ curves applied')
+  debugLog('  ✓ EQ curves applied')
 
   // Reconstruct complex STFT in (freq x time) format
   const adjustedStft = adjustedMagnitude.map((freqRow, k) =>
@@ -631,10 +632,10 @@ export function reconstructVocal(mixtureStft, eqCurves, sr, nFft = 2048, hopLeng
   // (Wave 5A repair: the old code transposed to time x freq and passed
   // 'hann'/true into the win_length/window slots of istft(D, hop_length,
   // win_length, window, center, length) — both wrong.)
-  console.log('  Converting back to audio...')
+  debugLog('  Converting back to audio...')
   const reconstructedAudio = istft(adjustedStft, hopLength, null, 'hann', true)
 
-  console.log('  ✓ Audio reconstructed')
+  debugLog('  ✓ Audio reconstructed')
 
   // Normalize (loop, not _amax(spread) — stack-safe on long audio)
   let maxVal = 0

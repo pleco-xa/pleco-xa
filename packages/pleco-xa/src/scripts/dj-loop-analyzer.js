@@ -10,7 +10,7 @@ import { chroma_cqt, enhance_chroma, chroma_energy } from './xa-chroma.js'
 import { analyze_groove } from './xa-tempo.js'
 import { tempo, beat_track } from './xa-beat-tracker.js'
 import { onset_strength } from './xa-onset.js'
-import { debugLog } from './debug.js'
+import { debugLog, debugWarn, debugError } from './debug.js'
 import {
   spectral_centroid,
   spectral_flatness,
@@ -76,7 +76,7 @@ export class DJLoopAnalyzer {
 
       return loop
     } catch (error) {
-      console.error('Error analyzing loop:', error)
+      debugError('Error analyzing loop:', error)
       throw error
     }
   }
@@ -237,7 +237,7 @@ export class DJLoopAnalyzer {
       // Convert distance to similarity (0-1)
       return 1 / (1 + distance)
     } catch (_error) {
-      console.warn('DTW calculation failed, using fallback similarity')
+      debugWarn('DTW calculation failed, using fallback similarity')
       return this.fallbackChromaSimilarity(loop1, loop2)
     }
   }
@@ -403,7 +403,7 @@ export class DJLoopAnalyzer {
       this.clusters = enrichedClusters
       return enrichedClusters
     } catch (error) {
-      console.error('Clustering failed:', error)
+      debugError('Clustering failed:', error)
       // Fallback: group by tempo ranges
       return this.fallbackClustering(nClusters)
     }
@@ -830,7 +830,7 @@ export class DJLoopAnalyzer {
     try {
       this.similarityMatrix = dtwDistanceMatrix(sequences)
     } catch (error) {
-      console.warn('Failed to update similarity matrix:', error)
+      debugWarn('Failed to update similarity matrix:', error)
     }
   }
 }

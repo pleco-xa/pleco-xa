@@ -20,6 +20,30 @@ export function debugLog(...args) {
   }
 }
 
+export function debugWarn(...args) {
+  if (DEBUG_ENABLED) {
+    console.warn(...args)
+  }
+}
+
+export function debugError(...args) {
+  if (DEBUG_ENABLED) {
+    console.error(...args)
+  }
+}
+
+export function debugTime(label) {
+  if (DEBUG_ENABLED) {
+    console.time(label)
+  }
+}
+
+export function debugTimeEnd(label) {
+  if (DEBUG_ENABLED) {
+    console.timeEnd(label)
+  }
+}
+
 export function isDebugEnabled() {
   return DEBUG_ENABLED
 }

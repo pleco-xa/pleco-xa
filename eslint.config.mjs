@@ -88,4 +88,24 @@ export default [
       'no-loss-of-precision': 'off',
     },
   },
+
+  // A library must be silent by default. Every diagnostic in the library
+  // source is routed through the PLECO_DEBUG-gated helpers in
+  // src/scripts/debug.js (debugLog/debugWarn/debugError/debugTime/
+  // debugTimeEnd) — direct console.* calls are a lint ERROR so the
+  // console sweep (2026-07-04) cannot regress.
+  {
+    files: ['packages/pleco-xa/src/**/*.js'],
+    rules: {
+      'no-console': 'error',
+    },
+  },
+
+  // ...with exactly ONE sanctioned sink: the debug helpers themselves.
+  {
+    files: ['packages/pleco-xa/src/scripts/debug.js'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ]

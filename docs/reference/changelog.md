@@ -7,13 +7,15 @@ description: Release history for Pleco-Xa.
 
 The 2.0 line is the release where Pleco-Xa became a complete, verifiable audio
 engine rather than a collection of scripts. The through-line of the development
-arc: **prove every claim.** Function after function was gated in CI against
-numerical fixtures, so "correct" stopped being a marketing word and became a
-build-breaking test.
+arc: **prove every claim.** Function after function was validated against
+numerical reference fixtures, and the CI suite grew to 27 test files
+(237 tests) that run on every push — so "correct" stopped being a marketing
+word and became a build-breaking test.
 
 ### Fixture-verified correctness across domains
 
-Correctness is now enforced by fixtures spanning the whole analysis surface:
+Validation during the 2.0 arc ran against reference fixtures spanning the
+whole analysis surface:
 
 - **Core DSP** — windows (hann/hamming/blackman), STFT magnitude and istft
   round-trip, fft/ifft, and the full family of frequency/time/sample
@@ -50,12 +52,12 @@ The signature capability was consolidated into a single public API,
 
 ### Real-time, in the browser, zero dependencies
 
-Capabilities an offline library structurally cannot offer:
+Live, in-browser capabilities:
 
 - `RealtimeSpectrumAnalyzer` and the streaming analyzers for live visualization
   and metering.
 - The canvas-native [display tier](/guides/display/) (waveforms, spectrograms,
-  colormaps) replacing matplotlib semantics.
+  colormaps) drawing straight to `<canvas>`.
 - Seamless loop playback (`LoopPlayer`, native sample-accurate looping) and an
   event-driven transport (`AudioPlayer`).
 - The [Play layer](/guides/play/) — the Echoplex-homage creative instruments
@@ -74,5 +76,6 @@ shim.
   closing, reversal) hoisted from the demo into the library as pure functions
   with an injectable buffer factory.
 
-> **Versioning note.** The current release line is **2.0.x** (latest `2.0.1`),
-> published on npm as `pleco-xa`. The correctness fixtures are enforced in CI.
+> **Versioning note.** The current release line is **2.0.x** (latest `2.0.3`),
+> published on npm as `pleco-xa`. The loop-point golden gate and the full
+> 27-suite test run are enforced in CI on every push.

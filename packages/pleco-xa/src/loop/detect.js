@@ -39,9 +39,23 @@ export const STRATEGIES = ['fast', 'precise', 'musical', 'recurrence']
  * @param {'fast'|'precise'|'musical'|'recurrence'} [options.strategy='fast']
  * @param {number} [options.bpm] - tempo hint for 'precise'/'musical'
  *   (detected via beat tracking when omitted)
- * @param {...*} options.* - strategy-specific options are passed through
- *   ('precise': minLoopDuration/maxLoopDuration/searchStart/searchEnd;
- *    'recurrence': hopLength/maxFrames/minConfidence/rqa/snapToZero)
+ * @param {number} [options.minLoopDuration] - 'precise': minimum loop length
+ *   in seconds
+ * @param {number} [options.maxLoopDuration] - 'precise': maximum loop length
+ *   in seconds
+ * @param {number} [options.searchStart] - 'precise': seconds to skip at the
+ *   head of the material before searching
+ * @param {number} [options.searchEnd] - 'precise': fraction (0..1) of the
+ *   material to search
+ * @param {number} [options.hopLength=512] - 'recurrence': chroma hop length
+ * @param {number} [options.maxFrames=1500] - 'recurrence': frame cap
+ *   (matrix cost is frames²)
+ * @param {number} [options.minConfidence=0.1] - 'recurrence': quality gate
+ *   (audio-validated NCC)
+ * @param {boolean} [options.rqa=false] - 'recurrence': add an
+ *   RQA-path-derived candidate
+ * @param {boolean} [options.snapToZero=true] - 'recurrence': trim boundaries
+ *   to zero crossings
  * @returns {Promise<Object>} {
  *   strategy, loopStart, loopEnd, loopStartSample, loopEndSample,
  *   confidence (0..1), bpm?, details }

@@ -1,4 +1,10 @@
 import { _amax, _amin } from './_arrstat.js'
+
+/**
+ * Any JavaScript typed-array view over an ArrayBuffer.
+ * @typedef {Int8Array|Uint8Array|Uint8ClampedArray|Int16Array|Uint16Array|Int32Array|Uint32Array|Float32Array|Float64Array} TypedArray
+ */
+import { debugLog, debugWarn, debugError } from './debug.js'
 /**
  * Utility Functions for JavaScript
  * Core signal processing utilities for audio analysis
@@ -1595,7 +1601,7 @@ export function get_fftlib() {
  */
 export function set_fftlib(lib = null) {
   if (lib !== null && lib !== 'native' && lib !== 'webaudio') {
-    console.warn(
+    debugWarn(
       `set_fftlib: Cannot set FFT library to '${lib}' in browser environment. ` +
       'pleco-audio always uses native Web Audio API for FFT operations.'
     );
@@ -2350,7 +2356,7 @@ export async function _resource_file(packageName, resourcePath, responseType = '
         return await response.text();
     }
   } catch (error) {
-    console.error(`Error loading resource ${packageName}/${resourcePath}:`, error);
+    debugError(`Error loading resource ${packageName}/${resourcePath}:`, error);
     throw error;
   }
 }
@@ -2454,28 +2460,28 @@ export function show_versions() {
   };
 
   // Log formatted output
-  console.log('pleco-audio version information:');
-  console.log('================================');
-  console.log(`Library: ${versionInfo.library} v${versionInfo.version}`);
-  console.log(`Environment: ${versionInfo.environment}`);
-  console.log(`Platform: ${versionInfo.platform}`);
-  console.log('');
-  console.log('Browser APIs:');
-  console.log(`  Web Audio API: ${versionInfo.webAudioAPI ? 'supported' : 'NOT SUPPORTED'}`);
-  console.log(`  Canvas API: ${versionInfo.canvasAPI ? 'supported' : 'NOT SUPPORTED'}`);
-  console.log(`  File API: ${versionInfo.fileAPI ? 'supported' : 'NOT SUPPORTED'}`);
-  console.log(`  MediaStream API: ${versionInfo.mediaStreamAPI ? 'supported' : 'NOT SUPPORTED'}`);
-  console.log('');
-  console.log('FFT Backend:');
-  console.log(`  Library: ${versionInfo.fft.name}`);
-  console.log(`  Backend: ${versionInfo.fft.backend}`);
-  console.log(`  Supported FFT sizes: ${versionInfo.fft.supports.fftSizes.join(', ')}`);
-  console.log('');
-  console.log('Advanced Capabilities:');
-  console.log(`  OfflineAudioContext: ${versionInfo.capabilities.offlineAudioContext ? 'yes' : 'no'}`);
-  console.log(`  AudioWorklet: ${versionInfo.capabilities.audioWorklet ? 'yes' : 'no'}`);
-  console.log(`  MediaRecorder: ${versionInfo.capabilities.mediaRecorder ? 'yes' : 'no'}`);
-  console.log(`  File System Access API: ${versionInfo.capabilities.fileSystemAccess ? 'yes' : 'no'}`);
+  debugLog('pleco-audio version information:');
+  debugLog('================================');
+  debugLog(`Library: ${versionInfo.library} v${versionInfo.version}`);
+  debugLog(`Environment: ${versionInfo.environment}`);
+  debugLog(`Platform: ${versionInfo.platform}`);
+  debugLog('');
+  debugLog('Browser APIs:');
+  debugLog(`  Web Audio API: ${versionInfo.webAudioAPI ? 'supported' : 'NOT SUPPORTED'}`);
+  debugLog(`  Canvas API: ${versionInfo.canvasAPI ? 'supported' : 'NOT SUPPORTED'}`);
+  debugLog(`  File API: ${versionInfo.fileAPI ? 'supported' : 'NOT SUPPORTED'}`);
+  debugLog(`  MediaStream API: ${versionInfo.mediaStreamAPI ? 'supported' : 'NOT SUPPORTED'}`);
+  debugLog('');
+  debugLog('FFT Backend:');
+  debugLog(`  Library: ${versionInfo.fft.name}`);
+  debugLog(`  Backend: ${versionInfo.fft.backend}`);
+  debugLog(`  Supported FFT sizes: ${versionInfo.fft.supports.fftSizes.join(', ')}`);
+  debugLog('');
+  debugLog('Advanced Capabilities:');
+  debugLog(`  OfflineAudioContext: ${versionInfo.capabilities.offlineAudioContext ? 'yes' : 'no'}`);
+  debugLog(`  AudioWorklet: ${versionInfo.capabilities.audioWorklet ? 'yes' : 'no'}`);
+  debugLog(`  MediaRecorder: ${versionInfo.capabilities.mediaRecorder ? 'yes' : 'no'}`);
+  debugLog(`  File System Access API: ${versionInfo.capabilities.fileSystemAccess ? 'yes' : 'no'}`);
 
   return versionInfo;
 }

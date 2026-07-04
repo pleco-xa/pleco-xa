@@ -1,6 +1,6 @@
 ---
 title: Cluster — deterministic k-means
-description: pleco-xa's cluster namespace — Lloyd's algorithm with greedy k-means++ seeding, matched to scikit-learn and fully reproducible from a seed.
+description: pleco-xa's cluster namespace — Lloyd's algorithm with greedy k-means++ seeding — bit-reproducible from a seed and fixture-verified.
 ---
 
 `cluster` is pleco-xa's clustering corner. Today it exposes one function — `kmeans` — but a

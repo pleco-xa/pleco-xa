@@ -408,6 +408,18 @@ export function tone(
   return y
 }
 
+/**
+ * Generate a frequency-sweep (chirp) signal.
+ * @param {Object} options
+ * @param {number} options.fmin - initial frequency (Hz)
+ * @param {number} options.fmax - final frequency (Hz)
+ * @param {number} [options.sr=22050] - sample rate
+ * @param {number|null} [options.length=null] - length in samples (or use duration)
+ * @param {number|null} [options.duration=null] - length in seconds
+ * @param {boolean} [options.linear=false] - linear (true) vs exponential sweep
+ * @param {number} [options.phi=-Math.PI*0.5] - initial phase
+ * @returns {Float32Array}
+ */
 export function chirp({
   fmin,
   fmax,

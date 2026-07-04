@@ -3,7 +3,7 @@
  * Part of Pleco Xa audio analysis engine
  */
 
-import { debugLog } from './debug.js'
+import { debugLog, debugError } from './debug.js'
 
 export class LoopPlayer {
   constructor(audioBuffer) {
@@ -31,7 +31,7 @@ export class LoopPlayer {
         await this.audioContext.resume()
         debugLog('Audio context resumed')
       } catch (error) {
-        console.error('Failed to resume audio context:', error)
+        debugError('Failed to resume audio context:', error)
         return
       }
     }
@@ -69,7 +69,7 @@ export class LoopPlayer {
         )
       }, 100)
     } catch (error) {
-      console.error('Failed to start audio:', error)
+      debugError('Failed to start audio:', error)
     }
   }
 

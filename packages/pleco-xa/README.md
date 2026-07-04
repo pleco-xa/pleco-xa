@@ -8,15 +8,15 @@
 
 > Browser-native audio analysis for JavaScript — BPM & beat tracking, spectral
 > features, structural segmentation, and intelligent loop detection.
-> **Zero dependencies. Full TypeScript types.**
+> **Zero dependencies. TypeScript declarations included.**
 
 pleco-xa brings musical intelligence to anything that runs JavaScript — the
 browser, Node, Web Workers, the edge. Tempo and beat tracking; mel / MFCC /
 chroma / spectral descriptors; structural segmentation; DTW & sequence
 alignment; effects; pitch tracking; pure-DSP vocal separation; and its
 signature **loop detection** — with **zero runtime dependencies** and no build
-step required. Every function is validated in CI against committed reference
-fixtures.
+step required. 27 CI-gated test suites (237 tests) run on every push, with
+loop detection locked against committed golden fixtures on real audio.
 
 ## Install
 
@@ -41,8 +41,8 @@ import { hz_to_note, hz_to_midi } from 'pleco-xa/convert'
 import { dtw, viterbi } from 'pleco-xa/sequence'
 ```
 
-Full TypeScript types ship with both entry styles — editor autocomplete works
-out of the box, no `@types/…` package needed.
+TypeScript declarations ship for the barrel and all 19 subpaths — editor
+autocomplete works out of the box, no `@types/…` package needed.
 
 ## Quickstart
 
@@ -80,8 +80,11 @@ the analysis API is `(Float32Array, sampleRate)` everywhere.
 ## Highlights
 
 - **Zero dependencies**, pure ESM — runs in browsers, Node, and Web Workers.
-- **Full TypeScript types** on every export and subpath.
-- **Fixture-verified** across ~20 domains, checked in CI (many numerically exact).
+- **~89 kB min+gzip** for the entire engine — the `feature` subpath alone under
+  8 kB. No WASM, no model download.
+- **TypeScript declarations** for the barrel and all 19 subpaths.
+- **27 CI-gated test suites** (237 tests) — loop points locked against
+  committed golden fixtures on real audio (±10 ms).
 - **Loop detection** — the signature feature.
 - **Real-time** streaming analyzers and a live tempo tier.
 - **Pure-DSP vocal separation** — no model, no weights, no GPU.

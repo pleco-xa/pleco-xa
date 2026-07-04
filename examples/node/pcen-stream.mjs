@@ -1,5 +1,5 @@
 /**
- * Proof: plot_pcen_stream — streaming PCEN: block-wise == whole file.
+ * Proof: streaming PCEN — block-wise == whole file.
  *
  * A streaming PCEN pattern: process a long file in fixed-size
  * frame blocks, carrying the PCEN smoother's filter state (zi/zf) across

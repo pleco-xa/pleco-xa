@@ -9,6 +9,7 @@
  */
 
 import { onsetDetect } from './xa-onset.js'
+import { debugTime, debugTimeEnd } from './debug.js'
 // computeSTFT is imported but not used
 
 /**
@@ -27,7 +28,7 @@ export function beatTrack(
     units = 'time',
   } = {},
 ) {
-  console.time('beat_track')
+  debugTime('beat_track')
 
   // Step 1: Onset detection
   const onsetResult = onsetDetect(audioData, sampleRate, { hopLength })
@@ -56,7 +57,7 @@ export function beatTrack(
       ? beatFrames.map((frame) => (frame * hopLength) / sampleRate)
       : beatFrames
 
-  console.timeEnd('beat_track')
+  debugTimeEnd('beat_track')
 
   return {
     tempo: tempoResult.bpm,
@@ -234,17 +235,23 @@ export function extractTempo(beatTimes) {
 /**
  * Optimized BPM detection - replacement for the slow one
  * Uses onset detection + tempo estimation
+ *
+ * Failure paths THROW with diagnostics naming the failed stage — there is no
+ * silent fallback estimator here. (The old catch-all fell back to an
+ * RMS-interval heuristic that clamped into [60, 200] BPM and reported a
+ * fabricated confidence of 0.5; that path was deleted, 2026-07-04.)
+ *
+ * @throws {Error} when the beat-tracking stage fails; the original error is
+ *   attached as `cause`.
  */
 export function fastBPMDetect(audioData, sampleRate) {
-  console.time('fast_bpm_detect')
+  debugTime('fast_bpm_detect')
 
   // Use smaller hop length for better precision but still fast
   const hopLength = 256
 
   try {
     const beatResult = beatTrack(audioData, sampleRate, { hopLength })
-
-    console.timeEnd('fast_bpm_detect')
 
     return {
       bpm: beatResult.tempo,
@@ -253,54 +260,11 @@ export function fastBPMDetect(audioData, sampleRate) {
       onsetStrength: beatResult.onsetStrength,
     }
   } catch (error) {
-    console.error(
-      'Fast BPM detection failed, falling back to basic method:',
-      error,
+    throw new Error(
+      `fastBPMDetect: beat-tracking stage failed — ${error.message}`,
+      { cause: error },
     )
-    console.timeEnd('fast_bpm_detect')
-
-    // Fallback to simple method
-    return simpleTempoEstimate(audioData, sampleRate)
+  } finally {
+    debugTimeEnd('fast_bpm_detect')
   }
-}
-
-/**
- * Simple fallback tempo estimation
- */
-function simpleTempoEstimate(audioData, sampleRate) {
-  const frameSize = 1024
-  const hopSize = 256
-  const numFrames = Math.floor((audioData.length - frameSize) / hopSize)
-
-  // Quick RMS-based onset detection
-  const onsets = []
-  let prevRMS = 0
-
-  for (let i = 0; i < numFrames; i++) {
-    const start = i * hopSize
-    const frame = audioData.slice(start, start + frameSize)
-    const rms = Math.sqrt(frame.reduce((sum, s) => sum + s * s, 0) / frameSize)
-
-    if (rms > prevRMS * 1.2 && rms > 0.01) {
-      // Simple onset detection
-      onsets.push(start / sampleRate)
-    }
-    prevRMS = rms
-  }
-
-  if (onsets.length < 2) {
-    throw new Error('Not enough onsets detected for BPM estimation')
-  }
-
-  // Estimate BPM from onset intervals
-  const intervals = []
-  for (let i = 1; i < onsets.length; i++) {
-    intervals.push(onsets[i] - onsets[i - 1])
-  }
-
-  intervals.sort((a, b) => a - b)
-  const medianInterval = intervals[Math.floor(intervals.length / 2)]
-  const bpm = 60 / medianInterval
-
-  return { bpm: Math.max(60, Math.min(200, bpm)), confidence: 0.5 }
 }

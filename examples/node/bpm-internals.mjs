@@ -1,5 +1,5 @@
 /**
- * scripts/xa-bpm-algorithm.js — the lb BPM pipeline, stage by stage, plus the
+ * scripts/xa-bpm-algorithm.js — the windowed BPM pipeline, stage by stage, plus the
  * demo-facing detectBPM() quick tier, on a synthetic 120 BPM click train.
  *
  * Every stage is exercised against a signal whose ground truth is known:
@@ -90,4 +90,4 @@ checkTrue('detectBPM (quick tier) lands within one lag bin of 120 (|bpm−120| �
 checkTrue('detectBPM reports a MEASURED confidence in (0, 1] (not a hardcoded default)',
   quick.confidence > 0 && quick.confidence <= 1, `confidence=${quick.confidence}`)
 
-summary('xa-bpm-algorithm — lb pipeline stages + detectBPM on a 120 BPM train')
+summary('xa-bpm-algorithm — pipeline stages + detectBPM on a 120 BPM train')

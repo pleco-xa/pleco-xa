@@ -19,8 +19,3 @@ This app earns its place in the monorepo for two reasons:
 ```bash
 npm run dev -w @pleco-xa/demo    # predev builds the library first
 ```
-
-> **Note:** the `deploying/`, `Procfile`, `nixpacks.toml`, and `railway.*` files
-> are a Railway deployment setup from when this app was the hosted demo. The
-> public site has since moved to GitHub Pages (`apps/docs`); keep these only if
-> you still deploy this app to Railway.

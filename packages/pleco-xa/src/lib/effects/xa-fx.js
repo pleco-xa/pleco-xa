@@ -9,6 +9,7 @@ import {
   resetLoop,
   detectLoop
 } from '../../core/index.js';
+import { debugWarn } from '../../scripts/debug.js';
 
 /**
  * Stutter effect - Micro-repeat first 10ms
@@ -181,7 +182,7 @@ export const applyQuantumOp = (op, buffer, loop) => {
       // noop - treat as rest
       break;
     default:
-      console.warn('Unknown quantum op', op);
+      debugWarn('Unknown quantum op', op);
   }
   return { buffer, loop };
 };

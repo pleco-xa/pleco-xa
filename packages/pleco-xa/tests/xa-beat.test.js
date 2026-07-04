@@ -9,10 +9,13 @@
  *    generate clicks at a known BPM, assert the estimate within 5%.
  *    Reference-derived truths (verified against the reference implementation 0.11.0):
  *      60→60.093, 80→80.750, 110→112.347, 120→117.454, 160→161.499 BPM.
- *  - Silence/constant expectations corrected to the reference's actual behavior:
- *    feature.tempo returns the tempo-prior argmax (117.4538... BPM at the
- *    default start_bpm=120), and beat_track returns (0 BPM, no beats)
- *    because its median-aggregated onset envelope is all zero.
+ *  - Silence expectations (honesty gate, 2026-07-04): tempo() THROWS on an
+ *    all-zero onset envelope instead of returning the tempo-prior argmax
+ *    (117.4538... BPM at start_bpm=120), which would be a fabricated answer
+ *    with zero onset evidence. A CONSTANT signal is not evidence-free (the
+ *    t=0 attack is a real onset), so it still yields the prior argmax.
+ *    beat_track still returns (0 BPM, no beats) on silence because its
+ *    median-aggregated onset envelope is all zero.
  *  - "Existence check" fallback chains (tempo || estimateTempo || ...)
  *    deleted — the canonical exports are asserted directly.
  *  - Input validation kept and tightened: the engine throws on invalid
@@ -44,14 +47,30 @@ describe('canonical rhythm engine - algorithmic validation', () => {
     }
   });
 
-  describe('degenerate inputs (reference test_tempo_no_onsets semantics)', () => {
-    it('returns the tempo-prior argmax for silence (reference behavior, not a fabricated default)', () => {
+  describe('degenerate inputs (all-zero onset envelope → throw, never fabricate)', () => {
+    it('throws on silence instead of returning the tempo-prior argmax', () => {
       const silence = generateSilence(SR * 10);
-      // reference feature.tempo(zeros) == prior argmax == 117.4538... at start_bpm=120
-      expect(tempo(silence, { sr: SR })).toBeCloseTo(PRIOR_ARGMAX_BPM, 10);
+      // The prior's argmax (117.4538... at start_bpm=120) is a fabricated
+      // answer when there is zero onset evidence — the honest move is a throw.
+      expect(() => tempo(silence, { sr: SR })).toThrow(
+        'cannot estimate tempo: onset envelope is all zeros (silent or constant input)',
+      );
     });
 
-    it('returns the tempo-prior argmax for a constant signal (verified vs reference 0.11.0)', () => {
+    it('throws on an explicitly all-zero onset envelope', () => {
+      expect(() =>
+        tempo(null, { sr: SR, onsetEnvelope: new Float32Array(512) }),
+      ).toThrow(
+        'cannot estimate tempo: onset envelope is all zeros (silent or constant input)',
+      );
+    });
+
+    it('returns the prior argmax for a constant signal (single t=0 attack IS onset evidence)', () => {
+      // A constant 0.5 signal is not evidence-free: the step from silence at
+      // t=0 produces a real (nonzero) onset-strength frame, so the all-zero
+      // guard must NOT fire. With no periodicity beyond that single attack,
+      // the estimate is the documented prior-dominated argmax (matches the
+      // reference behavior, verified vs 0.11.0).
       const constant = new Float32Array(SR * 10).fill(0.5);
       expect(tempo(constant, { sr: SR })).toBeCloseTo(PRIOR_ARGMAX_BPM, 10);
     });

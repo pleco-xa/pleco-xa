@@ -93,7 +93,7 @@ The complete public API, grouped by task. Click any function for its full signat
 | [`findFirstDownbeat`](/api/functions/findfirstdownbeat/) | Find the first strong downbeat in the track to help align loops to the musical phrasing. |
 | [`fourier_tempogram`](/api/functions/fourier_tempogram/) | Fourier tempogram: the STFT of the onset strength envelope. |
 | [`plp`](/api/functions/plp/) | Predominant Local Pulse (PLP) estimation |
-| [`quickTempo`](/api/functions/quicktempo/) | QUICK TIER — windowed lb-style live tempo estimate. |
+| [`quickTempo`](/api/functions/quicktempo/) | QUICK TIER — windowed live tempo estimate. |
 | [`tempo`](/api/functions/tempo/) | Estimate the global tempo (BPM) with aggregate='mean'. |
 | [`tempoBasedCompress`](/api/functions/tempobasedcompress/) | Tempo-based audio compression — PITCH-PRESERVING time stretch via the phase vocoder. |
 | [`tempogram`](/api/functions/tempogram/) | Local autocorrelation tempogram of the onset strength envelope. |
@@ -119,7 +119,7 @@ The complete public API, grouped by task. Click any function for its full signat
 | --- | --- |
 | [`createFluxAnalyzer`](/api/functions/createfluxanalyzer/) | Create an incremental spectral-flux analyzer. |
 | [`onset_strength`](/api/functions/onset_strength/) | onset_strength() — log-power-mel onset strength envelope. |
-| [`onsetDetect`](/api/functions/onsetdetect/) | onset_detect() — fast spectral flux-based onset detection |
+| [`onsetDetect`](/api/functions/onsetdetect/) | Fast spectral-flux onset detection — returns picked onset times directly. |
 
 ## Pitch & harmony
 

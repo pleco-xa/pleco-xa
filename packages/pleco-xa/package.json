@@ -1,6 +1,6 @@
 {
   "name": "pleco-xa",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "type": "module",
   "description": "Browser-native audio analysis engine: musical timing, BPM/beat tracking, spectral features, and intelligent loop detection",
   "license": "MIT",
@@ -125,7 +125,8 @@
     "build": "rollup -c && rollup -c rollup.subpaths.config.js && (tsc -p tsconfig.build.json || true)",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build && npm run test"
+    "check:types": "node ../../tools/check-types.mjs",
+    "prepublishOnly": "npm run build && npm run test && npm run check:types"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^16.0.1",

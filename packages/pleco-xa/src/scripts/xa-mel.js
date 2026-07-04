@@ -3,8 +3,9 @@
  * Mel-scale frequency analysis for audio processing
  */
 
-import { stft } from './xa-fft.js'
+import { stft_power } from './xa-fft.js'
 import { mfccFromLogMel } from '../feature/dct.js'
+import { debugWarn } from './debug.js'
 
 /**
  * Create Mel filterbank matrix
@@ -201,15 +202,17 @@ export function melspectrogram(
     // Assume S is already in the correct format [freq][time]
     if (power !== 2.0 && power !== 1.0) {
       // Need to adjust power if S is not in expected power format
-      console.warn(
+      debugWarn(
         `Pre-computed S with power=${power} may require manual conversion`,
       )
     }
     power_spec = S
   } else if (y !== null) {
-    // Compute power spectrogram from audio
-    // stft() now returns [freq][time] format
-    const stft_matrix = stft(
+    // Compute power spectrogram from audio on the flat (non-boxed) STFT
+    // path — [freq][time] Float32Array columns, same framing/numerics as
+    // stft() but without materializing ~4 GB of {real, imag} objects on
+    // long signals just to immediately reduce them to magnitudes.
+    power_spec = stft_power(
       y,
       n_fft,
       hop_length,
@@ -217,21 +220,8 @@ export function melspectrogram(
       window,
       center,
       pad_mode,
+      power,
     )
-
-    const n_freq = stft_matrix.length
-    const n_frames = stft_matrix[0] ? stft_matrix[0].length : 0
-
-    // Convert to power spectrogram [freq][time]
-    power_spec = Array(n_freq)
-    for (let f = 0; f < n_freq; f++) {
-      power_spec[f] = new Float32Array(n_frames)
-      for (let t = 0; t < n_frames; t++) {
-        const bin = stft_matrix[f][t]
-        const mag = Math.sqrt(bin.real * bin.real + bin.imag * bin.imag)
-        power_spec[f][t] = Math.pow(mag, power) // Apply power exponent
-      }
-    }
   } else {
     throw new Error('Either y or S must be provided')
   }

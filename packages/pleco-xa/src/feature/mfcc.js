@@ -56,15 +56,16 @@ export function melspectrogram(y = null, options = {}) {
 /**
  * Mel-frequency cepstral coefficients.
  * @param {Float32Array|Array|null} y - time series (or null when S given)
- * @param {Object} options
- * @param {Array|null} options.S - precomputed LOG-power mel spectrogram
+ * @param {Object} [options]
+ * @param {number} [options.sr=22050] - sample rate (forwarded to melspectrogram)
+ * @param {Array|null} [options.S=null] - precomputed LOG-power mel spectrogram
  *   (pass power_to_db(melspectrogram(...)))
- * @param {number} options.n_mfcc - number of coefficients (default 20)
- * @param {number} options.dct_type - only type 2 is implemented
- * @param {string|null} options.norm - DCT normalization: 'ortho' (default) or null
- * @param {number} options.lifter - cepstral liftering parameter (default 0)
- * @param {string|number|null} options.mel_norm - mel filterbank normalization
- *   forwarded to melspectrogram as `norm` (default 'slaney')
+ * @param {number} [options.n_mfcc=20] - number of coefficients
+ * @param {number} [options.dct_type=2] - only type 2 is implemented
+ * @param {string|null} [options.norm='ortho'] - DCT normalization: 'ortho' or null
+ * @param {number} [options.lifter=0] - cepstral liftering parameter
+ * @param {string|number|null} [options.mel_norm='slaney'] - mel filterbank
+ *   normalization forwarded to melspectrogram as `norm`
  * Remaining options forward to melspectrogram (sr, n_fft, hop_length, n_mels, ...).
  * @returns {Array<Float64Array>} [n_mfcc][n_frames]
  */

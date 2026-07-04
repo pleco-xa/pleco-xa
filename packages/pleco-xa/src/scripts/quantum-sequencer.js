@@ -1,5 +1,6 @@
 // Quantum vector-based sequencer
 import { detectLoop } from '../core/index.js';
+import { debugLog } from './debug.js';
 import { applyQuantumOp } from './audio-ops-extended.js';
 import { quantumRhythm } from '../core/vector-rhythm.js';
 import { randomPreset } from './beat-presets.js';
@@ -54,7 +55,7 @@ export function buildQuantumSequence(buffer, opList) {
 export async function playQuantumOps(buffer, ctx, applyLoop, beatMs = 160) {
   let loop = detectLoop(buffer);
   const ops = buildQuantumOpList(128, 4); // 128 steps, 4 preset injections
-  console.log('🌌 Quantum sequence:', ops.join(' '));
+  debugLog('🌌 Quantum sequence:', ops.join(' '));
 
   // Track quantum state for dynamic timing.
   // Tier-2 repair (2026-07-02): the micro-stutter counter is per-invocation
@@ -106,7 +107,7 @@ export async function playQuantumOps(buffer, ctx, applyLoop, beatMs = 160) {
       if (quantumCount > maxQuantumSequence) {
         timing = beatMs * 2; // Longer quantum breathing space
         quantumCount = 0;
-        console.log('🌌 Quantum field stabilized - breaking micro-loop');
+        debugLog('🌌 Quantum field stabilized - breaking micro-loop');
       }
     } else {
       quantumCount = 0;

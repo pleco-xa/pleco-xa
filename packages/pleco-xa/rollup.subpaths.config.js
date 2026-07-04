@@ -5,6 +5,7 @@
 // `import ... from 'pleco-xa'` entry.
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import esbuild from 'rollup-plugin-esbuild'
+import { tsExtensionResolve } from './ts-extension-resolve.mjs'
 
 // subpath -> source entry (mirrors the `export * as <ns>` lines in src/index.js)
 const entries = {
@@ -38,5 +39,5 @@ export default {
     entryFileNames: '[name].js',
     chunkFileNames: 'internal/[name]-[hash].js',
   },
-  plugins: [nodeResolve(), esbuild({ target: 'es2020' })],
+  plugins: [tsExtensionResolve(), nodeResolve(), esbuild({ target: 'es2020' })],
 }
