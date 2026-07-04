@@ -1,6 +1,6 @@
 {
   "name": "pleco-xa",
-  "version": "2.0.0-alpha.0",
+  "version": "2.0.0",
   "type": "module",
   "description": "Browser-native audio analysis engine: musical timing, BPM/beat tracking, spectral features, and intelligent loop detection",
   "license": "MIT",
