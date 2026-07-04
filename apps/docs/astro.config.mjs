@@ -132,6 +132,13 @@ export default defineConfig({
     starlight({
       title: 'Pleco-Xa',
       description: 'Browser-native audio analysis engine — musical timing, spectral features, and intelligent loop detection.',
+      favicon: '/favicon.png',
+      head: [
+        { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' } },
+        { tag: 'meta', attrs: { property: 'og:image', content: 'https://plecoxa.com/brand/banner-dark.jpg' } },
+        { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
+        { tag: 'meta', attrs: { name: 'twitter:image', content: 'https://plecoxa.com/brand/banner-dark.jpg' } },
+      ],
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/pleco-xa/pleco-xa' }],
       plugins: [
         starlightTypeDoc({

@@ -1,4 +1,6 @@
-# pleco-xa
+<p align="center">
+  <a href="https://plecoxa.com"><img src="https://plecoxa.com/brand/banner-dark.jpg" alt="Pleco-Xa" width="720" /></a>
+</p>
 
 [![npm version](https://img.shields.io/npm/v/pleco-xa.svg)](https://www.npmjs.com/package/pleco-xa)
 [![minzipped size](https://img.shields.io/bundlephobia/minzip/pleco-xa.svg)](https://bundlephobia.com/package/pleco-xa)
