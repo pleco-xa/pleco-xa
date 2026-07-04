@@ -116,13 +116,16 @@
   },
   "files": [
     "dist/",
+    "docs/",
+    "llms.txt",
+    "api-manifest.json",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
     "NOTICE"
   ],
   "scripts": {
-    "build": "rollup -c && rollup -c rollup.subpaths.config.js && (tsc -p tsconfig.build.json || true)",
+    "build": "rollup -c && rollup -c rollup.subpaths.config.js && (tsc -p tsconfig.build.json || true) && node ../../tools/generate-llms.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "check:types": "node ../../tools/check-types.mjs",

@@ -92,6 +92,13 @@ the analysis API is `(Float32Array, sampleRate)` everywhere.
 - **Real-time** streaming analyzers and a live tempo tier.
 - **Pure-DSP vocal separation** — no model, no weights, no GPU.
 
+## For AI agents
+
+A machine-readable capability map ships with this package: `llms.txt` (package root) — the
+full function index, per-task routing, contracts, and verified recipes in one
+skim. The complete guides also ship inside the npm package under `docs/`.
+Also served at [plecoxa.com/llms.txt](https://plecoxa.com/llms.txt).
+
 ## Documentation
 
 Full guides, a per-function API reference, and an interactive gallery where every

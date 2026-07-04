@@ -30,6 +30,11 @@ jobs:
       - name: Type gate (packed d.ts must type-check for consumers)
         run: npm run check:types
 
+      - name: Agent capability map is current (llms.txt drift gate)
+        run: |
+          node tools/generate-llms.mjs
+          git diff --exit-code llms.txt
+
       - name: Node import smoke (catches top-level DOM access)
         run: node --input-type=module -e "import('./packages/pleco-xa/dist/pleco-xa.js').then(m => console.log('exports:', Object.keys(m).length))"
 

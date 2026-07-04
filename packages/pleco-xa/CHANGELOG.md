@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.4] — 2026-07-04
 
-Documentation release — no code changes.
+Documentation release — no code changes. This package now documents itself to
+AI agents and humans alike, entirely offline.
+
+### Added
+
+- **`llms.txt` at the package root** — a machine-readable capability map:
+  runtime matrix, the three universal contracts, task→function routing,
+  execution-verified per-function cards, eight verified advanced-MIR recipes,
+  and the full 313-function index. Also served at plecoxa.com/llms.txt.
+- **`api-manifest.json`** — the full export surface as JSON (category, import
+  form, description per function) for tools and agents.
+- **The documentation ships in the tarball** — all guides and the categorized
+  API reference under `docs/`, readable from `node_modules` with no fetch.
 
 ### Changed
 
