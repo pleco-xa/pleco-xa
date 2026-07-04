@@ -741,7 +741,13 @@ export class DJLoopAnalyzer {
     const rms = Math.sqrt(
       audioData.reduce((sum, val) => sum + val * val, 0) / audioData.length,
     )
-    const peak = Math.max(...audioData.map(Math.abs))
+    // stack-safe peak: Math.max(...bigFloat32Array) overflows the call stack
+    // on real-length loops (RangeError), so reduce in a loop instead.
+    let peak = 0
+    for (let i = 0; i < audioData.length; i++) {
+      const a = audioData[i] < 0 ? -audioData[i] : audioData[i]
+      if (a > peak) peak = a
+    }
     const crestFactor = peak / rms
 
     return {
