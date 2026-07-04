@@ -30,7 +30,7 @@ accepts one).
   zero-crossing rate.
 - `feature.pitch_tuning` / `feature.estimate_tuning` — deviation from A440 in
   fractional bins; feeds chroma.
-- `feature.piptrack_peaks` / `feature.logFrequencySpectrum` — parabolic pitch
+- `feature.piptrackPeaks` / `feature.logFrequencySpectrum` — parabolic pitch
   peaks and a log-frequency spectrum (an approximate constant-Q, honestly named —
   it is not a true CQT).
 
@@ -57,5 +57,5 @@ const chroma = feature.chroma_stft(y, { sr })             // [12][n_frames]
 - MFCC deltas: `delta_features` (exported top-level) is a width-9
   Savitzky-Golay slope on interior frames; edges use clamp replication.
 
-See the [API reference](/api-by-category/) for every function's full signature and
+See the [API reference](../api-by-category.md) for every function's full signature and
 per-option defaults.

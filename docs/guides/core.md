@@ -26,7 +26,8 @@ spectrogram is a plain 2-D array you can index directly.
 - `magnitude(spectrum)` / `phase(spectrum)` / `power(spectrum)` /
   `polar_to_complex(mag, phase)` — 1-D helpers over `fft` output.
 - `hann_window(n)` / `hamming_window(n)` / `blackman_window(n)` — periodic
-  (`fftbins=True`) analysis windows.
+  analysis windows (DFT-even — the `fftbins=True` convention in scientific
+  Python).
 - `convert.*` — `hz_to_mel` / `mel_to_hz`, `hz_to_midi` / `midi_to_hz`,
   `note_to_hz` / `hz_to_note`, `amplitude_to_db` / `power_to_db` /
   `db_to_amplitude` / `db_to_power`, plus `frames_to_time` / `time_to_frames`,
@@ -79,4 +80,4 @@ convert.frames_to_time([0, 1, 2], sr, 512) // frame indices -> seconds
   2.0 dB offset leaves a ~3e-4 residual. "Zero at 1 kHz" holds to three
   decimals.
 
-See the [API reference](/api-by-category/) for full signatures and defaults.
+See the [API reference](../api-by-category.md) for full signatures and defaults.

@@ -2,18 +2,35 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>filters/index.js — chroma filterbank Gaussian bumps</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="See the twelve pitch-class filters a chromagram uses to sort frequencies into musical notes." />
+  <title>Chroma filterbank — pitch-class filters · pleco-xa</title>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
-  <h2>filters/index.js — chroma filterbank Gaussian bumps</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Chroma filterbank — pitch-class filters</span>
+</header>
+  <h2>Chroma filterbank — pitch-class filters</h2>
+  <div style="font:12px monospace;color:#888">filters/index.js</div>
   <p style="max-width:80ch">
-    <code>filters.chroma({sr:22050, n_fft:2048})</code> rendered as a 12 × 1025 heatmap
-    (the "chroma filterbank" plot): each row is a pitch class (C at the
-    bottom, base_c grid), x-axis is FFT bin frequency 0 → 11025 Hz. You should see the
-    Gaussian pitch-class bumps repeating each octave and the octave-dominance envelope
-    fading the extremes. Proofs: the pitch class with the most weight at the FFT bin
-    nearest 440 Hz must be 9 (A), and every column's L2 norm must be ≤ 1 + 1e-6
-    (per-bin norm=2 column normalization, then dominance weighting only ever shrinks it).
+    How does a chromagram decide which frequencies count as a C, a C#, or an A?
+    This heatmap shows the answer: twelve rows of frequency filters, one per
+    pitch class, with Gaussian bumps that repeat every octave and an
+    octave-dominance envelope fading the extremes. Technically:
+    <code>filters.chroma({sr:22050, n_fft:2048})</code> is rendered as a
+    12 × 1025 heatmap (each row is a pitch class, C at the bottom, base_c grid;
+    x-axis is FFT bin frequency 0 → 11025 Hz). Proofs: the pitch class with the
+    most weight at the FFT bin nearest 440 Hz must be 9 (A), and every column's
+    L2 norm must be ≤ 1 + 1e-6 (per-bin norm=2 column normalization, then
+    dominance weighting only ever shrinks it).
   </p>
   <div id="badges"></div>
   <div>

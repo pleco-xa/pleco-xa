@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — playback/ops</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Classic tape-style loop tricks like half-speed, reverse, and gap-closing are applied to a test tone that you can play back and inspect." />
+  <title>Playback ops — pure buffer operations · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     button { font: 14px system-ui; margin: 2px; padding: 6px 12px; }
@@ -10,20 +12,34 @@
     canvas { display: block; margin: 6px 0; background: #111; }
     .lbl { color: #999; font: 12px monospace; margin-top: 10px; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
-  <h2>playback/ops — pure buffer ops invariant table</h2>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Playback ops — pure buffer operations</span>
+  </header>
+  <h2>Playback ops — pure buffer operations</h2>
+  <div style="font:12px monospace;color:#888">playback/ops — invariant table</div>
   <p>
-    Same asserts as <code>examples/node/playback-ops.mjs</code> (node-verified,
-    8/8): a 1 s 440 Hz sine with loop {0.25, 0.5} through
+    Classic tape-machine loop moves — half-speed, double-speed, reverse, close
+    the gap — done as pure math on audio buffers you can immediately hear. The
+    waveforms below are drawn at a FIXED samples-per-pixel scale, so the
+    half-speed-stretched loop region (tinted) is visibly twice as wide as the
+    original's, and the audition buttons rebuild the ops with
+    <code>ctx.createBuffer</code> injected as the factory — proving the ops
+    produce genuine AudioBuffers when a browser caller asks for them. Badges
+    run the same asserts as <code>examples/node/playback-ops.mjs</code>
+    (node-verified, 8/8): a 1 s 440 Hz sine with loop {0.25, 0.5} through
     <code>halfSpeedLoop</code> / <code>doubleSpeedQuantzLoop</code> /
     <code>reverseSection</code> / <code>detectGap</code> /
-    <code>closeGapLeft</code>, plus the invalid-loop throw. The waveforms
-    below are drawn at a FIXED samples-per-pixel scale, so the
-    half-speed-stretched loop region (tinted) is visibly twice as wide as the
-    original's. Audition buttons rebuild the ops with
-    <code>ctx.createBuffer</code> injected as the factory — proving the ops
-    produce genuine AudioBuffers when a browser caller asks for them.
+    <code>closeGapLeft</code>, plus the invalid-loop throw.
   </p>
   <div id="badges"></div>
 

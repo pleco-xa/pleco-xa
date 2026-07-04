@@ -1,19 +1,18 @@
 ---
 title: Effects — time-scale, pitch, and silence
-description: pleco-xa's effects namespace — a real phase vocoder plus trim/split, pre-emphasis, remix, time-stretch and pitch-shift, all fixture-gated.
+description: Pleco-Xa's effects namespace — a real phase vocoder plus trim/split, pre-emphasis, remix, time-stretch and pitch-shift, all validated against reference fixtures.
 ---
 
-`effects` is pleco-xa's waveform-processing surface: silence trimming, pre/de-emphasis
+`effects` is Pleco-Xa's waveform-processing surface: silence trimming, pre/de-emphasis
 filtering, interval remixing, and — the centrepiece — a genuine phase vocoder driving
 pitch-preserving time-stretch and duration-preserving pitch-shift. Everything here takes
 a mono `Float32Array` and a sample rate where one is needed, and returns arrays. There are
 no default fallbacks: `time_stretch` and `pitch_shift` either honour their contract or
 throw.
 
-The whole namespace is fixture-gated in CI (`effects.json`,
-`phase_vocoder.json`): `trim`/`split` are exact, `preemphasis`/`deemphasis` to
+The whole namespace was validated against reference fixtures during
+development: `trim`/`split` are exact, `preemphasis`/`deemphasis` to
 5.96e-8, and the phase vocoder to within 1e-3 of the peak at rates 0.5 and 2.0.
-Those tolerances are proven results, enforced on every build.
 
 ## Key functions
 
@@ -32,7 +31,7 @@ All verified against the built barrel (`effects` namespace):
 - **`pitch_shift(y, sr, n_steps, opts)`** → same length as `y`, duration preserved.
 - **`hpss(y, opts)`** / **`harmonic(y, opts)`** / **`percussive(y, opts)`** —
   waveform-level harmonic/percussive separation (returns time-domain signals; the
-  spectrogram-level version lives in [`decompose`](/api-by-category/)).
+  spectrogram-level version lives in [`decompose`](./decompose.md)).
 
 ## Example
 
@@ -69,7 +68,7 @@ const swapped = effects.remix(clean, [
 
 ## API reference
 
-Full signatures and per-option defaults: [effects namespace](/api-by-category/)
-— e.g. [`time_stretch`](/api/pleco-xa/namespaces/effects/functions/time_stretch/),
-[`pitch_shift`](/api/pleco-xa/namespaces/effects/functions/pitch_shift/),
-[`trim`](/api/pleco-xa/namespaces/effects/functions/trim/).
+Full signatures and per-option defaults: [effects namespace](../api-by-category.md)
+— e.g. [`time_stretch`](https://plecoxa.com/api/pleco-xa/namespaces/effects/functions/time_stretch/),
+[`pitch_shift`](https://plecoxa.com/api/pleco-xa/namespaces/effects/functions/pitch_shift/),
+[`trim`](https://plecoxa.com/api/pleco-xa/namespaces/effects/functions/trim/).

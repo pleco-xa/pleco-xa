@@ -23,7 +23,7 @@ consumer's bundle is not.
 
 ## Getting set up
 
-Requires **Node ≥ 22.12** (see `.nvmrc`). Install exactly what's locked:
+Requires **Node ≥ 22.12** (see `engines` in `package.json`). Install exactly what's locked:
 
 ```bash
 npm run setup      # alias for `npm ci` — reproducible workspace install

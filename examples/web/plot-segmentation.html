@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — structure discovery on an AABA form</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Listens to a short A-A-B-A musical clip and automatically finds where the sections begin and end." />
+<title>Structure discovery — AABA form · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -11,11 +13,24 @@
   canvas { display: block; margin: 4px 0; border: 1px solid #333; }
   .note { color: #fc8; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Structure discovery — AABA form</span>
+</header>
 <h1>Structure discovery — AABA form via beat-synced chroma → recurrence + agglomerative</h1>
 <p>
-  A 16 s AABA clip (A = C-major triad texture, B = F♯-major — disjoint pitch
+  Can an algorithm hear song form? This page listens to a 16-second clip built
+  as A-A-B-A and finds the section boundaries on its own — no labels given.
+  Technically, the clip (A = C-major triad texture, B = F♯-major — disjoint pitch
   classes — over a 120 BPM click layer) runs the real-audio pipeline:
   <code>beat_track</code> → <code>feature.chroma_stft</code> →
   <code>sync</code> (beat-synchronous chroma) →

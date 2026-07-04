@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — tutorial quickstart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Detect the beats in a click track, see them marked on the waveform, and play the audio with a click on every detected beat." />
+  <title>Tutorial — the quickstart · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 72ch; }
@@ -10,18 +12,31 @@
     button { font: 14px system-ui; margin: 6px 2px; padding: 6px 12px; }
     #status { color: #999; margin: 8px 0; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Tutorial — the quickstart</span>
+  </header>
   <h2>tutorial — the quickstart: same beats, both runtimes</h2>
   <p>
-    The pinned reference fixture signal (click120 from
-    <code>tempo_beats.json</code>) goes through a 16-bit WAV encode/decode, then
+    Load a click track, find its beats, and hear the result: this page runs
+    pleco-xa's quickstart beat detection, marks every detected beat on the
+    waveform below, and lets you play the audio with a click overlaid on each
+    one. Under the hood, the pinned click120 fixture signal from
+    <code>tempo_beats.json</code> goes through a 16-bit WAV encode/decode, then
     <code>beat_track</code> — tempo and beat frames must EXACTLY equal the
-    reference fixture values (bit-exact reference claim), identical to
+    reference fixture values (bit-exact), identical to
     <code>examples/node/tutorial.mjs</code>. Advanced half:
     <code>effects.hpss → beat_track(percussive) → feature.mfcc + delta</code>,
-    beat-synchronously aggregated. Waveform below shows detected beat markers;
-    Play overlays a click on each detected beat.
+    beat-synchronously aggregated.
   </p>
   <div id="badges"></div>
   <canvas id="wave" width="880" height="140"></canvas>

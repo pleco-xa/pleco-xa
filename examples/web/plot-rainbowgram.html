@@ -2,13 +2,29 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Rainbowgram — phase you can see</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Visualizes the phase of a sound as color: a swept chirp cycles the full color wheel while a perfectly tuned tone holds one constant hue." />
+  <title>Rainbowgram — phase you can see · pleco-xa</title>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Rainbowgram — phase you can see</span>
+</header>
   <h2>Rainbowgram — phase you can see</h2>
   <p style="max-width:95ch">
-    A <em>rainbowgram</em> demo (the NSynth
-    visualization): hue = demodulated phase differential
+    Most spectrograms throw away phase — a <em>rainbowgram</em> (the NSynth
+    visualization) paints it as color. A swept chirp cycles through the whole
+    color wheel while a perfectly in-tune 440 Hz partial holds one constant
+    hue, so tuning drift becomes something you can see at a glance.
+    Technically: hue = demodulated phase differential
     diff(unwrap(∠D − 2πft)), alpha = amplitude_to_db(|D|)/80 + 1 on black.
     Signal: a linear chirp 32 → 1024 Hz plus a steady
     440 Hz partial, at sr 16384 / n_fft 2048 so 440 Hz is EXACTLY bin 55 —

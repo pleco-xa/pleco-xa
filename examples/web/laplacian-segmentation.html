@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — laplacian_segmentation: McFee-Ellis spectral clustering on real structure</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Automatically maps the structure of a song into sections, giving a repeated section the same label even when it returns later." />
+<title>Laplacian segmentation — song structure via spectral clustering · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -16,14 +18,30 @@
   td, th { border: 1px solid #444; padding: 3px 10px; text-align: right; }
   th { color: #9ad; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>laplacian_segmentation — McFee &amp; Ellis (2014) spectral clustering, the REAL method</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Laplacian segmentation — song structure via spectral clustering</span>
+</header>
+<h1>Laplacian segmentation — song structure via spectral clustering</h1>
+<div style="font:12px monospace;color:#888">laplacian_segmentation — McFee &amp; Ellis (2014), the REAL method</div>
 <p>
-  The upgraded sibling of <code>plot-segmentation</code>. That page stops at
-  <code>recurrence + agglomerative</code> (the contiguous, bottom-up Ward slice).
-  This one runs the full spectral-clustering recipe, now that every primitive
-  exists in pleco:
+  This page maps out the structure of a piece of music — which stretches
+  belong together, where the section boundaries fall, and which sections are
+  repeats of each other. Watch for the headline trick: a section that comes
+  back later in the song gets the same color, even across a gap. Technically
+  this is the upgraded sibling of <code>plot-segmentation</code> — that page
+  stops at <code>recurrence + agglomerative</code> (the contiguous, bottom-up
+  Ward slice), while this one runs the full spectral-clustering recipe, now
+  that every primitive exists in pleco:
 </p>
 <p>
   <code>beat_track</code> → beat-synchronous <code>feature.chroma_stft</code> +

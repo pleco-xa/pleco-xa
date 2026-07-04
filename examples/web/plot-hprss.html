@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — HPSS margins</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="A steady tone mixed with sharp clicks is split into its sustained and percussive parts, which you can compare on screen and by ear." />
+  <title>HPSS margins — pull the sine out of the clicks · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 76ch; }
@@ -12,12 +14,26 @@
     table { border-collapse: collapse; font: 13px monospace; margin: 8px 0; }
     td, th { border: 1px solid #333; padding: 3px 8px; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">HPSS margins — pull the sine out of the clicks</span>
+  </header>
   <h2>HPSS margins — pull the sine out of the clicks</h2>
   <p>
-    A sustained 440 Hz sine (harmonic) + 8 Hz click train (percussive), STFT
-    1024/256, <code>decompose.hpss</code> at margins 1/2/4/8. Per-margin
+    HPSS splits a sound into its sustained part and its hits — watch a steady
+    tone go one way and the clicks go the other, then A/B the split by ear.
+    The material: a sustained 440 Hz sine (harmonic) + 8 Hz click train
+    (percussive), STFT 1024/256, <code>decompose.hpss</code> at margins
+    1/2/4/8. Per-margin
     spectrogram rows show mixture / harmonic / percussive — the horizontal
     440 Hz line must live in H, the vertical click stripes in P. Badges assert
     the margin-1 identity max|S−(H+P)| &lt; 1e-5, energy capture (H keeps

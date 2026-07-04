@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — AudioPlayer event contract</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Set a loop on a real drum recording and watch the player's own events prove playback stays inside the loop and resumes exactly where it paused." />
+<title>AudioPlayer — event-contract playback · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 820px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -11,22 +13,36 @@
   button:hover { background: #37474f; }
   #status { font-family: monospace; color: #9ad; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/analysis/AudioPlayer.ts — event-contract player proof</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">AudioPlayer — event-contract playback</span>
+</header>
+<h1>AudioPlayer — event-contract playback</h1>
+<div style="font:12px monospace;color:#888">scripts/analysis/AudioPlayer.ts</div>
 <p>
-  Event-driven contract on the 15 s golden WAV. Badges assert the EVENT
-  payloads, not internal state: (1) <code>setLoop(10, 9999)</code> fires
-  <code>loopchange</code> with end clamped to <code>buffer.duration</code>
-  exactly; (2) during looped playback 200 consecutive
-  <code>timeupdate</code> values all land inside [loop.start, loop.end] —
-  this exercises the 2026-07-02 clock repair (the wall-clock reference now
-  tracks the actual start offset, so even first-cycle values are in bounds);
-  (3) <code>pause()/play()</code> continuity — the clock resumes within 60 ms
-  of the paused position (resume now also continues the AUDIO from the paused
-  position instead of silently restarting the loop); (4) the
-  <code>state</code> getter mirrors the last events. Clamp + state asserts
-  spot-run headless in Node pre-ship.
+  Set a loop on a real drum recording and the player has to keep its promises:
+  playback stays inside the loop region, and pausing then resuming picks up
+  right where you left off. Every badge asserts the EVENT payloads the player
+  emits, not internal state, on the 15 s golden WAV: (1)
+  <code>setLoop(10, 9999)</code> fires <code>loopchange</code> with end
+  clamped to <code>buffer.duration</code> exactly; (2) during looped playback
+  200 consecutive <code>timeupdate</code> values all land inside
+  [loop.start, loop.end] — this exercises the 2026-07-02 clock repair (the
+  wall-clock reference now tracks the actual start offset, so even first-cycle
+  values are in bounds); (3) <code>pause()/play()</code> continuity — the
+  clock resumes within 60 ms of the paused position (resume now also continues
+  the AUDIO from the paused position instead of silently restarting the loop);
+  (4) the <code>state</code> getter mirrors the last events. Clamp + state
+  asserts spot-run headless in Node pre-ship.
 </p>
 <div id="badges"></div>
 <p id="status">press run</p>

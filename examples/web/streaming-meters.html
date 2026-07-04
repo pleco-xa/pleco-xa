@@ -2,17 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — streaming/analyzers: chunk-size invariance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Shows that streaming audio meters give identical readings whether the sound arrives all at once or in random-sized chunks." />
+<title>Streaming meters — chunk-size invariance · pleco-xa</title>
 <style>
   body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
   canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
   code { color: #8fd }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h2>streaming/analyzers — environment-blind streaming meters</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Streaming meters — chunk-size invariance</span>
+</header>
+<h2>Streaming meters — chunk-size invariance</h2>
+<div style="font:12px monospace;color:#888">streaming/analyzers — environment-blind</div>
 <p>
-  The same worker-safe analyzers proven in <code>examples/node/streaming-meters.mjs</code>, run
+  Live meters shouldn't care how the audio arrives: feed them one big buffer or
+  a stream of random-sized chunks, and the readings must come out identical.
+  These are the same worker-safe analyzers proven in
+  <code>examples/node/streaming-meters.mjs</code>, run
   in the browser: a 0.5-amp 440Hz sine is pushed into <code>createRmsMeter</code> monolithically
   and as seeded-random 37&ndash;1999-sample chunks (every RMS within 1% of 0.5/&radic;2, both runs
   bitwise-identical); a 0.05&rarr;0.8 amplitude step at sample 16384 goes into

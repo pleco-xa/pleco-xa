@@ -2,22 +2,38 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — xa-onset: click-train onset detection</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="A steady click track is analyzed to show that every click is detected at the right moment, with each detected onset marked on the energy curve below the waveform." />
+<title>Onset detection — clicks found on time · pleco-xa</title>
 <style>
   body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
   canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
   code { color: #8fd }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h2>xa-onset — onset envelope + detected onsets vs known click positions</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Onset detection — clicks found on time</span>
+</header>
+<h2>Onset detection — clicks found on time</h2>
+<div style="font:12px monospace;color:#888">xa-onset — onset envelope + detected onsets vs known click positions</div>
 <p>
-  A synthetic 10s click train at 120 BPM (20 clicks every 0.5s, sr=22050) is analyzed with
+  Play 20 evenly spaced clicks and a good onset detector should find all 20, each at the moment
+  it actually happened. This page generates that click track, runs the detector, and marks every
+  detected onset as an orange tick on the energy curve below the waveform. Technically: a synthetic
+  10s click train at 120 BPM (20 clicks every 0.5s, sr=22050) is analyzed with
   <code>onset_strength()</code> and <code>onsetDetect()</code>. Proofs: the envelope has exactly
   <code>ceil(len/hop)</code> frames, 19–20 of the 20 clicks are recovered, the median inter-onset
   interval is within one hop (23.2ms) of 0.500s, and every detected onset lands within 100ms
-  (one uncentered n_fft window) of a true click. Orange ticks mark detected onsets on the
-  onset-strength envelope below the waveform. Same asserts as <code>examples/node/xa-onset.mjs</code>.
+  (one uncentered n_fft window) of a true click. Same asserts as <code>examples/node/xa-onset.mjs</code>.
 </p>
 <div id="badges"></div>
 <canvas id="wave" width="820" height="120"></canvas>

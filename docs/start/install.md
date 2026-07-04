@@ -79,7 +79,7 @@ a signal, use one of the decoding entry points:
 
 - **`loadAudioFile(url)`** — fetches and decodes to a real `AudioBuffer` via the
   Web Audio API. Returns `{ audioBuffer, audioContext, arrayBuffer }`. This is
-  the buffer the [`loop`](/guides/loop/) namespace consumes directly.
+  the buffer the [`loop`](../guides/loop.md) namespace consumes directly.
 - **`audioio.load(url, { sr, mono })`** — fetches and decodes to
   `{ y, sr }` (a `Float32Array` and its sample rate), resampling to `sr` if you
   ask. This is the fast path to the `(y, sr)` core.
@@ -122,5 +122,5 @@ the canvas display layer) require a browser.
 
 ## Next steps
 
-With the package installed, head to the [Quickstart](/start/quickstart/) to load
+With the package installed, head to the [Quickstart](./quickstart.mdx) to load
 a clip, track its tempo, and find its loop in a dozen lines.

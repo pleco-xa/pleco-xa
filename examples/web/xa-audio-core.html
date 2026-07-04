@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — xa-audio-core: load → draw → loop</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="A drum beat is loaded, drawn as a waveform, and played on a seamless loop while the page verifies the loop region, playhead, and cache all behave correctly." />
+<title>Audio core — load, draw, loop · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -12,11 +14,26 @@
   canvas { display: block; margin: 10px 0; border: 1px solid #333; }
   #status { font-family: monospace; color: #9ad; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/xa-audio-core.js — demo audio core: load → draw → loop</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Audio core — load, draw, loop</span>
+</header>
+<h1>Audio core — load, draw, loop</h1>
+<div style="font:12px monospace;color:#888">scripts/xa-audio-core.js</div>
 <p>
-  One page exercising all three exports together on the 15 s golden WAV:
+  Load a beat, see its waveform, loop a slice of it — the three basics every
+  audio app needs, working together on one page. Press run and the marked
+  quarter of the track plays on a seamless loop while the page checks itself.
+  Technically it exercises all three exports on the 15 s golden WAV:
   <code>loadAudioFile</code> (with its URL cache), <code>drawWaveform</code>
   (loop overlay {0.25, 0.5}), and <code>initAudioProcessor</code> playing the
   native looped region. Badges: loop duration exactly 0.25 × duration

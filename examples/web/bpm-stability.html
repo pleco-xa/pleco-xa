@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — xa-bpm-algorithm: tempo-stability map tracks a 100→140 BPM jump</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Watch a sliding-window tempo analysis follow a track that jumps from 100 to 140 BPM halfway through." />
+<title>BPM stability map — tracking a tempo jump · pleco-xa</title>
 <style>
   body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
   canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
@@ -10,11 +12,26 @@
   progress { width: 100%; height: 14px }
   #peaks { font: 13px monospace; color: #ffb74d }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h2>xa-bpm-algorithm — windowed tempo-stability map: does it track a 100&rarr;140 BPM jump?</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">BPM stability map — tracking a tempo jump</span>
+</header>
+<h2>BPM stability map — tracking a tempo jump</h2>
+<div style="font:12px monospace;color:#888">xa-bpm-algorithm</div>
 <p>
-  8s of 100 BPM clicks + 8s of 140 BPM clicks run through <code>bpm.analyzeWithProgress(y, sr, 4, 1)</code>.
+  A track that suddenly jumps from 100 to 140 BPM halfway through is a classic trap for tempo
+  detectors. This page runs a sliding-window tempo analysis over exactly that signal and plots
+  whether the estimate follows the jump. Technically: 8s of 100 BPM clicks + 8s of 140 BPM clicks
+  run through <code>bpm.analyzeWithProgress(y, sr, 4, 1)</code>.
   Repairs proven here (2026-07-02): the constrained per-window estimator used to reduce each 4s window
   to ~15 energy points while its BPM search needed lags &ge; ~17, so the loop never executed and every
   window silently echoed the global tempo; it now autocorrelates the raw onset envelope. The global

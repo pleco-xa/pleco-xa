@@ -7,7 +7,7 @@ Detection tells you *where* the loop is. Playback is how you *hear* it. Pleco-Xa
 ships two player classes for different needs, a set of pure buffer operations for
 transforming loop regions, and a live-speed layer for changing playback rate
 mid-flight. Everything here composes with a result from
-[`loop.detect()`](/guides/loop/).
+[`loop.detect()`](./loop.md).
 
 ## Two players
 
@@ -132,8 +132,9 @@ const reversed = playback.reverseSection(audioBuffer, 22579, 116688)
 `detectGap` finds silence common to all channels after the loop and returns a
 sample-indexed `{ start, end, size }` — or `null` when nothing qualifies.
 `closeGapLeft` / `closeGapRight` remove it and give back the rescaled loop end.
-`reverseSection` reverses a range on a *copy*, in contrast to the in-place
-`reverseBufferSection` in the [Play layer](/guides/play/).
+`reverseSection` reverses a range on a *copy* — unlike the
+[Play layer](./play.md)'s `reverse` gesture, which mutates the buffer in
+place.
 
 The `revealHiddenHalf` / `revealFirstHalf` pair swaps which half of a
 half-speed-quantized loop is audible — the mechanism behind the demo's "nudge"
@@ -147,14 +148,22 @@ different pitch behavior:
 ```js
 import { applyLiveHalfSpeed, applyLiveDoubleSpeed, resetLiveSpeed } from 'pleco-xa'
 
-applyLiveHalfSpeed()   // half tempo
-applyLiveDoubleSpeed() // double tempo
-resetLiveSpeed()       // back to 1×
+// Both require the session's context and buffer — they throw without them.
+await applyLiveHalfSpeed({ audioContext: ctx, buffer: audioBuffer })   // half tempo
+await applyLiveDoubleSpeed({
+  audioContext: ctx,
+  buffer: audioBuffer,
+  preservePitch: true, // resample tier — pitch stays put
+})
+await resetLiveSpeed() // back to 1×
 ```
 
-- The **`playbackRate` tier** shifts pitch with speed (the classic turntable
-  effect).
-- The **resample tier** preserves pitch while changing speed.
+The tier is selected by the `preservePitch` option on those same calls:
+
+- The **`playbackRate` tier** (`preservePitch: false`, the default) shifts
+  pitch with speed (the classic turntable effect).
+- The **resample tier** (`preservePitch: true`) preserves pitch while changing
+  speed.
 
 These operate through a session singleton, `liveSpeedController`, which
 `init()` re-binds per session. It currently loops the whole track (its internal
@@ -163,6 +172,6 @@ loop stub returns the full range) — pair it with `loop.detect()` bounds and a
 
 ## See it live
 
-The [Gallery](/gallery/) includes the live loop-control demo where the half /
+The [Gallery](https://plecoxa.com/gallery/) includes the live loop-control demo where the half /
 double / move-forward buttons drive a `LoopController` and re-trigger a
 `LoopPlayer` on each change — the same wiring described here.

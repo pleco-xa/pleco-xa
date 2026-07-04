@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa · core/demoSequences.js — signature choreography</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Watch a fixed 15-step loop performance halve, double, reverse, and shift a loop over a synthesized riff, identically every run." />
+  <title>Demo sequences — signature choreography · pleco-xa</title>
   <style>
     body { font: 14px/1.5 system-ui, sans-serif; background: #181818; color: #ddd; max-width: 920px; margin: 2em auto; padding: 0 1em; }
     h1 { font-size: 18px; }
@@ -12,10 +14,25 @@
     code { color: #9ccc65; }
     #op-log { font: 12px monospace; color: #ffb74d; margin-left: 10px; }
   </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-  <h1>core/demoSequences.js — Signature Choreography (deterministic)</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Demo sequences — signature choreography</span>
+</header>
+  <h1>Demo sequences — signature choreography</h1>
+  <div style="font:12px monospace;color:#888">core/demoSequences.js</div>
   <p>
+    Press <em>Play signature</em> and a 15-step loop performance runs itself: the loop halves,
+    doubles, reverses, and jumps forward over a synthesized 4 s riff while the overlay tracks
+    every move — the same choreography every run, with no randomness. Technically,
     <code>signatureDemo</code> is a fixed 15-step glitch choreography with <strong>no rng</strong>:
     every run emits the same op log and, because the ops are pure integer arithmetic on the loop
     descriptor (halve / double / move-forward, reverses don't touch bounds), the final loop bounds
@@ -23,8 +40,7 @@
     <code>{2q, N}</code> where <code>q = ⌊⌊⌊N/2⌋/2⌋/2⌋</code>
     (the last "move forward" is always a no-op — the loop already reaches the buffer end).
     Badge 1 asserts the op log equals the canonical sequence; badge 2 asserts the executed final
-    bounds equal the closed-form expectation. Press <em>Play signature</em> to hear the choreography
-    audition each step against a synthesized 4 s riff while the overlay tracks the moving loop.
+    bounds equal the closed-form expectation.
   </p>
   <div id="badges"></div>
   <canvas id="wave" width="880" height="160"></canvas>

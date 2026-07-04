@@ -9,8 +9,16 @@ Two kinds:
 - **`web/`** — browser pages (waveforms, spectrograms, audio playback, PASS/FAIL badges)
 - **`node/`** — terminal scripts that print a proof table and exit `0` on pass, non-zero on fail
 
-You do **not** need to build or install anything if `packages/pleco-xa/dist/` is
-already present (it ships in the repo). If it's missing, see [Rebuilding](#rebuilding).
+The demos load the library from `packages/pleco-xa/dist/`, which is **build
+output** — it is not checked into the repo. On a fresh clone, build it first:
+
+```bash
+npm install
+npm run demos:build    # builds the library, then serves the demos
+```
+
+If you've already built `dist/`, skip straight to the options below. See
+[Rebuilding](#rebuilding) whenever it's missing or stale.
 
 ---
 

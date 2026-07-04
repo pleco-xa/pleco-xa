@@ -1,18 +1,19 @@
 ---
 title: Decompose — HPSS, masks, and vocal separation
-description: pleco-xa's decompose namespace — one canonical median-filter HPSS, soft masking, nearest-neighbour filtering, and the pure-DSP vocal-separation flagship.
+description: Pleco-Xa's decompose namespace — one canonical median-filter HPSS, soft masking, nearest-neighbour filtering, and the pure-DSP vocal-separation flagship.
 ---
 
-`decompose` operates on spectrograms. It carries pleco-xa's single canonical
+`decompose` operates on spectrograms. It carries Pleco-Xa's single canonical
 harmonic/percussive source separation (HPSS), the soft-mask primitive underneath it,
-nearest-neighbour filtering for REPET-SIM-style repetition removal, and pleco's own
+nearest-neighbour filtering for REPET-SIM-style repetition removal, and Pleco-Xa's own
 **vocal-separation flagship** — a multi-scale spectral fingerprinting pipeline that pulls a
 vocal out of a mix using nothing but DSP. There is no machine-learning model anywhere in
 this namespace: zero weights, zero inference runtime, no ONNX, just median filters, masks,
 and gradient-optimised EQ curves.
 
-The HPSS/softmask core is fixture-gated in CI (`hpss.json`, including
-`margin=2`); harmonic + percussive ≈ the input at `margin=1`.
+The HPSS/softmask core was validated against reference fixtures during
+development (including `margin=2`); harmonic + percussive ≈ the input at
+`margin=1`.
 
 ## Key functions
 
@@ -34,7 +35,7 @@ Verified against the built barrel (`decompose` namespace):
   the reconstructed vocal.
 
 > **Two HPSS entry points, on purpose.** `decompose.hpss(S, …)` takes a **spectrogram** and
-> returns spectrograms. [`effects.hpss(y, …)`](/api/pleco-xa/namespaces/effects/functions/hpss/)
+> returns spectrograms. [`effects.hpss(y, …)`](https://plecoxa.com/api/pleco-xa/namespaces/effects/functions/hpss/)
 > takes a **waveform**, runs this same core, and inverts back to time-domain signals.
 
 ## Example
@@ -58,26 +59,27 @@ const foreground = decompose.nn_filter(S, {
 
 ## Notes
 
-- **`hpss` default is masked components, not raw median filters.** The legacy pleco copies
-  returned the bare median-filtered spectrograms; this canonical version applies the soft
-  masks so the components sum back to the input. `kernel_size` default is 31; margins must be
+- **`hpss` default is masked components, not raw median filters.** The default applies the
+  soft masks so the components sum back to the input — you get separated layers, not the
+  bare median-filtered spectrograms. `kernel_size` default is 31; margins must be
   `>= 1`.
 - **Vocal separation input only needs `{ getChannelData, sampleRate }`** — it runs in Node
-  against a structural mock, no browser required. Note `optimizeEqCurves`/`reconstructVocal`
-  print console banners as they iterate; the flagship's exact multi-stage wiring
+  against a structural mock, no browser required. `optimizeEqCurves`/`reconstructVocal`
+  report progress through the library's debug logger, silent unless you call
+  `setDebug(true)`; the flagship's exact multi-stage wiring
   (fingerprints → mixture magnitude → EQ curves → reconstruction) is shown end-to-end in the
-  vocal-separation demo.
+  [vocal-separation demo](https://plecoxa.com/demos/vocal-separation.html).
 - **`nn_filter` builds its recurrence graph from
-  [`segment.recurrenceMatrix`](/api/pleco-xa/namespaces/segment/functions/recurrencematrix/)**;
+  [`segment.recurrenceMatrix`](https://plecoxa.com/api/pleco-xa/namespaces/segment/functions/recurrencematrix/)**;
   frames with no neighbours pass through unchanged. Supported `aggregate` values are `'mean'`,
   `'median'`, `'average'` (weighted by the graph), or a custom `(values, weights) => number`.
-- **NMF decomposition is deliberately out of scope** (the merged marathon NMF converges
-  incorrectly and is not exported) — see the exceptions ledger.
+- **NMF decomposition is deliberately out of scope** — the one candidate implementation
+  converged incorrectly, so it was left unexported rather than shipping a wrong result.
 
 ## API reference
 
-Full signatures: [decompose namespace](/api-by-category/) — e.g.
-[`hpss`](/api/pleco-xa/namespaces/decompose/functions/hpss/),
-[`softmask`](/api/pleco-xa/namespaces/decompose/functions/softmask/),
-[`nn_filter`](/api/pleco-xa/namespaces/decompose/functions/nn_filter/),
-[`processAudioToFingerprints`](/api/pleco-xa/namespaces/decompose/functions/processaudiotofingerprints/).
+Full signatures: [decompose namespace](../api-by-category.md) — e.g.
+[`hpss`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/hpss/),
+[`softmask`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/softmask/),
+[`nn_filter`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/nn_filter/),
+[`processAudioToFingerprints`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/processaudiotofingerprints/).

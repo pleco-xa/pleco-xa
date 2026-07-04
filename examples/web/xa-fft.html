@@ -2,24 +2,42 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — xa-fft: FFT/STFT known-tone + spectrogram</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="A pure 440 Hz tone is analyzed with FFT and STFT, producing a spectrogram with a single bright line exactly where the tone should be." />
+<title>FFT &amp; STFT — known-tone spectrogram · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
   code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
   canvas { display: block; margin: 12px 0; border: 1px solid #333; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/xa-fft.js — FFT/STFT known-tone proof</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">FFT &amp; STFT — known-tone spectrogram</span>
+</header>
+<h1>FFT &amp; STFT — known-tone spectrogram</h1>
+<div style="font:12px monospace;color:#888">scripts/xa-fft.js</div>
 <p>
-  A 440 Hz sine at sr=8192 with N=8192 makes bin index equal Hz exactly, so
-  the <code>fft()</code> peak bin must be 440 with zero tolerance.
-  <code>ifft(fft([1,2,3,4]))</code> must return 1,2,3,4 exactly.
-  The <code>stft(1024/256)</code> magnitude spectrogram below must show one
-  horizontal line at bin 55 (440 Hz at 8 Hz/bin), and <code>istft()</code>
-  must reconstruct the interior of the signal to maxErr &lt; 1e-4.
-  Same asserts run headless in <code>examples/node/xa-fft.mjs</code>.
+  Feed a pure 440 Hz tone into the analyzer and the spectrogram below should
+  show exactly one bright horizontal line — at 440 Hz and nowhere else.
+  Because the tone's frequency is known in advance, every number the FFT and
+  STFT report can be checked against the truth. Technically: at sr=8192 with
+  N=8192, bin index equals Hz exactly, so the <code>fft()</code> peak bin must
+  be 440 with zero tolerance; <code>ifft(fft([1,2,3,4]))</code> must return
+  1,2,3,4 exactly; the <code>stft(1024/256)</code> magnitude spectrogram must
+  show one horizontal line at bin 55 (440 Hz at 8 Hz/bin); and
+  <code>istft()</code> must reconstruct the interior of the signal to
+  maxErr &lt; 1e-4. Same asserts run headless in
+  <code>examples/node/xa-fft.mjs</code>.
 </p>
 <div id="badges"></div>
 <canvas id="spec" width="720" height="200"></canvas>

@@ -2,18 +2,35 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>feature/chroma.js — C-major arpeggio chromagram</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Play a C-major arpeggio and watch the chromagram light up one pitch-class row per note." />
+  <title>Chromagram — C-major arpeggio · pleco-xa</title>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
-  <h2>feature/chroma.js — C-major arpeggio chromagram</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Chromagram — C-major arpeggio</span>
+</header>
+  <h2>Chromagram — C-major arpeggio</h2>
+  <div style="font:12px monospace;color:#888">feature/chroma.js</div>
   <p style="max-width:90ch">
-    A C4–E4–G4–C5 arpeggio (261.63 / 329.63 / 392.00 / 523.25 Hz, 0.5 s each) at
-    sr=22050 through <code>feature.chroma_stft</code> with tuning auto-estimated
-    (piptrack parabolic interpolation → pitch_tuning histogram — the standard
-    tuning-estimation path). Each note must light its own pitch-class row: per-segment argmax must be
-    [0, 4, 7, 0] = [C, E, G, C], and <code>estimate_tuning</code> on these
-    A440-derived tones must be within 0.05 chroma bins of 0. Numeric asserts were
-    node-verified against dist before this page was written ([0,4,7,0], tuning −0.040).
+    Play a C-major arpeggio — C, E, G, then C an octave up — and the chromagram
+    should light up exactly one pitch-class row per note; the play button lets
+    you hear the very audio being analyzed. Technically: a C4–E4–G4–C5 arpeggio
+    (261.63 / 329.63 / 392.00 / 523.25 Hz, 0.5 s each) at sr=22050 runs through
+    <code>feature.chroma_stft</code> with tuning auto-estimated (piptrack
+    parabolic interpolation → pitch_tuning histogram — the standard
+    tuning-estimation path). Per-segment argmax must be [0, 4, 7, 0] =
+    [C, E, G, C], and <code>estimate_tuning</code> on these A440-derived tones
+    must be within 0.05 chroma bins of 0. Numeric asserts were node-verified
+    against dist before this page was written ([0,4,7,0], tuning −0.040).
   </p>
   <div id="badges"></div>
   <p><button id="play">▶ play arpeggio</button></p>

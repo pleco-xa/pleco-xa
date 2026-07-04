@@ -14,7 +14,7 @@ See CONTRIBUTING.md for the full guide.
 - [ ] `npm run lint` passes
 - [ ] `npm test` passes
 - [ ] `npm run build:lib` succeeds
-- [ ] Numerical changes are backed by a fixture in `tools/parity/` (or N/A)
+- [ ] Numerical changes are backed by a fixture in `tools/goldens/` (or N/A)
 
 ## Notes for reviewers
 

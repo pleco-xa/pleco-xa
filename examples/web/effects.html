@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — effects: trim/split/preemph/stretch/shift/hpss/remix</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Runs a test tone through trim, split, time-stretch, pitch-shift, and remix effects that you can hear with one click." />
+<title>Effects — trim, split, stretch, shift, remix · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -11,19 +13,35 @@
   button:hover { background: #37474f; }
   canvas { display: block; margin: 10px 0; border: 1px solid #333; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>effects/index.js — effects on a known signal</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Effects — trim, split, stretch, shift, remix</span>
+</header>
+<h1>Effects — trim, split, stretch, shift, remix</h1>
+<div style="font:12px monospace;color:#888">effects/index.js</div>
 <p>
-  2 s at 22050 Hz: silence + a 1 s 440 Hz burst carrying 4 clicks + silence
-  (burst edges exactly [11025, 33075]). Badges mirror
-  <code>examples/node/effects.mjs</code>: exact centered-frame trim/split
-  golden [10240, 34304] with enclosure, preemphasis→deemphasis round-trip,
-  exact time_stretch lengths with pitch preserved, pitch_shift +12 → 880 Hz,
-  waveform-level HPSS 440 Hz-bin dominance, and remix reversing the burst
-  halves (bit-exact at <code>align_zeros: false</code>). The waveform shows
-  the trim edges (gold) around the burst; buttons audition original vs
-  stretched vs shifted.
+  One test signal, run through the classic sampler moves: trim away the
+  silence, stretch it to double speed without changing its pitch, shift it up
+  an octave without changing its length, split the tone apart from the
+  clicks, and swap the two halves — use the buttons to audition original vs
+  stretched vs shifted. Technically the signal is 2 s at 22050 Hz: silence +
+  a 1 s 440 Hz burst carrying 4 clicks + silence (burst edges exactly
+  [11025, 33075]). Badges mirror <code>examples/node/effects.mjs</code>:
+  exact centered-frame trim/split golden [10240, 34304] with enclosure,
+  preemphasis→deemphasis round-trip, exact time_stretch lengths with pitch
+  preserved, pitch_shift +12 → 880 Hz, waveform-level HPSS 440 Hz-bin
+  dominance, and remix reversing the burst halves (bit-exact at
+  <code>align_zeros: false</code>). The waveform shows the trim edges (gold)
+  around the burst.
 </p>
 <div id="badges"></div>
 <canvas id="wave" width="820" height="120"></canvas>

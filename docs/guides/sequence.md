@@ -1,14 +1,13 @@
 ---
 title: Sequence — DTW, RQA, Viterbi, and transitions
-description: pleco-xa's sequence namespace — bit-exact dynamic time warping, recurrence quantification, interval/event matching, Viterbi decoding, and transition-matrix constructors.
+description: Pleco-Xa's sequence namespace — bit-exact dynamic time warping, recurrence quantification, interval/event matching, Viterbi decoding, and transition-matrix constructors.
 ---
 
-`sequence` is pleco-xa's alignment and decoding layer: dynamic time warping (DTW),
+`sequence` is Pleco-Xa's alignment and decoding layer: dynamic time warping (DTW),
 recurrence quantification analysis (RQA), interval/event matching, Viterbi decoding, and the
 transition-matrix constructors that feed it. DTW is the headline — its cumulative cost is
-numerically exact and its warping path is fixture-gated (`dtw_segment.json`,
-case 1). RQA is fixture-gated too (`rqa.json`), and the Viterbi family plus transition
-constructors are gated by `sequence_extra.json`.
+numerically exact and its warping path was verified against reference fixtures during
+development, as were RQA, the Viterbi family, and the transition constructors.
 
 ## Key functions
 
@@ -56,15 +55,15 @@ const path = sequence.viterbi_discriminative(prob, trans) // prob: [state][frame
   error text says "strictly positive"; the check accepts 0), and `path` may be empty when no
   positive alignment exists.
 - **`transition_cycle(n, p)` puts the self-transition `p` on the diagonal** and `1 - p` one
-  step forward (a prior copy had this inverted). `transition_local` runs a
+  step forward. `transition_local` runs a
   `get_window → pad_center → roll` pipeline for both `'triangle'` and `'ones'` windows.
-- **`viterbi_discriminative` divides the posterior by the marginal prior** (an older pleco
-  copy multiplied, inverting the correction for any non-uniform `p_state`).
+- **`viterbi_discriminative` divides the posterior by the marginal prior** — the Bayes
+  correction that matters whenever `p_state` is non-uniform.
 
 ## API reference
 
-Full signatures: [sequence namespace](/api-by-category/) — e.g.
-[`dtw`](/api/pleco-xa/namespaces/sequence/functions/dtw/),
-[`rqa`](/api/functions/rqa/),
-[`viterbi`](/api/pleco-xa/namespaces/sequence/functions/viterbi/),
-[`transition_loop`](/api/pleco-xa/namespaces/sequence/functions/transition_loop/).
+Full signatures: [sequence namespace](../api-by-category.md) — e.g.
+[`dtw`](https://plecoxa.com/api/pleco-xa/namespaces/sequence/functions/dtw/),
+[`rqa`](https://plecoxa.com/api/functions/rqa/),
+[`viterbi`](https://plecoxa.com/api/pleco-xa/namespaces/sequence/functions/viterbi/),
+[`transition_loop`](https://plecoxa.com/api/pleco-xa/namespaces/sequence/functions/transition_loop/).

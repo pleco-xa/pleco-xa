@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — xa-advanced: Griffin-Lim reconstruction A/B</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Audio is rebuilt from only a spectrogram's magnitudes using Griffin-Lim, and you can compare the reconstruction against the original chord by ear." />
+<title>Griffin-Lim — rebuild audio from a spectrogram · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -12,18 +14,33 @@
   button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 6px 12px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #eee; cursor: pointer; }
   button:hover { background: #37474f; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/xa-advanced.js — Griffin-Lim reconstruction A/B (post-repair)</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Griffin-Lim — rebuild audio from a spectrogram</span>
+</header>
+<h1>Griffin-Lim — rebuild audio from a spectrogram</h1>
+<div style="font:12px monospace;color:#888">scripts/xa-advanced.js — reconstruction A/B</div>
 <p>
-  A 440 + 660 Hz chord's <code>|STFT(1024, 256)|</code> goes through
-  <code>griffinlim(32)</code> with deterministic zero-phase init. Before the
-  repair this returned <b>one sample</b> (istft arg-shift put
-  <code>center=true</code> into <code>length</code>). Badges mirror
-  <code>examples/node/xa-advanced.mjs</code>: audio-length output, strictly
-  decreasing spectral convergence over iterations 1–8, &lt;10% relative L2
-  magnitude error after 32 iterations, and an FFT-peak pitch within 1% of
-  440 Hz. A/B the audio yourself — phase is invented, pitch must survive.
+  A spectrogram only stores how loud each frequency is — the phase that makes
+  it playable audio is thrown away. Griffin-Lim invents a plausible phase and
+  rebuilds sound from the magnitudes alone: A/B the original chord against the
+  reconstruction and hear that the pitch survives. Technically, a 440 + 660 Hz
+  chord's <code>|STFT(1024, 256)|</code> goes through <code>griffinlim(32)</code>
+  with deterministic zero-phase init (before a repair this returned
+  <b>one sample</b> — an istft arg-shift put <code>center=true</code> into
+  <code>length</code>). Badges mirror <code>examples/node/xa-advanced.mjs</code>:
+  audio-length output, strictly decreasing spectral convergence over
+  iterations 1–8, &lt;10% relative L2 magnitude error after 32 iterations, and
+  an FFT-peak pitch within 1% of 440 Hz.
 </p>
 <div id="badges"></div>
 <div>

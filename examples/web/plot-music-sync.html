@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Music sync — align two performances via DTW</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Two takes of the same musical phrase, one slowed down, are lined up automatically, and the alignment is checked against the known speed change." />
+  <title>Music sync — align two performances via DTW · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #181818; color: #ddd; margin: 20px; }
     p { max-width: 92ch; }
@@ -13,8 +15,19 @@
     button { font: 13px system-ui; padding: 6px 12px; margin-right: 8px; }
     code { color: #b5cea8; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Music sync — align two performances via DTW</span>
+  </header>
   <h2>Music sync — DTW aligns a performance with its 1.25× time-stretched twin</h2>
   <p>
     The music-sync recipe aligns a slow and a fast recording of the

@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — decompose: HPSS spectrogram triptych</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Watch a steady tone and a train of clicks get pulled apart into separate harmonic and percussive spectrograms." />
+<title>HPSS — harmonic/percussive separation · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -10,14 +12,30 @@
   code { background: #2a2a2a; padding: 1px 5px; border-radius: 4px; }
   canvas { display: block; margin: 4px 0; border: 1px solid #333; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>decompose/index.js — HPSS triptych: sine + click train separates cleanly</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">HPSS — harmonic/percussive separation</span>
+</header>
+<h1>HPSS — harmonic/percussive separation</h1>
+<div style="font:12px monospace;color:#888">decompose/index.js</div>
 <p>
-  1 s of 440 Hz sine + 10 broadband clicks → <code>stft(1024, 256)</code> →
-  magnitude → <code>hpss()</code>. The horizontal 440 Hz line must land in the
-  harmonic panel, the vertical click stripes in the percussive panel. Badges
-  mirror <code>examples/node/decompose-hpss.mjs</code>: 440 Hz-bin dominance,
+  Mix a steady tone with a train of drum-like clicks and HPSS should pull them
+  apart: the sustained tone lands in the harmonic panel, the clicks in the
+  percussive panel. The three spectrograms below show the mixture and the two
+  separated halves. Technically: 1 s of 440 Hz sine + 10 broadband clicks →
+  <code>stft(1024, 256)</code> → magnitude → <code>hpss()</code>; the
+  horizontal 440 Hz line must land in the harmonic panel, the vertical click
+  stripes in the percussive panel. Badges mirror
+  <code>examples/node/decompose-hpss.mjs</code>: 440 Hz-bin dominance,
   click-column dominance, margin=1 complementarity (H + P == S per bin),
   masks summing to exactly 1, and the power=∞ strict 0/1 hard mask.
 </p>

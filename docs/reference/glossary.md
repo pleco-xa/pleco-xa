@@ -4,7 +4,7 @@ description: Short definitions of the audio and signal-processing terms used acr
 ---
 
 Compact definitions for the domain terms that recur across the
-[guides](/guides/loop/). Each is scoped to how Pleco-Xa uses it.
+[guides](../guides/index.md). Each is scoped to how Pleco-Xa uses it.
 
 **STFT (Short-Time Fourier Transform)**
 : The audio split into short overlapping frames, each transformed to the
@@ -84,7 +84,7 @@ primitives.
 **Loop point**
 : The sample-accurate start and end of a region that repeats seamlessly. Finding
 them — with an honest confidence and clean, click-free boundaries — is
-Pleco-Xa's signature capability. See the [Loop guide](/guides/loop/).
+Pleco-Xa's signature capability. See the [Loop guide](../guides/loop.md).
 
 **Normalized cross-correlation (NCC)**
 : A similarity score in `[-1, 1]` between two signals after removing their means

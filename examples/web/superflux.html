@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — superflux vibrato immunity</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Two onset detectors listen to the same four vibrato notes: the standard one is fooled by the wobble while SuperFlux fires once per note." />
+  <title>SuperFlux — vibrato-immune onset detection · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 72ch; }
@@ -10,11 +12,25 @@
     .lbl { color: #999; font-size: 12px; margin-bottom: 10px; }
     button { font: 14px system-ui; margin: 6px 2px; padding: 6px 12px; }
   </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">SuperFlux — vibrato-immune onset detection</span>
+</header>
   <h2>SuperFlux vs vanilla flux — vibrato immunity</h2>
   <p>
-    Four vibrato notes (±30 cents at 6 Hz) at known onsets, analyzed at a
+    Vibrato fools simple onset detectors — the pitch wobble reads as new notes.
+    SuperFlux is built to ignore it, firing once per note where the default
+    detector fires extra.
+    The test: four vibrato notes (±30 cents at 6 Hz) at known onsets, analyzed at a
     ~5 ms hop. Both onset-strength functions are peak-picked
     with identical parameters: superflux (lag 2, max_size 3, 138 mels)
     must fire exactly 4 times on the true onsets while the default ODF fires

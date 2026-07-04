@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — xa-fx: FX audition with sample-exact badges</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Three audio effects are applied to the detected loop of a real drum beat, with buttons to hear the original and processed loops side by side." />
+<title>FX audition — sample-exact effects · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -12,12 +14,28 @@
   button:hover { background: #37474f; }
   canvas { display: block; margin: 6px 0; border: 1px solid #333; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>lib/effects/xa-fx.js — FX audition with sample-exact badges</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">FX audition — sample-exact effects</span>
+</header>
+<h1>FX audition — sample-exact effects</h1>
+<div style="font:12px monospace;color:#888">lib/effects/xa-fx.js</div>
 <p>
-  Loads a golden WAV, takes the loop region from <code>loop.detect</code>, and
-  runs each effect through <code>applyQuantumOp</code> on a fresh copy.
+  Stutter, fractal reverse, and phaser — three effects applied to the detected
+  loop of a real drum beat, each with buttons to A/B the original loop against
+  the processed version. Every effect is verified down to the individual
+  sample, not just by ear. Technically the page loads a golden WAV, takes the
+  loop region from <code>loop.detect</code>, and runs each effect through
+  <code>applyQuantumOp</code> on a fresh copy.
   Badges are sample-exact: STUTTER must write the first-10 ms slice verbatim at
   <code>start + k·span</code> (k=0..3); FRACTAL must equal a manual reverse of
   the loop's first half with the rest untouched; PHASE must differ inside the

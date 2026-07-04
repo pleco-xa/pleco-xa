@@ -3,111 +3,111 @@ title: Gallery
 description: Fifty live, in-browser demos of pleco-xa — every one runs the real npm bundle on real audio, no server, no install — everything computes in your browser. Click any demo to open it full-page.
 ---
 
-import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
+import DemoCard from '../../../components/DemoCard.astro'
 
 **Fifty live demos.** Every card opens the actual demo full-page — it loads the same `pleco-xa` bundle you'd `npm install`, points it at real audio, and computes in your browser. Nothing is pre-rendered or faked; each demo asserts real results with pass/fail badges.
 
 ## Loop detection & DJ
 
-<CardGrid>
-  <LinkCard title="Loop detection" href="/demos/loop-detect.html" description="loop.detect() strategy shootout" />
-  <LinkCard title="Recurrence loop matrix" href="/demos/loop-recurrence.html" description="recurrence matrix loop detection" />
-  <LinkCard title="DJ crate analyzer" href="/demos/dj-loop-analyzer.html" description="DJ crate analyzer" />
-  <LinkCard title="Loop player" href="/demos/loop-player.html" description="LoopPlayer" />
-  <LinkCard title="Loop buffer builder" href="/demos/audio-utils.html" description="audio-utils: loop buffer builder" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Loop detection" href="/demos/loop-detect.html" thumb="/gallery-thumbs/loop-detect.png" desc="loop.detect() strategy shootout" />
+  <DemoCard title="Recurrence loop matrix" href="/demos/loop-recurrence.html" thumb="/gallery-thumbs/loop-recurrence.png" desc="recurrence matrix loop detection" />
+  <DemoCard title="DJ crate analyzer" href="/demos/dj-loop-analyzer.html" thumb="/gallery-thumbs/dj-loop-analyzer.png" desc="DJ crate analyzer" />
+  <DemoCard title="Loop player" href="/demos/loop-player.html" thumb="/gallery-thumbs/loop-player.png" desc="LoopPlayer" />
+  <DemoCard title="Loop buffer builder" href="/demos/audio-utils.html" thumb="/gallery-thumbs/audio-utils.png" desc="audio-utils: loop buffer builder" />
+</div>
 
 ## Vocal separation & decomposition
 
-<CardGrid>
-  <LinkCard title="Vocal separation (flagship)" href="/demos/vocal-separation.html" description="FLAGSHIP: multi-scale fingerprint vocal separation" />
-  <LinkCard title="REPET-SIM vs fingerprint" href="/demos/plot-vocal-separation.html" description="REPET-SIM vs fingerprint separation on a real mix" />
-  <LinkCard title="Vocal sep on real stems" href="/demos/vocal-separation-real.html" description="vocal separation on REAL Orphans stems (REPET-SIM vs fingerprint)" />
-  <LinkCard title="HPSS decomposition" href="/demos/decompose-hpss.html" description="decompose: HPSS spectrogram triptych" />
-  <LinkCard title="HPSS margins" href="/demos/plot-hprss.html" description="HPSS margins" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Vocal separation (flagship)" href="/demos/vocal-separation.html" thumb="/gallery-thumbs/vocal-separation.png" desc="FLAGSHIP: multi-scale fingerprint vocal separation" />
+  <DemoCard title="REPET-SIM vs fingerprint" href="/demos/plot-vocal-separation.html" thumb="/gallery-thumbs/plot-vocal-separation.png" desc="REPET-SIM vs fingerprint separation on a real mix" />
+  <DemoCard title="Vocal sep on real stems" href="/demos/vocal-separation-real.html" thumb="/gallery-thumbs/vocal-separation-real.png" desc="vocal separation on REAL Orphans stems (REPET-SIM vs fingerprint)" />
+  <DemoCard title="HPSS decomposition" href="/demos/decompose-hpss.html" thumb="/gallery-thumbs/decompose-hpss.png" desc="decompose: HPSS spectrogram triptych" />
+  <DemoCard title="HPSS margins" href="/demos/plot-hprss.html" thumb="/gallery-thumbs/plot-hprss.png" desc="HPSS margins" />
+</div>
 
 ## Rhythm & tempo
 
-<CardGrid>
-  <LinkCard title="Beat tracking" href="/demos/beat-tracker.html" description="xa-beat-tracker: click train in, beat grid out" />
-  <LinkCard title="Beats through a tempo change" href="/demos/plot-dynamic-beat.html" description="plot-dynamic-beat: beat tracking through a tempo change" />
-  <LinkCard title="Tempo-stability map" href="/demos/bpm-stability.html" description="xa-bpm-algorithm: tempo-stability map tracks a 100→140 BPM jump" />
-  <LinkCard title="Downbeat detection" href="/demos/downbeat.html" description="xa-downbeat: find beat 1 of an accent-shifted 4/4 pattern" />
-  <LinkCard title="Tempogram heatmap" href="/demos/xa-tempogram.html" description="scripts/xa-tempogram.js" />
-  <LinkCard title="Onset detection" href="/demos/xa-onset.html" description="xa-onset: click-train onset detection" />
-  <LinkCard title="SuperFlux (vibrato-immune)" href="/demos/superflux.html" description="superflux vibrato immunity" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Beat tracking" href="/demos/beat-tracker.html" thumb="/gallery-thumbs/beat-tracker.png" desc="xa-beat-tracker: click train in, beat grid out" />
+  <DemoCard title="Beats through a tempo change" href="/demos/plot-dynamic-beat.html" thumb="/gallery-thumbs/plot-dynamic-beat.png" desc="plot-dynamic-beat: beat tracking through a tempo change" />
+  <DemoCard title="Tempo-stability map" href="/demos/bpm-stability.html" thumb="/gallery-thumbs/bpm-stability.png" desc="xa-bpm-algorithm: tempo-stability map tracks a 100→140 BPM jump" />
+  <DemoCard title="Downbeat detection" href="/demos/downbeat.html" thumb="/gallery-thumbs/downbeat.png" desc="xa-downbeat: find beat 1 of an accent-shifted 4/4 pattern" />
+  <DemoCard title="Tempogram heatmap" href="/demos/xa-tempogram.html" thumb="/gallery-thumbs/xa-tempogram.png" desc="tempogram heatmap of a shifting pulse" />
+  <DemoCard title="Onset detection" href="/demos/xa-onset.html" thumb="/gallery-thumbs/xa-onset.png" desc="xa-onset: click-train onset detection" />
+  <DemoCard title="SuperFlux (vibrato-immune)" href="/demos/superflux.html" thumb="/gallery-thumbs/superflux.png" desc="superflux vibrato immunity" />
+</div>
 
 ## Pitch & chroma
 
-<CardGrid>
-  <LinkCard title="pYIN pitch tracking" href="/demos/pyin.html" description="pyin" />
-  <LinkCard title="Chromagram" href="/demos/chroma-arpeggio.html" description="feature/chroma.js" />
-  <LinkCard title="Enhanced chroma" href="/demos/plot-chroma.html" description="Enhanced chroma: harmonic + non-local + median" />
-  <LinkCard title="Harmonic spectrum" href="/demos/plot-spectral-harmonics.html" description="Track f0 and peel the overtones from a gliding quasi-vowel" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="pYIN pitch tracking" href="/demos/pyin.html" thumb="/gallery-thumbs/pyin.png" desc="pyin" />
+  <DemoCard title="Chromagram" href="/demos/chroma-arpeggio.html" thumb="/gallery-thumbs/chroma-arpeggio.png" desc="chromagram: 12 pitch classes tracked through an arpeggio" />
+  <DemoCard title="Enhanced chroma" href="/demos/plot-chroma.html" thumb="/gallery-thumbs/plot-chroma.png" desc="Enhanced chroma: harmonic + non-local + median" />
+  <DemoCard title="Harmonic spectrum" href="/demos/plot-spectral-harmonics.html" thumb="/gallery-thumbs/plot-spectral-harmonics.png" desc="Track f0 and peel the overtones from a gliding quasi-vowel" />
+</div>
 
 ## Spectral & transforms
 
-<CardGrid>
-  <LinkCard title="FFT / STFT" href="/demos/xa-fft.html" description="xa-fft: FFT/STFT known-tone + spectrogram" />
-  <LinkCard title="MFCC + mel spectrogram" href="/demos/mfcc-specshow.html" description="feature/mfcc.js + scripts/xa-display.js" />
-  <LinkCard title="Mel filterbank" href="/demos/mel-filterbank.html" description="scripts/xa-mel.js" />
-  <LinkCard title="Chroma filterbank" href="/demos/chroma-filterbank.html" description="filters/index.js" />
-  <LinkCard title="Rainbowgram" href="/demos/plot-rainbowgram.html" description="Rainbowgram: phase-derivative color over a log-frequency spectrogram" />
-  <LinkCard title="specshow axis modes" href="/demos/plot-display.html" description="specshow axis modes" />
-  <LinkCard title="Spectrum analyzer" href="/demos/spectrum-analyzer.html" description="SpectrumAnalyzer" />
-  <LinkCard title="Griffin-Lim reconstruction" href="/demos/xa-advanced.html" description="xa-advanced: Griffin-Lim reconstruction A/B" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="FFT / STFT" href="/demos/xa-fft.html" thumb="/gallery-thumbs/xa-fft.png" desc="xa-fft: FFT/STFT known-tone + spectrogram" />
+  <DemoCard title="MFCC + mel spectrogram" href="/demos/mfcc-specshow.html" thumb="/gallery-thumbs/mfcc-specshow.png" desc="MFCC and mel spectrogram, computed and drawn side by side" />
+  <DemoCard title="Mel filterbank" href="/demos/mel-filterbank.html" thumb="/gallery-thumbs/mel-filterbank.png" desc="the mel filterbank's triangular ramps, visualized" />
+  <DemoCard title="Chroma filterbank" href="/demos/chroma-filterbank.html" thumb="/gallery-thumbs/chroma-filterbank.png" desc="the chroma filterbank's pitch-class projection, visualized" />
+  <DemoCard title="Rainbowgram" href="/demos/plot-rainbowgram.html" thumb="/gallery-thumbs/plot-rainbowgram.png" desc="Rainbowgram: phase-derivative color over a log-frequency spectrogram" />
+  <DemoCard title="specshow axis modes" href="/demos/plot-display.html" thumb="/gallery-thumbs/plot-display.png" desc="specshow axis modes" />
+  <DemoCard title="Spectrum analyzer" href="/demos/spectrum-analyzer.html" thumb="/gallery-thumbs/spectrum-analyzer.png" desc="SpectrumAnalyzer" />
+  <DemoCard title="Griffin-Lim reconstruction" href="/demos/xa-advanced.html" thumb="/gallery-thumbs/xa-advanced.png" desc="xa-advanced: Griffin-Lim reconstruction A/B" />
+</div>
 
 ## Structure & sequence
 
-<CardGrid>
-  <LinkCard title="Laplacian segmentation" href="/demos/laplacian-segmentation.html" description="laplacian_segmentation: McFee-Ellis spectral clustering on real structure" />
-  <LinkCard title="Structure discovery" href="/demos/plot-segmentation.html" description="Structure discovery on an AABA form" />
-  <LinkCard title="Segment recurrence" href="/demos/segment-recurrence.html" description="segment recurrence (A-B-A)" />
-  <LinkCard title="DTW warping path" href="/demos/dtw.html" description="DTW warping path" />
-  <LinkCard title="Align two performances (DTW)" href="/demos/plot-music-sync.html" description="DTW aligns a performance with its 1.25× time-stretched twin" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Laplacian segmentation" href="/demos/laplacian-segmentation.html" thumb="/gallery-thumbs/laplacian-segmentation.png" desc="laplacian_segmentation: McFee-Ellis spectral clustering on real structure" />
+  <DemoCard title="Structure discovery" href="/demos/plot-segmentation.html" thumb="/gallery-thumbs/plot-segmentation.png" desc="Structure discovery on an AABA form" />
+  <DemoCard title="Segment recurrence" href="/demos/segment-recurrence.html" thumb="/gallery-thumbs/segment-recurrence.png" desc="segment recurrence (A-B-A)" />
+  <DemoCard title="DTW warping path" href="/demos/dtw.html" thumb="/gallery-thumbs/dtw.png" desc="DTW warping path" />
+  <DemoCard title="Align two performances (DTW)" href="/demos/plot-music-sync.html" thumb="/gallery-thumbs/plot-music-sync.png" desc="DTW aligns a performance with its 1.25× time-stretched twin" />
+</div>
 
 ## Effects
 
-<CardGrid>
-  <LinkCard title="Effects suite" href="/demos/effects.html" description="effects: trim/split/preemph/stretch/shift/hpss/remix" />
-  <LinkCard title="FX audition" href="/demos/xa-fx.html" description="xa-fx: FX audition with sample-exact badges" />
-  <LinkCard title="Time/pitch compression" href="/demos/compression.html" description="compression: pitch-changing vs pitch-preserving" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Effects suite" href="/demos/effects.html" thumb="/gallery-thumbs/effects.png" desc="effects: trim/split/preemph/stretch/shift/hpss/remix" />
+  <DemoCard title="FX audition" href="/demos/xa-fx.html" thumb="/gallery-thumbs/xa-fx.png" desc="xa-fx: FX audition with sample-exact badges" />
+  <DemoCard title="Time/pitch compression" href="/demos/compression.html" thumb="/gallery-thumbs/compression.png" desc="compression: pitch-changing vs pitch-preserving" />
+</div>
 
 ## Audio I/O & playback
 
-<CardGrid>
-  <LinkCard title="Audio I/O" href="/demos/audio-io.html" description="xa-audioio: synthesize, analyze, play" />
-  <LinkCard title="WAV save / reload / stream" href="/demos/file-io.html" description="file IO: WAV save→reload, registry cache, chunked reader" />
-  <LinkCard title="AudioPlayer" href="/demos/audio-player.html" description="AudioPlayer event contract" />
-  <LinkCard title="Hear your analysis" href="/demos/plot-audio-playback.html" description="hear your analysis" />
-  <LinkCard title="Playback ops" href="/demos/playback-ops.html" description="playback/ops" />
-  <LinkCard title="Live speed control" href="/demos/live-speed-control.html" description="live speed: playbackRate vs resample tiers" />
-  <LinkCard title="Load / draw / loop" href="/demos/xa-audio-core.html" description="xa-audio-core: load → draw → loop" />
-  <LinkCard title="Waveform renderer" href="/demos/waveform-renderer.html" description="WaveformRenderer + WaveformData" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Audio I/O" href="/demos/audio-io.html" thumb="/gallery-thumbs/audio-io.png" desc="xa-audioio: synthesize, analyze, play" />
+  <DemoCard title="WAV save / reload / stream" href="/demos/file-io.html" thumb="/gallery-thumbs/file-io.png" desc="file IO: WAV save→reload, registry cache, chunked reader" />
+  <DemoCard title="AudioPlayer" href="/demos/audio-player.html" thumb="/gallery-thumbs/audio-player.png" desc="AudioPlayer event contract" />
+  <DemoCard title="Hear your analysis" href="/demos/plot-audio-playback.html" thumb="/gallery-thumbs/plot-audio-playback.png" desc="hear your analysis" />
+  <DemoCard title="Playback ops" href="/demos/playback-ops.html" thumb="/gallery-thumbs/playback-ops.png" desc="playback/ops" />
+  <DemoCard title="Live speed control" href="/demos/live-speed-control.html" thumb="/gallery-thumbs/live-speed-control.png" desc="live speed: playbackRate vs resample tiers" />
+  <DemoCard title="Load / draw / loop" href="/demos/xa-audio-core.html" thumb="/gallery-thumbs/xa-audio-core.png" desc="xa-audio-core: load → draw → loop" />
+  <DemoCard title="Waveform renderer" href="/demos/waveform-renderer.html" thumb="/gallery-thumbs/waveform-renderer.png" desc="WaveformRenderer + WaveformData" />
+</div>
 
 ## Real-time & streaming
 
-<CardGrid>
-  <LinkCard title="Streaming meters" href="/demos/streaming-meters.html" description="streaming/analyzers: chunk-size invariance" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Streaming meters" href="/demos/streaming-meters.html" thumb="/gallery-thumbs/streaming-meters.png" desc="streaming/analyzers: chunk-size invariance" />
+</div>
 
 ## Creative play layer
 
-<CardGrid>
-  <LinkCard title="Signature choreography" href="/demos/demo-sequences.html" description="core/demoSequences.js" />
-  <LinkCard title="Glitch playground" href="/demos/glitch-playground.html" description="glitch playground (loopPlayground + beatGlitcher)" />
-  <LinkCard title="Quantum sequencer" href="/demos/quantum-sequencer.html" description="quantum op-stream sequencer" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Signature choreography" href="/demos/demo-sequences.html" thumb="/gallery-thumbs/demo-sequences.png" desc="the signature loop choreography: narrow, move, reverse, grow" />
+  <DemoCard title="Glitch playground" href="/demos/glitch-playground.html" thumb="/gallery-thumbs/glitch-playground.png" desc="glitch playground (loopPlayground + beatGlitcher)" />
+  <DemoCard title="Quantum sequencer" href="/demos/quantum-sequencer.html" thumb="/gallery-thumbs/quantum-sequencer.png" desc="quantum op-stream sequencer" />
+</div>
 
 ## Getting started
 
-<CardGrid>
-  <LinkCard title="Tutorial quickstart" href="/demos/tutorial.html" description="tutorial quickstart" />
-</CardGrid>
+<div class="demo-grid not-content">
+  <DemoCard title="Tutorial quickstart" href="/demos/tutorial.html" thumb="/gallery-thumbs/tutorial.png" desc="tutorial quickstart" />
+</div>

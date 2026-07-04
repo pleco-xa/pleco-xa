@@ -2,26 +2,43 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>scripts/xa-tempogram.js — Tempogram heatmap of a tempo jump</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="A click track that jumps from 100 to 140 BPM is rendered as a tempo-over-time heatmap, with the detected tempo ridge tracked in white dots." />
+  <title>Tempogram — tempo over time · pleco-xa</title>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
-  <h2>scripts/xa-tempogram.js — Tempogram heatmap of a tempo jump</h2>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Tempogram — tempo over time</span>
+  </header>
+  <h2>Tempogram — tempo over time</h2>
+  <div style="font:12px monospace;color:#888">scripts/xa-tempogram.js</div>
   <p style="max-width:95ch">
-    8 s of 100 BPM clicks then 8 s of 140 BPM clicks (sr 22050, hop 512)
-    through the canonical <code>onset_strength</code> →
-    <code>tempogram()</code> (win_length 192 ≈ 4.5 s, linear-ramp padding,
-    per-column inf-norm — the exact math the fixture-gated canonical
-    <code>tempo()</code> consumes). The per-frame argmax ridge (a
-    log-normal tempo prior, start 120 BPM) must sit in the lag bin bracketing
-    100 BPM for t ∈ [1, 6] s and the bin bracketing 140 BPM for t ∈ [10, 15] s;
-    <code>estimate_tempo</code> on each half must land in the same brackets.
-    Post-repair regression badge: plain 120 BPM clicks estimate inside the
-    120 BPM lag bracket — the pre-repair raw argmax returned the 60.09 BPM
-    subharmonic, and <code>fourier_tempogram</code> collapsed a 690-frame
-    envelope to a single column (now 257 × 691 at hop=1).
-    All numeric asserts were node-verified against dist before this page was
-    written (ridge 99.38 / 143.55, estimate_tempo 99.38 / 143.55, 120-click
-    regression 117.45). <code>tempogram_ratio</code> is an honest
+    A track that jumps from 100 to 140 BPM should show up as two clean tempo
+    bands over time — that is exactly what this heatmap draws, with the
+    detected tempo ridge tracked in white dots. Press play to hear the jump
+    the analysis is looking at. Technically: 8 s of 100 BPM clicks then 8 s
+    of 140 BPM clicks (sr 22050, hop 512) go through the canonical
+    <code>onset_strength</code> → <code>tempogram()</code> (win_length 192 ≈
+    4.5 s, linear-ramp padding, per-column inf-norm — the exact math the
+    fixture-gated canonical <code>tempo()</code> consumes). The per-frame
+    argmax ridge (a log-normal tempo prior, start 120 BPM) must sit in the
+    lag bin bracketing 100 BPM for t ∈ [1, 6] s and the bin bracketing
+    140 BPM for t ∈ [10, 15] s; <code>estimate_tempo</code> on each half must
+    land in the same brackets. Regression badge: plain 120 BPM clicks
+    estimate inside the 120 BPM lag bracket — the pre-repair raw argmax
+    returned the 60.09 BPM subharmonic, and <code>fourier_tempogram</code>
+    collapsed a 690-frame envelope to a single column (now 257 × 691 at
+    hop=1). All numeric asserts were node-verified against dist before this
+    page was written (ridge 99.38 / 143.55, estimate_tempo 99.38 / 143.55,
+    120-click regression 117.45). <code>tempogram_ratio</code> is an honest
     not-implemented throw and stays off the curated surface.
   </p>
   <div id="badges"></div>

@@ -1,9 +1,10 @@
 # @pleco-xa/docs
 
-The documentation site for pleco-xa — narrative guides, an auto-generated
-per-function API reference, and an interactive gallery where every example runs
-live in the browser. Built with [Astro Starlight](https://starlight.astro.build)
-and deployed to **[plecoxa.com](https://plecoxa.com)** on GitHub Pages.
+The documentation-site workspace for pleco-xa — narrative guides, an
+auto-generated per-function API reference, and an interactive gallery where
+every example runs live in the browser. Built with
+[Astro Starlight](https://starlight.astro.build) and served at
+**[plecoxa.com](https://plecoxa.com)**.
 
 ## Architecture
 
@@ -40,46 +41,9 @@ npm run docs:build           # build:lib + astro build → apps/docs/dist/
 The same command runs in CI (`.github/workflows/test.yml`) on every PR, so a
 docs build break fails the check before merge.
 
-## Deploy — GitHub Pages
+## Deploy
 
-Hosting is GitHub Pages, driven by `.github/workflows/deploy-docs.yml`. On every
-push to `main` that touches the docs, library, or demos, the workflow builds the
-site and publishes `apps/docs/dist/` to Pages. `public/CNAME` pins the custom
-domain to `plecoxa.com`.
-
-**One-time repo setup** (already done if the site is live):
-
-```bash
-# Point Pages at the Actions workflow as its build source
-gh api -X POST repos/pleco-xa/pleco-xa/pages -f build_type=workflow
-```
-
-Then Settings → Pages should show the custom domain `plecoxa.com` and, once DNS
-resolves, "Enforce HTTPS".
-
-## Deploy — DNS (Cloudflare)
-
-`plecoxa.com` is registered on Cloudflare; Cloudflare serves **DNS only** while
-GitHub Pages serves the site. Point the apex at GitHub's Pages IPs and `www` at
-the Pages host. Keep these records **grey-cloud (DNS only)** so GitHub can
-provision the TLS certificate.
-
-| Type  | Name | Value                | Proxy      |
-|-------|------|----------------------|------------|
-| A     | `@`  | `185.199.108.153`    | DNS only   |
-| A     | `@`  | `185.199.109.153`    | DNS only   |
-| A     | `@`  | `185.199.110.153`    | DNS only   |
-| A     | `@`  | `185.199.111.153`    | DNS only   |
-| CNAME | `www`| `pleco-xa.github.io` | DNS only   |
-
-Set these in the Cloudflare dashboard (DNS → Records), or run the API script
-below with a token scoped to **Zone → DNS → Edit** for the `plecoxa.com` zone:
-
-```bash
-export CF_API_TOKEN=<your-token>
-export CF_ZONE_ID=<plecoxa.com zone id>   # Cloudflare dashboard → domain → Overview
-bash tools/dns/cloudflare-pages-dns.sh
-```
-
-After DNS propagates (minutes to an hour), GitHub Pages issues the certificate;
-enable "Enforce HTTPS" in Settings → Pages.
+Deployment is fully automated by
+[`.github/workflows/deploy-docs.yml`](../../.github/workflows/deploy-docs.yml) —
+every push to `main` that touches the docs, library, or demos rebuilds and
+publishes the site.

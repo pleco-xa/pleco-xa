@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — file IO: WAV save→reload, registry cache, chunked reader</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Saves audio as a WAV file, loads it back without quality loss, and reads a long recording in small chunks." />
+<title>File I/O — WAV save, reload, chunked reading · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -13,22 +15,38 @@
   button:hover { background: #37474f; }
   pre { background: #222; padding: 8px; border-radius: 6px; font-size: 12px; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/xa-file.js + scripts/xa-fileio.js — the file-IO corner</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">File I/O — WAV save, reload, chunked reading</span>
+</header>
+<h1>File I/O — WAV save, reload, chunked reading</h1>
+<div style="font:12px monospace;color:#888">scripts/xa-file.js + scripts/xa-fileio.js</div>
 <p>
-  Three automated proofs: (1) <code>saveAudio</code> (post-repair: delegates
-  to the canonical <code>io/wav.encodeWav</code> and returns the Blob) writes
-  a 1 s 440 Hz tone that <code>loadFile</code> reloads within the 16-bit
-  quantization bound — original and reloaded waveforms are overlaid below;
-  (2) <code>example()/exampleBuffer()</code> exercise the AudioCache against a
-  <em>local</em> fixture (<code>fixtures/trumpet.ogg</code> — WAV bytes; the
-  remote sample registry stays unverified, see barrel note) proving
-  entries+1 after first load and a zero-network cache hit on the second;
-  (3) <code>fileio.stream()</code> (post-repair docs: chunked reader, NOT
-  streaming frame-generator semantics) splits a 3 s tone into exactly ⌈N/2048⌉ lossless
-  blocks. Chunk math node-verified 2026-07-02 via injected decoder (65 blocks,
-  bitwise re-concat). Saving triggers one real download of
+  Save a tone out as a WAV file, load it straight back in, and check that
+  nothing was lost — the original and reloaded waveforms are drawn on top of
+  each other below and should coincide. A sample cache proves repeat loads
+  skip the network entirely, and a chunked reader slices a long tone into
+  equal blocks without dropping a sample. The three automated proofs:
+  (1) <code>saveAudio</code> (post-repair: delegates to the canonical
+  <code>io/wav.encodeWav</code> and returns the Blob) writes a 1 s 440 Hz
+  tone that <code>loadFile</code> reloads within the 16-bit quantization
+  bound; (2) <code>example()/exampleBuffer()</code> exercise the AudioCache
+  against a <em>local</em> fixture (<code>fixtures/trumpet.ogg</code> — WAV
+  bytes; the remote sample registry stays unverified, see barrel note)
+  proving entries+1 after first load and a zero-network cache hit on the
+  second; (3) <code>fileio.stream()</code> (post-repair docs: chunked reader,
+  NOT streaming frame-generator semantics) splits a 3 s tone into exactly
+  ⌈N/2048⌉ lossless blocks. Chunk math node-verified 2026-07-02 via injected
+  decoder (65 blocks, bitwise re-concat). Saving triggers one real download of
   <code>pleco-tone-440.wav</code> — that side effect is the point.
 </p>
 <div id="badges"></div>

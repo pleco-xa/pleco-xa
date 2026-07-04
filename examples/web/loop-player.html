@@ -2,25 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — LoopPlayer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Plays a bass loop seamlessly and measures the audio to confirm it repeats at exactly the intended loop points." />
+  <title>LoopPlayer — seamless loop playback · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     button { font: 14px system-ui; margin: 2px; padding: 6px 12px; }
     p { max-width: 72ch; }
     #status { color: #999; margin: 8px 0; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
-  <h2>LoopPlayer — native seamless loop playback proof</h2>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">LoopPlayer — seamless loop playback</span>
+  </header>
+  <h2>LoopPlayer — seamless loop playback</h2>
+  <div style="font:12px monospace;color:#888">core/LoopPlayer — native <code>source.loop</code> proof</div>
   <p>
-    Loads <i>Bassline For Doppler Song longer.wav</i> and plays the golden
+    A seamless loop should just spin: no click, no gap, the bassline coming
+    back around at exactly the same spot every pass. Press <b>Play</b> to
+    hear a 2.6-second bass loop repeat while the page listens to its own
+    output and verifies the cycle really lands where it claims. Technically
+    it loads <i>Bassline For Doppler Song longer.wav</i> and plays the golden
     loop (11.9886 s → 14.6008 s, cycle 2.6122 s) via LoopPlayer's native
-    <code>source.loop</code>. Press <b>Play</b>: (1) the suspended
-    AudioContext must resume inside play(); (2) setVolume(0.1) must land on
-    the gain node; (3) an AnalyserNode taps the source and records the RMS
-    energy envelope for ~9 s (3+ cycles) — the envelope's autocorrelation
-    peak (the recurring loop-start energy fingerprint) must sit at the loop
-    period 2.612 s ±20 ms, proving native looping honors the exact points.
+    <code>source.loop</code>: (1) the suspended AudioContext must resume
+    inside play(); (2) setVolume(0.1) must land on the gain node; (3) an
+    AnalyserNode taps the source and records the RMS energy envelope for
+    ~9 s (3+ cycles) — the envelope's autocorrelation peak (the recurring
+    loop-start energy fingerprint) must sit at the loop period 2.612 s
+    ±20 ms, proving native looping honors the exact points.
   </p>
   <div id="badges"></div>
   <div>

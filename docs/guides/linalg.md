@@ -1,17 +1,18 @@
 ---
 title: Linalg — symmetric eigendecomposition and graph Laplacian
-description: pleco-xa's linalg namespace — a pure-JS symmetric eigensolver (Jacobi) and the normalized graph Laplacian, the primitives behind Laplacian segmentation.
+description: Pleco-Xa's linalg namespace — a pure-JS symmetric eigensolver (Jacobi) and the normalized graph Laplacian, the primitives behind Laplacian segmentation.
 ---
 
-`linalg` is pleco-xa's small, exact linear-algebra corner: a symmetric-matrix eigensolver
+`linalg` is Pleco-Xa's small, exact linear-algebra corner: a symmetric-matrix eigensolver
 and the normalized graph Laplacian. These are the two dependency-free primitives that the
-[Laplacian segmentation](/api/pleco-xa/namespaces/segment/functions/laplaciansegmentation/)
+[Laplacian segmentation](./segment.md)
 pipeline surfaced — pure JavaScript, no native BLAS, and numerically matched to SciPy's
 output so the structural-clustering demo produces the same boundaries in Node and the
 browser.
 
-Both are fixture-gated against `linalg.json`: `eigh` reconstructs to 1e-16 with
-eigenvalues within 1e-6, and `laplacian` matches `scipy.sparse.csgraph.laplacian` to 1e-9.
+Both were validated against reference fixtures during development: `eigh` reconstructs to
+1e-16 with eigenvalues within 1e-6, and `laplacian` matches
+`scipy.sparse.csgraph.laplacian` to 1e-9.
 
 ## Key functions
 
@@ -48,7 +49,7 @@ const fiedler = vectors.map((row) => row[1])
 - **Input is never shape-guessed.** Pass a 2D matrix (array of rows) or a flat row-major
   array with explicit `{ flat, n }`. Non-square input throws.
 - **`eigh` requires a genuinely symmetric matrix** and throws on the worst offending pair if
-  the two triangles disagree beyond tolerance — SciPy reads only one triangle, but pleco
+  the two triangles disagree beyond tolerance — SciPy reads only one triangle, but Pleco-Xa
   verifies the full matrix so the returned decomposition actually reconstructs your input.
   Eigenvector signs are not canonicalised (the sign gauge is not part of the spectrum).
 - **`laplacian` follows SciPy's conventions exactly:** the input diagonal is ignored
@@ -59,6 +60,6 @@ const fiedler = vectors.map((row) => row[1])
 
 ## API reference
 
-Full signatures: [linalg namespace](/api-by-category/) — namely
-[`eigh`](/api/pleco-xa/namespaces/linalg/functions/eigh/) and
-[`laplacian`](/api/pleco-xa/namespaces/linalg/functions/laplacian/).
+Full signatures: [linalg namespace](../api-by-category.md) — namely
+[`eigh`](https://plecoxa.com/api/pleco-xa/namespaces/linalg/functions/eigh/) and
+[`laplacian`](https://plecoxa.com/api/pleco-xa/namespaces/linalg/functions/laplacian/).

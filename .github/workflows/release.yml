@@ -2,16 +2,6 @@ name: Release
 
 # Publishes packages/pleco-xa to npm when a GitHub Release is published.
 #
-# One-time setup (pick ONE auth method):
-#   A) Trusted publishing (recommended, no secret): on npmjs.com ->
-#      pleco-xa -> Settings -> Trusted Publisher -> GitHub Actions, repo
-#      `pleco-xa/pleco-xa`, workflow `release.yml`. Then remove the
-#      NODE_AUTH_TOKEN line below.
-#   B) Automation token: npmjs.com -> Access Tokens -> Generate -> "Automation"
-#      (bypasses 2FA) -> add it as the repo secret `NPM_TOKEN`.
-#
-# Both paths produce a signed provenance attestation (requires id-token: write).
-#
 # Release flow: bump packages/pleco-xa/package.json + CHANGELOG.md -> tag
 # `vX.Y.Z` -> publish a GitHub Release for that tag -> this runs.
 
@@ -61,4 +51,5 @@ jobs:
         run: npm publish --provenance --access public
         working-directory: packages/pleco-xa
         env:
+          # Ignored when npm Trusted Publishing (OIDC) is configured for this workflow.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
