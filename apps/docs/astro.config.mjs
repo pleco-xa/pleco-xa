@@ -28,6 +28,7 @@ export default defineConfig({
         { label: 'Getting Started', items: [{ autogenerate: { directory: 'start' } }] },
         { label: 'Guides', items: [{ autogenerate: { directory: 'guides' } }] },
         { label: 'Gallery', items: [{ autogenerate: { directory: 'gallery' } }] },
+        { label: 'API by category', link: '/api-by-category/' },
         typeDocSidebarGroup,
         { label: 'Reference', items: [{ autogenerate: { directory: 'reference' } }] },
       ],
