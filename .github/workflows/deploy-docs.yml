@@ -6,10 +6,12 @@ on:
   push:
     branches: [main]
     paths:
+      - 'docs/**'
       - 'apps/docs/**'
       - 'packages/pleco-xa/**'
       - 'examples/web/**'
       - 'apps/demo/public/audio/**'
+      - 'tools/goldens/**'
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
