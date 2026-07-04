@@ -26,7 +26,8 @@ for (let i = 0; i < y.length; i += period) {
 }
 
 const { tempo, beats } = beat_track(y, sr)
-console.log(`${tempo.toFixed(1)} BPM, ${beats.length} beats`) // ~120 BPM
+console.log(`${tempo.toFixed(1)} BPM, ${beats.length} beats`)
+// "117.5 BPM, 7 beats" — 117.5, not 120: autocorrelation lag quantization at hop 512; the beat grid is exact
 ```
 
 ## In the browser
@@ -75,4 +76,6 @@ separate, named call — for example `quickTempo` for a ~5–10 s live estimate 
 never a silent fallback. If a quality gate can't be met, the function throws
 with diagnostics rather than returning a fabricated number.
 
-Every function used here is fixture-gated in CI.
+27 CI-gated test suites (237 tests) run on every push; the loop detector used
+here is additionally locked against committed golden fixtures on real audio,
+within ±10 ms.

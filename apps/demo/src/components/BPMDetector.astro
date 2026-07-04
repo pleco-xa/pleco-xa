@@ -1,7 +1,7 @@
 ---
 /**
  * BPM Detector Component
- * Orchestrates BPM detection with complete console logging from lb
+ * Orchestrates BPM detection with complete console logging
  * Preserves ALL console.log statements for debugging tempo octave errors
  */
 interface Props {
@@ -94,14 +94,14 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
   const { analyzeWithProgress } = bpmAlgorithm;
 
   /**
-   * Main BPM detection function that matches lb/index.html lines 216-364
+   * Main BPM detection function
    * Includes ALL console.log statements and calculations
    */
   async function detectBPMWithLogs(audioBuffer, options = {}) {
     const y = audioBuffer.getChannelData(0);
     const sr = audioBuffer.sampleRate;
 
-    // Determine analysis parameters (lb lines 224-226)
+    // Determine analysis parameters
     const duration = audioBuffer.duration;
     const windowSize = duration > 30 ? 8 : 4; // seconds
     const hopSize = duration > 30 ? 2 : 1;    // seconds
@@ -112,10 +112,10 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
     console.log(`Window size: ${windowSize}s, Hop size: ${hopSize}s`);
 
     try {
-      // Main analysis (lb line 235)
+      // Main analysis
       const result = await analyzeWithProgress(y, sr, windowSize, hopSize);
 
-      // Extract all values from result (lb lines 239-250)
+      // Extract all values from result
       const globalTempo = result.globalTempo;
       const globalConfidence = result.globalConfidence;
       const globalCandidates = result.globalCandidates;
@@ -125,7 +125,7 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
       const onsetEnvelope = result.onsetEnvelope;
       const tempogram = result.tempogram;
 
-      // Validate tempo (lb lines 252-258)
+      // Validate tempo
       const validatedTempo = (globalTempo >= 30 && globalTempo <= 300) ? globalTempo : null;
 
       if (globalTempo !== validatedTempo) {
@@ -140,12 +140,12 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
         }
       }
 
-      // Log main result (lb lines 260-263)
+      // Log main result
       console.log(`\n📊 Global Tempo: ${globalTempo.toFixed(1)} BPM`);
       console.log(`Confidence: ${(globalConfidence * 100).toFixed(1)}%`);
       console.log(`Validated: ${validatedTempo.toFixed(1)} BPM`);
 
-      // Log candidates (lb lines 265-272)
+      // Log candidates
       if (globalCandidates && globalCandidates.length > 0) {
         console.log(`\n🎯 Top Tempo Candidates:`);
         globalCandidates.slice(0, 5).forEach((c, i) => {
@@ -153,7 +153,7 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
         });
       }
 
-      // Log tempogram peaks (lb lines 274-282)
+      // Log tempogram peaks
       if (tempogram && tempogram.peakTempos && tempogram.peakTempos.length > 0) {
         console.log(`\n📈 Tempogram Peaks:`);
         for (let i = 0; i < Math.min(tempogram.peakTempos.length, 8); i++) {
@@ -162,26 +162,26 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
         }
       }
 
-      // Calculate stability metrics (lb lines 284-286) - CRITICAL
+      // Calculate stability metrics - CRITICAL
       const deviations = tempo.map(t => Math.abs(t - globalTempo));
       const avgDeviation = deviations.reduce((a, b) => a + b, 0) / deviations.length;
       const maxDeviation = Math.max(...deviations);
 
-      // Log stability analysis (lb lines 288-293)
+      // Log stability analysis
       console.log(`\n📉 Tempo Stability:`);
       console.log(`  Windows analyzed: ${tempo.length}`);
       console.log(`  Average deviation: ${avgDeviation.toFixed(1)} BPM`);
       console.log(`  Max deviation: ${maxDeviation.toFixed(1)} BPM`);
       console.log(`  Stability: ${((1 - avgDeviation / 50) * 100).toFixed(1)}%`);
 
-      // Compare methods (lb lines 295-298)
+      // Compare methods
       const autocorrBPM = globalTempo;
       const tempogramBPM = tempogram?.peakTempos?.[0]?.bpm || globalTempo;
       console.log(`\n🔄 Method Comparison:`);
       console.log(`  Autocorrelation: ${autocorrBPM.toFixed(1)} BPM`);
       console.log(`  Tempogram: ${tempogramBPM.toFixed(1)} BPM`);
 
-      // Log detailed window analysis (from lb's live tracking)
+      // Log detailed window analysis (live tracking)
       if (tempo.length > 0) {
         console.log(`\n🪟 Window-by-window BPMs:`);
         const windowsToShow = Math.min(10, tempo.length);
@@ -193,7 +193,7 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
         }
       }
 
-      // BPM Ranking - MOST IMPORTANT for debugging octave errors (lb lines 337-352)
+      // BPM Ranking - MOST IMPORTANT for debugging octave errors
       console.log(`\n🏆 BPM Ranking (for debugging octave errors):`);
 
       // Create ranking from all sources
@@ -266,7 +266,7 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
         console.log(`  Consider if ${primaryBPM.toFixed(1)} BPM should actually be ${hasHalfCandidate ? halfBPM.toFixed(1) : doubleBPM.toFixed(1)} BPM`);
       }
 
-      // Final result (lb line 337)
+      // Final result
       const confidenceLabel = globalConfidence > 0.8 ? 'High' :
                             globalConfidence > 0.6 ? 'Medium' : 'Low';
 
@@ -352,7 +352,7 @@ const { showConfidence = true, autoDetect = true, threshold = 0.3, class: classN
             return;
           }
 
-          // Use new lb-based detection with all logs
+          // Use the windowed detection with all logs
           const result = await detectBPMWithLogs(audioBuffer);
 
           // Update display based on result

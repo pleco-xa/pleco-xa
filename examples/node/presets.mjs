@@ -1,5 +1,5 @@
 /**
- * plot_presets — presets as plain closures.
+ * Presets — presets as plain closures.
  *
  * The preset pattern wraps functions so default parameters can be
  * swapped globally. In JS the same ergonomics is a one-line closure over
@@ -53,4 +53,4 @@ checkTrue('override run has ~2x the frames of the preset run (hop halved)',
   runs[1].S[0].length === 2 * runs[0].S[0].length - 1,
   `${runs[1].S[0].length} vs ${runs[0].S[0].length}`)
 
-summary('plot_presets — closure presets plumb parameters end to end')
+summary('presets — closure presets plumb parameters end to end')

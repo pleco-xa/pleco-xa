@@ -15,7 +15,8 @@
  *
  * Tier law (explicit tiers, never silent fallbacks):
  *   - tempo() / beat_track()  → precise tier. Slow but numerically exact.
- *   - quickTempo()            → quick tier. Windowed lb-style live estimate
+ *   - quickTempo()            → quick tier. Windowed live estimate —
+ *                               normalized autocorrelation of onset strength
  *                               over the last N seconds. Distinct name,
  *                               distinct semantics; tempo() NEVER falls back
  *                               to it, and it never impersonates tempo().
@@ -180,8 +181,9 @@ function meanTempogram(onsetEnvelope, winLength) {
  *   of BPM estimates (dynamic tempo)
  * @returns {number|Float64Array} estimated tempo in BPM (scalar for
  *   aggregate='mean', one BPM per onset-envelope frame for aggregate=null)
- * @throws {Error} on missing/empty input or invalid parameters — never
- *   returns a fabricated default
+ * @throws {Error} on missing/empty input, invalid parameters, or an all-zero
+ *   onset envelope (silent or constant input) — never returns a fabricated
+ *   default such as the prior's argmax
  */
 export function tempo(y, opts = {}) {
   // Support the positional call style: tempo(y, sr)
@@ -225,6 +227,23 @@ export function tempo(y, opts = {}) {
     env = onset_strength(y, { sr, hop_length: hopLength })
   } else {
     assertSignal(env, 'onsetEnvelope')
+  }
+
+  // No onsets at all → there is no rhythmic evidence to estimate from.
+  // Without this gate the argmax degenerates to the prior's peak
+  // (~117.45 BPM at start_bpm=120) — a fabricated answer. Throw instead,
+  // mirroring beat_track's all-zero guard.
+  let anyOnset = false
+  for (let i = 0; i < env.length; i++) {
+    if (env[i] !== 0) {
+      anyOnset = true
+      break
+    }
+  }
+  if (!anyOnset) {
+    throw new Error(
+      'cannot estimate tempo: onset envelope is all zeros (silent or constant input)',
+    )
   }
 
   // win_length = time_to_frames(ac_size, sr, hop_length).item()
@@ -672,12 +691,12 @@ export function beat_track(y, sr = 22050, opts = {}) {
  * ------------------------------------------------------------------------ */
 
 /**
- * QUICK TIER — windowed lb-style live tempo estimate.
+ * QUICK TIER — windowed live tempo estimate.
  *
  * Analyzes only the last `windowSec` seconds of audio with a normalized
- * autocorrelation over the onset envelope (the estimator migrated from the
- * lb project). This is intentionally cheaper and coarser than tempo():
- * lag-quantized BPM, no tempogram, no log-normal prior.
+ * autocorrelation over the onset envelope. This is intentionally cheaper
+ * and coarser than tempo(): lag-quantized BPM, no tempogram, no log-normal
+ * prior.
  *
  * This is NOT the precise tier and is NEVER used as a fallback by tempo() or
  * beat_track(). Callers opt into the quick tier explicitly.
@@ -715,7 +734,7 @@ export function quickTempo(y, sr = 22050, opts = {}) {
   const env = onset_strength(tail, { sr, hop_length: hopLength })
   const onsetRate = sr / hopLength
 
-  // lb-style: mean-center, then normalized autocorrelation over the lag range
+  // mean-center, then normalized autocorrelation over the lag range
   let mean = 0
   for (let i = 0; i < env.length; i++) mean += env[i]
   mean /= env.length

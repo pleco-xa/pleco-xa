@@ -1,15 +1,10 @@
 /**
- * BPM Detection Algorithm from lb
- * Advanced tempo detection with spectral flux onset detection,
- * autocorrelation tempo estimation, and Fourier tempogram validation
- *
- * IMPORTANT: This is the exact algorithm from lb/index.html lines 917-1276
- * All functions preserved exactly for accurate BPM detection
+ * Windowed BPM detection — spectral-flux onset detection, autocorrelation
+ * tempo estimation, Fourier-tempogram validation.
  */
 
 /**
  * Main analysis orchestrator with progress yielding
- * From lb/index.html lines 917-981
  */
 export async function analyzeWithProgress(y, sr, windowSize = 4, hopSize = 1) {
   // Step 1: Compute onset strength
@@ -72,7 +67,6 @@ export async function analyzeWithProgress(y, sr, windowSize = 4, hopSize = 1) {
 
 /**
  * Compute onset strength using spectral flux
- * From lb/index.html lines 983-1019
  */
 export async function computeOnsetStrength(y, sr) {
   const frameSize = 2048;
@@ -123,7 +117,6 @@ export async function computeOnsetStrength(y, sr) {
 
 /**
  * Estimate global tempo using autocorrelation
- * From lb/index.html lines 1021-1081
  */
 export async function estimateGlobalTempo(onsetEnvelope, sr) {
   const hopLength = 512;
@@ -236,7 +229,6 @@ export async function estimateGlobalTempo(onsetEnvelope, sr) {
 
 /**
  * Compute Fourier tempogram
- * From lb/index.html lines 1083-1125
  */
 export async function computeFourierTempogram(onsetEnvelope, sr) {
   const hopLength = 512;
@@ -282,7 +274,6 @@ export async function computeFourierTempogram(onsetEnvelope, sr) {
 
 /**
  * Estimate tempo within constrained range
- * From lb/index.html lines 1210-1262
  *
  * REPAIR (2026-07-02 proof-of-work): the original reduced a 4s window to an
  * ~15-point energy downsample (8 sub-buckets, half-bucket hop) while the BPM
@@ -358,7 +349,6 @@ export async function estimateConstrainedTempo(window, sr, globalTempo) {
 
 /**
  * Compute simple spectrum using decimated FFT
- * From lb/index.html lines 1264-1276
  */
 export async function computeSimpleSpectrum(frame) {
   const N = frame.length;
@@ -384,7 +374,6 @@ export async function computeSimpleSpectrum(frame) {
 
 /**
  * Compute simple FFT
- * From lb/index.html lines 1134-1147
  */
 export async function computeSimpleFFT(signal) {
   const N = signal.length;
@@ -408,7 +397,6 @@ export async function computeSimpleFFT(signal) {
 
 /**
  * Convert FFT bins to tempo frequencies
- * From lb/index.html lines 1127-1132
  */
 export function computeTempoFrequencies(windowLength, sr) {
   const frequencies = [];
@@ -422,7 +410,6 @@ export function computeTempoFrequencies(windowLength, sr) {
 
 /**
  * Analyze tempogram for peak tempos
- * From lb/index.html lines 1149-1208
  */
 export async function analyzeTempogram(tempogram, frequencies) {
   if (tempogram.length === 0) return [];

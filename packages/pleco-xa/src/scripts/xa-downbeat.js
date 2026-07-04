@@ -4,14 +4,19 @@
  */
 
 import { onsetDetect } from './xa-onset.js'
-import { debugLog } from './debug.js'
+import { debugLog, debugTime, debugTimeEnd } from './debug.js'
+
+// np.finfo(np.float32).tiny — the smallest NORMAL float32. Anything whose
+// RMS sits at or below a small multiple of this is zeros/denormals, i.e.
+// no audible signal evidence at all.
+const FLOAT32_TINY = 1.1754943508222875e-38
 
 /**
  * Find the true downbeat phase by analyzing onset patterns
  * Much simpler and more reliable than complex spectral analysis
  */
 export function findDownbeatPhase(audioData, beats, tempo, sampleRate) {
-  console.time('find_downbeat_phase')
+  debugTime('find_downbeat_phase')
 
   const beatDuration = 60 / tempo
   const beatsPerBar = 4 // Assume 4/4 time
@@ -64,7 +69,7 @@ export function findDownbeatPhase(audioData, beats, tempo, sampleRate) {
     correctedBeats.push(beats[i])
   }
 
-  console.timeEnd('find_downbeat_phase')
+  debugTimeEnd('find_downbeat_phase')
 
   return {
     phase: bestPhase,
@@ -154,6 +159,12 @@ export function findFirstDownbeat(audioData, tempo, sampleRate) {
 
 /**
  * Simple loop finder that respects musical boundaries
+ *
+ * @throws {Error} when the analyzed region carries no signal evidence
+ *   (RMS at or below 1e3 × float32-tiny, i.e. silence or pure denormals).
+ *   Without this gate, scoreLoopConsistency() degenerates on silence —
+ *   all-zero chunk energies give zero variance and a PERFECT 1.0 score —
+ *   fabricating maximum confidence out of nothing.
  */
 export function findMusicalLoop(
   audioData,
@@ -161,7 +172,24 @@ export function findMusicalLoop(
   tempo,
   { preferredBars = 4, minBars = 2, maxBars = 8 } = {},
 ) {
-  console.time('find_musical_loop')
+  debugTime('find_musical_loop')
+
+  // Signal-evidence gate: refuse to score loops on effective silence.
+  let sumSquares = 0
+  for (let i = 0; i < audioData.length; i++) {
+    sumSquares += audioData[i] * audioData[i]
+  }
+  const rms = Math.sqrt(sumSquares / audioData.length)
+  const silenceFloor = FLOAT32_TINY * 1e3
+  if (!(rms > silenceFloor)) {
+    debugTimeEnd('find_musical_loop')
+    throw new Error(
+      'findMusicalLoop: signal-evidence gate failed — analyzed region is ' +
+        `effectively silent (RMS=${rms.toExponential(3)} ≤ ` +
+        `${silenceFloor.toExponential(3)}, zeros or denormals only). ` +
+        'A loop score on silence would be fabricated, not measured.',
+    )
+  }
 
   const beatDuration = 60 / tempo
   const barDuration = beatDuration * 4
@@ -247,7 +275,7 @@ export function findMusicalLoop(
     }
   }
 
-  console.timeEnd('find_musical_loop')
+  debugTimeEnd('find_musical_loop')
 
   return bestLoop
 }

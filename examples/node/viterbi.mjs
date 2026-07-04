@@ -1,5 +1,5 @@
 /**
- * plot_viterbi — Viterbi smoothing: don't flinch at the dip (viterbi family
+ * Viterbi smoothing — don't flinch at the dip (viterbi family
  * promoted into the sequence namespace for this proof, with the
  * viterbi_discriminative prior repaired to correct Bayes semantics — divide
  * by p_state, not multiply).
@@ -110,4 +110,4 @@ check('transition_local(5, 3, triangle) == golden',
 checkTrue('transition_local rows sum to 1',
   transition_local(6, 3).every((r) => Math.abs(r.reduce((a, b) => a + b, 0) - 1) < 1e-12))
 
-summary('plot_viterbi — smoothing vs thresholding + prior-repair goldens')
+summary('viterbi — smoothing vs thresholding + prior-repair goldens')

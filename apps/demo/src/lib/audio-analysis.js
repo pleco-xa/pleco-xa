@@ -62,7 +62,7 @@ function setupEventListeners() {
   document.querySelectorAll('.sample-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (btn.dataset.sample) {
-        loadSampleFile(`/src/assets/audio/${btn.dataset.sample}`, btn.textContent)
+        loadSampleFile(`/audio/${btn.dataset.sample}`, btn.textContent)
       }
     })
   })
@@ -260,7 +260,7 @@ function setupLoadedAudio(name) {
 // ===== AUDIO ANALYSIS =====
 async function analyzeAudio() {
   try {
-    console.log('🎵 Starting accurate BPM analysis (lb-style)...');
+    console.log('🎵 Starting accurate BPM analysis (windowed)...');
 
     const y = currentAudioBuffer.getChannelData(0);
     const sr = currentAudioBuffer.sampleRate;
@@ -375,11 +375,11 @@ async function analyzeAudio() {
   }
 }
 
-// ===== LB-STYLE BPM DETECTION HELPER FUNCTIONS =====
+// ===== WINDOWED BPM DETECTION HELPER FUNCTIONS =====
 
 /**
  * Compute onset strength envelope using spectral flux
- * Ported from lb project - much more accurate than simple energy
+ * Much more accurate than simple energy
  */
 async function computeOnsetStrength(y, sr) {
   const frameLength = 2048;
@@ -430,7 +430,7 @@ async function computeOnsetStrength(y, sr) {
 
 /**
  * Estimate global tempo using autocorrelation
- * Ported from lb project with musical constraints
+ * Applies musical tempo-range constraints
  */
 async function estimateGlobalTempo(onsetEnvelope, sr) {
   const hopLength = 512;
@@ -502,7 +502,6 @@ async function estimateGlobalTempo(onsetEnvelope, sr) {
 
 /**
  * Compute Fourier tempogram for time-varying tempo analysis
- * Ported from lb project
  */
 async function computeFourierTempogram(onsetEnvelope, sr) {
   const hopLength = 512;

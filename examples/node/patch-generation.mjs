@@ -1,5 +1,5 @@
 /**
- * plot_patch_generation — fixed-size mel patches for ML pipelines.
+ * Patch generation — fixed-size mel patches for ML pipelines.
  *
  * Decodes the house-corpus speech-like WAV (am-noise vocal stand-in),
  * computes feature.melspectrogram, then carves overlapping fixed-size
@@ -62,4 +62,4 @@ patches[1][0][0] = 12345
 checkTrue('frame() returns copies — mutating a patch does NOT touch melspec (copy semantics)',
   melspec[0][H] === before, `melspec[0][${H}] still ${before.toExponential(3)}`)
 
-summary('plot_patch_generation — mel patches via promoted util frame()')
+summary('patch generation — mel patches via promoted util frame()')

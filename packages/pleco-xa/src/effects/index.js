@@ -451,7 +451,12 @@ export function pitch_shift(y, sr, n_steps, { bins_per_octave = 12, ...stretchOp
  * @param {number|Array<number>} [options.kernel_size=31]
  * @param {number} [options.power=2.0]
  * @param {number|Array<number>} [options.margin=1.0]
- * @param {number} [options.n_fft=2048] - And the other STFT options
+ * @param {number} [options.n_fft=2048]
+ * @param {number|null} [options.hop_length=null] - defaults to n_fft/4
+ * @param {number|null} [options.win_length=null] - defaults to n_fft
+ * @param {string} [options.window='hann']
+ * @param {boolean} [options.center=true]
+ * @param {string} [options.pad_mode='constant']
  * @returns {{harmonic: Float32Array, percussive: Float32Array}} Both length y.length
  */
 export function hpss(y, {

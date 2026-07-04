@@ -152,10 +152,10 @@ function medianFilterColumns(evecs, n, kCols, win) {
  *   - **Two-feature form** —
  *     `laplacianSegmentation({ recurrenceFeatures, pathFeatures }, opts)`:
  *     the recurrence affinity Rf is built from `recurrenceFeatures` and the
- *     sequential path graph R_path from `pathFeatures`, matching
- *     `plot_segmentation.py` which uses CQT (`Csync`) for repetition and MFCC
- *     (`Msync`) for local continuity. Both matrices must share the same number
- *     of frames (columns); their feature-row counts may differ.
+ *     sequential path graph R_path from `pathFeatures` — one feature for
+ *     repetition (typically a beat-synced CQT or chroma) and another for
+ *     local continuity (typically MFCC). Both matrices must share the same
+ *     number of frames (columns); their feature-row counts may differ.
  *
  * @param {(number[][]|Float32Array[]|Float64Array[]|
  *          {recurrenceFeatures: number[][], pathFeatures: number[][]})} features

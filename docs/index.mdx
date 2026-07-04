@@ -20,9 +20,9 @@ import { Card, CardGrid } from '@astrojs/starlight/components'
 
 Pleco-Xa brings musical intelligence — BPM and beat tracking, spectral features,
 structural segmentation, effects, pitch tracking, and its signature **loop
-detection** — to anything that runs JavaScript. No build step, no dependencies,
-and it does things an offline library can't: real-time streaming analysis and
-intelligent loop-point detection, running live in a browser tab.
+detection** — to anything that runs JavaScript. No build step, no dependencies —
+real-time streaming analysis and intelligent loop-point detection, running live
+in a browser tab.
 
 ## See it
 
@@ -58,16 +58,17 @@ runs in the browser, Node, and Web Workers.
     four strategies, and a single honest confidence score.
   </Card>
   <Card title="Musical timing">
-    Tempo and beat tracking, onset detection, and tempograms — numerically
-    validated against committed reference fixtures.
+    Tempo and beat tracking, onset detection, and tempograms — CI-tested on
+    synthetic click tracks, with committed golden fixtures pinning tempo and
+    beat output.
   </Card>
   <Card title="Spectral features">
     STFT, mel spectrograms, MFCC, chroma, and the full family of spectral
     descriptors (centroid, bandwidth, rolloff, contrast, flatness).
   </Card>
   <Card title="Real-time">
-    Worker-safe streaming analyzers and a live tempo tier — analysis an offline
-    library structurally can't do.
+    Worker-safe streaming analyzers and a live tempo tier — analysis that runs
+    while the audio plays.
   </Card>
   <Card title="Pure-DSP vocal separation">
     Surprisingly capable source separation with no trained model, no weights,
@@ -77,8 +78,9 @@ runs in the browser, Node, and Web Workers.
 
 ## Built to be trusted
 
-- **Full TypeScript types** on every export and subpath — autocomplete works out of the box.
-- **Fixture-verified** across ~20 domains and checked in CI, many results numerically exact.
+- **~89 kB min+gzip** for the entire engine — the `feature` subpath alone under 8 kB. No WASM, no model download.
+- **TypeScript declarations** for the barrel and all 19 subpaths — autocomplete works out of the box.
+- **27 CI-gated test suites** (237 tests) — loop points locked against committed golden fixtures on real audio, within ±10 ms.
 - **Explicit tiers, never silent.** Quality is the default; fast/live variants are separate named calls, and anything that can't produce a valid result throws with diagnostics rather than fabricating a number.
 
 Ready? **[Install and run your first analysis →](/start/install/)** or watch every

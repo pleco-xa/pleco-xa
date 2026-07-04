@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { startBeatGlitch } from '../src/core/beatGlitcher.js'
 
-vi.mock('../src/scripts/analysis/BPMDetector.ts', () => ({
+vi.mock('../src/scripts/analysis/BPMDetector.js', () => ({
   fastBPMDetect: () => 120
 }))
 

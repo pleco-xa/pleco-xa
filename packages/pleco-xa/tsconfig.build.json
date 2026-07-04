@@ -10,7 +10,6 @@
     "target": "es2020",
     "skipLibCheck": true,
     "noEmitOnError": false,
-    "allowImportingTsExtensions": true,
     "lib": ["ES2020", "DOM", "WebWorker"]
   },
   "include": ["src/**/*.js", "src/**/*.ts"]

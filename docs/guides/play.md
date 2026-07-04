@@ -145,9 +145,8 @@ to a player.
 
 ## Where the identity lives
 
-If Pleco-Xa's analysis half proves it can measure audio as rigorously as any
-offline library, this half is where it says something the measurement libraries
-never try to: that a loop is a playable object, and choreographing it — in the
+Pleco-Xa's analysis half measures audio rigorously; this half treats the result
+as an instrument: a loop is a playable object, and choreographing it — in the
 browser, in real time, clocked to the beat — is a legitimate creative act. The
 [Gallery](/gallery/) hosts the live instruments built on this layer: the loop
 playground, the beat glitcher, and the quantum sequencer.

@@ -12,7 +12,7 @@
  * @version 1.0.0
  */
 
-import { debugLog } from './debug.js'
+import { debugLog, debugWarn } from './debug.js'
 import { encodeWav } from '../io/wav.js'
 
 /**
@@ -452,7 +452,7 @@ export function cache() {
     preload: async (keys = Object.keys(AUDIO_REGISTRY), hq = false) => {
       const promises = keys.map((key) =>
         example(key, hq).catch((err) => {
-          console.warn(`Failed to preload ${key}:`, err.message)
+          debugWarn(`Failed to preload ${key}:`, err.message)
           return null
         }),
       )

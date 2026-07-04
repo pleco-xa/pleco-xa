@@ -2,6 +2,7 @@
 export class GibClock {
   constructor(intervalMs) {
     this.intervalMs = intervalMs;
+    /** @type {ReturnType<typeof setTimeout>|null} */
     this.timer = null;
     this.listeners = new Set();
     this.nextTime = 0;

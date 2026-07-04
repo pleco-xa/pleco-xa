@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>plot_spectral_harmonics — Harmonic spectrum: track f0, peel the overtones</title>
+  <title>Harmonic spectrum — track f0, peel the overtones</title>
 </head>
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
-  <h2>plot_spectral_harmonics — Harmonic spectrum: track f0, peel the overtones</h2>
+  <h2>Harmonic spectrum — track f0, peel the overtones</h2>
   <p style="max-width:95ch">
     A <em>harmonic spectrum</em> demo on a fully
     known quasi-vowel: f0 glides 110 → 165 Hz over 3 s carrying harmonics
@@ -20,12 +20,11 @@
     within 0.4%); the h=1 harmonic-energy row's coefficient of variation is
     &lt; 0.25 while the raw 110 Hz bin's is &gt; 2× larger (measured 0.051 vs
     1.84 — 36×). Resynthesis: an additive oscillator bank driven by the
-    measured f0 + harmonic energies (mir_eval.sonify.pitch_contour
-    equivalent), playable with the original glide or forced to a 110 Hz
-    monotone — the f0/timbre-decoupling trick, audible.
-    NOTE: the classic recipe uses pyin; pleco's pyin is intentionally off the
-    curated surface until it is a real HMM/Viterbi pYIN, so this page uses
-    the verified yin — the accuracy assertion is unchanged.
+    measured f0 + harmonic energies, playable with the original glide or
+    forced to a 110 Hz monotone — the f0/timbre-decoupling trick, audible.
+    NOTE: this page tracks f0 with the lightweight yin estimator — plenty for
+    a clean glide, and the accuracy assertion proves it. For noisy or
+    polyphonic material, the full HMM/Viterbi pyin is on the curated surface.
   </p>
   <div id="badges"></div>
   <p>

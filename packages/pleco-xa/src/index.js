@@ -23,7 +23,7 @@ export {
 
 // Rhythm — canonical beat engine (fixture-gated: tempo_beats.json).
 // tempo()/beat_track() are the reference tier; quickTempo() is the explicit
-// quick tier (windowed lb-style live estimate, never a silent fallback).
+// quick tier (windowed live estimate, never a silent fallback).
 export { BeatTracker, beat_track, tempo, quickTempo } from './scripts/xa-beat-tracker.js'
 export * as bpm from './scripts/xa-bpm-algorithm.js'
 
@@ -143,7 +143,7 @@ export * as playback from './playback/ops.js'
 // AudioPlayer/LoopPlayer construct an AudioContext lazily (browser-only at
 // call time, import-safe everywhere).
 export { LoopPlayer } from './scripts/LoopPlayer.js'
-export { AudioPlayer } from './scripts/analysis/AudioPlayer.ts'
+export { AudioPlayer } from './scripts/analysis/AudioPlayer.js'
 export {
   initAudioProcessor, loadAudioFile, drawWaveform,
 } from './scripts/xa-audio-core.js'
@@ -167,7 +167,7 @@ export {
 export {
   getWaveformPeaks, getStereoWaveformPeaks, getTimebasedWaveform,
   getWaveformRange, analyzeWaveform,
-} from './scripts/analysis/WaveformData.ts'
+} from './scripts/analysis/WaveformData.js'
 export {
   renderWaveform, renderStereoWaveform, addLoopRegions,
   createInteractiveRenderer,

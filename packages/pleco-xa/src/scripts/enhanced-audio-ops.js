@@ -1,5 +1,6 @@
 // Enhanced audio operations with live responsiveness and large buffer support
 import { halfLoop, doubleLoop, resetLoop } from '../core/index.js';
+import { debugLog, debugWarn } from './debug.js';
 
 // Enhanced reverse with chunked processing for large buffers
 export function reverseBufferSectionEnhanced(buffer, start, end, options = {}) {
@@ -12,7 +13,7 @@ export function reverseBufferSectionEnhanced(buffer, start, end, options = {}) {
   const totalSamples = end - start;
   const isLargeOperation = totalSamples > chunkSize;
   
-  console.log(`🔄 Reversing ${totalSamples} samples (${(totalSamples/buffer.sampleRate).toFixed(2)}s)`);
+  debugLog(`🔄 Reversing ${totalSamples} samples (${(totalSamples/buffer.sampleRate).toFixed(2)}s)`);
   
   if (!isLargeOperation) {
     // Small operation - do it immediately (existing fast method)
@@ -94,7 +95,7 @@ export function isLargeOperation(buffer, loop, operation) {
   const large = isLongLoop || isLargePercentage || isLongFile;
   
   if (large) {
-    console.log(`⚠️ Large operation detected:`, {
+    debugLog(`⚠️ Large operation detected:`, {
       operation,
       loopDuration: loopDuration.toFixed(2) + 's',
       loopPercentage: ((loopSamples / buffer.length) * 100).toFixed(1) + '%',
@@ -151,7 +152,7 @@ export async function applyOperationEnhanced(operation, buffer, loop, onProgress
       return { buffer, loop: resetLoop(buffer) };
       
     default:
-      console.warn(`Unknown operation: ${operation}`);
+      debugWarn(`Unknown operation: ${operation}`);
   }
   
   return { buffer, loop };

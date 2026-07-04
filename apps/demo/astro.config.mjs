@@ -7,11 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
-  site: 'https://pleco-xa.com',
+  site: 'https://plecoxa.com',
   scopedStyleStrategy: 'class',
   server: {
     host: true,
-    allowedHosts: ['work-1-rswgxxppnksyyemk.prod-runtime.all-hands.dev', 'work-2-rswgxxppnksyyemk.prod-runtime.all-hands.dev', 'work-1-pzjaiebmyyxzgkim.prod-runtime.all-hands.dev', 'work-2-pzjaiebmyyxzgkim.prod-runtime.all-hands.dev'],
   },
   vite: {
     resolve: {
@@ -28,9 +27,6 @@ export default defineConfig({
     },
     build: {
       assetsInlineLimit: 0,
-    },
-    preview: {
-      allowedHosts: ['healthcheck.railway.app'],
     },
   },
   adapter: node({ mode: 'standalone' }), 

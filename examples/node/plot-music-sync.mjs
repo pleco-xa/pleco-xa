@@ -1,5 +1,5 @@
 /**
- * plot_music_sync — align two performances via DTW (music-sync demo).
+ * Music sync — align two performances via DTW (music-sync demo).
  *
  * The classic music-sync demo aligns a slow and a fast recording of the same lick and
  * eyeballs the warping path. We make it SELF-VERIFYING by manufacturing a warp
@@ -148,4 +148,4 @@ for (let i = 0; i < Nx; i += rowStep) {
   console.log(line)
 }
 
-summary('plot_music_sync — DTW recovers a known 1.25× stretch as a slope-1.25 warp path')
+summary('music sync — DTW recovers a known 1.25× stretch as a slope-1.25 warp path')

@@ -1,4 +1,5 @@
 // @ts-check
+import { debugError } from '../debug.js'
 /**
  * AudioPlayer - Framework-agnostic audio playback controller
  * Wraps Web Audio API with a clean, event-driven interface
@@ -47,6 +48,7 @@
  * player.on('timeupdate', (time) => console.log('Current time:', time));
  * player.on('loopchange', (loop) => console.log('Loop changed:', loop));
  */
+
 export class AudioPlayer {
   /**
    * Create a new AudioPlayer instance
@@ -492,7 +494,7 @@ export class AudioPlayer {
         try {
           callback(data)
         } catch (error) {
-          console.error(`Error in ${event} listener:`, error)
+          debugError(`Error in ${event} listener:`, error)
         }
       })
     }

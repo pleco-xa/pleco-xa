@@ -5,6 +5,46 @@ All notable changes to `pleco-xa` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] — 2026-07-04
+
+Correctness and honesty release. No API-shape changes; degenerate inputs that
+previously produced fabricated results now throw with diagnostics, as the
+library's contract has always stated.
+
+### Fixed
+
+- **Long-input crash eliminated.** The FFT core is now an iterative, in-place
+  radix-2 transform over preallocated buffers (numerically bit-identical to the
+  previous implementation). A 10-minute 44.1 kHz track — which previously
+  crashed the process — now runs `beat_track` in ~30 s and `melspectrogram` in
+  ~22 s under the default Node heap.
+- **Broken TypeScript declaration.** `2.0.2` shipped a syntactically invalid
+  `loop/detect.d.ts` that failed `tsc` for TypeScript consumers. Fixed, along
+  with nine other declaration defects (unresolvable import specifiers, phantom
+  types, over-required option objects).
+- **No more fabricated results on degenerate input:**
+  - `tempo()` on silent/constant input now throws (previously returned the
+    prior's peak, ~117 BPM, for silence).
+  - `fastBPMDetect`'s silent fallback (fabricated `confidence: 0.5`) is
+    removed; failures rethrow naming the failed stage.
+  - `findMusicalLoop` now rejects effectively-silent signals instead of
+    scoring them with perfect confidence.
+  - FFT/STFT input containing NaN/Infinity now throws with the offending
+    index (previously coerced to 0 and produced plausible-looking output).
+
+### Changed
+
+- **The library is silent by default.** All internal logging is gated behind
+  the `PLECO_DEBUG` debug flag (87 previously-ungated console calls removed
+  from the default paths), enforced by lint rule.
+
+### Infrastructure
+
+- CI now packs the tarball, installs it into a fresh project, and typechecks a
+  real consumer under both `moduleResolution: bundler` and `node16` with
+  `skipLibCheck: false` — shipping a broken declaration again will fail the
+  build.
+
 ## [2.0.2] — 2026-07-04
 
 Maintenance release — no API changes.
@@ -81,6 +121,7 @@ see below.
 Releases prior to `2.0.0` (the `1.x` line, published May–July 2025) predate this
 changelog; their history is available in the git tags.
 
+[2.0.3]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.3
 [2.0.2]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.2
 [2.0.1]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.1
 [2.0.0]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.0

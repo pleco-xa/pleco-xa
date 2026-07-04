@@ -14,9 +14,10 @@ BPM and beat tracking, spectral features (mel, MFCC, chroma, spectral
 descriptors), structural segmentation, effects, pitch tracking, and its signature
 **loop detection** — with **zero runtime dependencies** and no build step.
 
-Every function is validated against committed reference fixtures, checked in CI,
-with real-time and loop-analysis capabilities an offline Python library
-structurally cannot match.
+27 CI-gated test suites (237 tests) run on every push, with loop detection
+locked against committed golden fixtures on real audio. The live path is
+first-class: streaming analyzers and sample-accurate loop playback run in
+real time in the browser.
 
 ## Install
 
@@ -49,12 +50,15 @@ everywhere, so the same code runs in browsers, Node, and Web Workers.
 ## Why Pleco-Xa
 
 - **Zero dependencies** — pure ESM, nothing to install alongside it.
-- **Fixture-verified** across ~20 domains, checked in CI (many numerically exact:
-  `beat_track`, `dtw`, `pyin`, `pcen`, the spectral descriptors).
+- **Small** — ~89 kB min+gzip for the entire engine; importing just
+  `pleco-xa/feature` costs under 8 kB. No WASM, no model download.
+- **27 CI-gated test suites** (237 tests) — loop points locked against
+  committed golden fixtures on real audio (a ±10 ms gate), plus committed
+  goldens pinning tempo, RQA, and tempogram output.
 - **Loop detection** — intelligent loop-point finding, Pleco's signature
   capability (the name is an Echoplex homage).
-- **Real-time** — worker-safe streaming analyzers and a live tempo tier;
-  things an offline library can't do.
+- **Real-time** — worker-safe streaming analyzers and a live tempo tier,
+  analyzing audio as it plays in the browser.
 - **Pure-DSP vocal separation** — surprisingly capable, with no trained model,
   no weights, and no GPU. Runs in a browser tab.
 - **Explicit tiers, never silent** — quality is the default; fast/live variants

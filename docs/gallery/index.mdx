@@ -1,6 +1,6 @@
 ---
 title: Gallery
-description: Fifty live, in-browser demos of pleco-xa — every one runs the real npm bundle on real audio, no server and no Python. Click any demo to open it full-page.
+description: Fifty live, in-browser demos of pleco-xa — every one runs the real npm bundle on real audio, no server, no install — everything computes in your browser. Click any demo to open it full-page.
 ---
 
 import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
@@ -21,7 +21,7 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
 
 <CardGrid>
   <LinkCard title="Vocal separation (flagship)" href="/demos/vocal-separation.html" description="FLAGSHIP: multi-scale fingerprint vocal separation" />
-  <LinkCard title="REPET-SIM vs fingerprint" href="/demos/plot-vocal-separation.html" description="plot_vocal_separation: REPET-SIM vs fingerprint on a real mix" />
+  <LinkCard title="REPET-SIM vs fingerprint" href="/demos/plot-vocal-separation.html" description="REPET-SIM vs fingerprint separation on a real mix" />
   <LinkCard title="Vocal sep on real stems" href="/demos/vocal-separation-real.html" description="vocal separation on REAL Orphans stems (REPET-SIM vs fingerprint)" />
   <LinkCard title="HPSS decomposition" href="/demos/decompose-hpss.html" description="decompose: HPSS spectrogram triptych" />
   <LinkCard title="HPSS margins" href="/demos/plot-hprss.html" description="HPSS margins" />
@@ -44,8 +44,8 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
 <CardGrid>
   <LinkCard title="pYIN pitch tracking" href="/demos/pyin.html" description="pyin" />
   <LinkCard title="Chromagram" href="/demos/chroma-arpeggio.html" description="feature/chroma.js" />
-  <LinkCard title="Enhanced chroma" href="/demos/plot-chroma.html" description="plot_chroma" />
-  <LinkCard title="Harmonic spectrum" href="/demos/plot-spectral-harmonics.html" description="plot_spectral_harmonics" />
+  <LinkCard title="Enhanced chroma" href="/demos/plot-chroma.html" description="Enhanced chroma: harmonic + non-local + median" />
+  <LinkCard title="Harmonic spectrum" href="/demos/plot-spectral-harmonics.html" description="Track f0 and peel the overtones from a gliding quasi-vowel" />
 </CardGrid>
 
 ## Spectral & transforms
@@ -55,7 +55,7 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
   <LinkCard title="MFCC + mel spectrogram" href="/demos/mfcc-specshow.html" description="feature/mfcc.js + scripts/xa-display.js" />
   <LinkCard title="Mel filterbank" href="/demos/mel-filterbank.html" description="scripts/xa-mel.js" />
   <LinkCard title="Chroma filterbank" href="/demos/chroma-filterbank.html" description="filters/index.js" />
-  <LinkCard title="Rainbowgram" href="/demos/plot-rainbowgram.html" description="plot_rainbowgram" />
+  <LinkCard title="Rainbowgram" href="/demos/plot-rainbowgram.html" description="Rainbowgram: phase-derivative color over a log-frequency spectrogram" />
   <LinkCard title="specshow axis modes" href="/demos/plot-display.html" description="specshow axis modes" />
   <LinkCard title="Spectrum analyzer" href="/demos/spectrum-analyzer.html" description="SpectrumAnalyzer" />
   <LinkCard title="Griffin-Lim reconstruction" href="/demos/xa-advanced.html" description="xa-advanced: Griffin-Lim reconstruction A/B" />
@@ -65,10 +65,10 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
 
 <CardGrid>
   <LinkCard title="Laplacian segmentation" href="/demos/laplacian-segmentation.html" description="laplacian_segmentation: McFee-Ellis spectral clustering on real structure" />
-  <LinkCard title="Structure discovery" href="/demos/plot-segmentation.html" description="plot_segmentation: structure discovery on an AABA form" />
+  <LinkCard title="Structure discovery" href="/demos/plot-segmentation.html" description="Structure discovery on an AABA form" />
   <LinkCard title="Segment recurrence" href="/demos/segment-recurrence.html" description="segment recurrence (A-B-A)" />
   <LinkCard title="DTW warping path" href="/demos/dtw.html" description="DTW warping path" />
-  <LinkCard title="Align two performances (DTW)" href="/demos/plot-music-sync.html" description="plot_music_sync" />
+  <LinkCard title="Align two performances (DTW)" href="/demos/plot-music-sync.html" description="DTW aligns a performance with its 1.25× time-stretched twin" />
 </CardGrid>
 
 ## Effects

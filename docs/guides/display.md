@@ -3,11 +3,11 @@ title: Display
 description: Pleco-Xa's canvas-native visualization tier — waveforms, spectrograms, colormaps, and a live spectrum analyzer that draw straight to a canvas in the browser.
 ---
 
-Pleco-Xa draws to a `<canvas>`. Where an offline Python stack hands its arrays to
-matplotlib, Pleco-Xa's display tier is canvas-native: it renders waveforms,
-spectrograms, and colormapped matrices directly in the browser, and it includes
-a live analyzer that visualizes audio as it plays. (A browser `<canvas>` has no
-matplotlib-style figure/axes model, so this API is its own thing.)
+Pleco-Xa draws to a `<canvas>`. Pleco-Xa's display tier is canvas-native: it
+renders waveforms, spectrograms, and colormapped matrices directly in the
+browser, and it includes a live analyzer that visualizes audio as it plays.
+(There is no figure/axes object model — you hand each renderer a canvas and it
+draws.)
 
 Most of this tier is browser-only (it needs `canvas` and `window`). A few
 helpers — `cmap`, `analyzeWaveform`, `getWaveformPeaks` — are pure and run in
@@ -89,8 +89,8 @@ const mel = feature.melspectrogram(y, audioBuffer.sampleRate) // Array<Float32Ar
 const colored = cmap(mel, { robust: true })
 ```
 
-`cmap` auto-selects a colormap family from the data range (sequential,
-diverging, or boolean), mirroring a sensible default. With `robust: true` it
+`cmap` auto-selects a sensible colormap family from the data range (sequential,
+diverging, or boolean). With `robust: true` it
 clips to the 2nd/98th percentiles so a few outliers don't wash out the scale. It
 accepts both plain `number[][]` and the `Array<Float32Array>` that the `feature`
 modules return, so `cmap(feature.melspectrogram(y, sr))` works directly.
@@ -101,8 +101,8 @@ is no key-spelling or svara notation on the display axes.)
 ## Live spectrum analyzer
 
 `RealtimeSpectrumAnalyzer` visualizes a live audio stream — bars, line, or
-filled, over a grid — by reading a Web Audio `AnalyserNode`. It is the real-time
-capability an offline library structurally cannot offer.
+filled, over a grid — by reading a Web Audio `AnalyserNode`. It is the display
+tier's real-time centerpiece — live audio in, live pixels out.
 
 ```js
 import { RealtimeSpectrumAnalyzer } from 'pleco-xa'
@@ -132,4 +132,4 @@ the playback path, not on an offline render.
 
 The [Gallery](/gallery/) pairs these renderers with the analyzers — the spectrum
 analyzer over a playing loop, the interactive waveform with shaded loop regions,
-and the spectrogram/chroma displays used throughout the example replicas.
+and the spectrogram/chroma displays used throughout the gallery demos.

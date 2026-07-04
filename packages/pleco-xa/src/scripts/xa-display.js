@@ -1,4 +1,5 @@
 import { _amax, _amin } from './_arrstat.js'
+import { debugLog, debugWarn } from './debug.js'
 /**
  * Canvas-native spectrogram and waveform display
  * Canvas-based audio visualization utilities for browser environments
@@ -643,7 +644,7 @@ class DisplayAdaptor {
    */
   connect(canvas, signal = 'resize') {
     if (this.connected) {
-      console.warn('DisplayAdaptor: already connected, disconnecting first');
+      debugWarn('DisplayAdaptor: already connected, disconnecting first');
       this.disconnect();
     }
 
@@ -723,7 +724,7 @@ class DisplayAdaptor {
    */
   update(canvas, event) {
     // Default implementation - override this in subclasses
-    console.log('DisplayAdaptor.update called:', event.type);
+    debugLog('DisplayAdaptor.update called:', event.type);
 
     // Example: Handle resize
     if (event.type === 'resize') {
