@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — loop.detect() strategy shootout</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Four loop-finding strategies analyze the same drum track, and each detected loop can be clicked and auditioned." />
+  <title>Loop detection — four-strategy shootout · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 78ch; }
@@ -17,20 +19,34 @@
     #status { color: #999; margin: 8px 0; }
     button { font: 14px system-ui; padding: 6px 12px; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
-  <h2>loop.detect() — four-strategy shootout on <i>Drive Through Beat.wav</i> + golden lock</h2>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Loop detection — four-strategy shootout</span>
+  </header>
+  <h2>Loop detection — four-strategy shootout</h2>
+  <div style="font:12px monospace;color:#888">loop.detect()</div>
   <p>
-    One buffer, one entry point, four explicit strategies. The WAV is decoded
-    with the package's own <code>decodeWav</code> (no browser resampling), then
-    <code>loop.detect(buffer, {strategy})</code> runs 'fast', 'precise',
-    'musical' and 'recurrence'. Each result is painted as a colored region on
-    the shared waveform. The <b>fast</b> row is asserted against
+    Four different ways of finding a good loop — fast, precise, musical, and
+    recurrence — all take a crack at the same drum track,
+    <i>Drive Through Beat.wav</i>. Each result is painted as a colored region
+    on the shared waveform; click a table row to audition that strategy's
+    loop via LoopPlayer. Technically it's one buffer and one entry point: the
+    WAV is decoded with the package's own <code>decodeWav</code> (no browser
+    resampling), then <code>loop.detect(buffer, {strategy})</code> runs each
+    strategy. The <b>fast</b> row is asserted against
     <code>tools/goldens/loop_goldens.json</code> (±441 samples, bpm
     ±0.1) — the same golden lock as <code>examples/node/loop-detect.mjs</code>
     (node-verified: Δ ≤ 1 sample on all four golden WAVs). Recurrence must
     report NO bpm field: it is tempo-free by contract and never invents one.
-    Click a table row to audition that strategy's loop via LoopPlayer.
   </p>
   <div id="badges"></div>
   <canvas id="wave" width="960" height="220"></canvas>

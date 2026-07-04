@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — audio-utils: loop buffer builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Build a seamless 440 Hz sine loop in the browser, measure it, play it, and download it as a WAV file." />
+<title>Loop buffer builder — synth, measure, loop, export · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -11,16 +13,31 @@
   button, a.dl { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; text-decoration: none; display: inline-block; }
   button:hover, a.dl:hover { background: #37474f; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/audio-utils.js — loop buffer: synth, measure, loop, export</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Loop buffer builder — synth, measure, loop, export</span>
+</header>
+<h1>Loop buffer builder — synth, measure, loop, export</h1>
+<div style="font:12px monospace;color:#888">scripts/audio-utils.js</div>
 <p>
-  <code>createLoopBuffer</code> builds a 4×0.5 s 440 Hz sine loop buffer
-  (post-repair: constructs the AudioBuffer directly — no more leaked live
-  AudioContext per call). Metric badges are asserted against sine theory:
-  RMS 1/√2, peak 1.0, ZCR 2f/sr. The export badge encodes the buffer through
+  This page builds a two-second seamless sine loop from scratch, measures it,
+  marks its loop points on the waveform, and exports it as a WAV you can
+  download — press play and it should repeat with no click at the seam. Under
+  the hood, <code>createLoopBuffer</code> builds a 4×0.5 s 440 Hz sine loop
+  buffer (post-repair: constructs the AudioBuffer directly — no more leaked
+  live AudioContext per call); metric badges are asserted against sine theory
+  (RMS 1/√2, peak 1.0, ZCR 2f/sr); the export badge encodes the buffer through
   <code>exportBufferAsWav</code> (io/wav tier) and re-decodes it in-page with
-  <code>decodeWav</code>. Loop markers come from
+  <code>decodeWav</code>; loop markers come from
   <code>defineMultipleLoopPoints</code>. Metric math node-verified 2026-07-02
   with a duck-typed buffer (rms 0.70711, peak 0.9999998, zcr 0.019944).
 </p>

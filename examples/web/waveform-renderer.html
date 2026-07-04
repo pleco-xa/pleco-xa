@@ -2,24 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — WaveformRenderer + WaveformData</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="A sine wave with a silent gap is drawn to canvas, then individual pixels are checked to prove the waveform, the silence, and the loop overlay all land exactly where they should." />
+  <title>Waveform renderer — pixel-probed · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     canvas { background: #111; display: block; margin: 8px 0; border: 1px solid #333; }
     p { max-width: 72ch; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Waveform renderer — pixel-probed</span>
+  </header>
   <h2>WaveformRenderer + WaveformData — pixel-probed render proof</h2>
   <p>
-    A 3 s 440 Hz sine with a <em>silent middle third</em> is rendered via
-    getWaveformPeaks → renderWaveform (peaks/mirror), then addLoopRegions
-    overlays the 1.0–2.0 s window. Badges probe actual canvas pixels: the loud
-    third must be waveform-colored, the silent third must be blank before the
-    overlay (amplitude→pixel mapping), and carry the loop tint after it
-    (time→x mapping). Below: analyzeWaveform stats vs closed-form sine truth
-    from a real AudioBuffer, the repaired renderStereoWaveform, and the
-    repaired idempotent HiDPI resize.
+    Does the waveform on screen actually match the audio? This page draws a
+    3 s 440 Hz tone with a <em>silent middle third</em>, then reads back
+    individual canvas pixels to prove sound paints as waveform, silence stays
+    blank, and the loop overlay lands exactly on the 1.0–2.0 s window.
+    Technically: the sine is rendered via <code>getWaveformPeaks</code> →
+    <code>renderWaveform</code> (peaks/mirror), then <code>addLoopRegions</code>
+    overlays 1.0–2.0 s; badges probe actual canvas pixels for the
+    amplitude→pixel and time→x mappings. Below: <code>analyzeWaveform</code>
+    stats vs closed-form sine truth from a real AudioBuffer, the repaired
+    <code>renderStereoWaveform</code>, and the repaired idempotent HiDPI
+    resize.
   </p>
   <div id="badges"></div>
   <canvas id="mono" width="800" height="200"></canvas>

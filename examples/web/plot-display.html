@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — specshow axis modes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="The same three-note tone is drawn on linear, log, mel, and chroma axes, and the pixel spacing is checked against what each axis promises." />
+  <title>specshow — axis modes that don't lie · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 78ch; }
@@ -10,11 +12,24 @@
     canvas { border: 1px solid #333; display: block; }
     .lbl { color: #999; font-size: 12px; margin-top: 2px; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">specshow — axis modes that don't lie</span>
+  </header>
   <h2>specshow, canvas-native — axis modes that don't lie</h2>
   <p>
-    A three-partial tone (440 + 880 + 1760 Hz) rendered four ways — the
+    A spectrogram is only trustworthy if its axis puts every frequency exactly
+    where it claims. To prove the axes here don't lie, a three-partial tone
+    (440 + 880 + 1760 Hz) is rendered four ways — the
     four-panel specshow layout: linear-frequency STFT, log-frequency STFT,
     mel spectrogram, chromagram. The proof is in the axis mapping: in log mode
     the pixel-row distance 440→880 must equal 880→1760 (octaves equidistant,

@@ -1,0 +1,117 @@
+---
+// Visual gallery card: thumbnail (16:10) + title + one-line description.
+// Thumbnails live in public/gallery-thumbs/ and are captured by a separate
+// run, so the card must degrade gracefully while a PNG is missing: the
+// broken <img> hides itself (onerror) and the wrapper's neutral gradient
+// panel shows instead, keeping build/preview presentable at all times.
+interface Props {
+  /** Card heading, e.g. "Loop detection". */
+  title: string
+  /** Demo page URL, e.g. "/demos/loop-detect.html". */
+  href: string
+  /** Thumbnail URL, e.g. "/gallery-thumbs/loop-detect.png". */
+  thumb: string
+  /** One-line description shown under the title. */
+  desc: string
+}
+
+const { title, href, thumb, desc } = Astro.props
+---
+
+<a class="demo-card" href={href}>
+  <div class="demo-card__thumb">
+    <img
+      src={thumb}
+      alt={`${title} — demo preview`}
+      loading="lazy"
+      decoding="async"
+      onerror="this.style.display='none'"
+    />
+  </div>
+  <div class="demo-card__body">
+    <span class="demo-card__title">{title}</span>
+    <span class="demo-card__desc">{desc}</span>
+  </div>
+</a>
+
+<style>
+  .demo-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--sl-color-black);
+    text-decoration: none;
+    color: var(--sl-color-white);
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .demo-card:hover,
+  .demo-card:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+    border-color: var(--sl-color-gray-4);
+  }
+
+  .demo-card__thumb {
+    aspect-ratio: 16 / 10;
+    background: radial-gradient(
+      circle at 30% 25%,
+      var(--sl-color-gray-5),
+      var(--sl-color-gray-6) 70%
+    );
+    border-bottom: 1px solid var(--sl-color-gray-5);
+  }
+
+  .demo-card__thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .demo-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 0.875rem;
+  }
+
+  .demo-card__title {
+    font-weight: 600;
+    font-size: var(--sl-text-base);
+    line-height: 1.3;
+  }
+
+  .demo-card__desc {
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+    line-height: 1.4;
+  }
+
+  /* Responsive grid the gallery page wraps cards in — declared here (global)
+     so the grid ships with the component and MDX pages need no extra CSS.
+     3-up desktop / 2-up tablet / 1-up mobile. */
+  :global(.demo-grid) {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  @media (min-width: 40rem) {
+    :global(.demo-grid) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 72rem) {
+    :global(.demo-grid) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

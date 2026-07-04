@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — compression: pitch-changing vs pitch-preserving</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Hear the same tone shortened two ways: sped up like a record so the pitch rises, and time-stretched so the pitch stays put." />
+<title>Time compression — pitch-changing vs pitch-preserving · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -12,18 +14,33 @@
   table { border-collapse: collapse; margin: 12px 0; font-family: monospace; }
   td, th { border: 1px solid #444; padding: 4px 12px; text-align: right; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/compression.js — two compressors, one tone</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Time compression — pitch-changing vs pitch-preserving</span>
+</header>
+<h1>Time compression — pitch-changing vs pitch-preserving</h1>
+<div style="font:12px monospace;color:#888">scripts/compression.js</div>
 <p>
-  A 1 s 440 Hz tone is shortened to 0.8× by both tiers.
-  <code>pitchBasedCompress</code> is an honest record-speed resample — pitch and
-  tempo move together, so the tone must measure ≈550 Hz (440 ÷ 0.8).
-  <code>tempoBasedCompress</code> is a real phase-vocoder time stretch — same
-  length, but the tone must still measure ≈440 Hz. Badges assert the exact
-  length contract (17640 samples) and the measured zero-crossing pitch of each
-  output; the buttons make the difference audible. The same asserts run
-  headless in <code>examples/node/compression.mjs</code>.
+  Speed a recording up and you have a choice: let the pitch rise like a record
+  played too fast, or keep the pitch and shrink only the timing. This page
+  shortens the same tone both ways so you can hear — and measure — the
+  difference. A 1 s 440 Hz tone is shortened to 0.8× by both tiers:
+  <code>pitchBasedCompress</code> is an honest record-speed resample — pitch
+  and tempo move together, so the tone must measure ≈550 Hz (440 ÷ 0.8) —
+  while <code>tempoBasedCompress</code> is a real phase-vocoder time stretch —
+  same length, but the tone must still measure ≈440 Hz. Badges assert the
+  exact length contract (17640 samples) and the measured zero-crossing pitch
+  of each output; the buttons make the difference audible. The same asserts
+  run headless in <code>examples/node/compression.mjs</code>.
 </p>
 <div id="badges"></div>
 <table id="results"><tr><th>signal</th><th>length</th><th>measured pitch</th></tr></table>

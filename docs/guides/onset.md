@@ -44,9 +44,9 @@ const { onsetTimes } = onsetDetect(y, sr, { hopLength: 512, delta: 0.07 })
 ## Notes
 
 - **`onset_strength` is frame-exact.** With `center=true` it returns exactly
-  `ceil(len / hop)` frames, and it is fixture-gated
-  (`onset_strength.json`). Pair it with `peakPick` from the
-  [utilities](/guides/util/) to land beats within ±1 hop (~23 ms) of truth.
+  `ceil(len / hop)` frames, and it is covered by exactness tests in CI. Pair it
+  with `peakPick` from the
+  [utilities](./util.md) to land beats within ±1 hop (~23 ms) of truth.
 - **`onsetDetect` reads early.** Its uncentered STFT reports frame-*start*
   times, so detected onsets land ~48–68 ms (up to one `n_fft` window ≈ 93 ms at
   `sr=22050`) before the true event. Use a ~100 ms tolerance when comparing to
@@ -63,4 +63,4 @@ const { onsetTimes } = onsetDetect(y, sr, { hopLength: 512, delta: 0.07 })
   invisible at the default `hop=512` — use a ~5 ms hop (`sr/200`) for the
   contrast to appear.
 
-See the [API reference](/api-by-category/) for full signatures and defaults.
+See the [API reference](../api-by-category.md) for full signatures and defaults.

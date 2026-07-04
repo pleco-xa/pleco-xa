@@ -2,12 +2,28 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Harmonic spectrum — track f0, peel the overtones</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Tracks the gliding pitch of a voice-like tone and re-plots its overtones so they line up as steady, readable rows." />
+  <title>Harmonic spectrum — track f0, peel the overtones · pleco-xa</title>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Harmonic spectrum — track f0, peel the overtones</span>
+</header>
   <h2>Harmonic spectrum — track f0, peel the overtones</h2>
   <p style="max-width:95ch">
-    A <em>harmonic spectrum</em> demo on a fully
+    A voice-like tone glides upward and its overtones ride along — this
+    <em>harmonic spectrum</em> demo tracks the fundamental, then re-plots the
+    spectrum relative to it so the harmonics flatten into steady rows you can
+    read (and resynthesize). The test signal is a fully
     known quasi-vowel: f0 glides 110 → 165 Hz over 3 s carrying harmonics
     1..10 at amplitudes 1/h (phase-continuous additive synthesis, sr 22050).
     Pipeline: <code>yin(50, 300)</code> f0 contour overlaid on a

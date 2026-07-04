@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>pyin — probabilistic YIN pitch tracking (HMM/Viterbi)</title>
+  <meta name="description" content="Tracks the pitch of a tone that steps from 220 to 330 Hz and correctly detects the silence that follows." />
+  <title>pyin — probabilistic YIN pitch tracking (HMM/Viterbi) · pleco-xa</title>
   <style>
     body { background:#0d0d0f; color:#ddd; font:14px/1.5 system-ui, sans-serif; margin:0; padding:24px; max-width:920px }
     h2 { margin:0 0 4px }
@@ -16,8 +17,19 @@
     .legend { font:12px monospace; color:#888 }
     .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:middle; margin:0 4px 0 12px }
   </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">pYIN — probabilistic pitch tracking</span>
+</header>
   <h2>pyin — probabilistic YIN (real HMM / Viterbi decode)</h2>
   <p>
     A synthetic <b>220 Hz tone that steps to 330 Hz</b>, then a <b>silent tail</b>

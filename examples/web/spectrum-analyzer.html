@@ -2,18 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — SpectrumAnalyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="A live oscillator feeds a real-time spectrum display that must pinpoint the tone's frequency to within one FFT bin." />
+  <title>Spectrum analyzer — live oscillator proof · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     canvas { background: #111; display: block; margin: 8px 0; border: 1px solid #333; }
     button { font: 14px system-ui; margin: 2px; padding: 6px 12px; }
     p { max-width: 72ch; }
   </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-  <h2>SpectrumAnalyzer — live oscillator peak-bin proof</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Spectrum analyzer — live oscillator proof</span>
+</header>
+  <h2>Spectrum analyzer — live oscillator proof</h2>
+  <div style="font:12px monospace;color:#888">SpectrumAnalyzer — RealtimeSpectrumAnalyzer · renderStaticSpectrum · createSpectrogram</div>
   <p>
-    Static proofs run on load with the repaired xa-fft-backed paths:
+    Play a tone, watch the analyzer find it: a live oscillator feeds a
+    real-time spectrum display, and the tallest peak has to land on the
+    oscillator's frequency — retune it and the peak follows.
+    Static proofs also run on load with the repaired xa-fft-backed paths:
     renderStaticSpectrum of a 1 kHz sine must report its peak within one FFT
     bin (previously it always threw), and createSpectrogram of a 200→2000 Hz
     chirp must produce the exact legacy frame count with a rising peak bin

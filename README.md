@@ -14,7 +14,7 @@ BPM and beat tracking, spectral features (mel, MFCC, chroma, spectral
 descriptors), structural segmentation, effects, pitch tracking, and its signature
 **loop detection** — with **zero runtime dependencies** and no build step.
 
-27 CI-gated test suites (237 tests) run on every push, with loop detection
+26 CI-gated test suites (237 tests) run on every push, with loop detection
 locked against committed golden fixtures on real audio. The live path is
 first-class: streaming analyzers and sample-accurate loop playback run in
 real time in the browser.
@@ -52,7 +52,7 @@ everywhere, so the same code runs in browsers, Node, and Web Workers.
 - **Zero dependencies** — pure ESM, nothing to install alongside it.
 - **Small** — ~89 kB min+gzip for the entire engine; importing just
   `pleco-xa/feature` costs under 8 kB. No WASM, no model download.
-- **27 CI-gated test suites** (237 tests) — loop points locked against
+- **26 CI-gated test suites** (237 tests) — loop points locked against
   committed golden fixtures on real audio (a ±10 ms gate), plus committed
   goldens pinning tempo, RQA, and tempogram output.
 - **Loop detection** — intelligent loop-point finding, Pleco's signature

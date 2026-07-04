@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — xa-audioio: synthesize, analyze, play</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Generate a pure tone and a rising chirp in the browser, verify their frequency content, and play the result." />
+<title>Audio I/O — synthesize, analyze, play · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -11,17 +13,33 @@
   button { font: 14px monospace; margin: 4px 6px 4px 0; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #263238; color: #fff; cursor: pointer; }
   button:hover { background: #37474f; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/xa-audioio.js — synthesize → analyze → play (chirp proof)</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Audio I/O — synthesize, analyze, play</span>
+</header>
+<h1>Audio I/O — synthesize, analyze, play</h1>
+<div style="font:12px monospace;color:#888">scripts/xa-audioio.js</div>
 <p>
-  <code>tone(440)</code> at sr=8000 for 0.5 s must contain exactly
-  2·440·0.5 = 440 zero crossings. The 200→2000 Hz <code>chirp()</code> below,
-  split into quarters, must show a strictly increasing zero-crossing count
-  (frequency-ramp proof). <code>muExpand(muCompress(x))</code> must round-trip
-  to maxErr &lt; 1e-6. The Play button routes the chirp through the module's
-  own <code>load()/play()</code> Web Audio path — the half Node can't prove
-  (numeric halves node-verified 2026-07-02: ZC=440, mu err 1.2e-7).
+  Build sound from scratch: a pure 440 Hz tone and a sweep that glides from
+  200 Hz up to 2000 Hz, generated, measured, and played entirely in your
+  browser. The waveform below is the sweep; press Play to hear it routed
+  through the library's own playback path. Verification: <code>tone(440)</code>
+  at sr=8000 for 0.5 s must contain exactly 2·440·0.5 = 440 zero crossings,
+  the 200→2000 Hz <code>chirp()</code>, split into quarters, must show a
+  strictly increasing zero-crossing count (frequency-ramp proof), and
+  <code>muExpand(muCompress(x))</code> must round-trip to maxErr &lt; 1e-6
+  (numeric halves node-verified 2026-07-02: ZC=440, mu err 1.2e-7). The Play
+  button routes the chirp through the module's own <code>load()/play()</code>
+  Web Audio path — the half Node can't prove.
 </p>
 <div id="badges"></div>
 <canvas id="wave" width="720" height="140"></canvas>

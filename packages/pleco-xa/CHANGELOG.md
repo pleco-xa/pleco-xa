@@ -123,5 +123,5 @@ changelog; their history is available in the git tags.
 
 [2.0.3]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.3
 [2.0.2]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.2
-[2.0.1]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.1
+[2.0.1]: https://www.npmjs.com/package/pleco-xa/v/2.0.1
 [2.0.0]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.0

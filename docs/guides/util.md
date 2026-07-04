@@ -64,7 +64,7 @@ sync(feats, [0, 3, 6], mean) // [[1, 4], [10, 20]]  ([features][segments])
   distinct from `onsetDetect`'s faster mean-plus-delta heuristic.
 - **`fix_frames` is inclusive and sorted.** It clamps into `[x_min, x_max]`,
   removes duplicates, and (with `pad`) prepends/appends the boundaries.
-- These are Tier-1 promotions to the curated public surface, fixture-verified
-  before shipping.
+- These functions are part of the stable public API and are covered by
+  exactness tests.
 
-See the [API reference](/api-by-category/) for full signatures and defaults.
+See the [API reference](../api-by-category.md) for full signatures and defaults.

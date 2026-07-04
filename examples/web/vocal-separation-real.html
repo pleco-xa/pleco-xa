@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — vocal separation on REAL Orphans stems (REPET-SIM vs fingerprint)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Two different methods pull the vocal out of a real song, and you can listen to every result side by side with the true stems." />
+<title>Vocal separation on real stems · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -22,13 +24,27 @@
   .lose { color: #e07f7f; }
   #status { color: #fc8; font: 13px monospace; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Vocal separation on real stems</span>
+</header>
 <h1>vocal separation on the REAL Orphans master — REPET-SIM (unsupervised) vs pleco fingerprint (supervised)</h1>
 <p>
-  Input is Cameron's real <code>orphans-mix.wav</code> (22.05 kHz mono, 16 s),
-  decoded with the package's own <code>decodeWav</code>. The ground truth is the
-  real stems: <code>orphans-vocals.wav</code> (isolated vocal) and
+  Can you pull the singer back out of a finished mix? This page runs two
+  separators on a real song and lets you audition every result right next to
+  the true stems it was mixed from. Input is Cameron's real
+  <code>orphans-mix.wav</code> (22.05 kHz mono, 16 s), decoded with the
+  package's own <code>decodeWav</code>; the ground truth is the real stems:
+  <code>orphans-vocals.wav</code> (isolated vocal) and
   <code>orphans-instrumental.wav</code> (summed non-vocal stems). The master is
   the sample-exact sum of the stems and the stems are mutually decorrelated, so
   a time-domain Pearson correlation of each estimate against each stem is an

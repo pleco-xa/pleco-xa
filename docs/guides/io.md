@@ -75,4 +75,4 @@ const test = audioio.tone(440, { sr: 22050, duration: 1 })
   decoder hook. `tone` / `chirp` / `clicks` / mu-law / `lpc` are all
   golden-verified.
 
-See the [API reference](/api-by-category/) for full signatures and defaults.
+See the [API reference](../api-by-category.md) for full signatures and defaults.

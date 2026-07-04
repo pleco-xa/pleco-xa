@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — DJ crate analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Analyzes six DJ loops for tempo, key, and mutual similarity, letting you click the matrix to hear any pair back-to-back." />
+  <title>DJ crate analyzer — tempo, key, similarity · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 78ch; }
@@ -14,22 +16,37 @@
     .row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
     .lbl { color: #999; font-size: 12px; margin-top: 4px; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
-  <h2>scripts/dj-loop-analyzer.js — 6-loop crate: DTW similarity, tempo, key, Camelot</h2>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">DJ crate analyzer — tempo, key, similarity</span>
+  </header>
+  <h2>DJ crate analyzer — tempo, key, similarity</h2>
+  <div style="font:12px monospace;color:#888">scripts/dj-loop-analyzer.js</div>
   <p>
-    Six loops with known recipes: <b>A1/A2/A3</b> (120.19 BPM — 43 hops/beat on
-    the tempo lag grid — A-minor chord tones over a four-on-the-floor kick,
-    small pattern variations) and <b>B1/B2/B3</b> (147.66 BPM, E♭-major
-    16th-note arps with off-beat hats). Ground truth is built into the
-    recipes. <code>DJLoopAnalyzer</code> analyzes all six; badges assert the
-    similarity ranking, the block structure of the DTW similarity matrix,
-    exact tempo recovery, Krumhansl-Schmuckler key detection with NORMALIZED
-    confidence (post-repair), measured timbral proxies (post-repair — the old
-    code returned constants), Camelot key compatibility, and index-based DTW
-    k-means clustering (post-repair — the old code TypeError'd and silently
-    fell back to tempo bins). All numbers node-verified. Click a matrix cell
-    to audition that pair back-to-back.
+    Six short loops get sized up the way a DJ reads a crate: what tempo is
+    each one, what key does it sit in, and which loops actually sound alike.
+    Three are A-minor grooves over a four-on-the-floor kick, three are
+    E♭-major 16th-note arps with off-beat hats — click any cell of the
+    similarity matrix to hear that pair back-to-back. Technically, the
+    recipes carry exact ground truth (<b>A1/A2/A3</b> at 120.19 BPM — 43
+    hops/beat on the tempo lag grid — with small pattern variations, and
+    <b>B1/B2/B3</b> at 147.66 BPM); <code>DJLoopAnalyzer</code> analyzes all
+    six, and badges assert the similarity ranking, the block structure of the
+    DTW similarity matrix, exact tempo recovery, Krumhansl-Schmuckler key
+    detection with NORMALIZED confidence (post-repair), measured timbral
+    proxies (post-repair — the old code returned constants), Camelot key
+    compatibility, and index-based DTW k-means clustering (post-repair — the
+    old code TypeError'd and silently fell back to tempo bins). All numbers
+    node-verified.
   </p>
   <div id="badges"></div>
   <div class="row">

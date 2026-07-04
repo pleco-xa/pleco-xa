@@ -28,7 +28,7 @@ const { audioBuffer } = await loadAudioFile('/audio/break.wav')
 const peaks = getWaveformPeaks(audioBuffer, { width: 800, normalize: true })
 
 const canvas = document.querySelector('#wave')
-renderWaveform(canvas, peaks, { type: 'peaks' }) // 'peaks' | 'bars' | 'line' | 'filled'
+renderWaveform(canvas, peaks, { style: 'peaks' }) // 'peaks' | 'bars' | 'line' | 'filled'
 ```
 
 `getWaveformPeaks` **rounds** its output to `precision` decimals (default 2)
@@ -45,7 +45,7 @@ frame.
 
 `createInteractiveRenderer` wraps a canvas with mouse-driven loop selection and
 playhead rendering. **Call `setDuration()` first** — until it knows the clip
-duration, the mouse-to-time math divides by zero.
+duration, mouse interaction is a silent no-op (clicks and drags are ignored).
 
 ```js
 import { createInteractiveRenderer } from 'pleco-xa'
@@ -57,7 +57,7 @@ renderer.render(peaks)
 
 `addLoopRegions(canvas, loops, duration)` overlays one or more detected loop
 regions on an already-drawn waveform — pair it with
-[`loop.detect()`](/guides/loop/) results to shade the loop you found.
+[`loop.detect()`](./loop.md) results to shade the loop you found.
 
 For stereo, `getStereoWaveformPeaks` returns `{ left, right, isMono }` (it
 duplicates mono into both channels when handed a single-channel buffer).
@@ -86,12 +86,14 @@ import { feature, cmap } from 'pleco-xa'
 
 const y = audioBuffer.getChannelData(0)
 const mel = feature.melspectrogram(y, audioBuffer.sampleRate) // Array<Float32Array>
-const colored = cmap(mel, { robust: true })
+const colored = cmap(mel) // robust percentile clipping is on by default
 ```
 
 `cmap` auto-selects a sensible colormap family from the data range (sequential,
-diverging, or boolean). With `robust: true` it
-clips to the 2nd/98th percentiles so a few outliers don't wash out the scale. It
+diverging, or boolean). Its arguments are **positional** —
+`cmap(data, robust?, ...)` — and `robust` defaults to `true`, clipping to the
+2nd/98th percentiles so a few outliers don't wash out the scale; pass
+`cmap(data, false)` for the raw range. It
 accepts both plain `number[][]` and the `Array<Float32Array>` that the `feature`
 modules return, so `cmap(feature.melspectrogram(y, sr))` works directly.
 
@@ -130,6 +132,6 @@ the playback path, not on an offline render.
 
 ## See it live
 
-The [Gallery](/gallery/) pairs these renderers with the analyzers — the spectrum
+The [Gallery](https://plecoxa.com/gallery/) pairs these renderers with the analyzers — the spectrum
 analyzer over a playing loop, the interactive waveform with shaded loop regions,
 and the spectrogram/chroma displays used throughout the gallery demos.

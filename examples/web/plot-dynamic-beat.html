@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — plot-dynamic-beat: beat tracking through a tempo change</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="A beat tracker follows a click track that jumps from 90 to 140 BPM, and you can hear it against one that assumes a single tempo." />
+<title>Dynamic beat tracking — through a tempo change · pleco-xa</title>
 <style>
   body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
   canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
@@ -12,12 +14,25 @@
   .legend { font: 11px monospace; color: #999; margin: 2px 0 10px }
   .r { color: #ef5350 } .b { color: #42a5f5 }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h2>plot-dynamic-beat — beat tracking through a 90→140 BPM tempo switch</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Dynamic beat tracking — through a tempo change</span>
+</header>
+<h2>Dynamic beat tracking — through a 90→140 BPM tempo switch</h2>
+<div style="font:12px monospace;color:#888">plot-dynamic-beat</div>
 <p>
-  Dynamic beat tracking in the browser. A click track (5&nbsp;ms decaying 1&nbsp;kHz
-  bursts, sr=22050) plays <b>90&nbsp;BPM for 4&nbsp;s, then 140&nbsp;BPM for 4&nbsp;s</b>. Two trackers
+  Real music speeds up and slows down, and a beat tracker locked to one BPM
+  falls apart the moment it does. Here a click track (5&nbsp;ms decaying 1&nbsp;kHz
+  bursts, sr=22050) plays <b>90&nbsp;BPM for 4&nbsp;s, then 140&nbsp;BPM for 4&nbsp;s</b>, and two trackers
   run on it. The <span class="r">static</span> tracker takes one scalar
   <code>tempo()</code> for the whole clip, so its beats keep a single spacing and over-detect in the
   slow half. The <span class="b">dynamic</span> tracker takes the per-frame

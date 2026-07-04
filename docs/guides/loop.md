@@ -72,7 +72,8 @@ loop.STRATEGIES // ['fast', 'precise', 'musical', 'recurrence']
 
 A beat-tracked pipeline: it tracks the beat, then runs a precise onset-pair
 stage, a bar-aligned stage, and a half-buffer heuristic in sequence. This is the
-everyday choice — the legacy `fastLoopAnalysis`, purged and golden-locked in CI.
+everyday choice — the same engine as the legacy `fastLoopAnalysis`, locked
+against golden fixtures in CI.
 It reports a `bpm`. Cost is roughly O(onsets²) in its inner search (~7 s for 45 s
 of audio in Node with the default hop).
 
@@ -211,8 +212,8 @@ controller.resetLoop()       // back to { start: 0, end: 1 }
 ```
 
 This is the same half / double / move-forward vocabulary the demo's live loop
-controls are built on — see the [Playback guide](/guides/playback/) for wiring
-it to actual sound, and the [Play guide](/guides/play/) for driving it
+controls are built on — see the [Playback guide](./playback.md) for wiring
+it to actual sound, and the [Play guide](./play.md) for driving it
 algorithmically.
 
 ### `DynamicZeroCrossing` — clean boundaries
@@ -241,7 +242,7 @@ points, so regressions in any strategy break the build.
 
 ## See it live
 
-The [Gallery](/gallery/) hosts the interactive loop demos — the four-strategy
+The [Gallery](https://plecoxa.com/gallery/) hosts the interactive loop demos — the four-strategy
 shootout on the same clip, the tempo-free recurrence heatmap, and the DJ-style
 loop comparison crate — where you can hear each strategy's boundaries and watch
 the confidence numbers move as you swap material.

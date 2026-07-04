@@ -11,8 +11,8 @@ running loop — is the gesture set of hardware live-loopers like the Echoplex
 Digital Pro, and this layer is Pleco-Xa's homage to it. It's the library's
 artistic identity: the loop as an instrument, not just a measurement.
 
-Everything here composes over a [`loop.detect()`](/guides/loop/) result and the
-[`playback`](/guides/playback/) operations. The loop descriptor these functions
+Everything here composes over a [`loop.detect()`](./loop.md) result and the
+[`playback`](./playback.md) operations. The loop descriptor these functions
 use is `{ startSample, endSample }` in samples (the algorithmic-sequence
 convention), which sits alongside the normalized `{ start, end }` used by
 `LoopController` and the `playback` namespace.
@@ -117,11 +117,14 @@ RHYTHM_VOCAB // ['half','double','move','reverse','reset','stutter','phase','fra
 allPresets   // array of preset op-bars
 ```
 
-**Execution is browser-only.** `playQuantumOps` reads and writes a
-`window.quantumSequenceCount` global, and any `phase` op routes through
-`window.phaserParams` — so stepping a sequence that contains `phase` requires a
-browser (or an injected shim for those globals). Build lists in Node; play them
-in the browser.
+**`playQuantumOps` drives its own sequence.**
+`playQuantumOps(buffer, ctx, applyLoop, beatMs)` generates a fresh 128-op list
+internally (with four preset injections) and steps through it with adaptive
+timing — it does not accept a prebuilt list from `buildQuantumOpList` /
+`buildQuantumSequence`. Use `buildQuantumSequence` when you want to construct
+and step a sequence yourself, and `playQuantumOps` when you want the
+self-driving stream. State is local to each invocation, and `phase` ops take
+their parameters as an explicit options argument — no globals are involved.
 
 ## Algorithmic generators — deterministic patterns
 
@@ -148,5 +151,5 @@ to a player.
 Pleco-Xa's analysis half measures audio rigorously; this half treats the result
 as an instrument: a loop is a playable object, and choreographing it — in the
 browser, in real time, clocked to the beat — is a legitimate creative act. The
-[Gallery](/gallery/) hosts the live instruments built on this layer: the loop
+[Gallery](https://plecoxa.com/gallery/) hosts the live instruments built on this layer: the loop
 playground, the beat glitcher, and the quantum sequencer.

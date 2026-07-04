@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — hear your analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Detected drum hits are played back as clicks on top of the pattern, plus a rising two-octave sweep, so you can hear the analysis being right." />
+  <title>Hear your analysis — onset clicks + chirp playback · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 72ch; }
@@ -10,11 +12,24 @@
     button { font: 14px system-ui; margin: 6px 2px; padding: 6px 12px; }
     .lbl { color: #999; font-size: 12px; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Hear your analysis — onset clicks + chirp playback</span>
+  </header>
   <h2>Hear your analysis — onset clicks + chirp playback</h2>
   <p>
-    A 4-hit percussion pattern with hits at exactly [0.5, 1.0, 1.5, 2.0] s is
+    If onset detection works, you should not have to squint at a plot — you
+    should hear the clicks land right on the drum hits. A 4-hit percussion
+    pattern with hits at exactly [0.5, 1.0, 1.5, 2.0] s is
     analyzed two ways: the centered <code>onset_strength</code>
     envelope + <code>peakPick</code> must recover all 4 hits within ±1 hop
     (23 ms), and the quick-tier <code>onsetDetect</code> must find 4 within its

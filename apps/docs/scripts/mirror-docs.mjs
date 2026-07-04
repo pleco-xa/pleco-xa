@@ -35,6 +35,12 @@ if (!existsSync(source)) {
 // astro build regenerates) so removed/renamed source files never linger.
 rmSync(dest, { recursive: true, force: true })
 mkdirSync(dirname(dest), { recursive: true })
-cpSync(source, dest, { recursive: true })
+cpSync(source, dest, {
+  recursive: true,
+  // docs/README.md is the GitHub-facing index of /docs (plain markdown, no
+  // Starlight frontmatter) — it is not site content, so keep it out of the
+  // content collection.
+  filter: (src) => !src.endsWith('/README.md'),
+})
 
 console.log(`[mirror-docs] docs/ -> ${dest.replace(`${repoRoot}/`, '')}`)

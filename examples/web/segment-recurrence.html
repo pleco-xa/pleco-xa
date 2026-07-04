@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — segment recurrence (A-B-A)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Shows a repeating A-B-A pattern as bright blocks in a self-similarity heatmap and finds the exact section boundaries." />
+  <title>Segment recurrence — A-B-A structure · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 72ch; }
@@ -10,11 +12,27 @@
     .row { display: flex; align-items: flex-start; }
     .lbl { color: #999; font-size: 12px; }
   </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-  <h2>segment — recurrence heatmap of an A-B-A pattern + exact Ward boundaries</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Segment recurrence — A-B-A structure</span>
+</header>
+  <h2>Segment recurrence — A-B-A structure</h2>
+  <div style="font:12px monospace;color:#888">segment — recurrence heatmap + exact Ward boundaries</div>
   <p>
-    A 60-frame, 12-dim feature matrix planted as A(20)-B(20)-A(20) with small
+    When music repeats itself, a recurrence plot shows the repeat as bright
+    blocks away from the diagonal — here a planted A-B-A pattern lights up
+    exactly where it should, and the section boundaries come back exact.
+    The input is a 60-frame, 12-dim feature matrix planted as
+    A(20)-B(20)-A(20) with small
     deterministic jitter. <code>recurrenceMatrix(mode 'affinity', sym)</code>
     must light the A↔A repeat as bright off-diagonal blocks, keep the
     |i−j|&lt;width band exactly zero and the matrix exactly symmetric; the lag

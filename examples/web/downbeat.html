@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — xa-downbeat: find beat 1 of an accent-shifted 4/4 pattern</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Shows how pleco-xa finds beat 1 of each bar even when the loudest drum hit lands somewhere else." />
+<title>Downbeat finder — locating beat 1 · pleco-xa</title>
 <style>
   body { font: 14px system-ui; background: #181818; color: #ddd; max-width: 860px; margin: 24px auto; padding: 0 12px }
   canvas { display: block; width: 100%; margin: 8px 0; border: 1px solid #333 }
@@ -10,20 +12,35 @@
   button { font: 14px system-ui; padding: 6px 14px; margin: 8px 4px 8px 0; border-radius: 6px; border: 1px solid #555; background: #2a2a2a; color: #ddd; cursor: pointer }
   button:hover { background: #3a3a3a }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h2>xa-downbeat — find the TRUE beat 1: accent-shifted 4/4, known downbeat phase</h2>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Downbeat finder — locating beat 1</span>
+</header>
+<h2>Downbeat finder — locating beat 1</h2>
+<div style="font:12px monospace;color:#888">xa-downbeat</div>
 <p>
-  A seeded 8-bar 4/4 pattern at 120 BPM (sr=22050) puts the accented hit — a loud 60Hz kick +
-  noise burst — on beat index 1 of every bar, with quiet hats elsewhere. The true beat grid
+  The loudest hit in this drum pattern lands one beat AFTER the barline — the kind of accent
+  shift that tricks a naive tracker into calling the wrong beat "one". This page shows
+  <code>findDownbeatPhase</code> locating the true downbeat anyway, and the play button adds
+  a thump on every reported downbeat so the "boom on 1" is audible. Technically: a seeded
+  8-bar 4/4 pattern at 120 BPM (sr=22050) puts the accented hit — a loud 60Hz kick + noise
+  burst — on beat index 1 of every bar, with quiet hats elsewhere; the true beat grid
   (every 0.5s) plus audio goes into <code>findDownbeatPhase(y, beats, 120, sr)</code>.
   Proofs (node-verified): <code>phase === 1</code> with a decisive score margin, one downbeat
   per bar (8 total), and <code>findFirstDownbeat</code> on a signal with one silent leading bar
   returns 2.000s exactly (&plusmn;0.25s asserted). Repairs proven here (2026-07-02): phase
   rounding wraps 4&rarr;0 instead of silently discarding, and accent strength is measured
   forward from the (uncentered, frame-start) onset time — the old centered window read pure
-  silence on sparse material and scored every phase 0. The play button thumps on each reported
-  downbeat so the "boom on 1" is audible.
+  silence on sparse material and scored every phase 0.
 </p>
 <div id="badges"></div>
 <canvas id="wave" width="820" height="140"></canvas>

@@ -1,6 +1,18 @@
 #!/usr/bin/env node
-/** Demo-coverage gate: every public API member demonstrated in examples/ or explicitly ledgered. */
-import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+/**
+ * Demo-coverage gate: every public API member demonstrated in examples/ or
+ * explicitly ledgered. Exits 1 if any callable export is neither.
+ *
+ * Run:    npm run check:coverage
+ *         (requires packages/pleco-xa/dist — run `npm run build:lib` first)
+ * Report: coverage/demo-coverage.json (gitignored build artifact)
+ *
+ * Ledger escape hatch: examples/coverage-ledger.json (optional, tracked) maps
+ * a member name to a short reason it is deliberately not demonstrated, e.g.
+ *   { "playback.pause": "exercised implicitly by every playback demo" }
+ * Ledgered members count as covered.
+ */
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 const root = new URL('..', import.meta.url).pathname
@@ -57,7 +69,8 @@ const rows = members.map((m) => {
 const uncovered = rows.filter(r => !r.covered && !r.ledgered)
 const pct = (100 * (rows.length - uncovered.length) / rows.length).toFixed(1)
 
-writeFileSync(join(root, 'docs/notes/demo-coverage.json'), JSON.stringify({ generated: new Date().toISOString(), total: rows.length, coveredOrLedgered: rows.length - uncovered.length, pct, uncovered: uncovered.map(r => r.member), nonCallable, rows }, null, 1))
+mkdirSync(join(root, 'coverage'), { recursive: true })
+writeFileSync(join(root, 'coverage/demo-coverage.json'), JSON.stringify({ generated: new Date().toISOString(), total: rows.length, coveredOrLedgered: rows.length - uncovered.length, pct, uncovered: uncovered.map(r => r.member), nonCallable, rows }, null, 1))
 console.log(`coverage: ${rows.length - uncovered.length}/${rows.length} (${pct}%) demonstrated-or-ledgered [call-site check]`)
 console.log(`(non-callable exports excluded from the gate: ${nonCallable.length})`)
 if (uncovered.length) {

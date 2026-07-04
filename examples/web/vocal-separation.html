@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — FLAGSHIP: multi-scale fingerprint vocal separation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="A synthetic singing tone is lifted out of its backing track by learning EQ curves from the vocal's spectral fingerprint, with every stage playable by ear." />
+<title>Fingerprint vocal separation — flagship · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -15,20 +17,36 @@
   td, th { border: 1px solid #444; padding: 4px 10px; text-align: right; }
   th { color: #9ad; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/xa-vocal-separation.js — FLAGSHIP: fingerprint separation on a known synthetic mix</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Fingerprint vocal separation — flagship</span>
+</header>
+<h1>Fingerprint vocal separation — flagship: separation on a known synthetic mix</h1>
+<div style="font:12px monospace;color:#888">scripts/xa-vocal-separation.js</div>
 <p>
-  Known "vocal" (440 Hz carrier, 5 Hz vibrato ±30 cents, 2 harmonic partials) +
-  known "backing" (110 Hz bass + 4 Hz click train), mixture = sum.
-  <code>processAudioToFingerprints</code> on vocal and mixture →
+  Hear a "vocal" get lifted out of a mix: the library learns EQ curves from the
+  vocal's spectral fingerprint, applies them to the mixture, and you can play
+  the vocal, the backing, the mix, and the reconstruction below. Because both
+  parts are synthesized — the vocal is a 440 Hz carrier with 5 Hz vibrato
+  ±30 cents and 2 harmonic partials, the backing a 110 Hz bass plus a 4 Hz
+  click train, mixture = sum — everything is measured against the known parts.
+  Pipeline: <code>processAudioToFingerprints</code> on vocal and mixture →
   <code>optimizeEqCurves</code> (100 iters) → <code>reconstructVocal</code> on
-  the mixture STFT. Everything below is measured against the known parts.
+  the mixture STFT.
   <b>Honest note:</b> the optimizer is plain full-batch gradient descent with
   NO input normalization — stability requires <code>lr &lt; 1/max(|STFT|)²</code>.
   At the natural signal levels here that means <code>lr = 1e-5</code>
-  (node-verified: lr 0.01 slams the EQ against its clip bounds and the loss
-  oscillates 294↔594 instead of descending).
+  (verified headless in Node: lr 0.01 slams the EQ against its clip bounds and
+  the loss oscillates 294↔594 instead of descending).
 </p>
 <div id="badges"></div>
 <div>

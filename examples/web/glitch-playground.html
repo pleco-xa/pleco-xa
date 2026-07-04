@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — glitch playground (loopPlayground + beatGlitcher)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="A seeded glitch sequencer chops a drum loop into ever-changing pieces live, alongside a bar-synced glitch clock." />
+  <title>Glitch playground — loop + beat glitching · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     button { font: 14px system-ui; margin: 2px; padding: 6px 12px; }
@@ -13,18 +15,34 @@
     .status { color: #999; margin: 6px 0; }
     h3 { margin-top: 26px; border-top: 1px solid #333; padding-top: 14px; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
-  <h2>Glitch playground — core/loopPlayground + core/beatGlitcher</h2>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Glitch playground — loop + beat glitching</span>
+  </header>
+  <h2>Glitch playground — loop + beat glitching</h2>
+  <div style="font:12px monospace;color:#888">core/loopPlayground + core/beatGlitcher</div>
 
   <p>
-    Section 1 proves <code>randomSequence</code> (node-verified in
-    <code>examples/node/loop-playground.mjs</code>): seeded determinism —
+    A seeded random sequencer chops a beat into ever-changing loops —
+    halving, nudging, reversing — and because it's seeded, the same seed
+    replays the exact same glitch choreography every time. Press Start to
+    watch the loop window jump around the waveform of
+    <i>Drive Through Beat.wav</i> while the ops scroll past in the ticker.
+    Technically, Section 1 proves <code>randomSequence</code> (node-verified
+    in <code>examples/node/loop-playground.mjs</code>): seeded determinism —
     identical op logs for the same seed, pinned golden log for seed 42 —
-    and a 500-step bounds fuzz with zero violations. Then it plays: a
-    GibClock drives step execution against live LoopPlayer playback of
-    <i>Drive Through Beat.wav</i>, with the moving loop overlay and a
-    scrolling op ticker. Same seed ⇒ same choreography.
+    and a 500-step bounds fuzz with zero violations; a GibClock then drives
+    step execution against live LoopPlayer playback. Same seed ⇒ same
+    choreography.
   </p>
   <div id="badges"></div>
 

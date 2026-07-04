@@ -10,10 +10,12 @@ functions you can pull out and apply yourself when building a custom pipeline.
 
 ## Key functions
 
-- `filters.mel_filterbank({ sr, n_fft, n_mels, htk, norm })` — the mel projection
-  matrix: continuous Slaney triangular ramps over the FFT frequency grid with
-  Slaney area normalization (HTK scale and other norms optional). Multiply it
-  against a power spectrogram to get a mel spectrogram.
+- `filters.mel_filterbank(sr?, n_fft?, n_mels?, fmin?, fmax?, norm?, htk?)` —
+  the mel projection matrix: continuous Slaney triangular ramps over the FFT
+  frequency grid with Slaney area normalization (HTK scale and other norms
+  optional). Arguments are **positional**, defaulting to
+  `(22050, 2048, 128, 0, null, 'slaney', false)`. Multiply it against a power
+  spectrogram to get a mel spectrogram.
 - `filters.chroma({ sr, n_fft })` — the chroma filterbank: Gaussian pitch-class
   bumps with octave weighting and tuning.
   `feature.chroma_stft` is a matmul of this against the energy spectrum.
@@ -24,10 +26,10 @@ functions you can pull out and apply yourself when building a custom pipeline.
 ## Example
 
 ```js
-import { filters, stft } from 'pleco-xa'
+import { filters } from 'pleco-xa'
 
-// build the mel matrix once, reuse across frames
-const melFb = filters.mel_filterbank({ sr: 22050, n_fft: 2048, n_mels: 128 })
+// build the mel matrix once, reuse across frames — positional args: (sr, n_fft, n_mels)
+const melFb = filters.mel_filterbank(22050, 2048, 128)
 
 // a periodic Hann window for your own STFT framing
 const win = filters.get_window('hann', 2048)
@@ -35,6 +37,10 @@ const win = filters.get_window('hann', 2048)
 
 ## Notes
 
+- **`mel_filterbank` takes positional arguments**, unlike the options-object
+  style of the `feature` namespace. Passing an options object
+  (`mel_filterbank({ sr: 22050, ... })`) does not throw — it silently produces
+  a garbage matrix. Use the positional form shown above.
 - Windows are **periodic** (`2π·i / n`), not symmetric (`/(n-1)`). This is the
   scipy `fftbins=True` convention; the symmetric form skews every spectrogram bin.
 - The mel filterbank defaults to the **Slaney** scale with area normalization.
@@ -43,4 +49,4 @@ const win = filters.get_window('hann', 2048)
   `feature.chroma_stft` use internally; exposing them lets you build custom
   feature stacks without re-deriving the matrices.
 
-See the [API reference](/api-by-category/) for full signatures.
+See the [API reference](../api-by-category.md) for full signatures.

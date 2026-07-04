@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — live speed: playbackRate vs resample tiers</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Doubles a track's playback speed live, either letting the pitch jump an octave or keeping the pitch unchanged." />
+<title>Live speed control — playbackRate vs resample · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 820px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -11,11 +13,26 @@
   button:hover { background: #37474f; }
   #status { font-family: monospace; color: #9ad; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
-<h1>scripts/live-speed-control.js — playbackRate vs resample tiers</h1>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Live speed control — playbackRate vs resample</span>
+</header>
+<h1>Live speed control — playbackRate vs resample</h1>
+<div style="font:12px monospace;color:#888">scripts/live-speed-control.js</div>
 <p>
-  Two live speed tiers, each with an assertable signature.
+  Doubling a track's speed live can go two ways: the turntable way, where
+  everything jumps up an octave, or the pitch-preserving way, where the
+  groove speeds up but stays at the same pitch. This page plays both, and
+  each tier leaves an assertable signature proving which path ran.
   <b>playbackRate tier</b>: <code>applyLiveDoubleSpeed()</code> crossfades to a
   replacement source whose <code>playbackRate.value</code> must be exactly 2.0,
   stopping the old source after the 50 ms fade (the audible octave jump).

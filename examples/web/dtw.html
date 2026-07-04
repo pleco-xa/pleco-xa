@@ -2,22 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>pleco-xa proof — DTW warping path</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Shows dynamic time warping lining up two sequences by tracing the cheapest path through a cost matrix." />
+  <title>Dynamic time warping — cost matrix + path · pleco-xa</title>
   <style>
     body { font: 14px system-ui; background: #1a1a1a; color: #ddd; margin: 20px; }
     p { max-width: 72ch; }
     canvas { image-rendering: pixelated; border: 1px solid #333; margin: 4px 8px 4px 0; }
     .lbl { color: #999; font-size: 12px; }
   </style>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body>
-  <h2>sequence/dtw — cost matrix + warping path on a known time-warp</h2>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Dynamic time warping — cost matrix + path</span>
+  </header>
+  <h2>Dynamic time warping — cost matrix + path</h2>
+  <div style="font:12px monospace;color:#888">sequence/dtw</div>
   <p>
-    X is a 2-dim ramp (40 frames); Y duplicates frames 10–19 (known warp map).
-    The heatmap shows the accumulated-cost matrix D with the recovered warping
-    path overlaid — it must ride the zero-cost valley exactly: total cost 0,
-    every path pair obeying the duplication map, and subsequence DTW pinning an
-    embedded copy at its exact offset. Same asserts as
+    Dynamic time warping is how you line up two takes of the same material
+    when one of them drags or rushes — it stretches time until the two
+    sequences match. The heatmap shows the accumulated-cost matrix D with the
+    recovered warping path overlaid, riding the cheapest valley. Technically:
+    X is a 2-dim ramp (40 frames) and Y duplicates frames 10–19 (known warp
+    map), so the path must ride the zero-cost valley exactly — total cost 0,
+    every path pair obeying the duplication map, and subsequence DTW pinning
+    an embedded copy at its exact offset. Same asserts as
     <code>examples/node/dtw.mjs</code> (node-verified).
   </p>
   <div id="badges"></div>

@@ -2,13 +2,30 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>scripts/xa-mel.js — Slaney mel filterbank triangles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Plot of the overlapping triangular filters that map a raw spectrum onto the mel scale, checked against the textbook formulas." />
+  <title>Mel filterbank — Slaney triangles · pleco-xa</title>
+  <style>
+    /* pleco-xa demo shell */
+    header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+    header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+    header.px-shell a:hover { text-decoration: underline; }
+    header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+  </style>
 </head>
 <body style="background:#181818;color:#ddd;font:14px system-ui;padding:12px">
-  <h2>scripts/xa-mel.js — Slaney mel filterbank triangles</h2>
+  <header class="px-shell">
+    <a href="/gallery/">&larr; Gallery</a>
+    <span class="px-shell-title">Mel filterbank — Slaney triangles</span>
+  </header>
+  <h2>Mel filterbank — Slaney triangles</h2>
+  <div style="font:12px monospace;color:#888">scripts/xa-mel.js</div>
   <p style="max-width:80ch">
-    First 12 slaney-normalized triangles of <code>filters.mel_filterbank(22050, 2048, 40)</code>
-    (re-exported from scripts/xa-mel.js) plotted over a Hz axis — the mel-filterbank classic.
+    These overlapping triangles are how a raw spectrum gets folded onto a scale that hears the
+    way people do — each triangle collects the energy of one frequency band, narrow at the low
+    end and wider as pitch climbs. The plot shows the first 12 slaney-normalized triangles of
+    <code>filters.mel_filterbank(22050, 2048, 40)</code>
+    (re-exported from scripts/xa-mel.js) over a Hz axis — the mel-filterbank classic.
     Proofs: the Slaney boundary identities hz_to_mel(1000)=15 and mel_to_hz(15)=1000 (float-exact:
     ≤1e-9; the raw float64 value is 15 − 1.8e-15 from 200/3 roundoff),
     filterbank shape 40 × 1025, every filter elementwise-matches an independent Slaney-formula

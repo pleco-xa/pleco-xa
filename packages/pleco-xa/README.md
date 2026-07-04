@@ -15,8 +15,9 @@ browser, Node, Web Workers, the edge. Tempo and beat tracking; mel / MFCC /
 chroma / spectral descriptors; structural segmentation; DTW & sequence
 alignment; effects; pitch tracking; pure-DSP vocal separation; and its
 signature **loop detection** — with **zero runtime dependencies** and no build
-step required. 27 CI-gated test suites (237 tests) run on every push, with
-loop detection locked against committed golden fixtures on real audio.
+step required. 26 CI-gated test suites (237 tests) run on every PR and push
+to `main`, with loop detection locked against committed golden fixtures on
+real audio.
 
 ## Install
 
@@ -83,7 +84,7 @@ the analysis API is `(Float32Array, sampleRate)` everywhere.
 - **~89 kB min+gzip** for the entire engine — the `feature` subpath alone under
   8 kB. No WASM, no model download.
 - **TypeScript declarations** for the barrel and all 19 subpaths.
-- **27 CI-gated test suites** (237 tests) — loop points locked against
+- **26 CI-gated test suites** (237 tests) — loop points locked against
   committed golden fixtures on real audio (±10 ms).
 - **Loop detection** — the signature feature.
 - **Real-time** streaming analyzers and a live tempo tier.

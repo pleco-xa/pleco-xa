@@ -62,7 +62,7 @@ const quick = quickTempo(y, sr)
   ~117.45 at hop 512. The honest bound is `|err| ≤ 7 BPM` at that hop — don't
   assert tempo on a knife edge.
 - **Tempo and beats are pinned.** `beat_track`'s tempo *and* beat frames are
-  fixture-gated in CI (`tempo_beats.json`) — and hold even after a 16-bit WAV
+  pinned by exactness tests in CI — and hold even after a 16-bit WAV
   encode/decode round trip.
 - **The quick tier never impersonates the canonical one.** `quickTempo` is
   explicitly the fast path; it is only actually faster than the canonical tier at
@@ -78,4 +78,4 @@ const quick = quickTempo(y, sr)
   `onset_strength` + `tempo`) is the canonical engine; the old standalone
   BPM detector is superseded.
 
-See the [API reference](/api-by-category/) for full signatures and defaults.
+See the [API reference](../api-by-category.md) for full signatures and defaults.

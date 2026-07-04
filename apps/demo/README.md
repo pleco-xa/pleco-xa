@@ -1,7 +1,7 @@
 # @pleco-xa/demo
 
 A standalone Astro app that exercises `pleco-xa` as a real consumer (it imports
-the published package via the workspace). It is **not** the public site —
+the package through the npm workspace). It is **not** the public site —
 [plecoxa.com](https://plecoxa.com) is served by [`apps/docs`](../docs).
 
 This app earns its place in the monorepo for two reasons:

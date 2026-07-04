@@ -30,6 +30,7 @@
     "docs": "npm run dev -w @pleco-xa/docs",
     "docs:build": "npm run build:lib && npm run build -w @pleco-xa/docs",
     "check:types": "node tools/check-types.mjs",
+    "check:coverage": "node tools/coverage-manifest.mjs",
     "demos": "node tools/serve-demos.mjs",
     "demos:build": "npm run build:lib && node tools/serve-demos.mjs",
     "start": "node apps/demo/dist/server/entry.mjs",

@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>pleco-xa proof — vocal separation: REPET-SIM vs fingerprint on a real mix</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Compares two ways of pulling the vocal out of a real full-band mix, with listening buttons and scores against the true isolated stems." />
+<title>Vocal separation — two methods on a real mix · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -17,11 +19,24 @@
   .note { color: #fc8; }
   .win { color: #7f7; }
 </style>
+<style>
+  /* pleco-xa demo shell */
+  header.px-shell { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; box-sizing: border-box; margin: 0 0 16px; padding: 8px 12px; background: rgba(127, 127, 127, 0.12); border: 1px solid rgba(127, 127, 127, 0.25); border-radius: 8px; font: 13px system-ui, sans-serif; }
+  header.px-shell a { color: #6faee0; text-decoration: none; white-space: nowrap; }
+  header.px-shell a:hover { text-decoration: underline; }
+  header.px-shell .px-shell-title { margin: 0; opacity: 0.75; text-align: right; }
+</style>
 </head>
 <body>
+<header class="px-shell">
+  <a href="/gallery/">&larr; Gallery</a>
+  <span class="px-shell-title">Vocal separation — two methods on a real mix</span>
+</header>
 <h1>Vocal separation — REPET-SIM (nn_filter) vs pleco's fingerprint method, on a real vocal mix</h1>
 <p>
-  Input is a real 16 s excerpt of <code>Orphans</code> (mono, 22.05 kHz) — a full
+  Two ways to pull a vocal out of a finished mix — listen to both, then see how
+  each scores against the real isolated stems. The input is a real 16 s excerpt
+  of <code>Orphans</code> (mono, 22.05 kHz) — a full
   band mix with sung vocals. This run has <b>true ground truth</b>: the isolated
   vocal and instrumental stems (from the original session) are loaded separately
   and used only as references to <i>score</i> each separator. Both separators see

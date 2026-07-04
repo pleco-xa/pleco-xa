@@ -8,7 +8,7 @@ description: Release history for Pleco-Xa.
 The 2.0 line is the release where Pleco-Xa became a complete, verifiable audio
 engine rather than a collection of scripts. The through-line of the development
 arc: **prove every claim.** Function after function was validated against
-numerical reference fixtures, and the CI suite grew to 27 test files
+numerical reference fixtures, and the CI suite grew to 26 test files
 (237 tests) that run on every push — so "correct" stopped being a marketing
 word and became a build-breaking test.
 
@@ -37,7 +37,7 @@ whole analysis surface:
 ### Loop detection: the flagship
 
 The signature capability was consolidated into a single public API,
-[`loop.detect()`](/guides/loop/), over four explicit strategies — `fast`,
+[`loop.detect()`](../guides/loop.md), over four explicit strategies — `fast`,
 `precise`, `musical`, and `recurrence` — with:
 
 - A **unified `0..1` confidence** convention derived from real cross-correlation
@@ -56,11 +56,11 @@ Live, in-browser capabilities:
 
 - `RealtimeSpectrumAnalyzer` and the streaming analyzers for live visualization
   and metering.
-- The canvas-native [display tier](/guides/display/) (waveforms, spectrograms,
+- The canvas-native [display tier](../guides/display.md) (waveforms, spectrograms,
   colormaps) drawing straight to `<canvas>`.
 - Seamless loop playback (`LoopPlayer`, native sample-accurate looping) and an
   event-driven transport (`AudioPlayer`).
-- The [Play layer](/guides/play/) — the Echoplex-homage creative instruments
+- The [Play layer](../guides/play.md) — the Echoplex-homage creative instruments
   (loop playground, beat glitcher, quantum sequencer) driven by a
   self-correcting `GibClock`.
 
@@ -78,4 +78,9 @@ shim.
 
 > **Versioning note.** The current release line is **2.0.x** (latest `2.0.3`),
 > published on npm as `pleco-xa`. The loop-point golden gate and the full
-> 27-suite test run are enforced in CI on every push.
+> 26-suite test run are enforced in CI on every push.
+
+## 1.x
+
+Pre-consolidation prototypes; superseded by the verified 2.0 surface documented
+above.
