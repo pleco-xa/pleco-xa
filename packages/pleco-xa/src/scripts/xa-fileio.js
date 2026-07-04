@@ -336,7 +336,7 @@ export async function find_files(directory, options = {}) {
  */
 export function cite(version = null) {
   // Metadata mirrors packages/pleco-xa/package.json (name, author, repository).
-  const libVersion = version || '2.0.1';
+  const libVersion = version || '2.0.2';
 
   const citation = `@software{pleco_xa,
   title        = {pleco-xa: Browser-native audio analysis engine},
