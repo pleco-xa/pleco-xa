@@ -1,6 +1,14 @@
 dist/
 .astro/
 node_modules/
-public/
+# Build-artifact mirrors inside public/ (copy-demos.mjs recreates these each
+# build). public/ itself stays trackable for real assets (CNAME, gallery
+# thumbnails).
+public/demos/
+public/packages/
+public/apps/
+public/tools/
 # starlight-typedoc regenerates the API reference on every build (derived from JSDoc)
 src/content/docs/api/
+# mirror-docs.mjs recreates the content mirror from /docs on every build
+src/content/docs/
