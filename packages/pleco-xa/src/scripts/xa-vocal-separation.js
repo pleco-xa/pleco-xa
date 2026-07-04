@@ -3,6 +3,7 @@
  * Recreates the multi-scale spectral fingerprinting approach from the Python demo
  */
 
+import { _amax } from './_arrstat.js'
 import { stft, istft, magnitude } from './xa-fft.js'
 import { normalize } from './xa-util.js'
 
@@ -323,12 +324,12 @@ export function windowToFingerprint(window, sr) {
   const arithmeticMean = mean(layer4)
   const flatness = arithmeticMean > 0 ? geoMean / arithmeticMean : 0
   const slope = layer4.length > 1 ? (layer4[layer4.length - 1] - layer4[0]) / layer4.length : 0
-  const crest = arithmeticMean > 0 ? Math.max(...layer4) / arithmeticMean : 0
+  const crest = arithmeticMean > 0 ? _amax(layer4) / arithmeticMean : 0
 
   // Harmonic structure (simplified)
   // For now, just basic peak detection
   const peaks = []
-  const threshold = Math.max(...layer3) * 0.1
+  const threshold = _amax(layer3) * 0.1
   for (let i = 1; i < layer3.length - 1; i++) {
     if (layer3[i] > layer3[i-1] && layer3[i] > layer3[i+1] && layer3[i] > threshold) {
       peaks.push(i)
@@ -351,7 +352,7 @@ export function windowToFingerprint(window, sr) {
   for (let i = 1; i < layer2.length - 1; i++) {
     if (i >= midBins.start && i < midBins.end) {
       const val = layer2[i]
-      if (val > layer2[i-1] && val > layer2[i+1] && val > Math.max(...layer2.slice(midBins.start, midBins.end)) * 0.3) {
+      if (val > layer2[i-1] && val > layer2[i+1] && val > _amax(layer2.slice(midBins.start, midBins.end)) * 0.3) {
         midRangePeaks.push(i)
       }
     }
@@ -369,7 +370,7 @@ export function windowToFingerprint(window, sr) {
     mean(midRangePeaks.map(p => layer2[p])) : 0
 
   // Dynamics
-  const peakToRms = Math.max(...layer4) / (Math.sqrt(mean(layer4.map(x => x * x))) + 1e-8)
+  const peakToRms = _amax(layer4) / (Math.sqrt(mean(layer4.map(x => x * x))) + 1e-8)
   const top10Percent = Math.max(1, Math.floor(layer4.length * 0.1))
   const sortedLayer4 = [...layer4].sort((a, b) => b - a)
   const topEnergy = sum(sortedLayer4.slice(0, top10Percent))
@@ -636,7 +637,7 @@ export function reconstructVocal(mixtureStft, eqCurves, sr, nFft = 2048, hopLeng
 
   console.log('  ✓ Audio reconstructed')
 
-  // Normalize (loop, not Math.max(...spread) — stack-safe on long audio)
+  // Normalize (loop, not _amax(spread) — stack-safe on long audio)
   let maxVal = 0
   for (let i = 0; i < reconstructedAudio.length; i++) {
     const a = Math.abs(reconstructedAudio[i])

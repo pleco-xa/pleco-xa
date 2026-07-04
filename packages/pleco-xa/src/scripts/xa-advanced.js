@@ -14,6 +14,7 @@
  * @version 1.0.0
  */
 
+import { _amax } from './_arrstat.js'
 import { stft as stftTransform, istft as istftTransform } from './xa-fft.js'
 import { hpss as hpssCanonical } from '../decompose/index.js'
 import {
@@ -52,7 +53,7 @@ export function normalize_features(features, norm = 'l2', axis = 0) {
   const normFunctions = {
     l1: (arr) => arr.reduce((acc, val) => acc + Math.abs(val), 0),
     l2: (arr) => Math.sqrt(arr.reduce((acc, val) => acc + val * val, 0)),
-    inf: (arr) => Math.max(...arr.map(Math.abs)),
+    inf: (arr) => _amax(arr.map(Math.abs)),
   }
 
   const normFunc = normFunctions[norm]

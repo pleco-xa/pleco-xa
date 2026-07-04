@@ -16,6 +16,7 @@
  * New code should import from src/feature/ directly.
  */
 
+import { _amax } from './_arrstat.js'
 import {
   chroma_stft as featureChromaStft,
   logFrequencySpectrum,
@@ -281,7 +282,7 @@ export function enhance_chroma(chroma, norm = 2) {
     } else if (norm === 2) {
       normalizer = Math.sqrt(log_frame.reduce((a, b) => a + b * b, 0))
     } else if (norm === Infinity) {
-      normalizer = Math.max(...log_frame.map(Math.abs))
+      normalizer = _amax(log_frame.map(Math.abs))
     }
 
     // Copy normalized frame

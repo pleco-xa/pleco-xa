@@ -3,6 +3,7 @@
  * Handles tempo detection and beat tracking
  */
 
+import { _amax } from './_arrstat.js'
 import { debugLog } from './debug.js'
 
 /**
@@ -154,7 +155,7 @@ function findPeaks(signal, threshold = 0.5) {
   const peaks = [];
   
   // Normalize the signal
-  const max = Math.max(...signal);
+  const max = _amax(signal);
   const normalizedSignal = signal.map(val => val / max);
   
   // Find peaks

@@ -1,3 +1,4 @@
+import { _amax } from './_arrstat.js'
 /**
  * Unit conversion and time/frequency transformations
  * Conversion utilities for JavaScript
@@ -283,7 +284,7 @@ export function amplitude_to_db(amplitude, ref = 1.0, amin = 1e-5, top_db = 80.0
   if (isArrayLike(amplitude)) {
     const db = Array.from(amplitude, log_spec)
     if (top_db == null) return db
-    const max_db = Math.max(...db)
+    const max_db = _amax(db)
     const threshold = max_db - top_db
     return db.map((val) => Math.max(threshold, val))
   }
@@ -339,7 +340,7 @@ export function power_to_db(power, ref = 1.0, amin = 1e-10, top_db = 80.0) {
   if (isArrayLike(power)) {
     const db = Array.from(power, log_spec)
     if (top_db == null) return db
-    const max_db = Math.max(...db)
+    const max_db = _amax(db)
     const threshold = max_db - top_db
     return db.map((val) => Math.max(threshold, val))
   }

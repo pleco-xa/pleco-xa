@@ -1,3 +1,4 @@
+import { _amax } from '../scripts/_arrstat.js'
 /**
  * Dynamic time warping (DTW).
  *
@@ -275,8 +276,8 @@ export function dtw(X = null, Y = null, options = {}) {
     fillOffDiagonal(C, bandRad, Infinity)
   }
 
-  const max0 = Math.max(...steps.map((s) => s[0]))
-  const max1 = Math.max(...steps.map((s) => s[1]))
+  const max0 = _amax(steps.map((s) => s[0]))
+  const max1 = _amax(steps.map((s) => s[1]))
 
   // Padded accumulated-cost and step matrices
   const Dp = Array.from({ length: N + max0 }, () =>

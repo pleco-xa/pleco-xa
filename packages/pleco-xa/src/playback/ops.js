@@ -1,3 +1,4 @@
+import { _amax, _amin } from '../scripts/_arrstat.js'
 /**
  * playback/ops.js — buffer-level loop playback operations (Wave 6).
  *
@@ -400,8 +401,8 @@ export function detectGap(audioBuffer, loopData, opts = {}) {
   if (silenceRegions.length === 0) return null
 
   // Intersection of silence regions across all channels
-  const gapStart = Math.max(...silenceRegions.map((r) => r.start))
-  const gapEnd = Math.min(...silenceRegions.map((r) => r.end))
+  const gapStart = _amax(silenceRegions.map((r) => r.start))
+  const gapEnd = _amin(silenceRegions.map((r) => r.end))
   if (gapEnd - gapStart < minGapSize) {
     return null
   }

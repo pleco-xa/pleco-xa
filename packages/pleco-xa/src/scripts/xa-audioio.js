@@ -6,6 +6,7 @@
 
 // Repaired path (Wave 5A): the old 'src/core/xa-fft.js' specifier resolved
 // nowhere in Node or the browser — xa-fft lives beside this module.
+import { _amax } from './_arrstat.js'
 import { fft, ifft } from './xa-fft.js'
 
 let globalAudioContext = null
@@ -454,7 +455,7 @@ export function clicks({
     for (let i = 0; i < cLen; ++i)
       click[i] = Math.pow(2, (-10 * i) / cLen) * Math.sin(w * i)
   }
-  if (!length) length = Math.max(...positions) + click.length
+  if (!length) length = _amax(positions) + click.length
   const out = new Float32Array(length)
   for (const pos of positions) {
     const end = Math.min(pos + click.length, length)

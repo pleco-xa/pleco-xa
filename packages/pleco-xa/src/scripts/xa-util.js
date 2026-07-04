@@ -1,3 +1,4 @@
+import { _amax, _amin } from './_arrstat.js'
 /**
  * Utility Functions for JavaScript
  * Core signal processing utilities for audio analysis
@@ -405,7 +406,7 @@ export function peakPick(
   const postAvgIdx = Math.min(postAvg, x.length)
 
   if (x.length > 0) {
-    const maxVal = Math.max(...x.slice(0, postMaxIdx))
+    const maxVal = _amax(x.slice(0, postMaxIdx))
     const avgVal = mean(x.slice(0, postAvgIdx))
     peaks[0] = x[0] >= maxVal && x[0] >= avgVal + delta
   }
@@ -416,7 +417,7 @@ export function peakPick(
   while (n < x.length) {
     const preMaxIdx = Math.max(0, n - preMax)
     const postMaxIdx = Math.min(n + postMax + 1, x.length)
-    const maxVal = Math.max(...x.slice(preMaxIdx, postMaxIdx))
+    const maxVal = _amax(x.slice(preMaxIdx, postMaxIdx))
 
     if (x[n] !== maxVal) {
       n++
@@ -623,9 +624,9 @@ function normalize1D(arr, norm, threshold, fill) {
   let fillNorm = 1
 
   if (norm === Infinity) {
-    length = Math.max(...arr.map(Math.abs))
+    length = _amax(arr.map(Math.abs))
   } else if (norm === -Infinity) {
-    length = Math.min(...arr.map(Math.abs))
+    length = _amin(arr.map(Math.abs))
   } else if (norm === 0) {
     if (fill === true) {
       throw new ParameterError('Cannot normalize with norm=0 and fill=true')

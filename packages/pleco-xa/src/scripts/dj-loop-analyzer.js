@@ -4,6 +4,7 @@
  * Advanced audio analysis for DJ applications and loop organization
  */
 
+import { _amax, _amin } from './_arrstat.js'
 import { dtw, dtwDistanceMatrix, dtwKMeans } from './xa-dtw.js'
 import { chroma_cqt, enhance_chroma, chroma_energy } from './xa-chroma.js'
 import { analyze_groove } from './xa-tempo.js'
@@ -448,7 +449,7 @@ export class DJLoopAnalyzer {
     return {
       avgTempo: tempos.reduce((a, b) => a + b, 0) / tempos.length,
       dominantKey,
-      energyRange: [Math.min(...energies), Math.max(...energies)],
+      energyRange: [_amin(energies), _amax(energies)],
       commonTags,
     }
   }
@@ -462,8 +463,8 @@ export class DJLoopAnalyzer {
     const loops = Array.from(this.loops.values())
     const tempos = loops.map((loop) => loop.features.tempo.bpm)
 
-    const minTempo = Math.min(...tempos)
-    const maxTempo = Math.max(...tempos)
+    const minTempo = _amin(tempos)
+    const maxTempo = _amax(tempos)
     const tempoRange = maxTempo - minTempo
 
     const clusters = Array(nClusters)
@@ -741,7 +742,7 @@ export class DJLoopAnalyzer {
     const rms = Math.sqrt(
       audioData.reduce((sum, val) => sum + val * val, 0) / audioData.length,
     )
-    // stack-safe peak: Math.max(...bigFloat32Array) overflows the call stack
+    // stack-safe peak: _amax(bigFloat32Array) overflows the call stack
     // on real-length loops (RangeError), so reduce in a loop instead.
     let peak = 0
     for (let i = 0; i < audioData.length; i++) {

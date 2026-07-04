@@ -1,3 +1,4 @@
+import { _amax } from './_arrstat.js'
 /**
  * Rhythm analysis helpers: autocorrelation tempograms, tempo-candidate
  * ranking, and groove/swing analysis for DJ applications.
@@ -93,7 +94,7 @@ export function find_tempo_candidates(
  */
 export function find_peaks_with_prominence(signal, min_prominence = 0.1) {
   const peaks = []
-  const max_val = Math.max(...signal)
+  const max_val = _amax(signal)
   const threshold = max_val * 0.1 // 10% of maximum
 
   for (let i = 1; i < signal.length - 1; i++) {

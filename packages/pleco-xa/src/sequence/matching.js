@@ -1,3 +1,4 @@
+import { _amax, _amin } from '../scripts/_arrstat.js'
 /**
  * Interval and event matching.
  *
@@ -221,12 +222,12 @@ export function matchEvents(eventsFrom, eventsTo, { left = true, right = true } 
       }
     }
   }
-  if (!left && Math.max(...to) < Math.max(...from)) {
+  if (!left && _amax(to) < _amax(from)) {
     throw new Error(
       'matchEvents: cannot match events with left=false and max(eventsTo) < max(eventsFrom)',
     )
   }
-  if (!right && Math.min(...to) > Math.min(...from)) {
+  if (!right && _amin(to) > _amin(from)) {
     throw new Error(
       'matchEvents: cannot match events with right=false and min(eventsTo) > min(eventsFrom)',
     )

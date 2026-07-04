@@ -1,3 +1,4 @@
+import { _amax, _amin } from './_arrstat.js'
 /**
  * Port of util normalization functions
  * Normalization and scaling utilities for audio and spectral data
@@ -74,9 +75,9 @@ export function normalize(S, norm = Infinity, axis = null, threshold = 1e-10, fi
  */
 function compute_norm(arr, norm) {
   if (norm === Infinity) {
-    return Math.max(...arr.map(Math.abs))
+    return _amax(arr.map(Math.abs))
   } else if (norm === -Infinity) {
-    return Math.min(...arr.map(Math.abs))
+    return _amin(arr.map(Math.abs))
   } else if (norm === 0) {
     return arr.filter((x) => x !== 0).length
   } else {
@@ -96,14 +97,14 @@ function compute_norm(arr, norm) {
 export function peak_normalize(S, target = 1.0, threshold = 1e-10) {
   // Handle 1D array
   if (!_isRow(S[0])) {
-    const peak = Math.max(...S.map(Math.abs))
+    const peak = _amax(S.map(Math.abs))
     const scale = peak > threshold ? target / peak : 1.0
     return S.map((val) => val * scale)
   }
 
   // Handle 2D array
   const flat = S.flat()
-  const peak = Math.max(...flat.map(Math.abs))
+  const peak = _amax(flat.map(Math.abs))
   const scale = peak > threshold ? target / peak : 1.0
 
   return S.map((row) => row.map((val) => val * scale))

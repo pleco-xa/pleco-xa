@@ -1,3 +1,4 @@
+import { _amax, _amin } from './_arrstat.js'
 /**
  * Canvas-native spectrogram and waveform display
  * Canvas-based audio visualization utilities for browser environments
@@ -128,8 +129,8 @@ export function cmap(data, robust = true, cmapSeq = 'magma', cmapBool = 'gray_r'
     dataMin = sorted[p2Index];
     dataMax = sorted[p98Index];
   } else {
-    dataMin = Math.min(...validData);
-    dataMax = Math.max(...validData);
+    dataMin = _amin(validData);
+    dataMax = _amax(validData);
   }
 
   // Determine colormap type based on data characteristics

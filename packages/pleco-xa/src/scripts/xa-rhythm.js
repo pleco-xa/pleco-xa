@@ -8,6 +8,7 @@
  * onset_strength from ./xa-onset.js.
  */
 
+import { _amax } from './_arrstat.js'
 import { onset_strength } from './xa-onset.js'
 
 /**
@@ -45,10 +46,10 @@ export function plp(y = null, sr = 22050, onset_envelope = null, hop_length = 51
       ac[lag] = sum
     }
 
-    plp_curve[t] = Math.max(...ac.slice(1))
+    plp_curve[t] = _amax(ac.slice(1))
   }
 
-  const max_plp = Math.max(...plp_curve)
+  const max_plp = _amax(plp_curve)
   if (max_plp > 0) {
     for (let i = 0; i < n_frames; i++) {
       plp_curve[i] /= max_plp
@@ -68,7 +69,7 @@ export function beat_sync(data, beats, aggregate = 'mean') {
     const synced = new Float32Array(beats.length - 1)
     for (let i = 0; i < beats.length - 1; i++) {
       const segment = data.slice(beats[i], beats[i + 1])
-      synced[i] = aggregate === 'mean' ? segment.reduce((a, b) => a + b, 0) / segment.length : Math.max(...segment)
+      synced[i] = aggregate === 'mean' ? segment.reduce((a, b) => a + b, 0) / segment.length : _amax(segment)
     }
     return synced
   } else {
@@ -77,7 +78,7 @@ export function beat_sync(data, beats, aggregate = 'mean') {
     for (let f = 0; f < n_features; f++) {
       for (let i = 0; i < beats.length - 1; i++) {
         const segment = data[f].slice(beats[i], beats[i + 1])
-        synced[f][i] = aggregate === 'mean' ? segment.reduce((a, b) => a + b, 0) / segment.length : Math.max(...segment)
+        synced[f][i] = aggregate === 'mean' ? segment.reduce((a, b) => a + b, 0) / segment.length : _amax(segment)
       }
     }
     return synced
