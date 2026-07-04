@@ -79,6 +79,9 @@ const out = [header, equivalence, cards, recipes, index, footer].join('\n\n---\n
 
 writeFileSync(join(repo, 'llms.txt'), out)
 writeFileSync(join(repo, 'packages/pleco-xa/llms.txt'), out)
+// Verification ledger ships in the tarball alongside llms.txt (build artifact;
+// the tracked source of truth is the repo-root VERIFICATION.md).
+writeFileSync(join(repo, 'packages/pleco-xa/VERIFICATION.md'), read('VERIFICATION.md'))
 mkdirSync(join(repo, 'apps/docs/public'), { recursive: true })
 writeFileSync(join(repo, 'apps/docs/public/llms.txt'), out)
 

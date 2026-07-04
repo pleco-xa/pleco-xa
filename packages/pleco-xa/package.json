@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Browser-native audio analysis engine: musical timing, BPM/beat tracking, spectral features, and intelligent loop detection",
   "license": "MIT",
-  "author": "Cameron Brooks",
+  "author": "Cameron Brooks (https://plecoxa.com)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pleco-xa/pleco-xa.git"
@@ -119,6 +119,7 @@
     "docs/",
     "llms.txt",
     "api-manifest.json",
+    "VERIFICATION.md",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",

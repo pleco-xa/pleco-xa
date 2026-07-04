@@ -106,4 +106,5 @@ one of 50 demos runs live in your browser: **[plecoxa.com](https://plecoxa.com)*
 
 ## License
 
-MIT. See `NOTICE` for third-party algorithm attributions.
+MIT — created and maintained by [Cameron Brooks](https://github.com/brookcs3).
+See `NOTICE` for third-party algorithm attributions.

@@ -83,3 +83,10 @@ Subpaths: `feature` `loop` `segment` `sequence` `filters` `effects`
 I/O subpath disambiguation: `io` = WAV codec (encode/decode), `audioio` =
 browser loading/playback + signal synthesis (`tone`, `chirp`, `clicks`),
 `file` = example/cache helpers, `fileio` = streaming file readers.
+
+## Verification
+
+Every numerical claim is pinned by committed reference fixtures replayed in CI;
+the per-domain tolerances are declared in `VERIFICATION.md`, which ships in this
+package. Fixtures and suites are public in the repo (`tools/goldens/`,
+`packages/pleco-xa/tests/goldens/`); loop detection is gated at ±10 ms on real WAVs.
