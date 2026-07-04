@@ -14,7 +14,7 @@ export {
   findZeroCrossing, findAllZeroCrossings, findAudioStart, applyHannWindow,
 } from './scripts/audio-utils.js'
 
-// Spectral core (numerical-parity repairs land in Wave 1)
+// Spectral core (numerical repairs land in Wave 1)
 export {
   fft, ifft, stft, istft, get_window, hann_window, hamming_window,
   blackman_window, magnitude, phase, power, polar_to_complex,
@@ -22,7 +22,7 @@ export {
 } from './scripts/xa-fft.js'
 
 // Rhythm — canonical beat engine (fixture-gated: tempo_beats.json).
-// tempo()/beat_track() are the parity tier; quickTempo() is the explicit
+// tempo()/beat_track() are the reference tier; quickTempo() is the explicit
 // quick tier (windowed lb-style live estimate, never a silent fallback).
 export { BeatTracker, beat_track, tempo, quickTempo } from './scripts/xa-beat-tracker.js'
 export * as bpm from './scripts/xa-bpm-algorithm.js'
@@ -57,7 +57,7 @@ export * as convert from './scripts/xa-convert.js'
 // modules are shims that delegate here.
 export * as feature from './feature/index.js'
 
-// Filter banks (filters.chroma port + re-exported parity-gated
+// Filter banks (filters.chroma port + re-exported validated
 // get_window / mel_filterbank)
 export * as filters from './filters/index.js'
 
@@ -156,7 +156,7 @@ export {
 } from './scripts/live-speed-control.js'
 
 // Display: canvas-native spectrogram rendering (browser-native
-// tier — see PARITY.md exceptions ledger).
+// tier — documented as a browser-native rendering exception).
 export {
   createSpectrogram, renderStaticSpectrum, RealtimeSpectrumAnalyzer,
 } from './scripts/SpectrumAnalyzer.js'
@@ -206,7 +206,7 @@ export {
 } from './scripts/enhanced-audio-ops.js'
 
 // Quick-tier BPM helpers consumed by the demo. Explicitly quick (see the
-// rhythm section above): the parity tier remains tempo()/beat_track();
+// rhythm section above): the reference tier remains tempo()/beat_track();
 // detectBPM/fastBPMDetect are fast estimators that report failure honestly.
 export { detectBPM } from './scripts/xa-bpm-detection.js'
 export { fastBPMDetect } from './scripts/xa-beat.js'
@@ -248,7 +248,7 @@ export {
 // util: peak picking, PCM→float buffer conversion, audio validation
 // (proof: examples/node/xa-util.mjs). frame/sync/fix_frames already above.
 // Repair: softmask here now delegates to the corrected xa-normalize
-// implementation; show_versions no longer reports fictional parity numbers.
+// implementation; show_versions no longer reports fictional coverage numbers.
 export { peakPick, buf_to_float, valid_audio } from './scripts/xa-util.js'
 
 // Audio IO & synthesis: tone/chirp/clicks generators, zero-crossing analysis,
@@ -279,7 +279,7 @@ export * as file from './scripts/xa-file.js'
 
 // Fast-tier beat engine + beat-time tempo extraction. beatTrack is the
 // heuristic engine behind fastBPMDetect (distinct name from the canonical
-// beat_track); at matched hopLength it is ~2x faster than the parity tier on
+// beat_track); at matched hopLength it is ~2x faster than the reference tier on
 // a 10s click train while landing in the same lag bin
 // (proof: examples/node/beat-tiers.mjs).
 export { beatTrack, extractTempo } from './scripts/xa-beat.js'
@@ -323,7 +323,7 @@ export { griffinlim, pcen } from './scripts/xa-advanced.js'
 // Tempogram (linear_ramp padding, full
 // win_length lag rows, per-column inf-norm). The canonical tempo() consumes
 // this exact math (xa-beat-tracker meanTempogram delegates here, so the
-// tempo_beats.json parity fixture gates it). fourier_tempogram runs at hop=1
+// tempo_beats.json reference fixture gates it). fourier_tempogram runs at hop=1
 // (power-of-2 win_length required — radix-2 stft, divergence documented);
 // estimate_tempo applies a log-normal tempo prior over the time-mean
 // tempogram. tempogram_ratio samples the tempogram at harmonic/subharmonic

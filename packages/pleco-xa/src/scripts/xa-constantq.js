@@ -257,7 +257,7 @@ export function cqt(
   tuning = 0.0,
   filter_scale = 1,
   norm = 1,
-  sparsity = 0.01, // eslint-disable-line no-unused-vars — accepted, not applied
+  sparsity = 0.01,
   window = 'hann',
   scale = true,
   pad_mode = 'constant',
@@ -329,7 +329,7 @@ export function vqt(
   tuning = 0.0,
   filter_scale = 1,
   norm = 1,
-  sparsity = 0.01, // eslint-disable-line no-unused-vars — accepted, not applied
+  sparsity = 0.01,
   window = 'hann',
   scale = true,
   pad_mode = 'constant',
@@ -400,7 +400,7 @@ export function pseudo_cqt(
   tuning = 0.0,
   filter_scale = 1,
   norm = 1,
-  sparsity = 0.01, // eslint-disable-line no-unused-vars — accepted, not applied
+  sparsity = 0.01,
   window = 'hann',
   scale = true,
   pad_mode = 'constant',

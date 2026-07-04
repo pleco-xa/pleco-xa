@@ -4,8 +4,7 @@
  */
 
 import { _amax } from './_arrstat.js'
-import { stft, istft, magnitude } from './xa-fft.js'
-import { normalize } from './xa-util.js'
+import { stft, istft } from './xa-fft.js'
 
 /**
  * 2D Convolution for spectrograms
@@ -173,7 +172,7 @@ export function create18Slices(magnitudeSpectrogram) {
   slices['slice_7_highpass'] = convolve2d(magnitudeSpectrogram, kernelHp)
 
   // SLICE 8: Low-pass (smoothing)
-  const kernelLp = Array(9).fill(1/9) // 3x3 box filter
+  const _kernelLp = Array(9).fill(1/9) // 3x3 box filter
   const kernelLp2d = [
     [1/9, 1/9, 1/9],
     [1/9, 1/9, 1/9],
@@ -252,7 +251,7 @@ export function create18Slices(magnitudeSpectrogram) {
 export function windowToFingerprint(window, sr) {
   // Suppress warnings for log operations
   const safeLog = (x) => (x > 0 ? Math.log(x) : -Infinity)
-  const safePow = (x, p) => (x >= 0 ? Math.pow(x, p) : 0)
+  const _safePow = (x, p) => (x >= 0 ? Math.pow(x, p) : 0)
 
   // Compress through layers
   const layer1 = downsampleSpectrum(window, 2)
@@ -427,7 +426,7 @@ export function processAudioToFingerprints(audioBuffer, nFft = 2048, hopLength =
   // returned time x freq, which scrambled frequency and time semantics for
   // the entire fingerprint pipeline.)
   const stftResult = stft(channelData, nFft, hopLength)
-  const numFreqBins = stftResult.length
+  const _numFreqBins = stftResult.length
   const numWindows = stftResult[0].length
 
   // Extract magnitude spectrogram in (freq x time) format

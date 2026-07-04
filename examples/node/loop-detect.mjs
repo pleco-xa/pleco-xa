@@ -3,7 +3,7 @@
  *
  * detect(buffer, { strategy: 'fast' }) on all 4 golden WAVs
  * (apps/demo/public/audio), asserted against
- * tools/parity/fixtures/loop_goldens.json:
+ * tools/goldens/loop_goldens.json:
  *   - loop points within the fixture's ±441-sample tolerance (10 ms @ 44.1 kHz)
  *     — spot-run: all four land 0–1 samples off the goldens,
  *   - bpm within 0.1 of the golden bpm (spot-run: exact),
@@ -25,7 +25,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const goldens = JSON.parse(readFileSync(
-  fileURLToPath(new URL('../../tools/parity/fixtures/loop_goldens.json', import.meta.url)), 'utf8'))
+  fileURLToPath(new URL('../../tools/goldens/loop_goldens.json', import.meta.url)), 'utf8'))
 const audioDir = new URL('../../apps/demo/public/audio/', import.meta.url)
 const TOL = goldens.meta.toleranceSamples // 441
 

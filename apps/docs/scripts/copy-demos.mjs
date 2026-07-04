@@ -60,8 +60,8 @@ mirrorDir('apps/demo/public/audio', 'apps/demo/public/audio')
 
 // 4. Golden-loop fixture consumed by the loop-detect flagship demo.
 mirrorFile(
-  'tools/parity/fixtures/loop_goldens.json',
-  'tools/parity/fixtures/loop_goldens.json',
+  'tools/goldens/loop_goldens.json',
+  'tools/goldens/loop_goldens.json',
 )
 
 console.log('[copy-demos] done')

@@ -1,9 +1,8 @@
 /**
  * feature/ — the canonical, fixture-verified spectral feature namespace.
  *
- * One implementation per feature, fixture-verified numerics, gated by
- * tests/parity/{spectral,mfcc,chroma}.parity.test.js against
- * tools/parity/fixtures/{spectral_features,mfcc,chroma}.json.
+ * One implementation per feature, fixture-verified numerics, validated against
+ * committed reference fixtures.
  *
  * The legacy modules (scripts/xa-spectral.js, xa-features.js,
  * xa-audio-features.js, xa-chroma.js) are shims that delegate here.

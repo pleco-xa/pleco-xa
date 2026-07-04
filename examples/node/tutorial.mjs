@@ -1,8 +1,8 @@
 /**
  * tutorial — the quickstart, pleco-native: same beats, both runtimes.
  *
- * Quickstart half (bit-exact parity claim): the pinned reference fixture
- * signal (tools/parity/fixtures/tempo_beats.json, click120) is encoded to a
+ * Quickstart half (bit-exact reference claim): the pinned reference fixture
+ * signal (tools/goldens/tempo_beats.json, click120) is encoded to a
  * 16-bit WAV, decoded back with io/wav decodeWav, and run through beat_track —
  * tempo AND beat frames must EXACTLY equal the fixture's pinned values, even
  * through PCM quantization. Beat times printed via convert.frames_to_time.
@@ -21,7 +21,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const fixturePath = fileURLToPath(new URL(
-  '../../tools/parity/fixtures/tempo_beats.json', import.meta.url,
+  '../../tools/goldens/tempo_beats.json', import.meta.url,
 ))
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')).cases[0]
 const sr = fixture.input.sr

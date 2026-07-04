@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node scripts/copy-demos.mjs",
+    "predev": "node scripts/mirror-docs.mjs && node scripts/copy-demos.mjs",
     "dev": "astro dev",
-    "prebuild": "node scripts/copy-demos.mjs",
+    "prebuild": "node scripts/mirror-docs.mjs && node scripts/copy-demos.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "sync-api": "typedoc"

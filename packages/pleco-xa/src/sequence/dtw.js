@@ -18,7 +18,7 @@ import { _amax } from '../scripts/_arrstat.js'
  *    (`int(round(bandRad * min(C.shape)))`, off-diagonal offset compensated
  *    for non-square C), not a normalized-coordinate band.
  *
- * Fixture-gated against tools/parity/fixtures/dtw_segment.json
+ * Validated against committed reference fixtures
  * (case 1: D[-1][-1] within 1e-6 relative, warping path exact).
  *
  * All failures throw. No silent parameter drops: every accepted option is

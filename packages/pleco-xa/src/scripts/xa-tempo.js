@@ -254,7 +254,7 @@ function analyze_subdivisions(beat_times) {
   }
 
   // Estimate swing as deviation from straight timing
-  const mean_interval = intervals.reduce((a, b) => a + b, 0) / intervals.length
+  const _mean_interval = intervals.reduce((a, b) => a + b, 0) / intervals.length
 
   // Check for alternating long/short patterns (swing)
   let swing_evidence = 0

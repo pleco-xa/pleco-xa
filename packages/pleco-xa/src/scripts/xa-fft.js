@@ -518,7 +518,7 @@ function pad_signal(array, pad_width, mode = 'constant') {
  * @param {number} pad_width - Padding width on each side
  * @returns {Float32Array} Padded array
  */
-function pad_reflect(array, pad_width) {
+function _pad_reflect(array, pad_width) {
   return pad_signal(array, pad_width, 'reflect')
 }
 

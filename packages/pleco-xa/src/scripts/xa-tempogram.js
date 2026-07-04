@@ -23,7 +23,7 @@
  *      ascending-in-place and mishandles the +Inf head, so it returns
  *      all-zeros on the descending tempo axis (verified); a dedicated
  *      static-grid interpolator lives here instead.
- *      Gated by tools/parity/fixtures/tempogram_ratio.json.
+ *      Validated against committed reference fixtures.
  *
  * Proof: examples/node/tempogram-ratio.mjs (tempogram_ratio),
  *        examples/web/xa-tempogram.html (tempogram heatmap + ridge).
@@ -450,7 +450,7 @@ function f0HarmonicsStatic(tg, freqs, bpm, factors, fill_value) {
  * @param {boolean} [options.center=true] - center tempogram windows
  * @param {string} [options.window='hann'] - tempogram window
  * @param {string} [options.kind='linear'] - interpolation kind (only 'linear'
- *   is validated to parity; others throw rather than silently approximate)
+ *   is validated against the reference fixtures; others throw rather than silently approximate)
  * @param {number} [options.fill_value=0] - value for out-of-range harmonics
  * @param {number|null} [options.norm=Infinity] - tempogram normalization
  * @returns {Array<Float64Array>|Float64Array} tempogram ratio

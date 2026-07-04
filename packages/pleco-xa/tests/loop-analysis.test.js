@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { musicalLoopAnalysis } from '../src/loop/musical.js'
 import { analyzeLoopPoints } from '../src/loop/legacy.js'
-import { AudioContext } from 'web-audio-test-api'
+import { AudioContext } from '../web-audio-test-api/index.js'
 
 function createLoopBuffer(loopLengthSeconds, repeats, sampleRate = 44100) {
   const ctx = new AudioContext({ sampleRate })

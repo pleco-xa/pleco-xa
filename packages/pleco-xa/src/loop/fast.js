@@ -13,7 +13,7 @@
  * the precise path at 1.0.
  *
  * Loop POINTS are golden-locked against the pre-consolidation pipeline
- * (tools/parity/fixtures/loop_goldens.json, ±441 samples).
+ * (tools/goldens/loop_goldens.json, ±441 samples).
  */
 
 import { onsetDetect } from '../scripts/xa-onset.js'

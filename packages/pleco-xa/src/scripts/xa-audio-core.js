@@ -86,7 +86,7 @@ export function initAudioProcessor() {
       if (currentSource) {
         try {
           currentSource.stop();
-        } catch (error) {
+        } catch (_error) {
           // Source may already be stopped
         }
         currentSource = null;

@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { laplacianSegmentation } from '../src/segment/laplacian-segmentation.js'
 
 /**
- * UNIT test, NOT a parity fixture — deliberately.
+ * UNIT test, NOT a reference fixture — deliberately.
  *
- * librosa's Laplacian-segmentation example (docs/examples/plot_segmentation.py)
+ * The reference's Laplacian-segmentation example (docs/examples/plot_segmentation.py)
  * derives its feature matrix from a log-power CQT + beat-synchronous median
  * aggregation. pleco only *approximates* the CQT stage, so an end-to-end
- * comparison against a librosa fixture would test the CQT approximation, not the
+ * comparison against a reference fixture would test the CQT approximation, not the
  * spectral-clustering recipe this module implements. Every numeric primitive the
- * recipe is built from is already parity-gated on its own (linalg.json for
+ * recipe is built from is already fixture-gated on its own (linalg.json for
  * eigh/laplacian, cluster.json for kmeans, dtw_segment.json for the recurrence /
  * lag pipeline). What remains to prove is that the *composition* recovers known
  * structure — so we feed it a synthetic matrix whose segmentation is unambiguous
@@ -28,7 +28,7 @@ function mulberry32(seed) {
 }
 
 /**
- * Build a (d × n) feature matrix (librosa layout) with `blocks` contiguous
+ * Build a (d × n) feature matrix (reference layout) with `blocks` contiguous
  * segments of `perBlock` frames each. Every block gets a distinct constant
  * feature vector plus small deterministic Gaussian-ish noise so the recurrence
  * graph is well-defined (no zero-distance degeneracy) but the block structure

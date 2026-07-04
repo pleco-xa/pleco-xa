@@ -8,7 +8,7 @@
  *    matching `scipy.sparse.csgraph.laplacian(W, normed=True)` including
  *    scipy's zeroed-diagonal degrees and isolated-node convention.
  *
- * Parity: fixture-gated against tools/parity/fixtures/linalg.json.
+ * Validated against committed reference fixtures.
  *
  * @module linalg
  */

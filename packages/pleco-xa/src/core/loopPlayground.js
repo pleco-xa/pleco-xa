@@ -340,7 +340,7 @@ export function glitchBurst(buffer, {
     return [op];
   };
 
-  const doRandomLocal = () => {
+  const _doRandomLocal = () => {
     const subOps = [];
     subOps.push('reset');
     const count = 2 + Math.floor(Math.random() * 5);

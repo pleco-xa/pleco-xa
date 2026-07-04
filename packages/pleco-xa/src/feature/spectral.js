@@ -2,12 +2,11 @@
  * feature/spectral.js — spectral descriptors, fixture-verified.
  *
  * Standard spectral descriptor formulas computed over the
- * parity-gated STFT in scripts/xa-fft.js. Every function accepts either a
+ * validated STFT in scripts/xa-fft.js. Every function accepts either a
  * time series `y` (first positional arg) or a precomputed spectrogram `S`
  * (magnitude, [freq][time] rows) via options.
  *
- * Parity gate: tests/parity/spectral.parity.test.js vs
- * tools/parity/fixtures/spectral_features.json.
+ * Validated against committed reference fixtures.
  *
  * Layout convention: all spectrogram matrices are freq-major ([freq][time]),
  * i.e. axis=-2 is the frequency axis.

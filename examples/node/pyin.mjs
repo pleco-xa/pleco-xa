@@ -22,7 +22,7 @@ const dur = 1.5
 const n = Math.round(dur * sr)
 const third = Math.floor(n / 3)
 
-// 220 Hz → 330 Hz step, silent final third (mirrors tools/parity/generate.py).
+// 220 Hz → 330 Hz step, silent final third (matches the reference signal used in tests).
 const y = new Float32Array(n)
 for (let i = 0; i < third; i++) y[i] = Math.sin((2 * Math.PI * 220 * i) / sr)
 for (let i = third; i < 2 * third; i++) y[i] = Math.sin((2 * Math.PI * 330 * i) / sr)

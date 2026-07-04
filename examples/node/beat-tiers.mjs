@@ -1,15 +1,15 @@
 /**
- * Proof: scripts/xa-beat.js — fast-tier vs parity-tier: same answer, measured speedup.
- * The heuristic tier (beatTrack / fastBPMDetect) and the canonical parity-tier
+ * Proof: scripts/xa-beat.js — fast tier vs reference tier: same answer, measured speedup.
+ * The heuristic tier (beatTrack / fastBPMDetect) and the canonical reference tier
  * beat_track() analyze the same 10s 120 BPM click train. Proofs: both tiers land within
  * one lag bin (<= 7 BPM) of each other, beat counts agree within +/-2, and — at MATCHED
- * hopLength (512) — the fast tier is strictly faster than the parity tier (measured ~2x).
+ * hopLength (512) — the fast tier is strictly faster than the reference tier (measured ~2x).
  * extractTempo on a perfect 0.5s beat grid returns the exact golden
  * {bpm: 120, confidence: 1, medianInterval: 0.5}.
  *
  * NOTE (honest divergence from the original plan): fastBPMDetect hardcodes hopLength=256
- * (2x the envelope frames of the parity tier's hop 512), which makes its wall-time a
- * coin flip vs parity (measured 0.99x-1.11x). The strictly-lower timing claim is only
+ * (2x the envelope frames of the reference tier's hop 512), which makes its wall-time a
+ * coin flip vs the reference tier (measured 0.99x-1.11x). The strictly-lower timing claim is only
  * correct at matched hop, so that is what is asserted; fastBPMDetect's own timing is
  * printed as an unasserted FYI row.
  */

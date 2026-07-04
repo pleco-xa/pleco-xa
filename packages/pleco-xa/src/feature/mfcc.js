@@ -4,14 +4,14 @@
  * Pipeline: S = power_to_db(melspectrogram(y)) →
  * DCT-II (ortho) along the mel axis → first n_mfcc rows → optional liftering.
  *
- * Builds on the parity-gated foundations:
+ * Builds on the validated foundations:
  *  - scripts/xa-mel.js melspectrogram (slaney filterbank, gated by
  *    mel_filterbank.json + melspectrogram.json)
  *  - scripts/xa-convert.js power_to_db (gated by conversions.json)
  *  - feature/dct.js cached ortho DCT-II basis — no per-frame O(N²)
  *    recomputation.
  *
- * Parity gate: tests/parity/mfcc.parity.test.js vs tools/parity/fixtures/mfcc.json.
+ * Validated against committed reference fixtures.
  */
 
 import { melspectrogram as xaMelspectrogram } from '../scripts/xa-mel.js'
@@ -23,7 +23,7 @@ export { dctBasis, mfccFromLogMel } from './dct.js'
 
 /**
  * Mel spectrogram with a (y, options) API.
- * Thin wrapper over the parity-gated scripts/xa-mel.js implementation.
+ * Thin wrapper over the validated scripts/xa-mel.js implementation.
  * @param {Float32Array|Array|null} y - time series (or null when S given)
  * @param {Object} options - { sr, S, n_fft, hop_length, win_length, window,
  *   center, pad_mode, power, n_mels, fmin, fmax, norm, htk }

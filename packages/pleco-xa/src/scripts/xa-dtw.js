@@ -3,8 +3,8 @@
  *
  * The core engine lives in src/sequence/dtw.js (recorded-step
  * backtracking, appended custom steps, honored weights_add/weights_mul,
- * subseq, absolute-radius Sakoe-Chiba band; fixture-gated against
- * tools/parity/fixtures/dtw_segment.json). This module keeps the legacy
+ * subseq, absolute-radius Sakoe-Chiba band; validated against committed
+ * reference fixtures). This module keeps the legacy
  * positional call signature and result shape for existing consumers
  * (dj-loop-analyzer), delegating the actual alignment to the engine.
  *

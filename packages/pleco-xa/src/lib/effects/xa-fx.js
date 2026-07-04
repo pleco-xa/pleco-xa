@@ -153,7 +153,7 @@ export const applyQuantumOp = (op, buffer, loop) => {
     case 'double':
       loop = doubleLoop(loop, buffer.length);
       break;
-    case 'move':
+    case 'move': {
       const duration = loop.endSample - loop.startSample;
       const newStart = loop.startSample + duration;
       const newEnd = loop.endSample + duration;
@@ -161,6 +161,7 @@ export const applyQuantumOp = (op, buffer, loop) => {
         loop = { startSample: newStart, endSample: newEnd };
       }
       break;
+    }
     case 'reverse':
       buffer = reverseBufferSection(buffer, loop.startSample, loop.endSample);
       break;

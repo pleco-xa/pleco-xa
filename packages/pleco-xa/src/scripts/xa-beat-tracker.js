@@ -11,8 +11,7 @@
  * Both consume onset_strength() from ./xa-onset.js
  * (beat_track uses aggregate='median').
  *
- * Output is fixture-gated against tools/parity/fixtures/tempo_beats.json in
- * tests/parity/beat.parity.test.js.
+ * Validated against committed reference fixtures.
  *
  * Tier law (explicit tiers, never silent fallbacks):
  *   - tempo() / beat_track()  → precise tier. Slow but numerically exact.
@@ -127,7 +126,7 @@ function assertSampleRate(sr) {
  * Delegates to the canonical tempogram() in xa-tempogram.js
  * (tier-3 proof-of-work, 2026-07-02) — identical padding/window/normalize
  * math, summed over columns in the same order, so the tempo_beats.json
- * parity fixture gates both modules.
+ * reference fixture gates both modules.
  * @private
  * @param {Float32Array|Float64Array|Array} onsetEnvelope
  * @param {number} winLength - autocorrelation window in frames

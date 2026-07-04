@@ -1,5 +1,12 @@
 # Pleco-Xa
 
+[![npm version](https://img.shields.io/npm/v/pleco-xa.svg)](https://www.npmjs.com/package/pleco-xa)
+[![CI](https://github.com/pleco-xa/pleco-xa/actions/workflows/test.yml/badge.svg)](https://github.com/pleco-xa/pleco-xa/actions/workflows/test.yml)
+[![minzipped size](https://img.shields.io/bundlephobia/minzip/pleco-xa.svg)](https://bundlephobia.com/package/pleco-xa)
+[![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](https://www.npmjs.com/package/pleco-xa?activeTab=dependencies)
+[![types included](https://img.shields.io/npm/types/pleco-xa.svg)](https://www.npmjs.com/package/pleco-xa)
+[![license: MIT](https://img.shields.io/npm/l/pleco-xa.svg)](LICENSE)
+
 > Browser-native audio analysis engine — musical timing, spectral features, and intelligent loop detection. Zero dependencies.
 
 Pleco-Xa brings musical intelligence to any environment that runs JavaScript:
@@ -71,10 +78,11 @@ npm run demos          # serves the examples at http://localhost:5757
 This is an npm-workspaces monorepo:
 
 - `packages/pleco-xa` — the library (published to npm)
+- `docs/` — the hand-written documentation content, browsable directly on GitHub (the single tracked source)
 - `apps/demo` — the Astro demo app
-- `apps/docs` — the documentation site
+- `apps/docs` — the documentation site builder; mirrors `docs/` into Starlight and appends the generated API reference
 - `examples/` — the proof-of-work demos (also the docs gallery)
-- `tools/parity` — the fixture harness that validates every claim
+- `tools/goldens` — committed reference fixtures that pin numerical output
 
 ```bash
 npm install
@@ -82,6 +90,14 @@ npm test               # library test suite
 npm run build:lib      # build the library
 npm run docs           # docs dev server
 ```
+
+## Contributing
+
+Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repo
+map, setup, and how to validate numerical work against reference fixtures.
+Please also read the [Code of Conduct](CODE_OF_CONDUCT.md). Release notes live in
+the [changelog](packages/pleco-xa/CHANGELOG.md); security reports go through
+[`SECURITY.md`](SECURITY.md).
 
 ## License
 

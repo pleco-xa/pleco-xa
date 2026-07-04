@@ -671,7 +671,7 @@ function getSpectrogramColor(value, colormap) {
         return { r: 255, g: 255, b: Math.floor((value - 0.66) * 3 * 255) }
       }
 
-    case 'viridis':
+    case 'viridis': {
       const r = Math.floor(
         255 * (0.267 + 0.105 * value + 0.547 * value * value),
       )
@@ -680,10 +680,12 @@ function getSpectrogramColor(value, colormap) {
       )
       const b = Math.floor(255 * (0.329 + 0.751 * value - 0.08 * value * value))
       return { r, g, b }
+    }
 
-    default:
+    default: {
       const gray = Math.floor(value * 255)
       return { r: gray, g: gray, b: gray }
+    }
   }
 }
 

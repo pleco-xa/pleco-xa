@@ -8,7 +8,7 @@
  * Unlike DTW, alignment paths here are MAXIMIZED, so the input must measure
  * similarity, not distance.
  *
- * Fixture-gated against tools/parity/fixtures/rqa.json
+ * Validated against committed reference fixtures
  * (exact path agreement + score max).
  *
  * @param {Array<Array<number>|Float32Array|Float64Array>} sim

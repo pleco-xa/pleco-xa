@@ -3,7 +3,7 @@
  * Notation utilities for JavaScript
  */
 
-import { hz_to_midi, midi_to_hz, note_to_hz, hz_to_note, note_to_midi, midi_to_note } from './xa-convert.js';
+import { midi_to_hz, note_to_hz, hz_to_note, note_to_midi, midi_to_note } from './xa-convert.js';
 
 /**
  * Melakarta raga database (Carnatic classical music)

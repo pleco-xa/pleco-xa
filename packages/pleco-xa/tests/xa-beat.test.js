@@ -1,15 +1,15 @@
 /**
  * Test Suite for the canonical rhythm engine (xa-beat-tracker)
- * Graduated from parity-seeds/xa-beat.test.js under truth-triage:
+ * Graduated from the seed test suite under truth-triage:
  *
  *  - Retargeted from xa-beat.js (fast heuristics, no longer exports
- *    tempo/beat_track) to the canonical librosa-parity engine in
+ *    tempo/beat_track) to the canonical reference engine in
  *    xa-beat-tracker.js — the single module that exports tempo/beat_track.
- *  - Click-track pattern kept from librosa test_beat.py (lines 50-77):
+ *  - Click-track pattern kept from the reference test_beat.py (lines 50-77):
  *    generate clicks at a known BPM, assert the estimate within 5%.
- *    Librosa-derived truths (verified against librosa 0.11.0):
+ *    Reference-derived truths (verified against the reference implementation 0.11.0):
  *      60→60.093, 80→80.750, 110→112.347, 120→117.454, 160→161.499 BPM.
- *  - Silence/constant expectations corrected to librosa's actual behavior:
+ *  - Silence/constant expectations corrected to the reference's actual behavior:
  *    feature.tempo returns the tempo-prior argmax (117.4538... BPM at the
  *    default start_bpm=120), and beat_track returns (0 BPM, no beats)
  *    because its median-aggregated onset envelope is all zero.
@@ -25,13 +25,13 @@ import { generateClickTrack, generateSilence, withinPercent } from './fixtures/t
 
 const SR = 22050;
 
-// librosa's tempo estimate is lag-quantized: the closest representable BPM
+// The reference tempo estimate is lag-quantized: the closest representable BPM
 // to the nominal click tempo can be ~2% off (e.g. 120 → 117.454). The 5%
-// tolerance below is librosa's own test_beat.py assertion.
-const LIBROSA_PRIOR_ARGMAX_BPM = 117.45383522727273; // 60*22050/(512*22)
+// tolerance below is the reference's own test_beat.py assertion.
+const PRIOR_ARGMAX_BPM = 117.45383522727273; // 60*22050/(512*22)
 
 describe('canonical rhythm engine - algorithmic validation', () => {
-  describe('tempo detection with click tracks (librosa test_tempo pattern)', () => {
+  describe('tempo detection with click tracks (reference test_tempo pattern)', () => {
     for (const expectedTempo of [60, 80, 110, 120, 160]) {
       it(`detects ${expectedTempo} BPM from a click track within 5% tolerance`, () => {
         const clickTrack = generateClickTrack(expectedTempo, SR, 20);
@@ -44,16 +44,16 @@ describe('canonical rhythm engine - algorithmic validation', () => {
     }
   });
 
-  describe('degenerate inputs (librosa test_tempo_no_onsets semantics)', () => {
-    it('returns the tempo-prior argmax for silence (librosa behavior, not a fabricated default)', () => {
+  describe('degenerate inputs (reference test_tempo_no_onsets semantics)', () => {
+    it('returns the tempo-prior argmax for silence (reference behavior, not a fabricated default)', () => {
       const silence = generateSilence(SR * 10);
-      // librosa.feature.tempo(zeros) == prior argmax == 117.4538... at start_bpm=120
-      expect(tempo(silence, { sr: SR })).toBeCloseTo(LIBROSA_PRIOR_ARGMAX_BPM, 10);
+      // reference feature.tempo(zeros) == prior argmax == 117.4538... at start_bpm=120
+      expect(tempo(silence, { sr: SR })).toBeCloseTo(PRIOR_ARGMAX_BPM, 10);
     });
 
-    it('returns the tempo-prior argmax for a constant signal (verified vs librosa 0.11.0)', () => {
+    it('returns the tempo-prior argmax for a constant signal (verified vs reference 0.11.0)', () => {
       const constant = new Float32Array(SR * 10).fill(0.5);
-      expect(tempo(constant, { sr: SR })).toBeCloseTo(LIBROSA_PRIOR_ARGMAX_BPM, 10);
+      expect(tempo(constant, { sr: SR })).toBeCloseTo(PRIOR_ARGMAX_BPM, 10);
     });
 
     it('beat_track returns 0 BPM and no beats when the onset envelope is silent', () => {
@@ -84,8 +84,8 @@ describe('canonical rhythm engine - algorithmic validation', () => {
 
     it('respects a caller-provided bpm instead of estimating', () => {
       const clickTrack = generateClickTrack(120, SR, 10);
-      const result = beat_track(clickTrack, SR, { bpm: LIBROSA_PRIOR_ARGMAX_BPM });
-      expect(result.tempo).toBe(LIBROSA_PRIOR_ARGMAX_BPM);
+      const result = beat_track(clickTrack, SR, { bpm: PRIOR_ARGMAX_BPM });
+      expect(result.tempo).toBe(PRIOR_ARGMAX_BPM);
       expect(result.beats.length).toBeGreaterThan(1);
     });
   });

@@ -4,7 +4,7 @@
  * The classic music-sync demo aligns a slow and a fast recording of the same lick and
  * eyeballs the warping path. We make it SELF-VERIFYING by manufacturing a warp
  * of KNOWN factor: take a real audio segment, stretch a copy by exactly 1.25×
- * with the parity-gated phase vocoder (effects.time_stretch), chroma-featurize
+ * with the validated phase vocoder (effects.time_stretch), chroma-featurize
  * both (feature.chroma_stft), and DTW-align the chroma sequences
  * (sequence.dtw, cosine metric).
  *

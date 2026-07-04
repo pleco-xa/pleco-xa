@@ -2,19 +2,43 @@
   "name": "pleco-xa-monorepo",
   "private": true,
   "type": "module",
+  "description": "Monorepo for pleco-xa — the browser-native, zero-dependency audio-analysis library. The published package lives in packages/pleco-xa.",
+  "homepage": "https://plecoxa.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pleco-xa/pleco-xa.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pleco-xa/pleco-xa/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12"
+  },
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w @pleco-xa/demo",
-    "build": "npm run build -w pleco-xa && npm run build -w @pleco-xa/demo",
-    "build:lib": "npm run build -w pleco-xa",
+    "setup": "npm ci",
     "test": "npm run test -w pleco-xa",
-    "start": "node apps/demo/dist/server/entry.mjs",
+    "build": "npm run build -w pleco-xa",
+    "build:lib": "npm run build -w pleco-xa",
+    "build:docs": "npm run build:lib && npm run build -w @pleco-xa/docs",
+    "build:demo": "npm run build -w @pleco-xa/demo",
+    "dev": "npm run dev -w @pleco-xa/docs",
+    "docs": "npm run dev -w @pleco-xa/docs",
+    "docs:build": "npm run build:lib && npm run build -w @pleco-xa/docs",
     "demos": "node tools/serve-demos.mjs",
     "demos:build": "npm run build:lib && node tools/serve-demos.mjs",
-    "docs": "npm run dev -w @pleco-xa/docs",
-    "docs:build": "npm run build:lib && npm run build -w @pleco-xa/docs"
+    "start": "node apps/demo/dist/server/entry.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "eslint": "^9",
+    "globals": "^16.0.0"
   }
 }

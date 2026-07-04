@@ -2,7 +2,7 @@
  * Proof: loop/fast.js — golden-locked fast pipeline (the default strategy).
  *
  * fastLoopAnalysis on all 4 golden WAVs (apps/demo/public/audio), asserted
- * against tools/parity/fixtures/loop_goldens.json (captured from the
+ * against tools/goldens/loop_goldens.json (captured from the
  * pre-consolidation legacy pipeline):
  *   - loop points within ±441 samples (10 ms @ 44.1 kHz) of the goldens
  *     (spot-run: all four land within 0–1 samples),
@@ -20,7 +20,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const goldens = JSON.parse(readFileSync(
-  fileURLToPath(new URL('../../tools/parity/fixtures/loop_goldens.json', import.meta.url)), 'utf8'))
+  fileURLToPath(new URL('../../tools/goldens/loop_goldens.json', import.meta.url)), 'utf8'))
 const audioDir = new URL('../../apps/demo/public/audio/', import.meta.url)
 const TOL = goldens.meta.toleranceSamples // 441
 

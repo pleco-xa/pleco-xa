@@ -11,8 +11,7 @@
  * it samples the nearest FFT bin of one large FFT per hop at log-spaced
  * frequencies. Kept as an explicitly-named fast approximation.
  *
- * Parity gate: tests/parity/chroma.parity.test.js vs
- * tools/parity/fixtures/chroma.json.
+ * Validated against committed reference fixtures.
  */
 
 import { stft, fft, fft_frequencies } from '../scripts/xa-fft.js'

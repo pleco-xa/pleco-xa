@@ -191,7 +191,7 @@ describe('xa-fft - Algorithmic Validation', () => {
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
 
-      // Librosa shape: (1 + n_fft/2) freq bins x (1 + floor(len/hop)) frames (center=true)
+      // Reference shape: (1 + n_fft/2) freq bins x (1 + floor(len/hop)) frames (center=true)
       expect(result.length).toBe(n_fft / 2 + 1);
       const expectedFrames = 1 + Math.floor(signal.length / hop_length);
       expect(result[0].length).toBe(expectedFrames);
@@ -227,12 +227,12 @@ describe('xa-fft - Algorithmic Validation', () => {
 
   describe('FFT frequency bins (fft_frequencies)', () => {
     /**
-     * Based on Librosa test_fft_frequencies (test_convert.py line 309)
+     * Based on the reference test_fft_frequencies (test_convert.py line 309)
      * - DC bin should be 0
      * - Nyquist should be sr/2
      * - Frequencies should be linearly spaced
      */
-    it('should generate correct FFT frequency bins (Librosa test_convert.py)', () => {
+    it('should generate correct FFT frequency bins (reference test_convert.py)', () => {
       const fftFreqFn = xa_fft.fft_frequencies || xa_fft.fftFrequencies;
 
       if (fftFreqFn) {

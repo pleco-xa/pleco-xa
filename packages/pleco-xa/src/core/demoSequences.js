@@ -2,7 +2,6 @@
 import {
   halfLoop,
   doubleLoop,
-  moveForward,
   reverseBufferSection,
   detectLoop,
 } from './loopHelpers.js';

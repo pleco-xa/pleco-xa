@@ -47,7 +47,7 @@
     for (let i = 0; i < burst.length; i++) burst[i] = (lcg() * 2 - 1) * Math.exp(-i / (0.004 * sr))
     const y = audioio.clicks({ times: truth, sr, click: burst, length: Math.round(2.5 * sr) })
 
-    // parity tier: centered onset_strength + canonical peak picking
+    // reference tier: centered onset_strength + canonical peak picking
     const env = onset_strength(y, { sr, max_size: 5 })
     const mx = Math.max(...env)
     const picks = Array.from(peakPick(Float64Array.from(env, (v) => v / mx), {

@@ -981,7 +981,7 @@ export function expand_to(x, ndim, axes) {
   // This is a simplified version - full ND array support would need a library
 
   let result = x
-  const axesArray = Array.isArray(axes) ? axes : [axes]
+  const _axesArray = Array.isArray(axes) ? axes : [axes]
 
   // Ensure result has at least ndim dimensions
   while (getArrayDepth(result) < ndim) {
@@ -2427,7 +2427,7 @@ export function show_versions() {
     version: '1.0.0',
     // Tier-2 proof-of-work repair (2026-07-02): removed fictional
     // '100%, 512/512 functions' coverage claims — real coverage status lives
-    // in PARITY.md and the fixture-gated test suite, not hard-coded numbers.
+    // in the fixture-gated test suite, not hard-coded numbers.
     environment: isNode ? 'node' : isBrowser ? 'browser' : 'unknown',
 
     // Browser APIs

@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a new capability, function, or improvement
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The problem or use case behind the request — not just the proposed solution.
+      placeholder: 'I need to detect tempo changes within a track, not just a single global BPM…'
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or behavior
+      description: What would the function/option look like? Sketch a call signature if you can.
+      render: js
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing functions or workarounds you tried, and why they fall short.
+    validations:
+      required: false
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: This can be implemented with zero runtime dependencies (pure DSP / Web Audio / typed arrays).
+          required: false
+        - label: I'd be willing to help implement it.
+          required: false

@@ -3,7 +3,7 @@
  *
  * ONE canonical HPSS for the whole library (Fitzgerald 2010, Driedger 2014),
  * consolidating the previous xa-advanced.js / xa-processing.js duplicates.
- * Fixture-gated: tools/parity/fixtures/hpss.json
+ * Validated against committed reference fixtures
  * (default margin AND margin=2.0).
  */
 

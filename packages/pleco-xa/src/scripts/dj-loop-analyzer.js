@@ -236,7 +236,7 @@ export class DJLoopAnalyzer {
 
       // Convert distance to similarity (0-1)
       return 1 / (1 + distance)
-    } catch (error) {
+    } catch (_error) {
       console.warn('DTW calculation failed, using fallback similarity')
       return this.fallbackChromaSimilarity(loop1, loop2)
     }
