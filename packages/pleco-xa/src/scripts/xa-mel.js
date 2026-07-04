@@ -3,7 +3,7 @@
  * Mel-scale frequency analysis for audio processing
  */
 
-import { stft, magnitude } from './xa-fft.js'
+import { stft } from './xa-fft.js'
 import { mfccFromLogMel } from '../feature/dct.js'
 
 /**
@@ -267,7 +267,7 @@ export function melspectrogram(
  * Wave-4: delegates to the fixture-verified feature/mfcc.js pipeline
  * (power_to_db instead of the old natural log, cached ortho DCT-II basis
  * instead of per-frame O(N²) recomputation; gated by
- * tools/parity/fixtures/mfcc.json).
+ * committed reference fixtures).
  *
  * @param {Float32Array} y - Audio signal (optional if S provided)
  * @param {number} sr - Sample rate

@@ -108,7 +108,7 @@ export function generateDrumPattern(bars = 1, bpm = 120, sampleRate = 22050) {
 }
 
 /**
- * Known test vectors for validation (based on Librosa test suite)
+ * Known test vectors for validation (based on a reference test suite)
  */
 export const knownTestVectors = {
   // FFT test vectors
@@ -137,7 +137,7 @@ export const knownTestVectors = {
     ]
   },
 
-  // MIDI/frequency conversion test vectors (Librosa test_convert.py)
+  // MIDI/frequency conversion test vectors (reference test_convert.py)
   midi: {
     // test_midi_to_hz line 277
     midiToHz: [
@@ -242,7 +242,7 @@ export const knownTestVectors = {
 };
 
 /**
- * Generate click track for tempo testing (Librosa test_tempo pattern)
+ * Generate click track for tempo testing (reference test_tempo pattern)
  * Creates impulses at regular intervals corresponding to a given BPM
  *
  * @param {number} tempo - Tempo in BPM
@@ -250,9 +250,9 @@ export const knownTestVectors = {
  * @param {number} duration - Duration in seconds
  * @returns {Float32Array} Audio with clicks at tempo intervals
  *
- * Example from Librosa test_beat.py lines 56-61:
+ * Example from the reference test_beat.py lines 56-61:
  *   y = np.zeros(20 * sr)
- *   delay = librosa.time_to_samples(60.0 / tempo, sr=sr).item()
+ *   delay = time_to_samples(60.0 / tempo, sr=sr).item()
  *   y[::delay] = 1
  */
 export function generateClickTrack(tempo, sr = 22050, duration = 20) {
@@ -272,7 +272,7 @@ export function generateClickTrack(tempo, sr = 22050, duration = 20) {
 
 /**
  * Generate idealized single-bin spectrum for spectral feature testing
- * (Librosa test_features.py lines 134-138)
+ * (reference test_features.py lines 134-138)
  *
  * @param {number} nBins - Number of frequency bins
  * @param {number} nFrames - Number of time frames
@@ -307,7 +307,7 @@ export function generateSilence(length = 1024) {
 
 /**
  * Generate alternating signal for zero-crossing rate testing
- * (Librosa test_features.py lines 385-391)
+ * (reference test_features.py lines 385-391)
  *
  * @param {number} sr - Sample rate
  * @param {number} period - Period of alternation in samples

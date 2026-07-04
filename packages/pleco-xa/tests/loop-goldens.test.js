@@ -21,7 +21,7 @@ const AUDIO_DIR = fileURLToPath(
 const goldens = JSON.parse(
   readFileSync(
     fileURLToPath(
-      new URL('../../../tools/parity/fixtures/loop_goldens.json', import.meta.url),
+      new URL('../../../tools/goldens/loop_goldens.json', import.meta.url),
     ),
     'utf8',
   ),

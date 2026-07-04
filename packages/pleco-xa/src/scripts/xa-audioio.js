@@ -7,7 +7,6 @@
 // Repaired path (Wave 5A): the old 'src/core/xa-fft.js' specifier resolved
 // nowhere in Node or the browser — xa-fft lives beside this module.
 import { _amax } from './_arrstat.js'
-import { fft, ifft } from './xa-fft.js'
 
 let globalAudioContext = null
 let currentAudioBuffer = null
@@ -63,7 +62,7 @@ async function __soundfile_load(source, { sr = 22050, mono = true, offset = 0, d
   const end = duration === null
     ? decoded.length
     : Math.min(decoded.length, start + Math.floor(duration * nativeSr));
-  const length = end - start;
+  const _length = end - start;
 
   const chans = Array.from({ length: decoded.numberOfChannels }, (_, c) =>
     decoded.getChannelData(c).slice(start, end)
@@ -163,7 +162,7 @@ export async function load(
     duration === null
       ? decoded.length
       : Math.min(decoded.length, start + Math.floor(duration * nativeSr))
-  const length = end - start
+  const _length = end - start
 
   const chans = Array.from({ length: decoded.numberOfChannels }, (_, c) =>
     decoded.getChannelData(c).slice(start, end),
@@ -358,7 +357,7 @@ function __lpc(y, order, ar_coeffs, ar_coeffs_prev, reflect_coeff, den, epsilon)
   return ar_coeffs
 }
 
-/** Burg LPC (real‑valued) — returns LPC denominator polynomial a[0..p], a[0] == 1  */
+/** Burg LPC (real-valued) — returns LPC denominator polynomial a[0..p], a[0] == 1  */
 export function lpc(signal, order) {
   if (order < 1 || order >= signal.length)
     throw new RangeError('Invalid LPC order')
@@ -366,7 +365,7 @@ export function lpc(signal, order) {
   const N = signal.length
   const ef = Float64Array.from(signal)
   const eb = Float64Array.from(signal)
-  let E = signal.reduce((s, v) => s + v * v, 0)
+  let _E = signal.reduce((s, v) => s + v * v, 0)
 
   const a = new Float64Array(order + 1)
   a[0] = 1
@@ -386,7 +385,7 @@ export function lpc(signal, order) {
       ef[n] = ef[n] + k * eb[n - 1]
       eb[n - 1] = eb[n - 1] + k * tmp
     }
-    E *= 1 - k * k
+    _E *= 1 - k * k
   }
   return a
 }

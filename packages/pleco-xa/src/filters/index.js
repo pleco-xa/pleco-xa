@@ -1,13 +1,12 @@
 /**
  * filters/ — filter-bank builders (fixture-verified) + re-exports of the
- * parity-gated window and mel filterbank builders.
+ * validated window and mel filterbank builders.
  *
  * chroma() builds the filters.chroma bank:
  * Gaussian pitch-class bumps over log-frequency bins, binwidth-adaptive,
  * octave-dominance (octwidth) Gaussian weighting, tuning shift and base-C roll.
  *
- * Parity gate: tests/parity/chroma.parity.test.js vs
- * tools/parity/fixtures/chroma.json (raw filterbank case).
+ * Validated against committed reference fixtures (raw filterbank case).
  */
 
 export { get_window } from '../scripts/xa-fft.js'

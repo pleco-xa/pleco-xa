@@ -17,9 +17,8 @@
  * float64 input, independent of the sign gauge (eigenvector signs are not
  * canonicalized against LAPACK because that gauge is not part of the spectrum).
  *
- * Parity: fixture-gated against tools/parity/fixtures/linalg.json (case
- * fn=eigh) — eigenvalues ascending within 1e-6, reconstruction within 1e-9,
- * orthonormality within 1e-9.
+ * Validated against committed reference fixtures — eigenvalues ascending
+ * within 1e-6, reconstruction within 1e-9, orthonormality within 1e-9.
  *
  * Input is NEVER shape-guessed: pass a 2D symmetric matrix (array of rows) or a
  * flat row-major array with an explicit `{ flat, n }`. Non-square or materially

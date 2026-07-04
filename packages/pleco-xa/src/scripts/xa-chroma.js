@@ -4,7 +4,7 @@
  *
  * chroma_stft now delegates to feature/chroma.js: a Gaussian
  * filters.chroma matrix over a power spectrogram with per-frame inf-norm
- * (gated by tools/parity/fixtures/chroma.json). The old nearest-semitone
+ * (gated by committed reference fixtures). The old nearest-semitone
  * hard binning survives only as the explicitly-named fast variant
  * stft_to_chroma.
  *
@@ -140,10 +140,10 @@ export function cqt_to_chroma(cqt, n_chroma = 12, bins_per_octave = 12) {
 }
 
 /**
- * FAST VARIANT (not the parity path): fold magnitude spectra into chroma by
+ * FAST VARIANT (not the reference path): fold magnitude spectra into chroma by
  * hard nearest-semitone binning with sqrt-energy-share normalization.
  * Kept as an explicitly-named approximation; feature/chroma.js chroma_stft
- * is the parity path.
+ * is the reference path.
  * @param {Array} magnitude_spectra - time-major magnitude spectra
  * @param {number} sr - Sample rate
  * @param {number} n_fft - FFT size
@@ -221,7 +221,7 @@ export function freq_to_chroma(freq) {
 }
 
 /**
- * Compute chroma vector from a single spectrum (fast variant, not parity)
+ * Compute chroma vector from a single spectrum (fast variant, not reference)
  * @param {Float32Array} spectrum - Magnitude spectrum
  * @param {number} sr - Sample rate
  * @param {number} tuning - Tuning deviation

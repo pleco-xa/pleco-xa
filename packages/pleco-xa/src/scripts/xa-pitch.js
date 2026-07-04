@@ -4,7 +4,6 @@
  */
 
 import { stft } from './xa-fft.js'
-import { frames_to_time } from './xa-convert.js'
 import { viterbi, transition_local, transition_loop } from '../sequence/index.js'
 
 /**
@@ -211,7 +210,7 @@ export function yin(
  *   3. sequence.viterbi decode → per-frame pitch bin → f0 (fill_na when
  *      unvoiced), voiced_flag, voiced_prob.
  *
- * Fixture-gated: tools/parity/fixtures/pyin.json (220→330 Hz step + silent
+ * Validated against committed reference fixtures (220→330 Hz step + silent
  * tail; voiced f0 within ~1 semitone, voicing exact on the clearly voiced/
  * silent regions). This is the real pYIN — NOT the former median-over-
  * threshold-ensemble stub (no transition matrix, no Viterbi) that was honestly

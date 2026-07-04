@@ -1,0 +1,85 @@
+---
+title: Pleco-Xa
+description: Browser-native audio analysis engine — BPM & beat tracking, spectral features, structural segmentation, and intelligent loop detection. Zero dependencies.
+template: splash
+hero:
+  tagline: Musical timing, spectral features, and intelligent loop detection — in the browser, with zero dependencies.
+  actions:
+    - text: Get started
+      link: /start/install/
+      icon: right-arrow
+    - text: Explore the gallery
+      link: /gallery/
+      variant: minimal
+    - text: API reference
+      link: /api-by-category/
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components'
+
+Pleco-Xa brings musical intelligence — BPM and beat tracking, spectral features,
+structural segmentation, effects, pitch tracking, and its signature **loop
+detection** — to anything that runs JavaScript. No build step, no dependencies,
+and it does things an offline library can't: real-time streaming analysis and
+intelligent loop-point detection, running live in a browser tab.
+
+## See it
+
+```js
+import { beat_track, loop } from 'pleco-xa'
+
+// Decode with Web Audio, then hand the samples to the library
+const ctx = new AudioContext()
+const audio = await ctx.decodeAudioData(await (await fetch('song.mp3')).arrayBuffer())
+const y = audio.getChannelData(0)
+
+// Musical timing
+const { tempo, beats } = beat_track(y, audio.sampleRate)
+console.log(`${tempo.toFixed(1)} BPM, ${beats.length} beats`)
+
+// The signature feature — find the best loop point
+const best = await loop.detect(audio, { strategy: 'fast' })
+console.log(`loop ${best.loopStart.toFixed(2)}s → ${best.loopEnd.toFixed(2)}s`)
+```
+
+The analysis API is `(Float32Array, sampleRate)` everywhere, so the same code
+runs in the browser, Node, and Web Workers.
+
+## What's inside
+
+<CardGrid stagger>
+  <Card title="Zero dependencies">
+    Pure ESM, nothing to install alongside it. Runs in browsers, Node, and Web
+    Workers — no build step, no native modules, no GPU.
+  </Card>
+  <Card title="Loop detection">
+    The signature feature: intelligent loop-point finding with one entry point,
+    four strategies, and a single honest confidence score.
+  </Card>
+  <Card title="Musical timing">
+    Tempo and beat tracking, onset detection, and tempograms — numerically
+    validated against committed reference fixtures.
+  </Card>
+  <Card title="Spectral features">
+    STFT, mel spectrograms, MFCC, chroma, and the full family of spectral
+    descriptors (centroid, bandwidth, rolloff, contrast, flatness).
+  </Card>
+  <Card title="Real-time">
+    Worker-safe streaming analyzers and a live tempo tier — analysis an offline
+    library structurally can't do.
+  </Card>
+  <Card title="Pure-DSP vocal separation">
+    Surprisingly capable source separation with no trained model, no weights,
+    and no GPU. It runs in a browser tab.
+  </Card>
+</CardGrid>
+
+## Built to be trusted
+
+- **Full TypeScript types** on every export and subpath — autocomplete works out of the box.
+- **Fixture-verified** across ~20 domains and checked in CI, many results numerically exact.
+- **Explicit tiers, never silent.** Quality is the default; fast/live variants are separate named calls, and anything that can't produce a valid result throws with diagnostics rather than fabricating a number.
+
+Ready? **[Install and run your first analysis →](/start/install/)** or watch every
+example run live on your own audio in the **[gallery](/gallery/)**.

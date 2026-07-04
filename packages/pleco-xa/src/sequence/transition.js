@@ -12,7 +12,7 @@
  * width (odd or even), the 'triangle' and uniform ('ones') windows, and wrap
  * on/off, not just the odd-triangle case.
  *
- * Fixture-gated: tools/parity/fixtures/sequence_extra.json (exact within 1e-6).
+ * Validated against committed reference fixtures (exact within 1e-6).
  * Scalar and typed-array (Float64Array / Int32Array) `prob`/`width` inputs are
  * both accepted. Invalid inputs throw with a diagnostic (never silently clamp).
  */

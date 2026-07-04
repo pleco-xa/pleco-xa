@@ -14,8 +14,8 @@ describe('xa-convert', () => {
       expect(typeof convert.hz_to_midi).toBe('function');
     });
 
-    it('should convert known frequencies correctly (Librosa test_convert.py line 281)', () => {
-      // Test with Librosa's known test vectors: [55, 110, 220, 440] -> [33, 45, 57, 69]
+    it('should convert known frequencies correctly (reference test_convert.py line 281)', () => {
+      // Test with the reference's known test vectors: [55, 110, 220, 440] -> [33, 45, 57, 69]
       knownTestVectors.midi.hzToMidi.forEach(({ hz, midi }) => {
         const result = convert.hz_to_midi(hz);
         expect(almostEqual(result, midi, 0.01)).toBe(true);
@@ -42,8 +42,8 @@ describe('xa-convert', () => {
       expect(typeof convert.midi_to_hz).toBe('function');
     });
 
-    it('should convert known MIDI notes correctly (Librosa test_convert.py line 277)', () => {
-      // Test with Librosa's known test vectors: [33, 45, 57, 69] -> [55, 110, 220, 440]
+    it('should convert known MIDI notes correctly (reference test_convert.py line 277)', () => {
+      // Test with the reference's known test vectors: [33, 45, 57, 69] -> [55, 110, 220, 440]
       knownTestVectors.midi.midiToHz.forEach(({ midi, hz }) => {
         const result = convert.midi_to_hz(midi);
         expect(almostEqual(result, hz, 0.5)).toBe(true);
@@ -191,9 +191,9 @@ describe('xa-convert', () => {
       expect(typeof convert.mel_to_hz).toBe('function');
     });
 
-    it('should convert mel scale correctly (librosa Slaney default)', () => {
-      // librosa default is the Slaney scale: linear below 1000 Hz (f = mel * 200/3),
-      // logarithmic above. mel 15.0 -> 1000 Hz (pinned in tools/parity/fixtures/conversions.json)
+    it('should convert mel scale correctly (reference Slaney default)', () => {
+      // The reference default is the Slaney scale: linear below 1000 Hz (f = mel * 200/3),
+      // logarithmic above. mel 15.0 -> 1000 Hz (pinned in committed reference fixtures)
       expect(almostEqual(convert.mel_to_hz(0), 0, 1e-6)).toBe(true);
       expect(almostEqual(convert.mel_to_hz(3), 200, 1e-3)).toBe(true);
       expect(almostEqual(convert.mel_to_hz(15), 1000, 1e-3)).toBe(true);
@@ -202,7 +202,7 @@ describe('xa-convert', () => {
     });
 
     it('should handle high mel values (HTK scale requested explicitly)', () => {
-      // librosa: mel_to_hz(2840, htk=True) ~= 7999.82 Hz
+      // reference: mel_to_hz(2840, htk=True) ~= 7999.82 Hz
       const hz = convert.mel_to_hz(2840, true);
       expect(almostEqual(hz, 7999.822, 0.01)).toBe(true);
     });
@@ -223,9 +223,9 @@ describe('xa-convert', () => {
       expect(typeof convert.hz_to_mel).toBe('function');
     });
 
-    it('should convert frequency to mel scale (librosa Slaney default)', () => {
-      // librosa slaney default: 1000 Hz -> 15.0 mel, 440 Hz -> 6.6 mel
-      // (pinned in tools/parity/fixtures/conversions.json)
+    it('should convert frequency to mel scale (reference Slaney default)', () => {
+      // reference slaney default: 1000 Hz -> 15.0 mel, 440 Hz -> 6.6 mel
+      // (pinned in committed reference fixtures)
       expect(almostEqual(convert.hz_to_mel(0), 0, 1e-6)).toBe(true);
       expect(almostEqual(convert.hz_to_mel(1000), 15.0, 1e-6)).toBe(true);
       expect(almostEqual(convert.hz_to_mel(440), 6.6, 1e-3)).toBe(true);
@@ -305,8 +305,8 @@ describe('xa-convert', () => {
       expect(typeof convert.samples_to_time).toBe('function');
     });
 
-    it('should convert samples to time (Librosa test_convert.py line 79)', () => {
-      // Test with Librosa vectors: samples_to_time([0, sr, 2*sr], sr=sr) == [0, 1, 2]
+    it('should convert samples to time (reference test_convert.py line 79)', () => {
+      // Test with reference vectors: samples_to_time([0, sr, 2*sr], sr=sr) == [0, 1, 2]
       knownTestVectors.time.samplesToTime.forEach(({ samples, sr, time }) => {
         const result = convert.samples_to_time(samples, sr);
         expect(almostEqual(result, time, 0.001)).toBe(true);
@@ -328,8 +328,8 @@ describe('xa-convert', () => {
       expect(typeof convert.time_to_samples).toBe('function');
     });
 
-    it('should convert time to samples (Librosa test_convert.py line 75)', () => {
-      // Test with Librosa vectors: time_to_samples([0, 1, 2], sr=sr) == [0, sr, 2*sr]
+    it('should convert time to samples (reference test_convert.py line 75)', () => {
+      // Test with reference vectors: time_to_samples([0, 1, 2], sr=sr) == [0, sr, 2*sr]
       knownTestVectors.time.timeToSamples.forEach(({ time, sr, samples }) => {
         const result = convert.time_to_samples(time, sr);
         expect(almostEqual(result, samples, 1)).toBe(true);

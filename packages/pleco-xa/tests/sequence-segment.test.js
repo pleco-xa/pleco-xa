@@ -17,7 +17,7 @@ import {
 } from '../src/segment/index.js'
 import { dtw as dtwLegacy } from '../src/scripts/xa-dtw.js'
 
-describe('matchEvents (librosa.util.match_events)', () => {
+describe('matchEvents (reference util.match_events)', () => {
   it('matches fractional-second events without integer truncation', () => {
     // Legacy bug: sortedTo floored to [1, 1, 2] via Uint32Array.map, so both
     // 1.4 and 1.9 matched against quantized values.
@@ -28,8 +28,8 @@ describe('matchEvents (librosa.util.match_events)', () => {
     expect(Array.from(fine)).toEqual([0, 1, 2])
   })
 
-  it('reproduces librosa 0.11 behavior (multiples of 7 vs 10, ties included)', () => {
-    // Verified against a live librosa 0.11.0 run — the librosa DOCSTRING for
+  it('reproduces reference 0.11 behavior (multiples of 7 vs 10, ties included)', () => {
+    // Verified against a live reference 0.11.0 run — the reference DOCSTRING for
     // this example is stale (it claims 35 -> 30; the code matches 35 -> 40,
     // because equidistant ties resolve to the searchsorted-left middle).
     const sFrom = []
@@ -40,8 +40,8 @@ describe('matchEvents (librosa.util.match_events)', () => {
     expect(Array.from(out)).toEqual([0, 1, 1, 2, 3, 4, 4, 5, 6, 6, 7, 8, 8, 9, 9])
   })
 
-  it('resolves equidistant ties like librosa (to the middle index)', () => {
-    // verified against librosa 0.11.0: [0.5, 1.5, 2.5] vs [0, 1, 2, 3]
+  it('resolves equidistant ties like the reference (to the middle index)', () => {
+    // verified against reference 0.11.0: [0.5, 1.5, 2.5] vs [0, 1, 2, 3]
     const out = matchEvents([0.5, 1.5, 2.5], [0, 1, 2, 3])
     expect(Array.from(out)).toEqual([1, 2, 3])
   })
@@ -71,8 +71,8 @@ describe('matchEvents (librosa.util.match_events)', () => {
   })
 })
 
-describe('matchIntervals (librosa.util.match_intervals)', () => {
-  it('reproduces the librosa docstring examples', () => {
+describe('matchIntervals (reference util.match_intervals)', () => {
+  it('reproduces the reference docstring examples', () => {
     const intsFrom = [
       [3, 5],
       [1, 4],

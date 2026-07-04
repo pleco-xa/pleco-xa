@@ -1,6 +1,6 @@
 /**
  * Test Suite for xa-onset
- * Graduated from parity-seeds/xa-onset.test.js under truth-triage:
+ * Graduated from the seed test suite under truth-triage:
  *
  *  - Import paths fixed for tests/ (./fixtures/test-data.js).
  *  - "Existence check" fallback chains (onset_strength || onsetStrength,
@@ -9,11 +9,11 @@
  *  - The onset_detect assertions were corrected for pleco's actual API:
  *    onsetDetect() returns {onsetTimes, onsetStrength, onsetFrames}; the
  *    seed compared `.length` on that object, which never tested anything.
- *  - Librosa patterns retained: constant signals yield ≤1 onset
+ *  - Reference patterns retained: constant signals yield ≤1 onset
  *    (test_onset.py lines 216-233); onset strength is non-negative when
  *    detrend=False (lines 42-70); detections ascend.
- *  - Numerical parity with librosa is separately fixture-gated in
- *    tests/parity/onset.parity.test.js.
+ *  - Numerical accuracy against the reference is separately fixture-gated
+ *    in the reference test suite.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -31,7 +31,7 @@ const SR = 22050;
 
 describe('xa-onset - Algorithmic Validation', () => {
   describe('onset_strength', () => {
-    it('returns a non-negative, finite 1D envelope for audio (librosa: detrend=False)', () => {
+    it('returns a non-negative, finite 1D envelope for audio (reference: detrend=False)', () => {
       const audio = generateTestAudio(1.0, SR, 440);
       const result = onset_strength(audio, SR);
 
@@ -63,7 +63,7 @@ describe('xa-onset - Algorithmic Validation', () => {
       expect(Math.max(...result)).toBeGreaterThan(0);
     });
 
-    it('supports median aggregation (what librosa.beat.beat_track uses)', () => {
+    it('supports median aggregation (what the reference beat_track uses)', () => {
       const clickTrack = generateClickTrack(120, SR, 5);
       const result = onset_strength(clickTrack, { sr: SR, aggregate: 'median' });
       expect(isNonNegativeArray(Array.from(result))).toBe(true);
@@ -78,7 +78,7 @@ describe('xa-onset - Algorithmic Validation', () => {
 
   describe('onsetDetect', () => {
     /**
-     * librosa test_onset.py lines 216-233: constant signals should produce
+     * reference test_onset.py lines 216-233: constant signals should produce
      * 0 or 1 onset (one is allowed at the start due to padding).
      */
     it('produces 0 or 1 onset for silence', () => {

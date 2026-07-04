@@ -8,8 +8,8 @@
  * rows < 6 super-metric (eighth, sixteenth, ...).
  *
  * Two proofs:
- *   A. Direct parity on the committed fixture
- *      (tools/parity/fixtures/tempogram_ratio.json, shape [13, 173]).
+ *   A. Direct validation on the committed reference fixture
+ *      (tools/goldens/tempogram_ratio.json, shape [13, 173]).
  *   B. Self-contained semantics on a synthetic 120-BPM click train: the
  *      fundamental (factor 1) dominates, only integer subharmonics (1/2, 1/3,
  *      1/4) carry energy, and NO super-metric factor (f > 1) fires because the
@@ -18,7 +18,7 @@
  * NOTE: tempogram_ratio interpolates with a faithful static-grid
  * routine, NOT the exported f0_harmonics — that helper brackets the frequency
  * grid ascending-in-place and returns all-zeros on the descending, +Inf-headed
- * tempo axis (see module JSDoc + parity test).
+ * tempo axis (see module JSDoc).
  */
 import { tempogram_ratio } from '../../packages/pleco-xa/dist/pleco-xa.js'
 import { check, checkTrue, summary } from './_harness.mjs'
@@ -27,10 +27,10 @@ import { fileURLToPath } from 'node:url'
 
 const FACTORS = [4, 8 / 3, 3, 2, 4 / 3, 3 / 2, 1, 2 / 3, 3 / 4, 1 / 2, 1 / 3, 3 / 8, 1 / 4]
 
-/* ── Proof A: parity on the fixture ──────────────────────────────────────── */
+/* ── Proof A: validation on the fixture ───────────────────────────────────── */
 const fx = JSON.parse(
   readFileSync(
-    fileURLToPath(new URL('../../tools/parity/fixtures/tempogram_ratio.json', import.meta.url)),
+    fileURLToPath(new URL('../../tools/goldens/tempogram_ratio.json', import.meta.url)),
     'utf8',
   ),
 )

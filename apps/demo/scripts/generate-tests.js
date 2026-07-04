@@ -1,6 +1,6 @@
 /**
  * Test Suite Generator for Pleco-Audio
- * Automatically generates comprehensive test files for all 459 Librosa functions
+ * Automatically generates comprehensive test files for all 459 reference functions
  */
 
 import fs from 'fs';
@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.join(__dirname, '..');
 
-// Module categories matching Librosa structure
+// Module categories matching the reference structure
 const moduleCategories = {
   'audio-core': { name: 'Core Audio I/O', modules: ['xa-audio-core', 'xa-audioio', 'xa-fileio', 'xa-file'] },
   'spectral': { name: 'Spectral Analysis', modules: ['xa-fft', 'xa-spectral', 'xa-mel', 'xa-chroma'] },
@@ -115,7 +115,7 @@ ${exports.map(exp => `  describe('${exp.name}', () => {
     it.todo('should handle valid inputs correctly');
     it.todo('should handle edge cases');
     it.todo('should throw on invalid inputs');
-    it.todo('should match Librosa behavior');
+    it.todo('should match reference behavior');
   });
 `).join('\n')}
 });
@@ -391,7 +391,7 @@ async function main() {
   console.log('Scanning modules...\n');
 
   const srcDir = path.join(rootDir, 'src', 'scripts');
-  const testDir = path.join(rootDir, 'tests', 'librosa');
+  const testDir = path.join(rootDir, 'tests', 'generated');
   const demoDir = path.join(rootDir, 'tests', 'demos');
 
   // Create directories
@@ -442,7 +442,7 @@ async function main() {
   // Generate master test index
   const indexContent = `/**
  * Master Test Suite Index
- * Auto-generated test suite for all ${totalFunctions} Librosa functions
+ * Auto-generated test suite for all ${totalFunctions} reference functions
  */
 
 import { describe } from 'vitest';
@@ -450,7 +450,7 @@ import { describe } from 'vitest';
 describe('Pleco-Audio Complete Test Suite', () => {
   // All ${totalModules} module test files will be run
   // Total: ${totalFunctions} functions tested
-  // See individual test files in tests/librosa/ directory
+  // See individual test files in tests/generated/ directory
 });
 `;
 
@@ -466,7 +466,7 @@ describe('Pleco-Audio Complete Test Suite', () => {
   console.log('\nNext steps:');
   console.log('1. Run tests: npm test');
   console.log('2. View demos: Open tests/demos/*.html in browser');
-  console.log('3. Implement specific tests in tests/librosa/*.test.js');
+  console.log('3. Implement specific tests in tests/generated/*.test.js');
 }
 
 main().catch(console.error);

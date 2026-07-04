@@ -9,7 +9,7 @@
 // shrinks that would produce a loop narrower than 1 sample are refused
 // (the loop is returned unchanged) instead of emitting a degenerate state.
 // Acceptance harness: examples/node/algorithmic-sequences.mjs (0/800 fuzz).
-import { detectLoop, halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop } from '../core/index.js';
+import { halfLoop, doubleLoop, moveForward, reverseBufferSection, resetLoop } from '../core/index.js';
 
 // Enhanced operations with musical parameters
 export function stutterLoop(loop, buffer, repeats = 4) {

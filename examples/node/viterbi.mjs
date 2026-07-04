@@ -93,7 +93,7 @@ check('viterbi_discriminative divides by p_state (Bayes correction)',
   viterbi_discriminative([[0.8, 0.6], [0.2, 0.4]], transition_uniform(2), [0.9, 0.1]).join(','),
   '1,1')
 
-// ── transition-matrix constructors (sequence parity) ───────────────────────
+// ── transition-matrix constructors (sequence validation) ───────────────────
 // transition_cycle(n, p): each state self-loops with prob p and advances to
 // the next (mod n) with 1−p. Rows are stochastic.
 check('transition_cycle(3, 0.5) == golden',

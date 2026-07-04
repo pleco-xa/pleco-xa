@@ -7,9 +7,9 @@
  * xa-remix / xa-filters / xa-processing / xa-advanced modules are shims
  * that delegate here.
  *
- * Fixture-gated:
- *   - tools/parity/fixtures/effects.json        (trim, split, preemphasis)
- *   - tools/parity/fixtures/phase_vocoder.json  (rates 0.5 and 2.0)
+ * Validated against committed reference fixtures:
+ *   - trim, split, preemphasis
+ *   - phase vocoder (rates 0.5 and 2.0)
  */
 
 import { stft, istft } from '../scripts/xa-fft.js'

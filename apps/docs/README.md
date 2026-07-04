@@ -7,12 +7,13 @@ and deployed to **[plecoxa.com](https://plecoxa.com)** on GitHub Pages.
 
 ## Architecture
 
-- **Guides** — one narrative page per namespace, hand-written under
-  `src/content/docs/`.
+- **Guides** — the hand-written documentation content lives at the repo root in
+  `docs/` (the single tracked source), mirrored into `src/content/docs/` at build
+  time by `scripts/mirror-docs.mjs` (a `predev`/`prebuild` hook).
 - **API Reference** — generated from the library's JSDoc by
   `starlight-typedoc` (TypeDoc with `allowJs`), reading
-  `../../packages/pleco-xa/src/index.js`. Regenerated on every build; committed
-  markdown lives under `src/content/docs/api/`.
+  `../../packages/pleco-xa/src/index.js`. Regenerated into `src/content/docs/api/`
+  on every build (not committed).
 - **Gallery** — the verified demos in `examples/web/` are mirrored into
   `public/demos/` by `scripts/copy-demos.mjs` (a `predev`/`prebuild` hook) and
   embedded as iframes. The demos import the real built bundle
@@ -50,7 +51,7 @@ domain to `plecoxa.com`.
 
 ```bash
 # Point Pages at the Actions workflow as its build source
-gh api -X POST repos/brookcs3/pleco-xa/pages -f build_type=workflow
+gh api -X POST repos/pleco-xa/pleco-xa/pages -f build_type=workflow
 ```
 
 Then Settings → Pages should show the custom domain `plecoxa.com` and, once DNS
@@ -69,7 +70,7 @@ provision the TLS certificate.
 | A     | `@`  | `185.199.109.153`    | DNS only   |
 | A     | `@`  | `185.199.110.153`    | DNS only   |
 | A     | `@`  | `185.199.111.153`    | DNS only   |
-| CNAME | `www`| `brookcs3.github.io` | DNS only   |
+| CNAME | `www`| `pleco-xa.github.io` | DNS only   |
 
 Set these in the Cloudflare dashboard (DNS → Records), or run the API script
 below with a token scoped to **Zone → DNS → Edit** for the `plecoxa.com` zone:

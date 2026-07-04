@@ -1,7 +1,7 @@
 /**
  * Proof: sequence/rqa.js — RQA fixture replay.
  *
- * Replays both cases of tools/parity/fixtures/rqa.json (a committed
+ * Replays both cases of tools/goldens/rqa.json (a committed
  * reference fixture): the optimal alignment path must
  * agree ELEMENT-WISE ([n, m] pairs, exact) and max(score) must equal the
  * fixture's expected_score_max exactly. Plus one interpretable case: an 8×8
@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const fixture = JSON.parse(readFileSync(
-  fileURLToPath(new URL('../../tools/parity/fixtures/rqa.json', import.meta.url)), 'utf8'))
+  fileURLToPath(new URL('../../tools/goldens/rqa.json', import.meta.url)), 'utf8'))
 
 const maxScore = (score) => {
   let mx = -Infinity

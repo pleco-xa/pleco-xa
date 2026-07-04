@@ -19,7 +19,7 @@
  *    greedy merge of the ADJACENT pair with minimum Ward
  *    increment (nA·nB/(nA+nB)·||µA − µB||²), boundaries = left edges.
  *
- * Parity: fixture-gated against tools/parity/fixtures/dtw_segment.json
+ * Validated against committed reference fixtures
  * (case 2: connectivity exact 0/1, affinity toleranced, lag exact,
  * agglomerative boundary frames exact).
  *

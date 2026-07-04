@@ -53,7 +53,7 @@
 export async function stream(source, options = {}) {
   const {
     blockLength = 2048,
-    frameLength = 2048,
+    frameLength: _frameLength = 2048,
     hopLength = 512,
     mono = true,
     offset = 0.0,
@@ -336,14 +336,14 @@ export async function find_files(directory, options = {}) {
  */
 export function cite(version = null) {
   // Metadata mirrors packages/pleco-xa/package.json (name, author, repository).
-  const libVersion = version || '2.0.0-alpha.0';
+  const libVersion = version || '2.0.1';
 
   const citation = `@software{pleco_xa,
   title        = {pleco-xa: Browser-native audio analysis engine},
   author       = {Cameron Brooks},
   year         = {2026},
   version      = {${libVersion}},
-  url          = {https://github.com/brookcs3/pleco-xa},
+  url          = {https://github.com/pleco-xa/pleco-xa},
   note         = {Browser-native audio analysis: BPM/beat tracking, spectral features, and intelligent loop detection}
 }
 

@@ -21,12 +21,12 @@
   <h2>pyin — probabilistic YIN (real HMM / Viterbi decode)</h2>
   <p>
     A synthetic <b>220 Hz tone that steps to 330 Hz</b>, then a <b>silent tail</b>
-    — exactly the pyin parity fixture. <code>pyin(y, 80, 500)</code> builds a
+    — exactly the pyin reference fixture. <code>pyin(y, 80, 500)</code> builds a
     beta/Boltzmann observation matrix over a log-spaced pitch grid + an unvoiced
     state block, then Viterbi-decodes it through a
     <code>transition_local ⊗ voiced/unvoiced-switch</code> matrix. The white
     contour is the decoded f0; green/gray bands are the decoded voicing.
-    This is the same math the <code>pyin.json</code> parity test gates — voiced
+    This is the same math the <code>pyin.json</code> reference test gates — voiced
     f0 lands grid-exact (&lt;0.1 semitone), and the silence decodes
     unvoiced.
   </p>

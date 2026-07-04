@@ -17,8 +17,8 @@
  *      `1 − 1 = 0` (not 1). Every connected node gets diagonal `1`.
  *   4. Off-diagonal: `L[i][j] = −W[i][j] / (√w[i] · √w[j])`.
  *
- * Parity: fixture-gated against tools/parity/fixtures/linalg.json (case
- * fn=laplacian_normed) — L within 1e-9, and `eigh(L)` eigenvalues within 1e-6.
+ * Validated against committed reference fixtures — L within 1e-9, and
+ * `eigh(L)` eigenvalues within 1e-6.
  *
  * Input is NEVER shape-guessed: pass a 2D matrix (array of rows) or a flat
  * row-major array with an explicit `{ flat, n }`. Non-square input throws.

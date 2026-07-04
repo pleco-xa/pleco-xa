@@ -1,0 +1,65 @@
+name: Bug report
+description: Something in the library produces a wrong result, crashes, or behaves unexpectedly
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report. Please fill in as much as
+        you can — a minimal reproduction is the single most helpful thing.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+      placeholder: '`beat_track` returned NaN for a 44.1 kHz mono buffer that plays fine…'
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: >
+        Minimal code that triggers it. If it depends on a specific audio file,
+        describe its characteristics (sample rate, channels, duration) or link a
+        short clip.
+      render: js
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: pleco-xa version
+      description: 'Output of `npm ls pleco-xa` (or the version from package.json).'
+      placeholder: '2.0.1'
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where does it run?
+      multiple: true
+      options:
+        - Browser (main thread)
+        - Web Worker
+        - Node
+        - Other (describe above)
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: Runtime version
+      description: 'Browser + version, or `node --version`.'
+      placeholder: 'Chrome 130 / Node 22.12'
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Errors / stack trace
+      description: Any thrown error or console output. Automatically formatted as code.
+      render: shell
+    validations:
+      required: false

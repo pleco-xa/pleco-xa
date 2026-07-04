@@ -2,7 +2,7 @@
 import { detectLoop } from '../core/index.js';
 import { applyQuantumOp } from './audio-ops-extended.js';
 import { quantumRhythm } from '../core/vector-rhythm.js';
-import { allPresets, randomPreset } from './beat-presets.js';
+import { randomPreset } from './beat-presets.js';
 
 /* returns full op-array ready for playback */
 export function buildQuantumOpList(steps = 128, injections = 4) {

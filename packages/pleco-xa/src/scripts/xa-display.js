@@ -691,7 +691,7 @@ class DisplayAdaptor {
     }
 
     // Remove all event listeners
-    for (const [signal, { browserEvent, callback }] of this.callbacks) {
+    for (const [_signal, { browserEvent, callback }] of this.callbacks) {
       if (browserEvent === 'resize') {
         window.removeEventListener('resize', callback);
       } else {

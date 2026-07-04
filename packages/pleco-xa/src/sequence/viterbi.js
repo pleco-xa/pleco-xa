@@ -13,7 +13,7 @@
  * copy multiplied by the prior, inverting the correction for any non-uniform
  * p_state; this module divides.
  *
- * Fixture-gated: tools/parity/fixtures/sequence_extra.json
+ * Validated against committed reference fixtures
  * (viterbi_discriminative path — exact integer agreement).
  */
 

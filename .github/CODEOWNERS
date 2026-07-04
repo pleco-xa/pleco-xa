@@ -1,0 +1,9 @@
+# Code owners for pleco-xa.
+# These users are requested for review on any matching change.
+# Docs: https://docs.github.com/articles/about-code-owners
+
+# Default owner for everything in the repo.
+*       @brookcs3
+
+# The published library.
+/packages/pleco-xa/   @brookcs3

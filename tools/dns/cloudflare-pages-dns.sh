@@ -25,7 +25,7 @@ ZONE_NAME=$(curl -s "${AUTH[@]}" "${API}/zones/${CF_ZONE_ID}" \
 echo "zone: ${ZONE_NAME}"
 
 PAGES_IPS=(185.199.108.153 185.199.109.153 185.199.110.153 185.199.111.153)
-PAGES_HOST="brookcs3.github.io"
+PAGES_HOST="pleco-xa.github.io"
 
 create() { # type name content
   local type="$1" name="$2" content="$3"

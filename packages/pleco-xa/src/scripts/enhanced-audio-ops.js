@@ -1,11 +1,11 @@
 // Enhanced audio operations with live responsiveness and large buffer support
-import { halfLoop, doubleLoop, moveForward, resetLoop, detectLoop } from '../core/index.js';
+import { halfLoop, doubleLoop, resetLoop } from '../core/index.js';
 
 // Enhanced reverse with chunked processing for large buffers
 export function reverseBufferSectionEnhanced(buffer, start, end, options = {}) {
   const {
     chunkSize = 44100 * 2, // 2 seconds at 44.1kHz
-    maxProcessingTime = 100, // Max 100ms per chunk to stay responsive
+    maxProcessingTime: _maxProcessingTime = 100, // accepted for API compatibility; throttling not yet wired
     onProgress = null
   } = options;
   
@@ -137,7 +137,7 @@ export async function applyOperationEnhanced(operation, buffer, loop, onProgress
     case 'double':
       return { buffer, loop: doubleLoop(loop, buffer.length) };
       
-    case 'move':
+    case 'move': {
       const duration = loop.endSample - loop.startSample;
       const newStart = loop.startSample + duration;
       const newEnd = loop.endSample + duration;
@@ -145,6 +145,7 @@ export async function applyOperationEnhanced(operation, buffer, loop, onProgress
         return { buffer, loop: { startSample: newStart, endSample: newEnd } };
       }
       break;
+    }
       
     case 'reset':
       return { buffer, loop: resetLoop(buffer) };

@@ -10,6 +10,11 @@ lerna-debug.log*
 dist/
 .astro/
 
+# Docs content mirror + generated API reference (build artifacts).
+# The tracked source of documentation content is the repo-root /docs directory;
+# apps/docs/scripts/mirror-docs.mjs copies it here before every astro build.
+apps/docs/src/content/docs/
+
 *.tsbuildinfo
 
 # Environment
@@ -70,18 +75,10 @@ test-worker.cjs
 # Exclude large npm package files
 pleco-xa-*.tgz
 
-# librosa clone for testing
-librosa/
-
-# lb BPM detector for testing
-lb/
-
 # local-only
 .amp/
 .oracle/
-LibrosaDemo-PR1/
 .DS_Store
-tools/parity/.venv/
 
 # Personal AI dev tooling + editor config (local only, not part of the public library)
 AGENTS.md
@@ -89,5 +86,4 @@ CLAUDE.md
 .claude/
 .obsidian/
 # Internal planning/process history (kept local, out of the public repo)
-docs/superpowers/
-docs/notes/
+.dev-notes/
