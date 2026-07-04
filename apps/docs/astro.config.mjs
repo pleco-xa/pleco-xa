@@ -31,7 +31,7 @@ export default defineConfig({
     starlight({
       title: 'Pleco-Xa',
       description: 'Browser-native audio analysis engine — musical timing, spectral features, and intelligent loop detection.',
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/brookcs3/pleco-xa' }],
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/pleco-xa/pleco-xa' }],
       plugins: [
         starlightTypeDoc({
           entryPoints: ['../../packages/pleco-xa/src/index.js'],

@@ -1,17 +1,17 @@
 {
   "name": "pleco-xa",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "Browser-native audio analysis engine: musical timing, BPM/beat tracking, spectral features, and intelligent loop detection",
   "license": "MIT",
   "author": "Cameron Brooks",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/brookcs3/pleco-xa.git"
+    "url": "git+https://github.com/pleco-xa/pleco-xa.git"
   },
-  "homepage": "https://github.com/brookcs3/pleco-xa#readme",
+  "homepage": "https://plecoxa.com",
   "bugs": {
-    "url": "https://github.com/brookcs3/pleco-xa/issues"
+    "url": "https://github.com/pleco-xa/pleco-xa/issues"
   },
   "keywords": [
     "audio",
@@ -32,7 +32,87 @@
   "main": "./dist/pleco-xa.js",
   "module": "./dist/pleco-xa.js",
   "exports": {
-    ".": "./dist/pleco-xa.js"
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/pleco-xa.js"
+    },
+    "./feature": {
+      "types": "./dist/types/feature/index.d.ts",
+      "import": "./dist/feature.js"
+    },
+    "./loop": {
+      "types": "./dist/types/loop/index.d.ts",
+      "import": "./dist/loop.js"
+    },
+    "./segment": {
+      "types": "./dist/types/segment/index.d.ts",
+      "import": "./dist/segment.js"
+    },
+    "./sequence": {
+      "types": "./dist/types/sequence/index.d.ts",
+      "import": "./dist/sequence.js"
+    },
+    "./filters": {
+      "types": "./dist/types/filters/index.d.ts",
+      "import": "./dist/filters.js"
+    },
+    "./effects": {
+      "types": "./dist/types/effects/index.d.ts",
+      "import": "./dist/effects.js"
+    },
+    "./decompose": {
+      "types": "./dist/types/decompose/index.d.ts",
+      "import": "./dist/decompose.js"
+    },
+    "./linalg": {
+      "types": "./dist/types/linalg/index.d.ts",
+      "import": "./dist/linalg.js"
+    },
+    "./cluster": {
+      "types": "./dist/types/cluster/index.d.ts",
+      "import": "./dist/cluster.js"
+    },
+    "./playback": {
+      "types": "./dist/types/playback/ops.d.ts",
+      "import": "./dist/playback.js"
+    },
+    "./convert": {
+      "types": "./dist/types/scripts/xa-convert.d.ts",
+      "import": "./dist/convert.js"
+    },
+    "./bpm": {
+      "types": "./dist/types/scripts/xa-bpm-algorithm.d.ts",
+      "import": "./dist/bpm.js"
+    },
+    "./notation": {
+      "types": "./dist/types/scripts/xa-notation.d.ts",
+      "import": "./dist/notation.js"
+    },
+    "./recurrence": {
+      "types": "./dist/types/scripts/xa-recurrence.d.ts",
+      "import": "./dist/recurrence.js"
+    },
+    "./audioio": {
+      "types": "./dist/types/scripts/xa-audioio.d.ts",
+      "import": "./dist/audioio.js"
+    },
+    "./intervals": {
+      "types": "./dist/types/scripts/xa-intervals.d.ts",
+      "import": "./dist/intervals.js"
+    },
+    "./fileio": {
+      "types": "./dist/types/scripts/xa-fileio.d.ts",
+      "import": "./dist/fileio.js"
+    },
+    "./file": {
+      "types": "./dist/types/scripts/xa-file.d.ts",
+      "import": "./dist/file.js"
+    },
+    "./io": {
+      "types": "./dist/types/io/wav.d.ts",
+      "import": "./dist/io.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/",
@@ -41,7 +121,7 @@
     "NOTICE"
   ],
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && rollup -c rollup.subpaths.config.js && (tsc -p tsconfig.build.json || true)",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build && npm run test"
@@ -51,6 +131,8 @@
     "jsdom": "^26.1.0",
     "rollup": "^4.24.0",
     "rollup-plugin-esbuild": "^6.2.1",
-    "vitest": "^3.1.4"
-  }
+    "vitest": "^3.1.4",
+    "typescript": "^5.6.0"
+  },
+  "types": "./dist/types/index.d.ts"
 }
