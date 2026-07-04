@@ -67,6 +67,13 @@ everywhere, so the same code runs in browsers, Node, and Web Workers.
   are separate named calls; failures throw with diagnostics rather than
   fabricating a number.
 
+## For AI agents
+
+A machine-readable capability map ships with this package: [`llms.txt`](llms.txt) — the
+full function index, per-task routing, contracts, and verified recipes in one
+skim. The complete guides also ship inside the npm package under `docs/`.
+Also served at [plecoxa.com/llms.txt](https://plecoxa.com/llms.txt).
+
 ## Documentation
 
 Full guides, a per-function API reference, and an **interactive gallery where
