@@ -129,13 +129,51 @@ function validateInputData(data) {
   )
 }
 
+/** Distance metrics gen_sim_matrix / recurrenceMatrix actually implement. */
+const SUPPORTED_METRICS = ['euclidean', 'cosine']
+
 /**
- * Generate similarity matrix (helper for recurrence_matrix)
+ * Per-pair similarity in [-1, 1] (cosine) or (0, 1] (euclidean).
+ *  - cosine:    the cosine of the angle between the two feature vectors.
+ *  - euclidean: 1 / (1 + ||a − b||), a bounded, monotonically decreasing
+ *               function of the Euclidean distance (1 for identical frames,
+ *               → 0 as they diverge). This is a genuine Euclidean-distance
+ *               computation, so `metric` is honored rather than ignored.
+ */
+function frameSimilarity(data, i, j, numFeatures, metric) {
+  if (metric === 'cosine') {
+    let dotProduct = 0
+    let norm1 = 0
+    let norm2 = 0
+    for (let f = 0; f < numFeatures; f++) {
+      const val1 = data[f][i]
+      const val2 = data[f][j]
+      dotProduct += val1 * val2
+      norm1 += val1 * val1
+      norm2 += val2 * val2
+    }
+    return dotProduct / (Math.sqrt(norm1 * norm2) + 1e-8)
+  }
+  // euclidean
+  let sumSq = 0
+  for (let f = 0; f < numFeatures; f++) {
+    const diff = data[f][i] - data[f][j]
+    sumSq += diff * diff
+  }
+  return 1 / (1 + Math.sqrt(sumSq))
+}
+
+/**
+ * Generate similarity matrix (helper for recurrence_matrix).
+ *
+ * `metric` is honored: 'cosine' and 'euclidean' produce genuinely different
+ * matrices. Any other metric THROWS a diagnostic error rather than silently
+ * falling back to a default (pleco's no-silent-fallback principle).
  */
 function gen_sim_matrix(
   data,
   _k = null,
-  _metric = 'euclidean',
+  metric = 'euclidean',
   _sparse = false,
   mode = 'connectivity',
   _bandwidth = null,
@@ -148,6 +186,12 @@ function gen_sim_matrix(
       'gen_sim_matrix: expected a non-empty 2D array (rows may be typed arrays)',
     )
   }
+  if (!SUPPORTED_METRICS.includes(metric)) {
+    throw new Error(
+      `gen_sim_matrix: metric='${metric}' is not supported. ` +
+        `Supported metrics: ${SUPPORTED_METRICS.map((m) => `'${m}'`).join(', ')}.`,
+    )
+  }
 
   const [numFeatures, numFrames] = [data.length, data[0].length]
   const matrix = Array(numFrames)
@@ -156,20 +200,7 @@ function gen_sim_matrix(
 
   for (let i = 0; i < numFrames; i++) {
     for (let j = 0; j < numFrames; j++) {
-      // Compute cosine similarity (since euclidean is more complex)
-      let dotProduct = 0
-      let norm1 = 0
-      let norm2 = 0
-
-      for (let f = 0; f < numFeatures; f++) {
-        const val1 = data[f][i]
-        const val2 = data[f][j]
-        dotProduct += val1 * val2
-        norm1 += val1 * val1
-        norm2 += val2 * val2
-      }
-
-      const similarity = dotProduct / (Math.sqrt(norm1 * norm2) + 1e-8)
+      const similarity = frameSimilarity(data, i, j, numFeatures, metric)
 
       if (mode === 'connectivity') {
         matrix[i][j] = similarity > 0.5 ? 1 : 0
@@ -500,12 +531,15 @@ export async function recurrenceLoopDetection(audioBuffer, options = {}) {
   }
 
   // Generate recurrence matrix (graded affinity — binary connectivity
-  // saturates on material with broadband transients) and its lag view
+  // saturates on material with broadband transients) and its lag view.
+  // 'cosine' is requested explicitly: chroma frames are best compared by
+  // spectral shape, and this is the metric the detector was tuned against
+  // (gen_sim_matrix now honors the metric arg instead of ignoring it).
   const recurrence = recurrenceMatrix(
     stacked,
     null,
     1,
-    'euclidean',
+    'cosine',
     false,
     -1,
     false,

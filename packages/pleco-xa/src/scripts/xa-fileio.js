@@ -313,43 +313,43 @@ export async function find_files(directory, options = {}) {
 }
 
 /**
- * Get citation information for pleco-audio library
+ * Get citation information for the pleco-xa library
  *
  * Returns citation information in BibTeX format for academic use.
  *
- * @param {string} version - Optional version string (default: uses library VERSION)
+ * @param {string} version - Optional version string (default: the shipped package version)
  * @returns {string} Citation information in BibTeX format
  *
  * @example
  * console.log(cite());
  * // Prints:
- * // @software{pleco_audio,
- * //   title = {Pleco Audio: audio analysis for JavaScript},
- * //   author = {Pleco Audio Contributors},
+ * // @software{pleco_xa,
+ * //   title = {pleco-xa: Browser-native audio analysis engine},
+ * //   author = {Cameron Brooks},
  * //   ...
  * // }
  *
  * @example
  * // Get citation for specific version
- * const citation = cite('1.0.0');
+ * const citation = cite('2.0.0');
  * document.getElementById('citation').textContent = citation;
  */
 export function cite(version = null) {
-  // Get version from library info if not provided
-  const libVersion = version || '1.0.0';
+  // Metadata mirrors packages/pleco-xa/package.json (name, author, repository).
+  const libVersion = version || '2.0.0-alpha.0';
 
-  const citation = `@software{pleco_audio,
-  title        = {Pleco Audio: audio analysis for JavaScript},
-  author       = {Pleco Audio Contributors},
-  year         = {2025},
+  const citation = `@software{pleco_xa,
+  title        = {pleco-xa: Browser-native audio analysis engine},
+  author       = {Cameron Brooks},
+  year         = {2026},
   version      = {${libVersion}},
-  url          = {https://github.com/pleco-audio/pleco-audio},
-  note         = {Browser-compatible audio DSP library}
+  url          = {https://github.com/brookcs3/pleco-xa},
+  note         = {Browser-native audio analysis: BPM/beat tracking, spectral features, and intelligent loop detection}
 }
 
-Pleco Audio is a browser-native audio analysis library for JavaScript.
+pleco-xa is a browser-native audio analysis engine for JavaScript.
 
-If you use pleco-audio in academic work, please cite it using the entry above.
+If you use pleco-xa in academic work, please cite it using the entry above.
 `;
 
   return citation;

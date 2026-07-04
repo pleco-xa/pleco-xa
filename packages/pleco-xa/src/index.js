@@ -177,8 +177,9 @@ export {
 export { createAudioBlob } from './scripts/xa-wav-encoder.js'
 
 // Play layer — loop choreography + glitch toys (spec §6 play/).
-// NOTE: core's detectLoop is the deprecated full-buffer stub kept for
-// play-layer compatibility; real detection is loop.detect().
+// core's detectLoop runs the real fast-strategy detection pipeline
+// (beat-track → precise onset-pair → musical bar-aligned) synchronously;
+// loop.detect() is the richer async entry point with selectable strategies.
 export {
   signatureDemo, detectLoop, fullBufferLoop, halfLoop, doubleLoop,
   moveForward, resetLoop, randomSequence, randomLocal, glitchBurst,

@@ -782,8 +782,45 @@ export class DJLoopAnalyzer {
       hasBreakdown,
       hasDrop,
       beatCount: beatTimes.length,
-      structuralComplexity: hasBreakdown || hasDrop ? 0.8 : 0.4,
+      structuralComplexity: this.computeStructuralComplexity(onsetEnv),
     }
+  }
+
+  /**
+   * Structural complexity measured from the onset envelope. The envelope is
+   * split into up to 16 equal segments; the coefficient of variation of the
+   * per-segment mean energy is soft-squashed to [0, 1) via `cv / (1 + cv)`.
+   * A steady loop has near-uniform segment energy (low value); breakdowns,
+   * drops and build-ups raise the segment-to-segment variance (high value).
+   * Measured from the signal — never a fabricated constant, never NaN.
+   * @param {ArrayLike<number>} onsetEnv - Onset strength envelope
+   * @returns {number} Complexity in [0, 1)
+   */
+  computeStructuralComplexity(onsetEnv) {
+    const n = onsetEnv.length
+    if (n === 0) return 0
+
+    const segCount = Math.min(16, n)
+    const segMeans = new Array(segCount)
+    for (let s = 0; s < segCount; s++) {
+      const start = Math.floor((s * n) / segCount)
+      const end = Math.floor(((s + 1) * n) / segCount)
+      let sum = 0
+      for (let i = start; i < end; i++) sum += onsetEnv[i]
+      segMeans[s] = end > start ? sum / (end - start) : 0
+    }
+
+    let mean = 0
+    for (const m of segMeans) mean += m
+    mean /= segCount
+    if (mean <= 0) return 0
+
+    let variance = 0
+    for (const m of segMeans) variance += (m - mean) * (m - mean)
+    variance /= segCount
+
+    const cv = Math.sqrt(variance) / mean
+    return cv / (1 + cv)
   }
 
   updateSimilarityMatrix() {

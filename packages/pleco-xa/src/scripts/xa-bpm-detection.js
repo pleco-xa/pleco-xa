@@ -7,36 +7,50 @@ import { _amax } from './_arrstat.js'
 import { debugLog } from './debug.js'
 
 /**
- * Detect BPM from audio buffer
- * @param {AudioBuffer} audioBuffer - Audio buffer to analyze
- * @param {Object} options - Detection options
+ * Detect BPM from audio.
+ *
+ * Input contract (explicit — no silent guessing):
+ *   - An AudioBuffer (channel 0 and its sampleRate are read), or
+ *   - A Float32Array of raw mono PCM, in which case `options.sampleRate`
+ *     (a positive number) is REQUIRED.
+ * Anything else throws a TypeError with a clear diagnostic. A genuine
+ * detection failure on valid audio (no steady pulse found) resolves to
+ * { bpm: null, confidence: 0, error } rather than a fabricated tempo.
+ *
+ * @param {AudioBuffer|Float32Array} input - Audio to analyze
+ * @param {Object} [options] - Detection options (sampleRate required for Float32Array)
  * @returns {Promise<Object>} BPM result
  */
-export async function detectBPM(audioBuffer, options = {}) {
+export async function detectBPM(input, options = {}) {
   const defaultOptions = {
     minBPM: 60,
     maxBPM: 180,
     windowSize: 2048,
     hopSize: 512
   };
-  
+
   const opts = { ...defaultOptions, ...options };
+
+  // Validate the input contract up front, OUTSIDE the try/catch below, so a
+  // wrong input type surfaces as a loud, specific error instead of being
+  // swallowed into a confusing { bpm: null, error: '...getChannelData...' }.
+  const { data, sampleRate } = resolveAudioInput(input, opts);
 
   try {
     // Quick BPM estimation for immediate feedback
-    const quickResult = await quickBPMDetect(audioBuffer, opts);
-    
+    const quickResult = await quickBPMDetect(data, sampleRate, opts);
+
     // Apply musical corrections
     let bpm = quickResult.bpm;
-    let confidence = quickResult.confidence || 0.7;
-    
+    let confidence = quickResult.confidence;
+
     // Simple sanity correction for extreme values
     if (bpm > 160) {
       bpm = bpm / 2;
     } else if (bpm < 55) {
       bpm = bpm * 2;
     }
-    
+
     return {
       bpm,
       confidence,
@@ -55,16 +69,43 @@ export async function detectBPM(audioBuffer, options = {}) {
 }
 
 /**
- * Quick BPM detection using onset strength
+ * Resolve the public detectBPM input into { data: Float32Array, sampleRate }.
+ * Throws a TypeError for unsupported inputs rather than silently guessing.
  * @private
  */
-async function quickBPMDetect(audioBuffer, options) {
-  // For demo purposes, we'll use a simplified algorithm
-  // In a real implementation, this would use proper onset detection and autocorrelation
-  
-  const channel = audioBuffer.getChannelData(0);
-  const sr = audioBuffer.sampleRate;
-  
+function resolveAudioInput(input, options) {
+  // AudioBuffer (duck-typed: getChannelData + numeric sampleRate).
+  if (input && typeof input.getChannelData === 'function' && typeof input.sampleRate === 'number') {
+    return { data: input.getChannelData(0), sampleRate: input.sampleRate };
+  }
+
+  // Raw mono PCM. A Float32Array carries no sample rate, so require one.
+  if (input instanceof Float32Array) {
+    const sampleRate = options.sampleRate;
+    if (typeof sampleRate !== 'number' || !(sampleRate > 0)) {
+      throw new TypeError(
+        'detectBPM: a Float32Array input requires options.sampleRate (a positive number)'
+      );
+    }
+    return { data: input, sampleRate };
+  }
+
+  throw new TypeError(
+    'detectBPM: unsupported input — expected an AudioBuffer or a Float32Array, got ' +
+    (input === null ? 'null' : Array.isArray(input) ? 'Array' : typeof input)
+  );
+}
+
+/**
+ * Quick BPM detection using onset strength.
+ * @param {Float32Array} channel - Mono PCM samples
+ * @param {number} sr - Sample rate (Hz)
+ * @param {Object} options - Detection options
+ * @private
+ */
+async function quickBPMDetect(channel, sr, options) {
+  // Energy-flux onset peaks → inter-onset intervals → median-period BPM.
+
   // Use only a small portion of the audio for faster processing
   // Especially important for large files like Jazz Drums
   const maxSeconds = 10; // Only analyze first 10 seconds
@@ -135,15 +176,30 @@ async function quickBPMDetect(audioBuffer, options) {
   }
   
   const bpm = 60 * frameRate / medianInterval;
-  
+
   // Ensure BPM is in the specified range
   let finalBpm = bpm;
   while (finalBpm < options.minBPM) finalBpm *= 2;
   while (finalBpm > options.maxBPM) finalBpm /= 2;
-  
+
+  // Real confidence: how strongly the winning period (the median interval)
+  // dominates the field of observed inter-onset intervals. A steady pulse
+  // (clean click track) produces near-identical intervals → nearly all agree
+  // with the median → confidence ≈ 1. Scattered onsets (noise) produce
+  // intervals spread across the range → few agree → low confidence. This is a
+  // measured quantity, never a fabricated constant.
+  const tolerance = 0.15; // ±15% of the median period counts as "on the pulse"
+  let agree = 0;
+  for (const interval of intervals) {
+    if (Math.abs(interval - medianInterval) <= tolerance * medianInterval) {
+      agree++;
+    }
+  }
+  const confidence = intervals.length > 0 ? agree / intervals.length : 0;
+
   return {
     bpm: finalBpm,
-    confidence: 0.7
+    confidence
   };
 }
 

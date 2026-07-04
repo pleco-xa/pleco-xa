@@ -480,8 +480,16 @@ export function muCompress(x, { mu = 255, quantize = true } = {}) {
   }
   if (!quantize) return out
   const q = new Int16Array(x.length)
-  for (let i = 0; i < out.length; ++i)
-    q[i] = Math.round(((out[i] + 1) * mu) / 2 - mu / 2)
+  // Codewords must stay inside muExpand's valid dequant domain: it maps a code
+  // back to [-1,1] via code*2/mu, so |code| must not exceed mu/2. Rounding the
+  // upper boundary (comp === 1 -> round(mu/2)) can overshoot by one level (e.g.
+  // 128 for mu=255), which made muExpand throw on muCompress's own output.
+  // Clamp to the largest integer level that still round-trips.
+  const limit = Math.floor(mu / 2)
+  for (let i = 0; i < out.length; ++i) {
+    const code = Math.round(((out[i] + 1) * mu) / 2 - mu / 2)
+    q[i] = code > limit ? limit : code < -limit ? -limit : code
+  }
   return q
 }
 

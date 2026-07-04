@@ -4,9 +4,17 @@
  */
 
 /**
- * Fast Fourier Transform using Cooley-Tukey algorithm
+ * Fast Fourier Transform using Cooley-Tukey algorithm (radix-2).
+ *
+ * Zero-padding contract: this is a radix-2 transform, so inputs whose length
+ * is not already a power of 2 are zero-padded UP to the next power of 2. The
+ * returned spectrum therefore has `2**ceil(log2(N))` bins, which for a
+ * non-power-of-2 input is LONGER than the input. This padding is intentional
+ * (not a silent best-guess): pass a power-of-2-length signal to get a spectrum
+ * of exactly that length, or account for the padded length in the caller.
+ *
  * @param {Float32Array|Array} signal - Input signal
- * @returns {Array} FFT result as complex numbers
+ * @returns {Array} FFT result as complex numbers; length = next power of 2 >= N
  */
 export function fft(signal) {
   if (signal == null || typeof signal.length !== 'number') {
@@ -25,7 +33,9 @@ export function fft(signal) {
     return Array.from(signal, (x) => ({ real: x, imag: 0 }))
   }
 
-  // Pad to power of 2
+  // Pad to power of 2 (radix-2 requirement — see the zero-padding contract in
+  // the JSDoc above). When N is already a power of 2, paddedLength === N and no
+  // padding occurs, so the spectrum length matches the input exactly.
   const paddedLength = Math.pow(2, Math.ceil(Math.log2(N)))
   const padded = new Float32Array(paddedLength)
   padded.set(signal)
@@ -351,11 +361,15 @@ export function istft(
   return result
 }
 
+/** Window types get_window can build. */
+const SUPPORTED_WINDOWS = ['hann', 'hamming', 'blackman', 'rectangular', 'boxcar']
+
 /**
  * Get window function
- * @param {string} window_type - Window type
+ * @param {string} window_type - Window type (one of SUPPORTED_WINDOWS)
  * @param {number} n_fft - Window length
  * @returns {Float32Array} Window function
+ * @throws {Error} if window_type is not supported (no silent fallback to hann)
  */
 export function get_window(window_type, n_fft) {
   switch (window_type) {
@@ -369,7 +383,10 @@ export function get_window(window_type, n_fft) {
     case 'boxcar':
       return new Float32Array(n_fft).fill(1.0)
     default:
-      return hann_window(n_fft)
+      throw new Error(
+        `get_window: unsupported window type ${JSON.stringify(window_type)}. ` +
+          `Supported windows: ${SUPPORTED_WINDOWS.map((w) => `'${w}'`).join(', ')}.`,
+      )
   }
 }
 

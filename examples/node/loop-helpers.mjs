@@ -46,7 +46,13 @@ check('halfLoop(full) → {0, 22050}', halfLoop(fullBufferLoop(buffer)), { start
 check('doubleLoop({0, 30000}, 44100) clamps end at maxSamples', doubleLoop({ startSample: 0, endSample: 30000 }, N), { startSample: 0, endSample: N })
 check('moveForward({0, 22050}, 40000, 44100) clamps start to maxSamples − len', moveForward({ startSample: 0, endSample: 22050 }, 40000, N), { startSample: 22050, endSample: N })
 check('resetLoop === fullBufferLoop', resetLoop(buffer), fullBufferLoop(buffer))
-check('detectLoop deep-equals fullBufferLoop (deprecated-alias contract)', detectLoop(buffer), fullBufferLoop(buffer))
+{
+  const dl = detectLoop(buffer)
+  checkTrue('detectLoop performs REAL detection: an in-bounds sub-range, never the whole buffer',
+    dl.startSample >= 0 && dl.endSample <= buffer.length && dl.endSample > dl.startSample &&
+      !(dl.startSample === 0 && dl.endSample === buffer.length),
+    JSON.stringify(dl))
+}
 
 // reverse-twice bit-exact identity on [1000, 40000) across both channels
 const snapshot = channels.map((ch) => ch.slice())

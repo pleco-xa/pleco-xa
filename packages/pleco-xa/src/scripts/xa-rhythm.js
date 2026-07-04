@@ -63,6 +63,21 @@ export function plp(y = null, sr = 22050, onset_envelope = null, hop_length = 51
  * Beat-synchronous feature aggregation
  */
 export function beat_sync(data, beats, aggregate = 'mean') {
+  // `beats` are frame boundaries and must be strictly increasing. A zero- or
+  // negative-length segment (a duplicate or out-of-order pair) has no frames to
+  // aggregate, so mean divides by zero (NaN) and max returns -Infinity. Rather
+  // than silently emit those poisoned values, reject the malformed input with a
+  // clear diagnostic (dedupe/sort the beats first).
+  for (let i = 0; i < beats.length - 1; i++) {
+    if (beats[i + 1] <= beats[i]) {
+      throw new Error(
+        `beat_sync: beats must be strictly increasing frame indices; segment ${i} spans ` +
+          `[${beats[i]}, ${beats[i + 1]}) which has non-positive length. ` +
+          `Sort and de-duplicate beats (e.g. remove coincident frames) before calling.`
+      )
+    }
+  }
+
   const is_1d = !Array.isArray(data[0])
 
   if (is_1d) {

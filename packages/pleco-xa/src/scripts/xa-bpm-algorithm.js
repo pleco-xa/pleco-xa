@@ -139,7 +139,7 @@ export async function estimateGlobalTempo(onsetEnvelope, sr) {
 
   const candidates = [];
   let bestScore = -Infinity;
-  let bestBPM = 120;
+  let bestBPM = null; // no fabricated default — a winner must be measured
 
   // Normalize onset envelope
   let mean = 0;
@@ -180,6 +180,26 @@ export async function estimateGlobalTempo(onsetEnvelope, sr) {
     if ((lag - minLag) % 20 === 0) {
       await new Promise(resolve => setTimeout(resolve, 1));
     }
+  }
+
+  // No lag could be searched: the onset envelope is shorter than the minimum
+  // period in the search range. Refuse to invent a tempo (was: silent 120).
+  if (bestBPM === null) {
+    throw new Error(
+      `estimateGlobalTempo: onset envelope too short (${onsetEnvelope.length} frames) ` +
+      `to search the ${minBPM}-${maxBPM} BPM range (needs more than ${minLag} frames)`
+    );
+  }
+
+  // No positive autocorrelation at ANY lag means there is no periodic
+  // structure at all — silence, DC, or otherwise non-rhythmic input. Reporting
+  // a "best" BPM here would be pure fabrication, so surface it as an error.
+  if (bestScore <= 0) {
+    throw new Error(
+      `estimateGlobalTempo: no periodic structure detected ` +
+      `(max normalized autocorrelation ${bestScore.toFixed(4)} <= 0) — ` +
+      `input appears silent or non-rhythmic`
+    );
   }
 
   // Calculate confidence based on peak prominence

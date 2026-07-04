@@ -87,6 +87,7 @@ checkTrue('analyzeTempogram: strongest peak within one tempogram bin (±6.8) of 
 const quick = await detectBPM(buffer)
 checkTrue('detectBPM (quick tier) lands within one lag bin of 120 (|bpm−120| ≤ 7)',
   Math.abs(quick.bpm - 120) <= 7, `bpm=${quick.bpm.toFixed(2)}`)
-check('detectBPM reports its documented default confidence 0.7', quick.confidence, 0.7)
+checkTrue('detectBPM reports a MEASURED confidence in (0, 1] (not a hardcoded default)',
+  quick.confidence > 0 && quick.confidence <= 1, `confidence=${quick.confidence}`)
 
 summary('xa-bpm-algorithm — lb pipeline stages + detectBPM on a 120 BPM train')

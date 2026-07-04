@@ -117,7 +117,7 @@ check('find_files(limit 1, offset 1) windows the sorted list',
 {
   const c = fileio.cite('9.9.9')
   checkTrue('cite(version) echoes the version in the pleco BibTeX entry',
-    c.includes('version      = {9.9.9}') && c.includes('@software{pleco_audio'))
+    c.includes('version      = {9.9.9}') && c.includes('@software{pleco_xa'))
   checkTrue('cite() includes the academic-use citation note',
     c.includes('please cite it'))
 }
