@@ -5,6 +5,23 @@ All notable changes to `pleco-xa` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.5] — 2026-07-05
+
+Documentation release — no code changes.
+
+### Added
+
+- **`VERIFICATION.md` ships in the package** — the quality ledger: a 51-row
+  declared-vs-achieved tolerance table, loop acceptance gates (±10 ms golden
+  lock on real audio), and documented edge-case contracts. The full reference
+  corpus and golden suites are public in the repository (`npm ci && npm test`
+  reproduces all 420 assertions).
+
+### Changed
+
+- Test counts updated to the public verification layer (47 suites / 420 tests).
+- Package size badge is now a static measured value (~89 kB min+gzip).
+
 ## [2.0.4] — 2026-07-04
 
 Documentation release — no code changes. This package now documents itself to
@@ -142,6 +159,7 @@ see below.
 Releases prior to `2.0.0` (the `1.x` line, published May–July 2025) predate this
 changelog; their history is available in the git tags.
 
+[2.0.5]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.5
 [2.0.4]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.4
 [2.0.3]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.3
 [2.0.2]: https://github.com/pleco-xa/pleco-xa/releases/tag/v2.0.2
