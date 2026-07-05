@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/pleco-xa.svg)](https://www.npmjs.com/package/pleco-xa)
 [![CI](https://github.com/pleco-xa/pleco-xa/actions/workflows/test.yml/badge.svg)](https://github.com/pleco-xa/pleco-xa/actions/workflows/test.yml)
-[![minzipped size](https://img.shields.io/bundlephobia/minzip/pleco-xa.svg)](https://bundlephobia.com/package/pleco-xa)
+[![min+gzip ~89 kB](https://img.shields.io/badge/min%2Bgzip-~89_kB-blue.svg)](https://github.com/pleco-xa/pleco-xa/blob/main/VERIFICATION.md)
 [![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](https://www.npmjs.com/package/pleco-xa?activeTab=dependencies)
 [![types included](https://img.shields.io/npm/types/pleco-xa.svg)](https://www.npmjs.com/package/pleco-xa)
 [![license: MIT](https://img.shields.io/npm/l/pleco-xa.svg)](LICENSE)
