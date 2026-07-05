@@ -3,7 +3,7 @@
 </p>
 
 [![npm version](https://img.shields.io/npm/v/pleco-xa.svg)](https://www.npmjs.com/package/pleco-xa)
-[![minzipped size](https://img.shields.io/bundlephobia/minzip/pleco-xa.svg)](https://bundlephobia.com/package/pleco-xa)
+[![min+gzip ~89 kB](https://img.shields.io/badge/min%2Bgzip-~89_kB-blue.svg)](https://github.com/pleco-xa/pleco-xa/blob/main/VERIFICATION.md)
 [![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](https://www.npmjs.com/package/pleco-xa?activeTab=dependencies)
 [![types included](https://img.shields.io/npm/types/pleco-xa.svg)](https://www.npmjs.com/package/pleco-xa)
 [![license: MIT](https://img.shields.io/npm/l/pleco-xa.svg)](https://github.com/pleco-xa/pleco-xa/blob/main/LICENSE)
@@ -17,7 +17,7 @@ browser, Node, Web Workers, the edge. Tempo and beat tracking; mel / MFCC /
 chroma / spectral descriptors; structural segmentation; DTW & sequence
 alignment; effects; pitch tracking; pure-DSP vocal separation; and its
 signature **loop detection** — with **zero runtime dependencies** and no build
-step required. 26 CI-gated test suites (237 tests) run on every PR and push
+step required. 47 CI-gated test suites (420 tests) run on every PR and push
 to `main`, with loop detection locked against committed golden fixtures on
 real audio.
 
@@ -86,7 +86,7 @@ the analysis API is `(Float32Array, sampleRate)` everywhere.
 - **~89 kB min+gzip** for the entire engine — the `feature` subpath alone under
   8 kB. No WASM, no model download.
 - **TypeScript declarations** for the barrel and all 19 subpaths.
-- **26 CI-gated test suites** (237 tests) — loop points locked against
+- **47 CI-gated test suites** (420 tests) — loop points locked against
   committed golden fixtures on real audio (±10 ms).
 - **Loop detection** — the signature feature.
 - **Real-time** streaming analyzers and a live tempo tier.
