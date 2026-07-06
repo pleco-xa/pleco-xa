@@ -109,7 +109,9 @@ npm run docs           # docs dev server
 
 Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repo
 map, setup, and how to validate numerical work against reference fixtures.
-Please also read the [Code of Conduct](CODE_OF_CONDUCT.md). Release notes live in
+Project direction and decision-making are documented in
+[`GOVERNANCE.md`](GOVERNANCE.md). Please also read the
+[Code of Conduct](CODE_OF_CONDUCT.md). Release notes live in
 the [changelog](packages/pleco-xa/CHANGELOG.md); security reports go through
 [`SECURITY.md`](SECURITY.md).
 
