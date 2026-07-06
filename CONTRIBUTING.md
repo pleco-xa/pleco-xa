@@ -4,6 +4,8 @@ Thanks for your interest in improving Pleco-Xa! This guide covers how the repo i
 laid out, how to get set up, and what a good contribution looks like.
 
 By participating you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+How decisions get made — and what the project says no to — is documented in
+[`GOVERNANCE.md`](GOVERNANCE.md).
 
 ## Repository layout
 
@@ -55,8 +57,8 @@ npm run demos      # serve the example gallery at http://localhost:5757
 5. Open a pull request. Fill in the template — describe *what* changed and *how
    you verified it*. Link any related issue.
 
-CI runs the test suite, builds the library, the demo, and the docs site, and
-runs a Node import smoke test. All of it must be green to merge.
+CI runs lint, the test suite, the packed-tarball type check, builds of the
+library, the demo, and the docs site, and a Node import smoke test. All of it must be green to merge.
 
 ## Validating numerical work
 
