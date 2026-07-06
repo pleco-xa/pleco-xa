@@ -15,7 +15,7 @@
 pleco-xa brings musical intelligence to anything that runs JavaScript — the
 browser, Node, Web Workers, the edge. Tempo and beat tracking; mel / MFCC /
 chroma / spectral descriptors; structural segmentation; DTW & sequence
-alignment; effects; pitch tracking; pure-DSP vocal separation; and its
+alignment; effects; pitch tracking; pure-DSP source separation; and its
 signature **loop detection** — with **zero runtime dependencies** and no build
 step required. 47 CI-gated test suites (420 tests) run on every PR and push
 to `main`, with loop detection locked against committed golden fixtures on
@@ -73,7 +73,7 @@ the analysis API is `(Float32Array, sampleRate)` everywhere.
 | `pleco-xa/convert` | hz ↔ midi ↔ note, time ↔ frames ↔ samples, hz ↔ mel, amplitude ↔ dB |
 | `pleco-xa/segment` | recurrence matrix, agglomerative & Laplacian segmentation |
 | `pleco-xa/sequence` | DTW, Viterbi, RQA, event/interval matching |
-| `pleco-xa/decompose` | HPSS, nn_filter, softmask, fingerprint vocal separation |
+| `pleco-xa/decompose` | HPSS, nn_filter, softmask, stem-guided vocal matching (supervised fingerprint pipeline) |
 | `pleco-xa/effects` | time-stretch, pitch-shift, remix, trim, split |
 | `pleco-xa/filters` | mel & chroma filter banks |
 | `pleco-xa/bpm` | tempo engine |
@@ -90,7 +90,9 @@ the analysis API is `(Float32Array, sampleRate)` everywhere.
   committed golden fixtures on real audio (±10 ms).
 - **Loop detection** — the signature feature.
 - **Real-time** streaming analyzers and a live tempo tier.
-- **Pure-DSP vocal separation** — no model, no weights, no GPU.
+- **Pure-DSP source separation** — median-filter HPSS and REPET-SIM-style
+  masking; no model, no weights, no GPU. Plus a supervised stem-guided
+  vocal-matching pipeline.
 
 ## For AI agents
 

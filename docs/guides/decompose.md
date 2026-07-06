@@ -1,15 +1,17 @@
 ---
-title: Decompose — HPSS, masks, and vocal separation
-description: Pleco-Xa's decompose namespace — one canonical median-filter HPSS, soft masking, nearest-neighbour filtering, and the pure-DSP vocal-separation flagship.
+title: Decompose — HPSS, masks, and source separation
+description: Pleco-Xa's decompose namespace — one canonical median-filter HPSS, soft masking, nearest-neighbour (REPET-SIM-style) filtering, and a supervised stem-guided vocal-matching pipeline.
 ---
 
-`decompose` operates on spectrograms. It carries Pleco-Xa's single canonical
-harmonic/percussive source separation (HPSS), the soft-mask primitive underneath it,
-nearest-neighbour filtering for REPET-SIM-style repetition removal, and Pleco-Xa's own
-**vocal-separation flagship** — a multi-scale spectral fingerprinting pipeline that pulls a
-vocal out of a mix using nothing but DSP. There is no machine-learning model anywhere in
-this namespace: zero weights, zero inference runtime, no ONNX, just median filters, masks,
-and gradient-optimised EQ curves.
+`decompose` operates on spectrograms. Its separation story is **blind (unsupervised)
+source separation**: Pleco-Xa's single canonical harmonic/percussive separation (HPSS),
+the soft-mask primitive underneath it, and nearest-neighbour filtering for REPET-SIM-style
+repetition removal — these need nothing but the mixture. Alongside them sits a multi-scale
+spectral-fingerprinting pipeline for **stem-guided spectral matching (supervised — requires
+reference stems)**: it learns EQ curves that pull the mixture toward fingerprints of a
+vocal stem you supply, so it cannot separate a mix it has no reference for. There is no
+machine-learning model anywhere in this namespace: zero weights, zero inference runtime,
+no ONNX, just median filters, masks, and gradient-optimised EQ curves.
 
 The HPSS/softmask core was validated against reference fixtures during
 development (including `margin=2`); harmonic + percussive ≈ the input at
@@ -27,12 +29,13 @@ Verified against the built barrel (`decompose` namespace):
 - **`nn_filter(S, opts)`** — replace each frame by an aggregate of its nearest neighbours in
   a recurrence graph. `aggregate: 'median'` + `metric: 'cosine'` + a width band is the
   REPET-SIM configuration.
-- **`processAudioToFingerprints(audioBuffer, nFft?, hopLength?)`** — the vocal-separation
-  entry point: multi-scale spectral fingerprints from an `AudioBuffer`-shaped input.
+- **`processAudioToFingerprints(audioBuffer, nFft?, hopLength?)`** — the stem-guided
+  matching entry point: multi-scale spectral fingerprints from an `AudioBuffer`-shaped input.
 - **`optimizeEqCurves(vocalFps, mixtureFps, mixtureMag, numWindows, sr, ...)`** — gradient
-  descent for the per-window EQ curves that isolate the vocal.
+  descent for the per-window EQ curves that match the mixture to the reference vocal's
+  fingerprints (supervised — the optimization target comes from the isolated stem).
 - **`reconstructVocal(mixtureStft, eqCurves, sr, nFft?, hopLength?)`** → `Float32Array` of
-  the reconstructed vocal.
+  the reconstructed vocal estimate.
 
 > **Two HPSS entry points, on purpose.** `decompose.hpss(S, …)` takes a **spectrogram** and
 > returns spectrograms. [`effects.hpss(y, …)`](https://plecoxa.com/api/pleco-xa/namespaces/effects/functions/hpss/)
@@ -63,10 +66,13 @@ const foreground = decompose.nn_filter(S, {
   soft masks so the components sum back to the input — you get separated layers, not the
   bare median-filtered spectrograms. `kernel_size` default is 31; margins must be
   `>= 1`.
-- **Vocal separation input only needs `{ getChannelData, sampleRate }`** — it runs in Node
-  against a structural mock, no browser required. `optimizeEqCurves`/`reconstructVocal`
-  report progress through the library's debug logger, silent unless you call
-  `setDebug(true)`; the flagship's exact multi-stage wiring
+- **The fingerprint pipeline is supervised — it does not do blind separation.** Its
+  optimization target is built from the true isolated vocal, so it needs the reference
+  stem it is matching toward; to separate a mix you only have the mixture of, use
+  `hpss`/`softmask`/`nn_filter`. Input only needs `{ getChannelData, sampleRate }` — it
+  runs in Node against a structural mock, no browser required.
+  `optimizeEqCurves`/`reconstructVocal` report progress through the library's debug
+  logger, silent unless you call `setDebug(true)`; the pipeline's exact multi-stage wiring
   (fingerprints → mixture magnitude → EQ curves → reconstruction) is shown end-to-end in the
   [vocal-separation demo](https://plecoxa.com/demos/vocal-separation.html).
 - **`nn_filter` builds its recurrence graph from
