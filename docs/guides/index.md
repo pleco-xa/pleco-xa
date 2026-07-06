@@ -46,7 +46,8 @@ section says so precisely.
 - **[Effects](./effects.md)** — a real phase vocoder (time-scale, pitch),
   plus trim/split, pre-emphasis, and remix.
 - **[Decompose](./decompose.md)** — median-filter HPSS, soft masking,
-  nearest-neighbour filtering, and pure-DSP vocal separation.
+  nearest-neighbour (REPET-SIM-style) filtering, and a supervised stem-guided
+  vocal-matching pipeline.
 
 ### Primitives
 

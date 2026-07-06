@@ -158,7 +158,7 @@ Import: `import { tempo, feature, loop, segment, sequence, decompose, convert } 
 | Loops | `loop.detect` (one entry, 4 strategies) | `detectLoop`, `fastLoopAnalysis`, `loop.loopAnalysis`, `loop.fastOnsetLoopAnalysis`, `loop.analyzeLoopPoints`, `loop.xaLoopAnalysis` |
 | Onsets | `onset_strength` (envelope) \| `onsetDetect` (event times) | `bpm.computeOnsetStrength` |
 | Spectral features | `feature.*` (melspectrogram, mfcc, chroma_stft, spectral_*) | top-level `spectrogram` (bare magnitude helper) |
-| Separation | `decompose.hpss` / `decompose.nn_filter` / `decompose.softmask` | `decompose.processAudioToFingerprints` / `reconstructVocal` / `optimizeEqCurves` (specialized vocal-EQ pipeline, not general separation) |
+| Separation | `decompose.hpss` / `decompose.nn_filter` / `decompose.softmask` | `decompose.processAudioToFingerprints` / `reconstructVocal` / `optimizeEqCurves` (supervised stem-guided vocal-EQ pipeline — requires reference stems, not blind separation) |
 | Structure | `segment.recurrenceMatrix` / `segment.agglomerative` / `segment.laplacianSegmentation` | `recurrence.*` namespace (`recurrence.recurrenceMatrix`, `recurrence.recurrenceLoopDetection`, `recurrence.computeChroma`) |
 | Alignment | `sequence.dtw` / `sequence.rqa` / `sequence.viterbi` | — (no legacy alignment exports in the barrel) |
 | Pitch | `pyin` (f0 + voicing) \| `yin` (fast f0) | — (piptrack/autocorrelation_pitch not in the barrel) |
@@ -705,9 +705,9 @@ https://plecoxa.com/api-by-category/ (and in the shipped TypeScript declarations
 ### Decomposition & separation
 - `decompose.hpss` — Median-filtering harmonic/percussive source separation on a spectrogram.
 - `decompose.nn_filter` — Nearest-neighbor filtering (nn_filter).
-- `decompose.optimizeEqCurves` — Optimize EQ curves to match mixture fingerprints to vocal fingerprints
-- `decompose.processAudioToFingerprints` — Process audio to create complete fingerprint
-- `decompose.reconstructVocal` — Reconstruct vocal audio using learned EQ curves
+- `decompose.optimizeEqCurves` — Optimize EQ curves matching mixture fingerprints to reference vocal fingerprints — stem-guided spectral matching (supervised: requires the isolated vocal stem as target)
+- `decompose.processAudioToFingerprints` — Multi-scale spectral fingerprints — entry point of the stem-guided (supervised) matching pipeline
+- `decompose.reconstructVocal` — Reconstruct a vocal estimate from EQ curves learned against a reference stem (supervised — not blind separation; for that use hpss/softmask/nn_filter)
 - `decompose.softmask` — Robust soft mask M = X^power / (X^power + X_ref^power), computed with a rescale-by-max stabilization.
 - `griffinlim` — Griffin-Lim algorithm for phase reconstruction
 - `pcen` — Per-Channel Energy Normalization (PCEN)

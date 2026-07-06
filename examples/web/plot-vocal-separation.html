@@ -39,8 +39,9 @@
   of <code>Orphans</code> (mono, 22.05 kHz) — a full
   band mix with sung vocals. This run has <b>true ground truth</b>: the isolated
   vocal and instrumental stems (from the original session) are loaded separately
-  and used only as references to <i>score</i> each separator. Both separators see
-  only the mixture.
+  and used to <i>score</i> each separator. The REPET-SIM separator sees only the
+  mixture; the fingerprint method is additionally handed the true vocal's
+  fingerprints as its optimization target (supervised).
 </p>
 <p>
   <b>A. REPET-SIM</b> (repetition-based separation, <b>unsupervised</b>):
@@ -48,7 +49,8 @@
   element-min with S → <code>decompose.softmask</code> (margins 2/10, power 2)
   → istft with the mixture phase. It models the <i>repeating</i> background and
   treats the non-repeating residue as foreground.
-  <b>B. Fingerprint</b> (pleco flagship, <span class="note">supervised — it is
+  <b>B. Fingerprint</b> (pleco's stem-guided matching pipeline,
+  <span class="note">supervised — it is
   given the true vocal's fingerprints</span>):
   <code>processAudioToFingerprints</code> → <code>optimizeEqCurves</code> →
   <code>reconstructVocal</code>.

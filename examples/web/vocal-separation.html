@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="A synthetic singing tone is lifted out of its backing track by learning EQ curves from the vocal's spectral fingerprint, with every stage playable by ear." />
-<title>Fingerprint vocal separation — flagship · pleco-xa</title>
+<meta name="description" content="A supervised, stem-guided demo: EQ curves are learned from the true synthetic vocal's spectral fingerprint and used to pull it back out of the mix, with every stage playable by ear." />
+<title>Fingerprint vocal matching (supervised) · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
   h1 { font-size: 1.2rem; }
@@ -28,9 +28,9 @@
 <body>
 <header class="px-shell">
   <a href="/gallery/">&larr; Gallery</a>
-  <span class="px-shell-title">Fingerprint vocal separation — flagship</span>
+  <span class="px-shell-title">Fingerprint vocal matching (supervised)</span>
 </header>
-<h1>Fingerprint vocal separation — flagship: separation on a known synthetic mix</h1>
+<h1>Fingerprint vocal matching — supervised, stem-guided, on a known synthetic mix</h1>
 <div style="font:12px monospace;color:#888">scripts/xa-vocal-separation.js</div>
 <p>
   Hear a "vocal" get lifted out of a mix: the library learns EQ curves from the
@@ -42,6 +42,12 @@
   Pipeline: <code>processAudioToFingerprints</code> on vocal and mixture →
   <code>optimizeEqCurves</code> (100 iters) → <code>reconstructVocal</code> on
   the mixture STFT.
+  <b>Honest framing:</b> this pipeline is <b>supervised</b> — it is handed the
+  true vocal (its fingerprints are the optimization target) and is scored
+  against the very parts it was given. That demonstrates stem-guided spectral
+  matching, not blind separation; the unsupervised baseline is REPET-SIM
+  (<code>decompose.nn_filter</code> + <code>decompose.softmask</code>) and HPSS
+  (<code>decompose.hpss</code>), compared head-to-head in the real-stems demos.
   <b>Honest note:</b> the optimizer is plain full-batch gradient descent with
   NO input normalization — stability requires <code>lr &lt; 1/max(|STFT|)²</code>.
   At the natural signal levels here that means <code>lr = 1e-5</code>

@@ -62,8 +62,9 @@ everywhere, so the same code runs in browsers, Node, and Web Workers.
   capability (the name is an Echoplex homage).
 - **Real-time** — worker-safe streaming analyzers and a live tempo tier,
   analyzing audio as it plays in the browser.
-- **Pure-DSP vocal separation** — surprisingly capable, with no trained model,
-  no weights, and no GPU. Runs in a browser tab.
+- **Pure-DSP source separation** — median-filter HPSS and REPET-SIM-style
+  masking, with no trained model, no weights, and no GPU; plus a supervised
+  stem-guided vocal-matching pipeline. Runs in a browser tab.
 - **Explicit tiers, never silent** — quality is the default; fast/live variants
   are separate named calls; failures throw with diagnostics rather than
   fabricating a number.

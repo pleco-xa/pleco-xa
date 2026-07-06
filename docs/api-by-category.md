@@ -197,9 +197,9 @@ The complete public API, grouped by task. Click any function for its full signat
 | --- | --- |
 | [`decompose.hpss`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/hpss/) | Median-filtering harmonic/percussive source separation on a spectrogram. |
 | [`decompose.nn_filter`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/nn_filter/) | Nearest-neighbor filtering (nn_filter). |
-| [`decompose.optimizeEqCurves`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/optimizeeqcurves/) | Optimize EQ curves to match mixture fingerprints to vocal fingerprints |
-| [`decompose.processAudioToFingerprints`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/processaudiotofingerprints/) | Process audio to create complete fingerprint |
-| [`decompose.reconstructVocal`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/reconstructvocal/) | Reconstruct vocal audio using learned EQ curves |
+| [`decompose.optimizeEqCurves`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/optimizeeqcurves/) | Optimize EQ curves matching mixture fingerprints to reference vocal fingerprints — stem-guided spectral matching (supervised: requires the isolated vocal stem as target) |
+| [`decompose.processAudioToFingerprints`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/processaudiotofingerprints/) | Multi-scale spectral fingerprints — entry point of the stem-guided (supervised) matching pipeline |
+| [`decompose.reconstructVocal`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/reconstructvocal/) | Reconstruct a vocal estimate from EQ curves learned against a reference stem (supervised — not blind separation; for that use hpss/softmask/nn_filter) |
 | [`decompose.softmask`](https://plecoxa.com/api/pleco-xa/namespaces/decompose/functions/softmask/) | Robust soft mask M = X^power / (X^power + X_ref^power), computed with a rescale-by-max stabilization. |
 | [`griffinlim`](https://plecoxa.com/api/functions/griffinlim/) | Griffin-Lim algorithm for phase reconstruction |
 | [`pcen`](https://plecoxa.com/api/functions/pcen/) | Per-Channel Energy Normalization (PCEN) |

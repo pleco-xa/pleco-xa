@@ -60,7 +60,7 @@ Just run them — no server needed:
 ```bash
 node examples/node/xa-fft.mjs          # FFT/STFT known-tone proof
 node examples/node/pyin.mjs            # probabilistic-YIN pitch tracking
-node examples/node/vocal-separation-real.mjs   # vocal separation on a real mix
+node examples/node/vocal-separation-real.mjs   # unsupervised REPET-SIM vs supervised fingerprint on a real mix
 ```
 
 Each prints a `PASS`/`FAIL` table and exits `0` only if every proof passes, so

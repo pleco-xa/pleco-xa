@@ -412,7 +412,8 @@ export function windowToFingerprint(window, sr) {
 }
 
 /**
- * Process audio to create complete fingerprint
+ * Process audio to create a complete multi-scale spectral fingerprint
+ * (stage 1 of the supervised stem-guided matching pipeline)
  * @param {AudioBuffer} audioBuffer - Audio buffer
  * @param {number} nFft - FFT window size
  * @param {number} hopLength - Hop length
@@ -467,7 +468,8 @@ export function processAudioToFingerprints(audioBuffer, nFft = 2048, hopLength =
 }
 
 /**
- * Optimize EQ curves to match mixture fingerprints to vocal fingerprints
+ * Optimize EQ curves to match mixture fingerprints to a REFERENCE vocal's
+ * fingerprints (supervised — requires the isolated stem as its target)
  * @param {Object} vocalFps - Vocal fingerprints
  * @param {Object} mixtureFps - Mixture fingerprints (used for initialization context)
  * @param {Array<Array<number>>} mixtureMag - Mixture magnitude spectrogram (freq x time)
@@ -551,7 +553,9 @@ export function optimizeEqCurves(vocalFps, mixtureFps, mixtureMag, numWindows, s
 }
 
 /**
- * Reconstruct vocal audio using learned EQ curves
+ * Reconstruct a vocal ESTIMATE from EQ curves learned against a reference
+ * stem (supervised — not blind separation; for that use decompose.hpss /
+ * softmask / nn_filter)
  * @param {Array} mixtureStft - Mixture STFT in (freq x time) format
  * @param {Array<Array<number>>} eqCurves - EQ curves for each window
  * @param {number} sr - Sample rate

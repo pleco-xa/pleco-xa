@@ -40,7 +40,7 @@ Overview: [the guides index](guides/index.md)
 **Transformation & separation**
 
 - [Effects](guides/effects.md) — phase vocoder time-stretch/pitch-shift, trim/split, remix
-- [Decompose](guides/decompose.md) — HPSS, soft masking, pure-DSP vocal separation
+- [Decompose](guides/decompose.md) — HPSS, soft masking, REPET-SIM-style filtering, and supervised stem-guided vocal matching
 
 **Primitives**
 

@@ -14,7 +14,7 @@ Import: `import { tempo, feature, loop, segment, sequence, decompose, convert } 
 | Loops | `loop.detect` (one entry, 4 strategies) | `detectLoop`, `fastLoopAnalysis`, `loop.loopAnalysis`, `loop.fastOnsetLoopAnalysis`, `loop.analyzeLoopPoints`, `loop.xaLoopAnalysis` |
 | Onsets | `onset_strength` (envelope) \| `onsetDetect` (event times) | `bpm.computeOnsetStrength` |
 | Spectral features | `feature.*` (melspectrogram, mfcc, chroma_stft, spectral_*) | top-level `spectrogram` (bare magnitude helper) |
-| Separation | `decompose.hpss` / `decompose.nn_filter` / `decompose.softmask` | `decompose.processAudioToFingerprints` / `reconstructVocal` / `optimizeEqCurves` (specialized vocal-EQ pipeline, not general separation) |
+| Separation | `decompose.hpss` / `decompose.nn_filter` / `decompose.softmask` | `decompose.processAudioToFingerprints` / `reconstructVocal` / `optimizeEqCurves` (supervised stem-guided vocal-EQ pipeline — requires reference stems, not blind separation) |
 | Structure | `segment.recurrenceMatrix` / `segment.agglomerative` / `segment.laplacianSegmentation` | `recurrence.*` namespace (`recurrence.recurrenceMatrix`, `recurrence.recurrenceLoopDetection`, `recurrence.computeChroma`) |
 | Alignment | `sequence.dtw` / `sequence.rqa` / `sequence.viterbi` | — (no legacy alignment exports in the barrel) |
 | Pitch | `pyin` (f0 + voicing) \| `yin` (fast f0) | — (piptrack/autocorrelation_pitch not in the barrel) |

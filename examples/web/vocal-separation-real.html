@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="Two different methods pull the vocal out of a real song, and you can listen to every result side by side with the true stems." />
+<meta name="description" content="An unsupervised REPET-SIM baseline and a supervised stem-guided fingerprint method each estimate the vocal of a real song — listen to every result side by side with the true stems." />
 <title>Vocal separation on real stems · pleco-xa</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; background: #181818; color: #eee; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
@@ -56,7 +56,8 @@
   <code>decompose.nn_filter(|STFT|, median, cosine, width=2 s)</code> →
   element-min with S → <code>decompose.softmask</code> (margins 2/10, power 2)
   → istft with mix phase.
-  <b>B. fingerprint</b> (pleco flagship, <span class="note">supervised — handed
+  <b>B. fingerprint</b> (pleco's stem-guided matching pipeline,
+  <span class="note">supervised — handed
   the true vocal's fingerprints</span>): <code>processAudioToFingerprints</code>
   → <code>optimizeEqCurves</code> → <code>reconstructVocal</code>.
 </p>
@@ -67,7 +68,11 @@
   ordering, but the supervised fingerprint wins vocal fidelity by a clear margin
   (corr voc 0.744 vs REPET 0.438), while REPET's background still retains ~65 %
   of the true instrumental energy. Gate = the fingerprint's vocal-vs-instrumental
-  ordering; REPET's numbers are reported, not hidden.
+  ordering; REPET's numbers are reported, not hidden. Keep the comparison honest:
+  the fingerprint method is <b>supervised</b> — it is scored against the very stem
+  it was handed as its optimization target, so its win demonstrates stem-guided
+  matching, not blind separation. REPET-SIM is the unsupervised baseline; it sees
+  only the mixture.
 </p>
 <div id="status">decoding stems and running both separators…</div>
 <div id="badges"></div>
