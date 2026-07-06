@@ -47,9 +47,12 @@ jobs:
       - run: npm test
       - run: npm run build:lib
 
-      - name: Publish to npm
+      # Trusted publishing: auth is OIDC (id-token: write above) once the npm
+      # Trusted Publisher is configured for repo pleco-xa/pleco-xa + this
+      # workflow file. OIDC needs npm >= 11.5; upgrade the runner's npm first.
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Publish to npm (trusted publishing + provenance)
         run: npm publish --provenance --access public
         working-directory: packages/pleco-xa
-        env:
-          # Ignored when npm Trusted Publishing (OIDC) is configured for this workflow.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
