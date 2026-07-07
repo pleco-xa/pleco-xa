@@ -8,7 +8,7 @@ import { _amax } from './_arrstat.js'
  * Convert frames to audio samples
  * @param {number|Array} frames - Frame indices
  * @param {number} hop_length - Hop length
- * @param {number} n_fft - FFT window size (optional)
+ * @param {number} n_fft - Length of the FFT window (optional)
  * @returns {number|Array} Sample indices
  */
 /** Array-like check covering plain arrays AND typed arrays (Float32Array etc.). */
@@ -27,7 +27,7 @@ export function frames_to_samples(frames, hop_length = 512, n_fft = null) {
  * Convert audio samples to frame indices
  * @param {number|Array} samples - Sample indices
  * @param {number} hop_length - Hop length
- * @param {number} n_fft - FFT window size (optional)
+ * @param {number} n_fft - Length of the FFT window (optional)
  * @returns {number|Array} Frame indices
  */
 export function samples_to_frames(samples, hop_length = 512, n_fft = null) {
@@ -44,7 +44,7 @@ export function samples_to_frames(samples, hop_length = 512, n_fft = null) {
  * @param {number|Array} frames - Frame indices
  * @param {number} sr - Sample rate
  * @param {number} hop_length - Hop length
- * @param {number} n_fft - FFT window size (optional)
+ * @param {number} n_fft - Length of the FFT window (optional)
  * @returns {number|Array} Time in seconds
  */
 export function frames_to_time(frames, sr = 22050, hop_length = 512, n_fft = null) {
@@ -61,7 +61,7 @@ export function frames_to_time(frames, sr = 22050, hop_length = 512, n_fft = nul
  * @param {number|Array} times - Time in seconds
  * @param {number} sr - Sample rate
  * @param {number} hop_length - Hop length
- * @param {number} n_fft - FFT window size (optional)
+ * @param {number} n_fft - Length of the FFT window (optional)
  * @returns {number|Array} Frame indices
  */
 export function time_to_frames(times, sr = 22050, hop_length = 512, n_fft = null) {
@@ -493,7 +493,7 @@ export function perceptual_weighting(frequencies, kind = 'A', min_db = -80.0) {
 /**
  * Compute FFT frequencies
  * @param {number} sr - Sample rate
- * @param {number} n_fft - FFT size
+ * @param {number} n_fft - Length of the FFT window
  * @returns {Float32Array} Frequency bins in Hz
  */
 export function fft_frequencies(sr = 22050, n_fft = 2048) {
@@ -652,7 +652,7 @@ export function tempo_frequencies(n_bins, hop_length = 512, sr = 22050) {
  * @param {Array|number} X - Feature matrix or number of frames
  * @param {number} sr - Sample rate
  * @param {number} hop_length - Hop length
- * @param {number|null} n_fft - FFT size
+ * @param {number|null} n_fft - Length of the FFT window
  * @param {number} axis - Time axis (default -1)
  * @returns {Float32Array} Array of time values
  */
@@ -680,7 +680,7 @@ export function times_like(X, sr = 22050, hop_length = 512, n_fft = null, axis =
  * Return an array of sample indices to match the time axis from a feature matrix
  * @param {Array|number} X - Feature matrix or number of frames
  * @param {number} hop_length - Hop length
- * @param {number|null} n_fft - FFT size
+ * @param {number|null} n_fft - Length of the FFT window
  * @param {number} axis - Time axis (default -1)
  * @returns {Int32Array} Array of sample indices
  */

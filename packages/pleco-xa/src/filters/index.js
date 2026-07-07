@@ -25,7 +25,7 @@ function rint(x) {
  *
  * @param {Object} options
  * @param {number} options.sr - sample rate (required)
- * @param {number} options.n_fft - FFT size (required)
+ * @param {number} options.n_fft - Length of the FFT window (required)
  * @param {number} [options.n_chroma=12] - number of chroma bins
  * @param {number} [options.tuning=0.0] - deviation from A440 in fractional chroma bins
  * @param {number} [options.ctroct=5.0] - center of the octave dominance window (octs)

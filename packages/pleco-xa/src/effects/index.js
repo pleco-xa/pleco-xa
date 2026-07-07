@@ -305,7 +305,7 @@ export function remix(y, intervals, { align_zeros = true } = {}) {
  * @param {number} rate - Speed-up factor (> 1 faster, < 1 slower)
  * @param {Object} [options]
  * @param {number|null} [options.hop_length=null] - Defaults to n_fft/4
- * @param {number|null} [options.n_fft=null] - Defaults to 2*(D.length - 1)
+ * @param {number|null} [options.n_fft=null] - Number of samples per frame in D; defaults to 2*(D.length - 1)
  * @returns {Array<Array<{real:number,imag:number}>>} Stretched STFT [freq][ceil(time/rate)]
  * @throws {Error} When rate <= 0 or D is empty
  */
@@ -369,7 +369,7 @@ export function phase_vocoder(D, rate, { hop_length = null, n_fft = null } = {})
  * @param {Float32Array} y - Audio signal
  * @param {number} rate - Stretch factor (> 1 speeds up, < 1 slows down)
  * @param {Object} [options] - STFT parameters
- * @param {number} [options.n_fft=2048]
+ * @param {number} [options.n_fft=2048] - Length of the FFT window
  * @param {number|null} [options.hop_length=null] - Defaults to n_fft/4
  * @param {number|null} [options.win_length=null]
  * @param {string} [options.window='hann']
@@ -451,7 +451,7 @@ export function pitch_shift(y, sr, n_steps, { bins_per_octave = 12, ...stretchOp
  * @param {number|Array<number>} [options.kernel_size=31]
  * @param {number} [options.power=2.0]
  * @param {number|Array<number>} [options.margin=1.0]
- * @param {number} [options.n_fft=2048]
+ * @param {number} [options.n_fft=2048] - Length of the FFT window
  * @param {number|null} [options.hop_length=null] - defaults to n_fft/4
  * @param {number|null} [options.win_length=null] - defaults to n_fft
  * @param {string} [options.window='hann']

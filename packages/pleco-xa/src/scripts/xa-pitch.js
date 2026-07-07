@@ -11,7 +11,7 @@ import { viterbi, transition_local, transition_loop } from '../sequence/index.js
  * @param {Float32Array} y - Audio time series (optional if S provided)
  * @param {number} sr - Sample rate
  * @param {Array} S - Pre-computed magnitude/power spectrogram [freq][time]
- * @param {number} n_fft - FFT window size
+ * @param {number} n_fft - Length of the FFT window
  * @param {number} hop_length - Hop length
  * @param {number} fmin - Minimum frequency
  * @param {number} fmax - Maximum frequency
@@ -813,7 +813,7 @@ export function pitch_tuning(frequencies, resolution = 0.01, bins_per_octave = 1
  * @param {Float32Array} y - Audio time series (optional if S provided)
  * @param {number} sr - Sample rate (default: 22050)
  * @param {Array} S - Spectrogram (optional if y provided)
- * @param {number} n_fft - FFT window size (default: 2048)
+ * @param {number} n_fft - Length of the FFT window (default: 2048)
  * @param {number} resolution - Resolution of tuning offset (default: 0.01)
  * @param {number} bins_per_octave - Number of bins per octave (default: 12)
  * @param {Object} kwargs - Additional arguments passed to piptrack

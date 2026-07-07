@@ -219,7 +219,7 @@ export function ifft(spectrum) {
  * Math.fround to preserve the previous implementation's float32 numerics.
  *
  * @param {Float32Array|Array} y - Audio signal
- * @param {number} n_fft - FFT window size
+ * @param {number} n_fft - Length of the FFT window
  * @param {number|null} hop_length - Hop length (default: n_fft/4)
  * @param {number|null} win_length - Window length (default: n_fft)
  * @param {string} window - Window type
@@ -337,7 +337,7 @@ function runStftFrames(
 /**
  * Short-Time Fourier Transform
  * @param {Float32Array} y - Audio signal
- * @param {number} n_fft - FFT window size
+ * @param {number} n_fft - Length of the FFT window
  * @param {number} hop_length - Hop length (default: n_fft/4)
  * @param {number} win_length - Window length (default: n_fft)
  * @param {string} window - Window type
@@ -390,7 +390,7 @@ export function stft(
  * Same framing, windowing, padding, and numerics as stft().
  *
  * @param {Float32Array} y - Audio signal
- * @param {number} n_fft - FFT window size
+ * @param {number} n_fft - Length of the FFT window
  * @param {number} hop_length - Hop length (default: n_fft/4)
  * @param {number} win_length - Window length (default: n_fft)
  * @param {string} window - Window type
@@ -559,7 +559,7 @@ const SUPPORTED_WINDOWS = ['hann', 'hamming', 'blackman', 'rectangular', 'boxcar
 /**
  * Get window function
  * @param {string} window_type - Window type (one of SUPPORTED_WINDOWS)
- * @param {number} n_fft - Window length
+ * @param {number} n_fft - Length of the FFT window
  * @returns {Float32Array} Window function
  * @throws {Error} if window_type is not supported (no silent fallback to hann)
  */
@@ -717,7 +717,7 @@ function _pad_reflect(array, pad_width) {
 /**
  * FFT frequencies
  * @param {number} sr - Sample rate
- * @param {number} n_fft - FFT size
+ * @param {number} n_fft - Length of the FFT window
  * @returns {Float32Array} Frequency bins
  */
 export function fft_frequencies(sr, n_fft) {
@@ -731,7 +731,7 @@ export function fft_frequencies(sr, n_fft) {
 /**
  * Simple spectrogram computation
  * @param {Float32Array} y - Audio signal
- * @param {number} n_fft - FFT size
+ * @param {number} n_fft - Length of the FFT window
  * @param {number} hop_length - Hop length
  * @returns {Array} Magnitude spectrogram
  */

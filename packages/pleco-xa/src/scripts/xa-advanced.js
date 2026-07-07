@@ -442,7 +442,7 @@ export function find_peaks(signal, min_distance = 1, threshold = 0) {
  * @param {number} n_iter - Number of iterations (default: 32)
  * @param {number} hop_length - Hop length for STFT (default: 512)
  * @param {number|null} win_length - Window length (default: null, uses n_fft)
- * @param {number|null} n_fft - FFT size (default: null, inferred from S)
+ * @param {number|null} n_fft - Length of the FFT window (default: null, inferred from S)
  * @param {string} window - Window function (default: 'hann')
  * @param {boolean} center - Center the frames (default: true)
  * @param {string|null} dtype - Data type (default: null)
@@ -806,7 +806,7 @@ export function fmt(
  * @param {Float32Array} y - Audio signal
  * @param {number} sr - Sample rate (default: 22050)
  * @param {Array|null} S - Precomputed spectrogram (default: null)
- * @param {number} n_fft - FFT size (default: 2048)
+ * @param {number} n_fft - Length of the FFT window (default: 2048)
  * @param {number|null} hop_length - Hop length (default: null)
  * @param {number|null} win_length - Window length (default: null)
  * @param {string} window - Window function (default: 'hann')
@@ -987,7 +987,7 @@ export function __overlap_add(y, ytmp, hop_length, frame_idx) {
  * @param {Float32Array|Array<number>} y - Audio signal
  * @param {number} sr - Sample rate in Hz
  * @param {Array<Array<{real: number, imag: number}>>|null} S - Pre-computed STFT (optional)
- * @param {number} n_fft - FFT window size
+ * @param {number} n_fft - Length of the FFT window
  * @param {number|null} hop_length - Hop length (default: n_fft/4)
  * @param {number|null} win_length - Window length (default: n_fft)
  * @param {string} window - Window type ('hann', 'hamming', etc.)
@@ -1069,7 +1069,7 @@ export function __reassign_frequencies(
  * @param {Float32Array|Array<number>} y - Audio signal
  * @param {number} sr - Sample rate in Hz
  * @param {Array<Array<{real: number, imag: number}>>|null} S - Pre-computed STFT (optional)
- * @param {number} n_fft - FFT window size
+ * @param {number} n_fft - Length of the FFT window
  * @param {number|null} hop_length - Hop length (default: n_fft/4)
  * @param {number|null} win_length - Window length (default: n_fft)
  * @param {string} window - Window type
@@ -1158,7 +1158,7 @@ export function __reassign_times(
  * @private
  * @param {Float32Array|Array<number>|null} y - Audio signal (optional if S provided)
  * @param {Array<Array<{real: number, imag: number}>>|null} S - Pre-computed STFT (optional if y provided)
- * @param {number} n_fft - FFT window size (default: 2048)
+ * @param {number} n_fft - Length of the FFT window (default: 2048)
  * @param {number} hop_length - Hop length (default: 512)
  * @param {number} power - Exponent for magnitude (1=magnitude, 2=power) (default: 1)
  * @param {number|null} win_length - Window length (default: n_fft)
