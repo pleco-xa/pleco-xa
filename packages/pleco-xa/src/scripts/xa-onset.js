@@ -157,7 +157,7 @@ function maximumFilterFreq(S, size) {
  * @param {Object|number} [opts] - Options object, or sr as a number
  *   @param {number} [opts.sr=22050]         sample rate (Hz)
  *   @param {Array}  [opts.S=null]           pre-computed LOG-POWER spectrogram [freq][time]
- *   @param {number} [opts.n_fft=2048]       Length of the FFT window for the mel spectrogram
+ *   @param {number} [opts.n_fft=2048]       Length of the FFT frame for the mel spectrogram
  *   @param {number} [opts.hop_length=512]   hop length
  *   @param {number} [opts.lag=1]            time lag for the difference
  *   @param {number} [opts.max_size=1]       frequency-local max filter size (1 = off)
@@ -404,7 +404,7 @@ export function onset_backtrack(events, energy) {
  * @param {Float32Array|null} y - Audio time series
  * @param {number} sr - Sample rate
  * @param {Array|null} S - Pre-computed spectrogram [channels x freq x time]
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @param {number} hop_length - Hop length
  * @param {number} lag - Lag for onset detection
  * @param {number} max_size - Max filter size

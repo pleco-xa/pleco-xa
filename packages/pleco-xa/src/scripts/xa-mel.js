@@ -10,7 +10,7 @@ import { debugWarn } from './debug.js'
 /**
  * Create Mel filterbank matrix
  * @param {number} sr - Sample rate
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @param {number} n_mels - Number of Mel filters
  * @param {number} fmin - Minimum frequency
  * @param {number|null} fmax - Maximum frequency (sr/2 if null)
@@ -164,7 +164,7 @@ export function linspace(start, stop, num) {
  * @param {Float32Array} y - Audio signal (optional if S provided)
  * @param {number} sr - Sample rate
  * @param {Array} S - Pre-computed power spectrogram [freq][time] (optional)
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @param {number} hop_length - Hop length
  * @param {number} win_length - Window length
  * @param {string} window - Window type
@@ -268,7 +268,7 @@ export function melspectrogram(
  * @param {number} dct_type - DCT type (only 2 is supported)
  * @param {string|null} norm - DCT normalization ('ortho' or null)
  * @param {number} lifter - Liftering coefficient (0 = no liftering)
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @param {number} hop_length - Hop length
  * @param {number} win_length - Window length
  * @param {string} window - Window type

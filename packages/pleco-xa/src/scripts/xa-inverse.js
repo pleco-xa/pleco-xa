@@ -16,7 +16,7 @@ import { db_to_power } from './xa-convert.js'
  * location, cosine similarity vs |stft|) survives; absolute magnitudes do not.
  * @param {Array} M - Mel spectrogram [n_mels x n_frames]
  * @param {number} sr - Sample rate
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @param {number} power - Power for the spectrogram (2.0 for power, 1.0 for magnitude)
  * @param {Object} kwargs - Additional arguments for mel_filterbank
  * @returns {Array} Approximate STFT magnitude [n_freq x n_frames]
@@ -66,7 +66,7 @@ export function mel_to_stft(M, sr = 22050, n_fft = 2048, power = 2.0, kwargs = {
  * Invert a mel power spectrogram to audio using Griffin-Lim
  * @param {Array} M - Mel spectrogram [n_mels x n_frames]
  * @param {number} sr - Sample rate
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @param {number} hop_length - Hop length
  * @param {number} win_length - Window length
  * @param {string} window - Window type

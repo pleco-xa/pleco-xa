@@ -65,7 +65,7 @@ export function chroma_cqt(
  * @param {Float32Array} y - Audio time series
  * @param {number} sr - Sample rate
  * @param {number} hop_length - Hop length
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @param {number} n_chroma - Number of chroma bins
  * @param {number|null} tuning - Tuning in fractional chroma bins
  *   (0.0 default preserves this shim's historical signature; pass null to
@@ -108,7 +108,7 @@ export function constant_q_transform(
  * @param {number} sr - Sample rate
  * @param {number} fmin - Minimum frequency
  * @param {number} n_bins - Number of log-frequency bins
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @returns {Float32Array} log-frequency magnitude bins
  */
 export function mapToCQTBins(spectrum, sr, fmin, n_bins, n_fft) {
@@ -146,7 +146,7 @@ export function cqt_to_chroma(cqt, n_chroma = 12, bins_per_octave = 12) {
  * is the reference path.
  * @param {Array} magnitude_spectra - time-major magnitude spectra
  * @param {number} sr - Sample rate
- * @param {number} n_fft - Length of the FFT window
+ * @param {number} n_fft - Length of the FFT frame
  * @param {number} n_chroma - Number of chroma bins
  * @param {number} tuning - Tuning deviation in cents
  * @returns {Array<Float32Array>} [n_chroma][n_frames]
