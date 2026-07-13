@@ -40,6 +40,9 @@ import { PlecoIIRFilterNode } from './nodes/xa-iir-filter.js'
 import { PlecoDynamicsCompressorNode } from './nodes/xa-dynamics-compressor.js'
 import { PlecoOscillatorNode } from './nodes/xa-oscillator.js'
 import { PlecoPeriodicWave } from './nodes/xa-periodic-wave.js'
+import { PlecoConvolverNode } from './nodes/xa-convolver.js'
+import { PlecoPannerNode } from './nodes/xa-panner.js'
+import { getContextListener } from './xa-listener.js'
 import { createPlecoAudioBuffer } from './xa-buffer.js'
 import { decodeWavArrayBuffer, resampleLinearChannels } from './xa-decode.js'
 import { invalidStateError, notSupportedError } from './xa-errors.js'
@@ -172,6 +175,21 @@ export class PlecoBaseContext extends EventTarget {
   /** Spec § createAnalyser() — no parameters; node keeps AnalyserNode defaults. */
   createAnalyser() {
     return new PlecoAnalyserNode(this)
+  }
+
+  /** Spec § BaseAudioContext.listener — the context's AudioListener singleton (lazy). */
+  get listener() {
+    return getContextListener(this)
+  }
+
+  /** Spec § createConvolver() — no parameters. */
+  createConvolver() {
+    return new PlecoConvolverNode(this)
+  }
+
+  /** Spec § createPanner() — no parameters; node keeps PannerNode defaults. */
+  createPanner() {
+    return new PlecoPannerNode(this)
   }
 
   /** Spec § createConstantSource() — no parameters; offset defaults to 1. */
