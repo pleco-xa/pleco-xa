@@ -17,9 +17,33 @@
  * summed after up/down-mixing, per § channel-up-mixing-and-down-mixing),
  * processes, and returns a RENDER_QUANTUM-frame PlecoAudioBuffer. Output is
  * memoized per context.currentTime, so a node fanning out to several
- * consumers computes once per quantum. A re-entrancy guard mutes feedback
- * cycles to silence — the spec's DelayNode cycle rule is parity-later (P11);
- * the Echoplex's feedback is buffer-domain, not a graph cycle.
+ * consumers computes once per quantum.
+ *
+ * THE CYCLE RULE (P11, spec § connect() "cycle" + § rendering-loop step 4.2):
+ * a cycle is legal only if it contains at least one DelayNode; every other
+ * cycle is muted. The engine detects cycles dynamically with a per-context
+ * pull stack (context._pullStack): a _tick() re-entry means the stack segment
+ * from this node to the top IS a cycle.
+ * - No PlecoDelayNode in the segment → every node in the segment is muted for
+ *   this quantum (spec: "mute all the AudioNodes that are part of this
+ *   cycle"), and the re-entrant pull returns silence.
+ * - At least one PlecoDelayNode → each delay in the segment is notified via
+ *   _enterCycle(now) (it then enforces the spec's minimum one-render-quantum
+ *   delayTime, reads its ring buffer BEFORE writing, and defers the write to
+ *   after the graph pull — see nodes/xa-delay.js). The re-entrant pull
+ *   returns _cycleReentryBlock(): a re-entered delay returns its exact
+ *   this-quantum ring read (read-before-write — the value the cycle is
+ *   SUPPOSED to see); any other re-entered node returns its most recent
+ *   block (previous quantum — same provisional the audiojs reference uses).
+ *   Every segment node that computed FROM that provisional (the nodes above
+ *   the segment's last delay on the pull stack) is marked in
+ *   context._cycleStaleMemos; the deferred-write flush invalidates those
+ *   memos before re-pulling, so the block committed to the ring is computed
+ *   from the delay's settled this-quantum ring read regardless of where the
+ *   cycle was re-entered (spec § DelayNode processing: the DelayReader is a
+ *   source). Residual deviation, stated honestly: a stale-marked node with
+ *   per-sample internal state (biquad/IIR/compressor) re-runs _process at the
+ *   flush, advancing that state twice in the quantum the cycle is entered.
  */
 
 import { RENDER_QUANTUM } from './xa-constants.js'
@@ -106,6 +130,9 @@ export class PlecoNode extends EventTarget {
     this._cacheTime = -1
     this._cacheBlock = null
     this._ticking = false
+    // currentTime at which this node was found inside a DelayNode-free cycle
+    // (muted for that quantum); compared against `now`, so marks self-expire.
+    this._cycleMutedAt = -1
   }
 
   get context() {
@@ -260,21 +287,94 @@ export class PlecoNode extends EventTarget {
   _tick() {
     const now = this.context.currentTime
     if (this._cacheBlock !== null && this._cacheTime === now) return this._cacheBlock
-    if (this._ticking) {
-      // feedback cycle — mute to silence (the DelayNode cycle rule is P11)
-      return createPlecoAudioBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
-    }
+    const stack = this.context._pullStack ?? (this.context._pullStack = [])
+    if (this._ticking) return this._handleCycleReentry(stack, now)
     this._ticking = true
+    stack.push(this)
     let block
     try {
+      this._prepareQuantum(now)
       block = this._process(...this._inputs.map((port) => port._pull()))
     } finally {
+      stack.pop()
       this._ticking = false
+    }
+    if (this._cycleMutedAt === now) {
+      // This node was found inside a DelayNode-free cycle during the pull:
+      // mute — output silence (spec § rendering loop, "mute all the
+      // AudioNodes that are part of this cycle"). The computed channel
+      // count is kept, matching the reference implementation.
+      block = createPlecoAudioBuffer(block.numberOfChannels, RENDER_QUANTUM, this.context.sampleRate)
     }
     this._cacheTime = now
     this._cacheBlock = block
     return block
   }
+
+  /**
+   * A _tick() re-entry: the pull came back around to a node that is still
+   * mid-tick, so the pull stack segment [this .. top] is a cycle (see the
+   * file header, THE CYCLE RULE). Decides mute-vs-legal, notifies the cycle's
+   * DelayNodes, and returns the re-entrant pull's block.
+   */
+  _handleCycleReentry(stack, now) {
+    const from = stack.lastIndexOf(this) // _ticking ⇒ this node is on the stack
+    let hasDelay = false
+    for (let i = from; i < stack.length; i++) {
+      if (stack[i]._isDelayCycleBreaker === true) hasDelay = true
+    }
+    if (!hasDelay) {
+      // Illegal cycle (no DelayNode): mute EVERY node in it for this quantum.
+      for (let i = from; i < stack.length; i++) stack[i]._cycleMutedAt = now
+      return createPlecoAudioBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
+    }
+    // Legal cycle: every DelayNode inside it switches to the cycle regime
+    // (min one-quantum delayTime, read-before-write, deferred write) BEFORE
+    // this node's re-entry block is produced, so a re-entered delay already
+    // answers with its clamped ring read.
+    let lastDelay = -1
+    for (let i = from; i < stack.length; i++) {
+      if (stack[i]._isDelayCycleBreaker === true) {
+        stack[i]._enterCycle(now)
+        lastDelay = i
+      }
+    }
+    // Memo-staleness bookkeeping (spec § DelayNode processing: the DelayReader
+    // is a SOURCE — every in-cycle node must consume THIS quantum's reader
+    // output). When the re-entered node is not a delay, the provisional block
+    // returned below is PREVIOUS-quantum data. On the stack, stack[i] pulled
+    // stack[i+1], so data flows from the top of the stack downward and a
+    // delay's ring-read output stops the taint: exactly the segment nodes
+    // ABOVE the last delay will memoize blocks computed from the provisional,
+    // and those memos feed that delay's deferred write. Mark them so the
+    // deferred-flush hook (nodes/xa-delay.js) invalidates the memos and the
+    // flush re-pull recomputes them against the settled ring read.
+    if (this._isDelayCycleBreaker !== true && lastDelay < stack.length - 1) {
+      const stale = this.context._cycleStaleMemos ?? (this.context._cycleStaleMemos = new Set())
+      for (let i = lastDelay + 1; i < stack.length; i++) stale.add(stack[i])
+    }
+    return this._cycleReentryBlock(now)
+  }
+
+  /**
+   * The block a re-entrant pull receives from this node inside a LEGAL
+   * (DelayNode-containing) cycle. Base nodes answer with their most recent
+   * output (previous quantum — the same provisional the audiojs reference
+   * returns; the delay's deferred-write flush re-pulls the settled memoized
+   * graph afterwards, so the ring buffer gets this quantum's true signal).
+   * PlecoDelayNode overrides this to return its exact this-quantum ring read.
+   */
+  _cycleReentryBlock() {
+    return this._cacheBlock ?? createPlecoAudioBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
+  }
+
+  /**
+   * Hook invoked by _tick() each quantum BEFORE the input ports are pulled.
+   * Default no-op. PlecoDelayNode resolves its a-rate delayTime block here so
+   * a re-entrant pull arriving DURING the input pull (i.e. a cycle through
+   * the delay) can already read the ring buffer at the right offsets.
+   */
+  _prepareQuantum() {}
 
   /**
    * The block for output port `outputIndex` this quantum. Output ports pull
