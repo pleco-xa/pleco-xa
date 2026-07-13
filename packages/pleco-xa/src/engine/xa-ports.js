@@ -7,8 +7,9 @@
  * is the structure the spec's connect()/disconnect() overloads operate on,
  * and what lets numberOfInputs/numberOfOutputs exceed 1 (splitter/merger).
  *
- * Pulling: an output port pulls its owning node's _tick() (memoized per
- * currentTime on the node). An input port pulls EVERY connected output, then
+ * Pulling: an output port pulls its owning node's _tickOutput(index) —
+ * for single-output nodes the node's _tick() block, memoized per currentTime
+ * on the node; multi-output nodes select a per-output block from that memo. An input port pulls EVERY connected output, then
  * sums the blocks after up/down-mixing each via mixInto() with the owning
  * node's channelInterpretation, into a block that is computedNumberOfChannels
  * wide (spec § ChannelCountMode). An input with zero connections is one
@@ -67,27 +68,41 @@ export class PlecoAudioInput extends PlecoAudioPort {
    */
   _pull() {
     const node = this.owner
-    const sampleRate = node.context.sampleRate
+    return this._pullMixed(node.channelCountMode, node.channelCount, node.channelInterpretation)
+  }
+
+  /**
+   * Pull all connections and sum them under an EXPLICIT mixing rule rather
+   * than the owner's attributes. AnalyserNode's capture path needs this
+   * (spec § Time-Domain Down-Mixing: mixed "as if" channelCount 1 /
+   * channelCountMode 'max' / channelInterpretation 'speakers', independent of
+   * the node's own settings). Upstream output pulls are memoized per
+   * currentTime, so a second mixing pass in the same quantum re-reads cached
+   * blocks instead of recomputing the graph.
+   */
+  _pullMixed(channelCountMode, channelCount, channelInterpretation) {
+    const sampleRate = this.owner.context.sampleRate
     if (this.connections.length === 0) {
       return createPlecoAudioBuffer(1, RENDER_QUANTUM, sampleRate)
     }
     const blocks = this.connections.map((out) => out._pull())
     let maxSourceChannels = 1
     for (const b of blocks) maxSourceChannels = Math.max(maxSourceChannels, b.numberOfChannels)
-    const computed = computeNumberOfChannels(
-      node.channelCountMode,
-      node.channelCount,
-      maxSourceChannels,
-    )
+    const computed = computeNumberOfChannels(channelCountMode, channelCount, maxSourceChannels)
     const dest = createPlecoAudioBuffer(computed, RENDER_QUANTUM, sampleRate)
-    for (const b of blocks) mixInto(dest, b, node.channelInterpretation)
+    for (const b of blocks) mixInto(dest, b, channelInterpretation)
     return dest
   }
 }
 
-/** An AudioNode output: pulling it ticks the owning node (memoized per currentTime). */
+/**
+ * An AudioNode output: pulling it asks the owning node for THIS port's block
+ * via _tickOutput(index) — which for every single-output node is just the
+ * memoized _tick() block, and for multi-output nodes (ChannelSplitterNode)
+ * selects the per-output block from the per-currentTime memoized set.
+ */
 export class PlecoAudioOutput extends PlecoAudioPort {
   _pull() {
-    return this.owner._tick()
+    return this.owner._tickOutput(this.index)
   }
 }

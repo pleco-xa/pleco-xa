@@ -28,8 +28,11 @@ import { PlecoAudioInput, PlecoAudioOutput } from './xa-ports.js'
 import { PlecoAudioParam } from './xa-param.js'
 import { indexSizeError, invalidAccessError, invalidStateError, notSupportedError } from './xa-errors.js'
 
-const CHANNEL_COUNT_MODES = ['max', 'clamped-max', 'explicit']
-const CHANNEL_INTERPRETATIONS = ['speakers', 'discrete']
+// Exported so subclasses that must pre-validate the constructor dictionary
+// BEFORE super() (locked-attribute nodes: splitter/merger) reproduce the same
+// WebIDL enum-conversion TypeError from the same single source of truth.
+export const CHANNEL_COUNT_MODES = ['max', 'clamped-max', 'explicit']
+export const CHANNEL_INTERPRETATIONS = ['speakers', 'discrete']
 
 /** Spec: "An implementation MUST support at least 32 channels" — pleco supports exactly 32 (same ceiling as PlecoAudioBuffer). */
 const MAX_CHANNELS = 32
@@ -271,6 +274,19 @@ export class PlecoNode extends EventTarget {
     this._cacheTime = now
     this._cacheBlock = block
     return block
+  }
+
+  /**
+   * The block for output port `outputIndex` this quantum. Output ports pull
+   * through here (xa-ports.js) so nodes whose outputs carry DIFFERENT signals
+   * (ChannelSplitterNode is the first) can override it; the default ignores
+   * the index and returns the node's single memoized _tick() block, so every
+   * single-output node behaves exactly as before. Overrides keep the
+   * per-currentTime memoization by computing through _tick() (whose _process
+   * may return the full per-output set) and selecting per index.
+   */
+  _tickOutput() {
+    return this._tick()
   }
 
   /**
