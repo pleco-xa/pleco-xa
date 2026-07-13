@@ -27,6 +27,11 @@ export class PlecoBaseContext {
     this._sampleRate = sampleRate
     this._numberOfChannels = numberOfChannels
     this._frame = 0
+    // Started scheduled sources register here (xa-node.js start()/_end()) so
+    // renderQuantum() ticks them even when nothing pulls them — a source's
+    // stop/exhaustion window (and its `ended` event) is connectivity-
+    // independent per the spec. Double-ticking a pulled source is a no-op
+    // thanks to the per-quantum memo.
     this._tailNodes = new Set()
     this._destination = new PlecoAudioDestinationNode(this, { channelCount: numberOfChannels })
   }

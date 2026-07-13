@@ -72,7 +72,7 @@ describe('engine — source→gain→destination rendered offline (headless, zer
     expect(render()).toEqual(render())
   })
 
-  it('fires ended exactly once when the source is exhausted', () => {
+  it('fires ended exactly once when the source is exhausted', async () => {
     const ctx = new PlecoOfflineContext({ numberOfChannels: 1, length: 384, sampleRate: SR })
     const s = ctx.createBufferSource()
     s.buffer = makeSource()
@@ -81,6 +81,7 @@ describe('engine — source→gain→destination rendered offline (headless, zer
     s.connect(ctx.destination)
     s.start(0)
     ctx.renderSync()
+    await Promise.resolve() // ended is dispatched via queueMicrotask (P05), never inside the render pull
     expect(endedCount).toBe(1)
   })
 })

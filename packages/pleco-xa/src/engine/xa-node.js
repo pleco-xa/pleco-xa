@@ -26,7 +26,7 @@ import { RENDER_QUANTUM } from './xa-constants.js'
 import { createPlecoAudioBuffer } from './xa-buffer.js'
 import { PlecoAudioInput, PlecoAudioOutput } from './xa-ports.js'
 import { PlecoAudioParam } from './xa-param.js'
-import { indexSizeError, invalidAccessError, notSupportedError } from './xa-errors.js'
+import { indexSizeError, invalidAccessError, invalidStateError, notSupportedError } from './xa-errors.js'
 
 const CHANNEL_COUNT_MODES = ['max', 'clamped-max', 'explicit']
 const CHANNEL_INTERPRETATIONS = ['speakers', 'discrete']
@@ -284,56 +284,150 @@ export class PlecoNode extends EventTarget {
 }
 
 /**
- * PlecoScheduledSourceNode — start(when)/stop(when) windowing on the frame clock.
+ * Convert a scheduled time (seconds) to its first active render frame: the
+ * smallest integer frame f with f/sampleRate >= when, i.e. ceil(when *
+ * sampleRate) — with a float-precision snap so a `when` computed as
+ * frame/sampleRate lands on exactly that frame instead of drifting one frame
+ * late from double rounding. Used for both bounds because the spec's playback
+ * window (§ Playback of AudioBuffer Contents, per-frame condition
+ * `currentTime < start || currentTime >= stop` → silent) makes the start frame
+ * INCLUSIVE-at->=start and the stop frame the same ceil taken EXCLUSIVE.
+ */
+function frameCeil(v) {
+  const r = Math.round(v)
+  return Math.abs(v - r) < 1e-8 ? r : Math.ceil(v)
+}
+
+/**
+ * PlecoScheduledSourceNode — spec-shaped AudioScheduledSourceNode
+ * (spec § The AudioScheduledSourceNode Interface): start(when)/stop(when)
+ * windowing on the frame clock, sample-frame-accurate at sub-quantum offsets.
  * Subclasses implement _dsp(output, offset, count) to generate up to `count`
  * frames starting at `offset` in the block; the base decides where in each
  * quantum the source is active, zero-pads the rest (the buffer starts silent),
- * and fires `ended` exactly once when the source is exhausted or stopped.
+ * and dispatches an `ended` Event exactly once when the source stops (stop
+ * time reached, or content exhausted — `produced < count`).
+ *
+ * start()/stop() follow the spec algorithms: the [[source started]] slot gates
+ * InvalidStateError (start twice / stop before start, checked BEFORE the
+ * parameter constraint per the algorithms' step order); a non-finite `when` is
+ * a TypeError (WebIDL restricted `double` conversion precedes the algorithm)
+ * and a negative `when` is the spec's RangeError constraint. Rejecting
+ * non-number `when` outright (e.g. start('1')) instead of coercing via WebIDL
+ * ToNumber is deliberate pleco strictness, not spec behavior. Times in the
+ * past clamp to currentTime at the quantum that processes them — the max/min
+ * against the block window IS that clamp. Per the spec, repeated stop() calls
+ * replace the pending stop time (last invocation wins), and a stop time at or
+ * before the start time means the source never plays but `ended` still fires
+ * when the stop time is reached.
+ *
+ * A started source registers itself in the context's tail set
+ * (context._tailNodes) so renderQuantum() ticks it even when nothing pulls it
+ * — the spec defines "playing" purely by currentTime against the start/stop
+ * times, with no connectivity condition, so `ended` must fire for a source
+ * that was never connected or was disconnected before its stop time. _end()
+ * deregisters it; per-quantum memoization makes the extra tick a no-op for
+ * sources the destination already pulled.
+ *
+ * The spec queues the `ended` Event from the control thread once the render
+ * thread passes the stop frame; pleco's single-thread analogue dispatches it
+ * via queueMicrotask after the quantum that ended the source, so it never
+ * fires synchronously inside the render pull. `onended` is an event-handler
+ * IDL attribute backed by the EventTarget inheritance: assigning subscribes,
+ * reassigning replaces, null (or any non-function) unsubscribes.
  */
 export class PlecoScheduledSourceNode extends PlecoNode {
+  #onended = null
+
   constructor(context, options = {}) {
     super(context, { ...options, numberOfInputs: 0 })
+    this._sourceStarted = false // the spec's [[source started]] slot
     this._startFrame = null
     this._stopFrame = null
     this._ended = false
-    this.onended = null
+  }
+
+  get onended() {
+    return this.#onended
+  }
+
+  set onended(fn) {
+    if (this.#onended !== null) this.removeEventListener('ended', this.#onended)
+    this.#onended = typeof fn === 'function' ? fn : null
+    if (this.#onended !== null) this.addEventListener('ended', this.#onended)
   }
 
   start(when = 0) {
-    if (this._startFrame !== null) throw new Error('start() already called')
-    this._startFrame = Math.round(when * this.context.sampleRate)
+    // WebIDL restricted `double` conversion precedes the algorithm: non-finite
+    // → TypeError. (Non-number rejection is pleco strictness — see class doc.)
+    if (typeof when !== 'number' || !Number.isFinite(when)) {
+      throw new TypeError(`PlecoScheduledSourceNode.start: when must be a finite number, got ${when}`)
+    }
+    // Spec start() step 1: [[source started]] already true → InvalidStateError.
+    if (this._sourceStarted) {
+      throw invalidStateError('PlecoScheduledSourceNode.start: start() has already been called on this source')
+    }
+    // Spec start() step 2 (parameter constraints): negative when → RangeError,
+    // aborting BEFORE [[source started]] is set.
+    if (when < 0) {
+      throw new RangeError(`PlecoScheduledSourceNode.start: when must be non-negative, got ${when}`)
+    }
+    this._sourceStarted = true
+    this._startFrame = frameCeil(when * this.context.sampleRate)
+    // A started source is live regardless of connectivity: register as a
+    // context tail node so renderQuantum() keeps ticking it and the
+    // stop/exhaustion window (→ `ended`) is evaluated even when nothing
+    // pulls it. Removed in _end().
+    this.context._tailNodes.add(this)
   }
 
   stop(when = 0) {
-    if (this._startFrame === null) throw new Error('stop() called before start()')
-    this._stopFrame = Math.round(when * this.context.sampleRate)
+    if (typeof when !== 'number' || !Number.isFinite(when)) {
+      throw new TypeError(`PlecoScheduledSourceNode.stop: when must be a finite number, got ${when}`)
+    }
+    // Spec stop() step 1: [[source started]] not true → InvalidStateError.
+    if (!this._sourceStarted) {
+      throw invalidStateError('PlecoScheduledSourceNode.stop: stop() may not be called before start()')
+    }
+    if (when < 0) {
+      throw new RangeError(`PlecoScheduledSourceNode.stop: when must be non-negative, got ${when}`)
+    }
+    this._stopFrame = frameCeil(when * this.context.sampleRate) // last invocation wins (spec)
   }
 
   _process() {
     const out = createPlecoAudioBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
-    if (this._ended || this._startFrame === null) return out
+    if (this._ended || !this._sourceStarted) return out
 
     const blockStart = this.context._frame
     const blockEnd = blockStart + RENDER_QUANTUM
+    // Past times clamp to currentTime at the quantum that processes them:
+    // the max/min against [blockStart, blockEnd) is exactly that clamp.
     const from = Math.max(this._startFrame, blockStart)
     const to = this._stopFrame === null ? blockEnd : Math.min(blockEnd, this._stopFrame)
 
-    if (from >= to) {
-      if (this._stopFrame !== null && blockStart >= this._stopFrame) this._end()
-      return out
+    if (from < to) {
+      const count = to - from
+      const produced = this._dsp(out, from - blockStart, count)
+      if (produced < count) {
+        this._end() // content exhausted mid-window
+        return out
+      }
     }
-
-    const offset = from - blockStart
-    const count = to - from
-    const produced = this._dsp(out, offset, count)
-    if (produced < count || (this._stopFrame !== null && to >= this._stopFrame)) this._end()
+    // Stop time reached within (or before) this quantum — including a stop
+    // scheduled at/before the start time, where the source never plays.
+    if (this._stopFrame !== null && this._stopFrame <= blockEnd) this._end()
     return out
   }
 
   _end() {
     if (this._ended) return
     this._ended = true
-    if (typeof this.onended === 'function') this.onended()
+    this.context._tailNodes.delete(this)
+    // Control-thread analogue: the spec queues the ended Event to the control
+    // thread; in pleco's single-thread engine it is queued as a microtask after
+    // the quantum that ended the source, never synchronously inside the pull.
+    queueMicrotask(() => this.dispatchEvent(new Event('ended')))
   }
 
   /** Override: write up to `count` frames into `output` at `offset`; return frames produced. */
