@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PlecoOfflineContext } from '../src/engine/xa-offline-context.js'
+import { PlecoOfflineAudioContext } from '../src/engine/xa-offline-context.js'
 import { PlecoAudioBuffer } from '../src/engine/xa-buffer.js'
 import { RENDER_QUANTUM } from '../src/engine/xa-constants.js'
 import { PlecoBaseContext } from '../src/engine/xa-base-context.js'
@@ -39,7 +39,7 @@ describe('engine — source→gain→destination rendered offline (headless, zer
   }
 
   it('renders sample-exact: out[i] = fround(src[i] * 0.5), silence after the source ends', () => {
-    const ctx = new PlecoOfflineContext({ numberOfChannels: 1, length: 384, sampleRate: SR }) // 3 quanta
+    const ctx = new PlecoOfflineAudioContext({ numberOfChannels: 1, length: 384, sampleRate: SR }) // 3 quanta
     const s = ctx.createBufferSource()
     s.buffer = makeSource()
     const g = ctx.createGain()
@@ -59,7 +59,7 @@ describe('engine — source→gain→destination rendered offline (headless, zer
 
   it('is deterministic — two renders are bit-identical', () => {
     const render = () => {
-      const c = new PlecoOfflineContext({ numberOfChannels: 1, length: 384, sampleRate: SR })
+      const c = new PlecoOfflineAudioContext({ numberOfChannels: 1, length: 384, sampleRate: SR })
       const s = c.createBufferSource()
       s.buffer = makeSource()
       const g = c.createGain()
@@ -73,7 +73,7 @@ describe('engine — source→gain→destination rendered offline (headless, zer
   })
 
   it('fires ended exactly once when the source is exhausted', async () => {
-    const ctx = new PlecoOfflineContext({ numberOfChannels: 1, length: 384, sampleRate: SR })
+    const ctx = new PlecoOfflineAudioContext({ numberOfChannels: 1, length: 384, sampleRate: SR })
     const s = ctx.createBufferSource()
     s.buffer = makeSource()
     let endedCount = 0
