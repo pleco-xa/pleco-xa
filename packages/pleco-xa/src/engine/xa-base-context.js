@@ -32,6 +32,14 @@ import { PlecoChannelSplitterNode } from './nodes/xa-channel-splitter.js'
 import { PlecoChannelMergerNode } from './nodes/xa-channel-merger.js'
 import { PlecoWaveShaperNode } from './nodes/xa-wave-shaper.js'
 import { PlecoAnalyserNode } from './nodes/xa-analyser.js'
+import { PlecoConstantSourceNode } from './nodes/xa-constant-source.js'
+import { PlecoDelayNode } from './nodes/xa-delay.js'
+import { PlecoStereoPannerNode } from './nodes/xa-stereo-panner.js'
+import { PlecoBiquadFilterNode } from './nodes/xa-biquad-filter.js'
+import { PlecoIIRFilterNode } from './nodes/xa-iir-filter.js'
+import { PlecoDynamicsCompressorNode } from './nodes/xa-dynamics-compressor.js'
+import { PlecoOscillatorNode } from './nodes/xa-oscillator.js'
+import { PlecoPeriodicWave } from './nodes/xa-periodic-wave.js'
 import { createPlecoAudioBuffer } from './xa-buffer.js'
 import { decodeWavArrayBuffer, resampleLinearChannels } from './xa-decode.js'
 import { invalidStateError, notSupportedError } from './xa-errors.js'
@@ -164,6 +172,49 @@ export class PlecoBaseContext extends EventTarget {
   /** Spec § createAnalyser() — no parameters; node keeps AnalyserNode defaults. */
   createAnalyser() {
     return new PlecoAnalyserNode(this)
+  }
+
+  /** Spec § createConstantSource() — no parameters; offset defaults to 1. */
+  createConstantSource() {
+    return new PlecoConstantSourceNode(this)
+  }
+
+  /** Spec § createDelay(maxDelayTime = 1.0) — bounds validated by the node constructor. */
+  createDelay(maxDelayTime = 1.0) {
+    return new PlecoDelayNode(this, { maxDelayTime })
+  }
+
+  /** Spec § createStereoPanner() — no parameters. */
+  createStereoPanner() {
+    return new PlecoStereoPannerNode(this)
+  }
+
+  /** Spec § createBiquadFilter() — no parameters; node keeps BiquadFilterNode defaults. */
+  createBiquadFilter() {
+    return new PlecoBiquadFilterNode(this)
+  }
+
+  /** Spec § createIIRFilter(feedforward, feedback) — validation lives in the node constructor. */
+  createIIRFilter(feedforward, feedback) {
+    return new PlecoIIRFilterNode(this, { feedforward, feedback })
+  }
+
+  /** Spec § createDynamicsCompressor() — no parameters. */
+  createDynamicsCompressor() {
+    return new PlecoDynamicsCompressorNode(this)
+  }
+
+  /** Spec § createOscillator() — no parameters; node keeps OscillatorNode defaults. */
+  createOscillator() {
+    return new PlecoOscillatorNode(this)
+  }
+
+  /** Spec § createPeriodicWave(real, imag, constraints) — both coefficient arrays are required. */
+  createPeriodicWave(real, imag, constraints = {}) {
+    if (real === undefined || imag === undefined) {
+      throw new TypeError('createPeriodicWave: real and imag coefficient arrays are both required')
+    }
+    return new PlecoPeriodicWave(this, { real, imag, ...constraints })
   }
 
   createBufferSource() {
