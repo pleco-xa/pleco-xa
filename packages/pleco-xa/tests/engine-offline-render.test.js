@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { PlecoOfflineContext } from '../src/engine/xa-offline-context.js'
-import { PlecoBuffer } from '../src/engine/xa-buffer.js'
+import { PlecoAudioBuffer } from '../src/engine/xa-buffer.js'
 import { RENDER_QUANTUM } from '../src/engine/xa-constants.js'
 import { PlecoBaseContext } from '../src/engine/xa-base-context.js'
 
 // Slice 1 of the pleco-xa 3.0 Web-Audio-replacement engine: a source→gain→
-// destination graph rendered fully OFFLINE to a PlecoBuffer, with ZERO Web Audio
+// destination graph rendered fully OFFLINE to a PlecoAudioBuffer, with ZERO Web Audio
 // imported anywhere. Proves the whole spine — RENDER_QUANTUM, the frame clock,
 // the pull graph, the buffer-source voice, gain, the sink, offline blit, and
 // determinism — all headless.
@@ -33,7 +33,7 @@ describe('engine — the frame clock (headless)', () => {
 describe('engine — source→gain→destination rendered offline (headless, zero Web Audio)', () => {
   // 320-frame ramp source (2.5 quanta) so we cross block boundaries AND test the ended tail.
   const makeSource = () => {
-    const src = new PlecoBuffer({ numberOfChannels: 1, length: 320, sampleRate: SR })
+    const src = new PlecoAudioBuffer({ numberOfChannels: 1, length: 320, sampleRate: SR })
     src.getChannelData(0).forEach((_, i, a) => (a[i] = i)) // 0,1,2,...,319 (all exact in f32)
     return src
   }
@@ -49,7 +49,7 @@ describe('engine — source→gain→destination rendered offline (headless, zer
     s.start(0)
 
     const out = ctx.renderSync()
-    expect(out).toBeInstanceOf(PlecoBuffer)
+    expect(out).toBeInstanceOf(PlecoAudioBuffer)
     expect(out.length).toBe(384)
 
     const d = out.getChannelData(0)

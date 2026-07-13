@@ -1,7 +1,7 @@
 /**
  * engine/nodes/xa-buffer-source.js — PlecoAudioBufferSourceNode.
  *
- * The looper's replay voice: plays a PlecoBuffer through the graph via a
+ * The looper's replay voice: plays a PlecoAudioBuffer through the graph via a
  * persistent fractional read cursor with linear interpolation, so varispeed
  * (playbackRate / detune) will be click-free. Slice-1 exercises the integer-rate
  * path (rate = 1 → the cursor lands on sample boundaries, interpolation is exact

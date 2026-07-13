@@ -2,14 +2,14 @@
  * engine/xa-offline-context.js — PlecoOfflineContext.
  *
  * The headless, deterministic render driver: a synchronous loop over
- * renderQuantum() that blits each block into a fixed-length PlecoBuffer. No
+ * renderQuantum() that blits each block into a fixed-length PlecoAudioBuffer. No
  * timers, no sink, zero Web Audio — a literal OfflineAudioContext bounce minus
  * the platform. Render twice ⇒ bit-identical output. This is THE headless proof
  * that pleco's audio engine runs under `node script.js`.
  */
 import { PlecoBaseContext } from './xa-base-context.js'
 import { RENDER_QUANTUM } from './xa-constants.js'
-import { createPlecoBuffer } from './xa-buffer.js'
+import { createPlecoAudioBuffer } from './xa-buffer.js'
 
 export class PlecoOfflineContext extends PlecoBaseContext {
   constructor({ numberOfChannels = 1, length, sampleRate } = {}) {
@@ -21,9 +21,9 @@ export class PlecoOfflineContext extends PlecoBaseContext {
     this.length = length
   }
 
-  /** Render the whole graph to a PlecoBuffer of exactly `length` frames. Deterministic. */
+  /** Render the whole graph to a PlecoAudioBuffer of exactly `length` frames. Deterministic. */
   renderSync() {
-    const out = createPlecoBuffer(this.numberOfChannels, this.length, this.sampleRate)
+    const out = createPlecoAudioBuffer(this.numberOfChannels, this.length, this.sampleRate)
     let written = 0
     while (written < this.length) {
       const block = this.renderQuantum()

@@ -3,7 +3,7 @@
  *
  * The engine is a PULL graph: the destination pulls the graph once per render
  * quantum via _tick(); each node pulls-and-sums its inputs, processes them, and
- * returns a RENDER_QUANTUM-frame PlecoBuffer. Output is memoized per
+ * returns a RENDER_QUANTUM-frame PlecoAudioBuffer. Output is memoized per
  * context.currentTime, so a node feeding several consumers computes once per
  * quantum. A re-entrancy guard mutes feedback cycles to silence — true cycle
  * resolution (the deferred DelayNode read/write split) is parity-later; the
@@ -11,7 +11,7 @@
  */
 
 import { RENDER_QUANTUM } from './xa-constants.js'
-import { createPlecoBuffer } from './xa-buffer.js'
+import { createPlecoAudioBuffer } from './xa-buffer.js'
 import { mixInto } from './xa-channel-mixing.js'
 
 export class PlecoNode {
@@ -47,7 +47,7 @@ export class PlecoNode {
 
   /** Sum all upstream outputs into one channelCount-wide block for this quantum. */
   _pullInputs() {
-    const out = createPlecoBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
+    const out = createPlecoAudioBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
     for (const src of this._sources) mixInto(out, src._tick())
     return out
   }
@@ -57,7 +57,7 @@ export class PlecoNode {
     if (this._cacheBlock !== null && this._cacheTime === now) return this._cacheBlock
     if (this._ticking) {
       // feedback cycle — mute to silence (real cycle resolution is parity-later)
-      return createPlecoBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
+      return createPlecoAudioBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
     }
     this._ticking = true
     let block
@@ -104,7 +104,7 @@ export class PlecoScheduledSourceNode extends PlecoNode {
   }
 
   _process() {
-    const out = createPlecoBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
+    const out = createPlecoAudioBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
     if (this._ended || this._startFrame === null) return out
 
     const blockStart = this.context._frame

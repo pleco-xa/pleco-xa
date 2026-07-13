@@ -8,7 +8,7 @@
 import { PlecoNode } from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
-import { createPlecoBuffer } from '../xa-buffer.js'
+import { createPlecoAudioBuffer } from '../xa-buffer.js'
 
 export class PlecoGainNode extends PlecoNode {
   constructor(context, { channelCount = 1 } = {}) {
@@ -19,7 +19,7 @@ export class PlecoGainNode extends PlecoNode {
 
   _process(input) {
     const g = this.gain.fillBlock(this._gainBlock)
-    const out = createPlecoBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
+    const out = createPlecoAudioBuffer(this.channelCount, RENDER_QUANTUM, this.context.sampleRate)
     for (let c = 0; c < this.channelCount; c++) {
       const src = input.getChannelData(c)
       const dst = out.getChannelData(c)

@@ -14,9 +14,13 @@ import { RENDER_QUANTUM } from './xa-constants.js'
 import { PlecoAudioDestinationNode } from './nodes/xa-destination.js'
 import { PlecoGainNode } from './nodes/xa-gain.js'
 import { PlecoAudioBufferSourceNode } from './nodes/xa-buffer-source.js'
+import { createPlecoAudioBuffer } from './xa-buffer.js'
 
 export class PlecoBaseContext {
   constructor({ sampleRate, numberOfChannels = 1 } = {}) {
+    // P06 tightens this to the spec's nominal range [3000, 768000] Hz with a
+    // NotSupportedError ("Supported Sample Rates" applies to contexts too);
+    // until then buffer allocation at this rate enforces it indirectly.
     if (!Number.isFinite(sampleRate) || sampleRate <= 0) {
       throw new RangeError(`PlecoBaseContext: sampleRate must be a positive finite number, got ${sampleRate}`)
     }
@@ -37,6 +41,16 @@ export class PlecoBaseContext {
 
   get destination() {
     return this._destination
+  }
+
+  /**
+   * BaseAudioContext.createBuffer(numberOfChannels, length, sampleRate) —
+   * zero-initialized PlecoAudioBuffer. Throws a NotSupportedError DOMException
+   * if any argument is zero, negative, or outside its nominal range (same
+   * validation path as the PlecoAudioBuffer constructor).
+   */
+  createBuffer(numberOfChannels, length, sampleRate) {
+    return createPlecoAudioBuffer(numberOfChannels, length, sampleRate)
   }
 
   createGain() {
