@@ -19,7 +19,7 @@ export class PlecoGainNode extends PlecoNode {
   }
 
   _process(input) {
-    const g = this.gain.fillBlock(this._gainBlock)
+    const g = this.gain.fillBlock(this._gainBlock, this.context.currentTime)
     // Output channel count follows the input's computedNumberOfChannels.
     const channels = input.numberOfChannels
     const out = createPlecoAudioBuffer(channels, RENDER_QUANTUM, this.context.sampleRate)
