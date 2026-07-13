@@ -54,7 +54,9 @@ export class PlecoBaseContext {
   }
 
   createGain() {
-    return new PlecoGainNode(this, { channelCount: this._numberOfChannels })
+    // Factory algorithm sets only passed parameters — createGain takes none,
+    // so the node keeps the spec GainNode defaults (channelCount 2, mode 'max').
+    return new PlecoGainNode(this)
   }
 
   createBufferSource() {

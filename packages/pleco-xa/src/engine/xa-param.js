@@ -10,14 +10,24 @@
  * parity-later; the Echoplex drives params with scalars, never an LFO node.
  */
 
+import { PlecoAudioPort } from './xa-ports.js'
+
 const F32_MAX = 3.4028234663852886e38
 
 export class PlecoAudioParam {
-  constructor({ defaultValue = 0, minValue = -F32_MAX, maxValue = F32_MAX } = {}) {
+  /**
+   * `context` is the owning node's BaseAudioContext (used by
+   * PlecoNode.connect for the spec's cross-context InvalidAccessError check);
+   * `_input` is the param's input port — node→param connections land here as
+   * bidirectional edges (stored now, consumed by the automation slice, P04).
+   */
+  constructor({ defaultValue = 0, minValue = -F32_MAX, maxValue = F32_MAX, context = null } = {}) {
     this.defaultValue = defaultValue
     this.minValue = minValue
     this.maxValue = maxValue
     this._value = defaultValue
+    this._context = context
+    this._input = new PlecoAudioPort(this, 0)
   }
 
   get value() {

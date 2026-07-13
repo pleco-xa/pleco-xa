@@ -8,7 +8,18 @@
 import { PlecoNode } from '../xa-node.js'
 
 export class PlecoAudioDestinationNode extends PlecoNode {
-  constructor(context, { channelCount = 1 } = {}) {
-    super(context, { numberOfInputs: 1, numberOfOutputs: 0, channelCount })
+  constructor(context, options = {}) {
+    // Spec (§ AudioDestinationNode): 1 in / 1 out, channelCountMode 'explicit',
+    // channelInterpretation 'speakers' — the input always mixes to exactly
+    // channelCount channels (the context's channel count). The output exists so
+    // the summed mix can be captured (spec: "produced by summing its input");
+    // its block is simply the node's _tick() result.
+    super(context, {
+      channelCount: 1,
+      ...options,
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      channelCountMode: 'explicit',
+    })
   }
 }

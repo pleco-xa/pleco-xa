@@ -16,8 +16,8 @@ export class PlecoAudioBufferSourceNode extends PlecoScheduledSourceNode {
     super(context, { channelCount: 1 })
     this._buffer = null
     this._cursor = 0
-    this.playbackRate = new PlecoAudioParam({ defaultValue: 1 })
-    this.detune = new PlecoAudioParam({ defaultValue: 0 })
+    this.playbackRate = new PlecoAudioParam({ defaultValue: 1, context })
+    this.detune = new PlecoAudioParam({ defaultValue: 0, context })
   }
 
   get buffer() {
