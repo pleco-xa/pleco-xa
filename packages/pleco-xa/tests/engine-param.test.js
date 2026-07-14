@@ -584,3 +584,26 @@ describe('PlecoAudioParam — end-to-end through PlecoGainNode', () => {
     for (const v of out) expect(v).toBe(0.375) // 0.5 · (0.5 + 0.25)
   })
 })
+
+describe('PlecoAudioParam — context-less (bare) param clock + fillBlock guard', () => {
+  it('the value setter uses t = 0 when the param has no owning context', () => {
+    const p = new PlecoAudioParam({ defaultValue: 1 }) // context defaults to null
+    p.value = 0.5
+    expect(p.value).toBe(0.5)
+  })
+
+  it('the constant fast path fills a bare param with no owning context', () => {
+    const p = new PlecoAudioParam({ defaultValue: 0.5 })
+    const out = new Float32Array(RENDER_QUANTUM)
+    p.fillBlock(out) // default startTime resolves to 0 (no context)
+    expect(out[0]).toBe(0.5)
+    expect(out[RENDER_QUANTUM - 1]).toBe(0.5)
+  })
+
+  it('rendering automation without an owning context throws InvalidStateError', () => {
+    const p = new PlecoAudioParam({ defaultValue: 1 })
+    p.setValueAtTime(0.3, 1) // adds an event → no longer the constant fast path
+    const out = new Float32Array(RENDER_QUANTUM)
+    expect(() => p.fillBlock(out)).toThrowError(expect.objectContaining({ name: 'InvalidStateError' }))
+  })
+})

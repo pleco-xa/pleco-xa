@@ -130,6 +130,12 @@ describe('PlecoAudioContext construction — AudioContextOptions validation', ()
     expect(mockContext({ ctx: { renderSizeHint: 'hardware' } }).ctx.renderQuantumSize).toBe(128)
   })
 
+  it('renderSizeHint: a value that is neither a string nor a number → TypeError', () => {
+    expect(() => mockContext({ ctx: { renderSizeHint: true } })).toThrow(TypeError)
+    expect(() => mockContext({ ctx: { renderSizeHint: {} } })).toThrow(TypeError)
+    expect(() => mockContext({ ctx: { renderSizeHint: null } })).toThrow(TypeError)
+  })
+
   it('renderSizeHint: non-integer → TypeError; out of range → NotSupportedError; ≠128 → the documented fixed-quantum gap', () => {
     expect(() => mockContext({ ctx: { renderSizeHint: 128.5 } })).toThrow(TypeError)
     expect(() => mockContext({ ctx: { renderSizeHint: 0 } })).toThrowError(

@@ -349,6 +349,54 @@ describe('PlecoOscillatorNode — OscillatorOptions constructor dictionary', () 
     expect(osc.channelCountMode).toBe('explicit')
     expect(osc.channelInterpretation).toBe('discrete')
   })
+
+  it('a function options argument is not a valid dictionary — TypeError', () => {
+    // coerceNodeOptions lets a function through (WebIDL: a function is an
+    // object), but the oscillator's own OscillatorOptions guard then rejects a
+    // non-plain-object with a TypeError.
+    expect(() => new PlecoOscillatorNode(ctx(), () => {})).toThrow(TypeError)
+  })
+
+  it('a function options argument to PeriodicWave is not a valid dictionary — TypeError', () => {
+    expect(() => new PlecoPeriodicWave(ctx(), () => {})).toThrow(TypeError)
+  })
+})
+
+describe('PlecoPeriodicWave — mip-map range selection at frequency extremes', () => {
+  it('a zero fundamental (ratio → 0.5) and a near-Nyquist fundamental both select a valid, bounded range', () => {
+    // Exercises waveDataForFundamentalFrequency's f === 0 branch (ratio 0.5),
+    // the pitchRange < 0 clamp, the pitchRange > maxRange clamp, and the
+    // top-of-range higherIndex fold — none may produce NaN/Inf output.
+    for (const frequency of [0, NYQUIST * 0.999]) {
+      const out = renderOsc(128, (c) => {
+        const wave = new PlecoPeriodicWave(c, { real: [0, 1, 0.5], imag: [0, 1, 0.5] })
+        return new PlecoOscillatorNode(c, { periodicWave: wave, frequency })
+      })
+      for (const v of out) {
+        expect(Number.isFinite(v)).toBe(true)
+        expect(Math.abs(v)).toBeLessThanOrEqual(4)
+      }
+    }
+  })
+})
+
+describe('PlecoOscillatorNode — scheduling guard (silence before start / after end)', () => {
+  it('an oscillator that was never started renders a full quantum of silence', () => {
+    const out = renderOsc(128, (c) => new PlecoOscillatorNode(c)) // never start()ed
+    expect(Array.from(out).every((v) => v === 0)).toBe(true)
+  })
+
+  it('after the source has ended, every later quantum returns silence (the _ended guard)', () => {
+    // start(0) then stop(0): the first quantum ends the source and the SECOND
+    // quantum takes the _ended short-circuit.
+    const out = renderOsc(256, (c) => {
+      const osc = new PlecoOscillatorNode(c, { frequency: 440 })
+      osc.start(0)
+      osc.stop(0)
+      return osc
+    })
+    expect(Array.from(out).every((v) => v === 0)).toBe(true)
+  })
 })
 
 describe('PlecoOscillatorNode — sine rendering', () => {

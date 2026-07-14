@@ -291,6 +291,20 @@ describe('PlecoConstantSourceNode — rendering', () => {
     expect(s._tick().numberOfChannels).toBe(1)
   })
 
+  it('when channelCount is 1 the base already yields a mono block — returned as-is, still the offset value', () => {
+    // The base allocates its scheduled-source block channelCount-wide; with
+    // channelCount 1 that block is already mono, so the override returns it
+    // directly (no extra channel-0 copy).
+    const ctx = makeCtx()
+    const s = new PlecoConstantSourceNode(ctx, { offset: 0.5 })
+    s.channelCount = 1
+    s.start(0)
+    const block = s._tick()
+    expect(block.numberOfChannels).toBe(1)
+    expect(block.getChannelData(0)[0]).toBe(0.5)
+    expect(block.getChannelData(0)[127]).toBe(0.5)
+  })
+
   it('the mono output up-mixes as mono — replicated into BOTH channels of a stereo destination', () => {
     const ctx = makeCtx(2) // destination: channelCount 2, mode 'explicit'
     const s = new PlecoConstantSourceNode(ctx, { offset: 0.5 })

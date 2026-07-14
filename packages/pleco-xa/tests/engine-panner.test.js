@@ -789,3 +789,10 @@ describe("PlecoPannerNode — 'HRTF': explicit open parity gap (never an equalpo
     expect(outR[0]).toBe(Math.fround(0.5 * COS45))
   })
 })
+
+describe('PlecoAudioListener — context guard', () => {
+  it('requires a context (TypeError on null / non-context)', () => {
+    expect(() => new PlecoAudioListener(null)).toThrow(TypeError)
+    expect(() => new PlecoAudioListener({})).toThrow(TypeError)
+  })
+})

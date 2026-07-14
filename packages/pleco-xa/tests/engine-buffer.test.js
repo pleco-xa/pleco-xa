@@ -204,3 +204,28 @@ describe('PlecoBaseContext.createBuffer — the BaseAudioContext factory (headle
     expect(b.duration).toBe(8 / Math.fround(44100.123))
   })
 })
+
+describe('PlecoAudioBuffer — WebIDL conversion edge branches', () => {
+  it('a non-finite length converts to NaN and fails the positive-length check (NotSupportedError)', () => {
+    const err = (() => {
+      try {
+        new PlecoAudioBuffer({ length: Infinity, sampleRate: 8000 })
+      } catch (e) {
+        return e
+      }
+    })()
+    expect(err).toBeInstanceOf(DOMException)
+    expect(err.name).toBe('NotSupportedError')
+  })
+
+  it('numberOfChannels defaults to 1 when omitted', () => {
+    const b = new PlecoAudioBuffer({ length: 4, sampleRate: 8000 })
+    expect(b.numberOfChannels).toBe(1)
+  })
+
+  it('getChannelData wraps a non-finite channel index to 0 (unsigned-long conversion)', () => {
+    const b = new PlecoAudioBuffer({ numberOfChannels: 2, length: 4, sampleRate: 8000 })
+    expect(b.getChannelData(Infinity)).toBe(b.getChannelData(0))
+    expect(b.getChannelData(NaN)).toBe(b.getChannelData(0))
+  })
+})

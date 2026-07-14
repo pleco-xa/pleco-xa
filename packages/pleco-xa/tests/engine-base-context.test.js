@@ -522,3 +522,12 @@ describe('AudioDestinationNode — maxChannelCount + channel constraints', () =>
     }
   })
 })
+
+describe('BaseAudioContext.createPeriodicWave — required-argument guard', () => {
+  it('omitting real or imag throws TypeError', () => {
+    const ctx = makeCtx()
+    expect(() => ctx.createPeriodicWave()).toThrow(TypeError)
+    expect(() => ctx.createPeriodicWave([0, 1])).toThrow(TypeError) // imag missing
+    expect(() => ctx.createPeriodicWave(undefined, [0, 1])).toThrow(TypeError) // real missing
+  })
+})

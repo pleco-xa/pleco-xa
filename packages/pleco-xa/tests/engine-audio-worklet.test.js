@@ -1238,3 +1238,126 @@ describe('active source flag — process() return-value lifetime', () => {
     expect(calls).toBeGreaterThanOrEqual(2)
   })
 })
+
+// ---------------------------------------------------------------------------
+// AudioWorkletNode — WebIDL argument/dictionary conversion tier (defensive
+// branches: the guards the happy-path construction never trips)
+// ---------------------------------------------------------------------------
+
+describe('PlecoAudioParamMap — engine-internal backing-map guard', () => {
+  it('rejects a non-Map backing store with TypeError', () => {
+    expect(() => new PlecoAudioParamMap([])).toThrow(TypeError)
+    expect(() => new PlecoAudioParamMap({})).toThrow(TypeError)
+  })
+})
+
+describe('PlecoAudioWorkletNode — options-dictionary conversion errors', () => {
+  it('a non-object options argument (a function) throws TypeError', () => {
+    const ctx = makeContext()
+    register(ctx, 'p-fn-opts', makePassthrough())
+    expect(() => new PlecoAudioWorkletNode(ctx, 'p-fn-opts', () => {})).toThrow(TypeError)
+  })
+
+  it('a non-integer numberOfOutputs throws TypeError', () => {
+    const ctx = makeContext()
+    register(ctx, 'p-noo', makePassthrough())
+    expect(() => new PlecoAudioWorkletNode(ctx, 'p-noo', { numberOfOutputs: -1 })).toThrow(TypeError)
+    expect(() => new PlecoAudioWorkletNode(ctx, 'p-noo', { numberOfOutputs: 1.5 })).toThrow(TypeError)
+  })
+
+  it('a non-iterable outputChannelCount, or a non-integer entry, throws TypeError', () => {
+    const ctx = makeContext()
+    register(ctx, 'p-occ', makePassthrough())
+    expect(() => new PlecoAudioWorkletNode(ctx, 'p-occ', { outputChannelCount: 42 })).toThrow(TypeError)
+    expect(() => new PlecoAudioWorkletNode(ctx, 'p-occ', { outputChannelCount: [1.5] })).toThrow(TypeError)
+    expect(() => new PlecoAudioWorkletNode(ctx, 'p-occ', { outputChannelCount: [-1] })).toThrow(TypeError)
+  })
+
+  it('a non-object parameterData throws TypeError', () => {
+    const ctx = makeContext()
+    register(ctx, 'p-pd', makePassthrough())
+    expect(() => new PlecoAudioWorkletNode(ctx, 'p-pd', { parameterData: 42 })).toThrow(TypeError)
+  })
+
+  it('an invalid channelInterpretation in the constructor dictionary throws TypeError', () => {
+    const ctx = makeContext()
+    register(ctx, 'p-ci', makePassthrough())
+    expect(() => new PlecoAudioWorkletNode(ctx, 'p-ci', { channelInterpretation: 'bogus' })).toThrow(TypeError)
+  })
+
+  it('AudioNodeOptions members flow into the processor options object (channelCount/mode/interpretation)', () => {
+    const ctx = makeContext()
+    register(ctx, 'p-ano', makePassthrough())
+    const node = new PlecoAudioWorkletNode(ctx, 'p-ano', {
+      channelCount: 1,
+      channelCountMode: 'explicit',
+      channelInterpretation: 'discrete',
+    })
+    expect(node.channelCount).toBe(1)
+    expect(node.channelCountMode).toBe('explicit')
+    expect(node.channelInterpretation).toBe('discrete')
+  })
+})
+
+describe('PlecoErrorEvent + worklet context guards (defensive branches)', () => {
+  it('PlecoErrorEvent tolerates a null init and missing/typed fields (defaults)', () => {
+    const e0 = new PlecoErrorEvent('processorerror', null) // null init → empty dict
+    expect(e0.message).toBe('')
+    expect(e0.filename).toBe('')
+    expect(e0.lineno).toBe(0)
+    expect(e0.colno).toBe(0)
+    const e1 = new PlecoErrorEvent('processorerror', {}) // present-but-empty → same defaults
+    expect(e1.message).toBe('')
+    expect(e1.lineno).toBe(0)
+  })
+
+  it('PlecoAudioWorklet and getContextAudioWorklet require a context (TypeError)', () => {
+    expect(() => new PlecoAudioWorklet(null)).toThrow(TypeError)
+    expect(() => getContextAudioWorklet(null)).toThrow(TypeError)
+    expect(() => getContextAudioWorklet({})).toThrow(TypeError)
+  })
+})
+
+describe('PlecoAudioWorkletNode — processor constructor throwing a non-Error', () => {
+  it('a processor whose constructor throws a string is born dead and reports the stringified message', async () => {
+    const ctx = makeContext()
+    register(
+      ctx,
+      'throws-string',
+      class extends PlecoAudioWorkletProcessor {
+        constructor() {
+          super()
+          throw 'boom' // non-Error throw → String(err) path
+        }
+        process() {
+          return true
+        }
+      },
+    )
+    const node = new PlecoAudioWorkletNode(ctx, 'throws-string')
+    let seen = null
+    node.onprocessorerror = (e) => {
+      seen = e
+    }
+    await flush()
+    expect(seen).toBeInstanceOf(PlecoErrorEvent)
+    expect(seen.message).toBe('boom')
+  })
+})
+
+describe('PlecoErrorEvent — typed init fields flow through', () => {
+  it('a present message/filename/lineno/colno of the correct type is reflected', () => {
+    const e = new PlecoErrorEvent('processorerror', {
+      message: 'kaboom',
+      filename: 'processor.js',
+      lineno: 12,
+      colno: 5,
+      error: new Error('kaboom'),
+    })
+    expect(e.message).toBe('kaboom')
+    expect(e.filename).toBe('processor.js')
+    expect(e.lineno).toBe(12)
+    expect(e.colno).toBe(5)
+    expect(e.error).toBeInstanceOf(Error)
+  })
+})

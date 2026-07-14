@@ -327,3 +327,11 @@ describe('PlecoWaveShaperNode — oversampling (2x / 4x, native half-band FIR)',
     expect(Array.from(a)).toEqual(Array.from(b))
   })
 })
+
+describe('PlecoWaveShaperNode — WaveShaperOptions.curve conversion', () => {
+  it('a non-sequence curve option throws TypeError', () => {
+    const ctx = new PlecoOfflineContext({ numberOfChannels: 1, length: 128, sampleRate: 48000 })
+    expect(() => new PlecoWaveShaperNode(ctx, { curve: 42 })).toThrow(TypeError)
+    expect(() => new PlecoWaveShaperNode(ctx, { curve: {} })).toThrow(TypeError) // object without a numeric length
+  })
+})

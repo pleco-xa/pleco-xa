@@ -578,6 +578,84 @@ describe('PlecoMediaStreamAudioDestinationNode — input mix → track feed', ()
   })
 })
 
+// ── Feed-contract + stream-shape defensive branches ─────────────────────────
+
+describe('media source nodes — feed-contract and stream-shape violations', () => {
+  /** A raw element-like carrying a hand-rolled feed duck (bypasses the shim's own validation). */
+  const elementWithFeed = (feed) => ({ plecoSampleFeed: feed })
+
+  it('a non-dictionary options argument throws TypeError (WebIDL: options must be an object)', () => {
+    const { ctx } = mockContext()
+    expect(() => new PlecoMediaElementAudioSourceNode(ctx, 42)).toThrow(TypeError)
+  })
+
+  it('a plecoSampleFeed that is not an object-with-read throws TypeError', () => {
+    const { ctx } = mockContext()
+    expect(() => new PlecoMediaElementAudioSourceNode(ctx, { mediaElement: elementWithFeed(5) })).toThrow(TypeError)
+    expect(() =>
+      new PlecoMediaElementAudioSourceNode(ctx, { mediaElement: elementWithFeed({ channelCount: 1 }) }),
+    ).toThrow(TypeError) // present but no read()
+  })
+
+  it('a feed declaring an out-of-range channelCount throws TypeError at construction', () => {
+    const { ctx } = mockContext()
+    for (const channelCount of [0, 33, 1.5]) {
+      expect(() =>
+        new PlecoMediaElementAudioSourceNode(ctx, { mediaElement: elementWithFeed({ channelCount, read: () => null }) }),
+      ).toThrow(TypeError)
+    }
+  })
+
+  it('feed.read returning a non-array (or wrong channel count) throws when the quantum is pulled', () => {
+    const { ctx } = mockContext()
+    const nonArray = new PlecoMediaElementAudioSourceNode(ctx, {
+      mediaElement: elementWithFeed({ channelCount: 1, read: () => 'not-an-array' }),
+    })
+    expect(() => nonArray._tick()).toThrow(TypeError)
+    const wrongWidth = new PlecoMediaElementAudioSourceNode(ctx, {
+      mediaElement: elementWithFeed({ channelCount: 2, read: () => [new Float32Array(64)] }),
+    })
+    expect(() => wrongWidth._tick()).toThrow(TypeError)
+  })
+
+  it('feed.read whose channels are not nonzero equal-length Float32Arrays throws when pulled', () => {
+    const { ctx } = mockContext()
+    const badElement = new PlecoMediaElementAudioSourceNode(ctx, {
+      mediaElement: elementWithFeed({ channelCount: 1, read: () => [123] }), // chunk[0] not a Float32Array → length 0
+    })
+    expect(() => badElement._tick()).toThrow(TypeError)
+    const overLong = new PlecoMediaElementAudioSourceNode(ctx, {
+      mediaElement: elementWithFeed({ channelCount: 1, read: () => [new Float32Array(RENDER_QUANTUM + 1)] }),
+    })
+    expect(() => overLong._tick()).toThrow(TypeError)
+    const ragged = new PlecoMediaElementAudioSourceNode(ctx, {
+      mediaElement: elementWithFeed({ channelCount: 2, read: () => [new Float32Array(64), 'nope'] }),
+    })
+    expect(() => ragged._tick()).toThrow(TypeError)
+  })
+
+  it('getAudioTracks() returning a non-array throws TypeError', () => {
+    const { ctx } = mockContext()
+    const streamLike = { getAudioTracks: () => 'not-an-array' }
+    expect(() => new PlecoMediaStreamAudioSourceNode(ctx, { mediaStream: streamLike })).toThrow(TypeError)
+  })
+
+  it('an audio track missing a string id throws TypeError', () => {
+    const { ctx } = mockContext()
+    const streamLike = { getAudioTracks: () => [{ kind: 'audio' }] } // no id
+    expect(() => new PlecoMediaStreamAudioSourceNode(ctx, { mediaStream: streamLike })).toThrow(TypeError)
+  })
+
+  it("id sort exercises the greater-than and equal comparator arms (duplicate + descending ids)", () => {
+    const { ctx } = mockContext()
+    const mk = (id) => new PlecoMediaStreamTrackShim({ id, channelCount: 1, sampleRate: SR })
+    // Insertion sort over ['1','3','3'] compares '3' > '1' (greater arm) and
+    // '3' === '3' (equal arm); construction picks the fed '1' track.
+    const node = ctx.createMediaStreamSource(new PlecoMediaStreamShim([mk('1'), mk('3'), mk('3')]))
+    expect(node).toBeInstanceOf(PlecoMediaStreamAudioSourceNode)
+  })
+})
+
 // ── Factory placement (AudioContext-only, per the spec IDL) ─────────────────
 
 describe('the four factories live on AudioContext, NOT BaseAudioContext', () => {
@@ -598,5 +676,21 @@ describe('the four factories live on AudioContext, NOT BaseAudioContext', () => 
     expect(ctx.createMediaStreamSource(stream)).toBeInstanceOf(PlecoMediaStreamAudioSourceNode)
     expect(ctx.createMediaStreamTrackSource(track)).toBeInstanceOf(PlecoMediaStreamTrackAudioSourceNode)
     expect(ctx.createMediaStreamDestination()).toBeInstanceOf(PlecoMediaStreamAudioDestinationNode)
+  })
+})
+
+describe('media adapter shims — constructor / enqueue guards', () => {
+  it('a track shim rejects a non-string kind or id', () => {
+    expect(() => new PlecoMediaStreamTrackShim({ kind: 42 })).toThrow(TypeError)
+    expect(() => new PlecoMediaStreamTrackShim({ id: 42 })).toThrow(TypeError)
+  })
+
+  it('a stream shim rejects a non-array track list', () => {
+    expect(() => new PlecoMediaStreamShim(42)).toThrow(TypeError)
+  })
+
+  it('enqueue rejects a chunk whose first channel is not a Float32Array', () => {
+    const feed = new PlecoMediaSampleFeed({ channelCount: 1 })
+    expect(() => feed.enqueue([42])).toThrow(TypeError) // right width, wrong element type
   })
 })

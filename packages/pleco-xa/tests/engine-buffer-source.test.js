@@ -217,6 +217,13 @@ describe('AudioBufferSourceNode — start(when, offset, duration) validation', (
     expect(() => s.start(0)).not.toThrow() // the failed calls consumed nothing
   })
 
+  it('a negative start time throws RangeError, consuming nothing', () => {
+    const ctx = makeCtx()
+    const s = makeSource(ctx, ramp(8))
+    expect(() => s.start(-0.5)).toThrow(RangeError)
+    expect(() => s.start(0)).not.toThrow() // the failed call consumed nothing
+  })
+
   it('non-finite offset/duration throws TypeError (WebIDL restricted double)', () => {
     const ctx = makeCtx()
     const s = makeSource(ctx, ramp(8))

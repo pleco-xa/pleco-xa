@@ -680,3 +680,10 @@ describe('PlecoIIRFilterNode — getFrequencyResponse', () => {
     expect(err.name).toBe('InvalidAccessError')
   })
 })
+
+describe('PlecoIIRFilterNode — non-array-like coefficient sequence', () => {
+  it('a present-but-non-array-like feedforward/feedback throws TypeError', () => {
+    expect(() => new PlecoIIRFilterNode(ctx(), { feedforward: 42, feedback: [1] })).toThrow(TypeError)
+    expect(() => new PlecoIIRFilterNode(ctx(), { feedforward: [1], feedback: true })).toThrow(TypeError)
+  })
+})

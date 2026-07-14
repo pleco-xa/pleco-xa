@@ -396,3 +396,25 @@ describe('PlecoScheduledSourceNode — structural shape after the port rework', 
     expect(s.detune._context).toBe(ctx)
   })
 })
+
+describe('PlecoNode — constructor + disconnect defensive guards', () => {
+  it('a null context throws TypeError (a context is required)', () => {
+    expect(() => new PlecoGainNode(null)).toThrow(TypeError)
+    expect(() => new PlecoNode(null)).toThrow(TypeError)
+  })
+
+  it('a non-integer / negative numberOfInputs or numberOfOutputs throws RangeError', () => {
+    const ctx = makeCtx()
+    expect(() => new PlecoNode(ctx, { numberOfInputs: -1 })).toThrow(RangeError)
+    expect(() => new PlecoNode(ctx, { numberOfInputs: 1.5 })).toThrow(RangeError)
+    expect(() => new PlecoNode(ctx, { numberOfOutputs: -1 })).toThrow(RangeError)
+    expect(() => new PlecoNode(ctx, { numberOfOutputs: 2.5 })).toThrow(RangeError)
+  })
+
+  it('disconnect(destination) with a non-node, non-param, non-index destination throws TypeError', () => {
+    const ctx = makeCtx()
+    const g = new PlecoGainNode(ctx)
+    expect(() => g.disconnect({})).toThrow(TypeError)
+    expect(() => g.disconnect('nope')).toThrow(TypeError)
+  })
+})
