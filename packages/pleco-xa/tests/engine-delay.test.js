@@ -124,6 +124,12 @@ describe('PlecoDelayNode — constructor surface (DelayOptions)', () => {
     expect(d.delayTime.value).toBe(0)
     expect(d.delayTime.maxValue).toBe(1) // default maxDelayTime = 1
   })
+
+  it('a non-object options argument → TypeError (WebIDL dictionary conversion)', () => {
+    for (const bad of [42, 'x', true]) {
+      expect(() => new PlecoDelayNode(makeCtx(), bad)).toThrow(TypeError)
+    }
+  })
 })
 
 describe('PlecoDelayNode — delay-line DSP (no cycle)', () => {
@@ -208,14 +214,42 @@ describe('PlecoDelayNode — delay-line DSP (no cycle)', () => {
     expect(nonZero(out.getChannelData(1))).toEqual({ 138: 1 })
   })
 
-  it('a channel-count change up-mixes retained delayed samples to the prevailing layout (spec § DelayNode)', () => {
+  it('the output width tracks the DELAYED input; still-silent history reads as mono (spec § DelayNode, issue #25)', () => {
+    // A one-quantum delay fed a stereo block. The first quantum reads history
+    // that predates any input → a single channel of silence (NOT the stereo
+    // width of the input that has already arrived); the next quantum reads
+    // back that stereo block → stereo output. (Resolution of web-audio-api
+    // issue #25: DelayNode output channelCount matches the delayed input.)
+    const ctx = makeCtx(2 * RENDER_QUANTUM, 2)
+    const d = new PlecoDelayNode(ctx)
+    d.delayTime.value = RENDER_QUANTUM / SR // exactly one render quantum
+    const buf = ctx.createBuffer(2, RENDER_QUANTUM, SR)
+    buf.getChannelData(0).fill(0.5)
+    buf.getChannelData(1).fill(0.25)
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    src.start(0)
+    src.connect(d)
+    d.connect(ctx.destination)
+
+    ctx.renderQuantum() // quantum 0 — reads unwritten history
+    expect(d._cacheBlock.numberOfChannels).toBe(1)
+    expect(nonZero(d._cacheBlock.getChannelData(0))).toEqual({})
+
+    ctx.renderQuantum() // quantum 1 — reads back the delayed stereo block
+    expect(d._cacheBlock.numberOfChannels).toBe(2)
+    expect(d._cacheBlock.getChannelData(0)[0]).toBe(0.5)
+    expect(d._cacheBlock.getChannelData(1)[0]).toBe(0.25)
+  })
+
+  it('the ring grows to the widest channel count seen and never shrinks (grow-only capacity)', () => {
     const d = new PlecoDelayNode(makeCtx())
-    d._ensureRing(1)
-    d._ring[0][5] = 1
-    d._ensureRing(2) // mono → stereo 'speakers' up-mix: L = M, R = M
+    d._ensureCapacity(1)
+    expect(d._ring.length).toBe(1)
+    d._ensureCapacity(2)
     expect(d._ring.length).toBe(2)
-    expect(d._ring[0][5]).toBe(1)
-    expect(d._ring[1][5]).toBe(1)
+    d._ensureCapacity(1) // never shrinks below the widest layout seen
+    expect(d._ring.length).toBe(2)
   })
 })
 

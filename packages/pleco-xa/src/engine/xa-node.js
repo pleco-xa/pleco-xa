@@ -61,6 +61,26 @@ export const CHANNEL_INTERPRETATIONS = ['speakers', 'discrete']
 /** Spec: "An implementation MUST support at least 32 channels" — pleco supports exactly 32 (same ceiling as PlecoAudioBuffer). */
 const MAX_CHANNELS = 32
 
+/**
+ * WebIDL dictionary argument conversion for a node's options dictionary (spec
+ * § WebIDL "convert an ECMAScript value to a dictionary"): `null`/`undefined`
+ * are the empty dictionary; any object (a function is an object) passes
+ * through; a non-object primitive (e.g. `new GainNode(ctx, 42)`) is a
+ * TypeError. This is the spec-aligned WebIDL-conversion seam (a parity library
+ * MUST match the browser here — see the AudioBufferSourceNode/DelayNode
+ * headers), NOT the house "no silent coercion" rule. A concrete node calls
+ * this on its raw `options` argument BEFORE spreading/destructuring, because a
+ * spread of a primitive (`{...42}`) would silently swallow the type error.
+ */
+export function coerceNodeOptions(options) {
+  if (options === null || options === undefined) return {}
+  const t = typeof options
+  if (t !== 'object' && t !== 'function') {
+    throw new TypeError(`AudioNode constructor: the options argument must be an object, got ${t}`)
+  }
+  return options
+}
+
 /** Spec-mandated IndexSizeError for out-of-range connect/disconnect port indexes. */
 function checkPortIndex(method, kind, index, count) {
   if (!Number.isInteger(index) || index < 0 || index >= count) {
@@ -489,7 +509,12 @@ export class PlecoScheduledSourceNode extends PlecoNode {
       throw new RangeError(`PlecoScheduledSourceNode.start: when must be non-negative, got ${when}`)
     }
     this._sourceStarted = true
-    this._startFrame = frameCeil(when * this.context.sampleRate)
+    // The exact (fractional) start position on the frame clock. _startFrame is
+    // its ceil (the first rendered frame); the fractional gap between them is
+    // the sub-sample start offset a subclass DSP needs to advance its playhead
+    // by at the first active frame (spec § sub-sample accurate scheduling).
+    this._startFrameExact = when * this.context.sampleRate
+    this._startFrame = frameCeil(this._startFrameExact)
     // A started source is live regardless of connectivity: register as a
     // context tail node so renderQuantum() keeps ticking it and the
     // stop/exhaustion window (→ `ended`) is evaluated even when nothing

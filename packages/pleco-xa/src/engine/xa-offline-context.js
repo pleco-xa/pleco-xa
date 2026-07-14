@@ -41,6 +41,13 @@
  *   dispatched on a microtask AFTER the startRendering() promise resolves —
  *   the last event fired on the context.
  *
+ * WebIDL-conversion seams — SPEC-ALIGNED for parity: `numberOfChannels` and
+ * `length` are IDL `unsigned long`, converted by ES ToNumber then truncation
+ * toward zero (a fractional length like 3276.8 becomes 3276, never a throw)
+ * before the nominal-range checks — the same seam as PlecoAudioBuffer. Missing
+ * required OfflineAudioContextOptions members (length, sampleRate) remain a
+ * WebIDL TypeError; out-of-nominal-range values remain NotSupportedError.
+ *
  * Pleco strictness (documented deviations from WebIDL coercion — no silent
  * fallbacks):
  * - suspendTime is IDL `double`: non-number or non-finite values reject with
@@ -66,7 +73,7 @@
  */
 import { PlecoBaseContext } from './xa-base-context.js'
 import { RENDER_QUANTUM } from './xa-constants.js'
-import { PlecoAudioBuffer, createPlecoAudioBuffer } from './xa-buffer.js'
+import { PlecoAudioBuffer, createPlecoAudioBuffer, toIntegralCount } from './xa-buffer.js'
 import { invalidStateError, notSupportedError } from './xa-errors.js'
 
 /** Spec: "MUST support at least 32 channels" — pleco's ceiling, same as PlecoAudioBuffer. */
@@ -149,17 +156,24 @@ export class PlecoOfflineAudioContext extends PlecoBaseContext {
       )
     }
 
-    // Spec: NotSupportedError when any argument is negative, zero, or outside
-    // its nominal range. Same bounds + strictness as PlecoAudioBuffer (non-
-    // integer values are rejected, never truncated).
-    if (!Number.isInteger(numberOfChannels) || numberOfChannels < 1 || numberOfChannels > MAX_CHANNELS) {
+    // WebIDL `unsigned long` conversion (ToNumber + truncate toward zero) for
+    // numberOfChannels + length, THEN the spec's nominal-range checks —
+    // identical seam to PlecoAudioBuffer. A fractional length like 3276.8
+    // truncates to 3276 (never a throw); values outside the nominal integer
+    // range (≤ 0, > 32 channels, non-finite) throw NotSupportedError rather
+    // than the old strict non-integer rejection or a silent 2^32 wrap.
+    const rawNumberOfChannels = numberOfChannels
+    const rawLength = length
+    numberOfChannels = toIntegralCount(rawNumberOfChannels)
+    length = toIntegralCount(rawLength)
+    if (!(numberOfChannels >= 1 && numberOfChannels <= MAX_CHANNELS)) {
       throw notSupportedError(
-        `PlecoOfflineAudioContext: numberOfChannels must be an integer in [1, ${MAX_CHANNELS}], got ${numberOfChannels}`,
+        `PlecoOfflineAudioContext: numberOfChannels must be in the nominal range [1, ${MAX_CHANNELS}], got ${rawNumberOfChannels}`,
       )
     }
-    if (!Number.isInteger(length) || length < 1) {
+    if (!(length >= 1)) {
       throw notSupportedError(
-        `PlecoOfflineAudioContext: length must be a positive integer sample-frame count, got ${length}`,
+        `PlecoOfflineAudioContext: length must be a positive sample-frame count, got ${rawLength}`,
       )
     }
     super({ sampleRate, numberOfChannels }) // validates sampleRate (NotSupportedError) + builds the destination

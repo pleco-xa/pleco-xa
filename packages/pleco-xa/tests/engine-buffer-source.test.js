@@ -149,6 +149,16 @@ describe('AudioBufferSourceNode — AudioBufferSourceOptions constructor', () =>
     expect(s.detune.value).toBe(600)
   })
 
+  it('a non-object options argument → TypeError (WebIDL dictionary conversion)', () => {
+    const ctx = makeCtx()
+    for (const bad of [42, 'x', true]) {
+      expect(() => new PlecoAudioBufferSourceNode(ctx, bad)).toThrow(TypeError)
+    }
+    // null / undefined are the empty dictionary — not an error.
+    expect(() => new PlecoAudioBufferSourceNode(ctx, null)).not.toThrow()
+    expect(() => new PlecoAudioBufferSourceNode(ctx, undefined)).not.toThrow()
+  })
+
   it('invalid dictionary members throw TypeError (constructor dictionary path)', () => {
     const ctx = makeCtx()
     expect(() => new PlecoAudioBufferSourceNode(ctx, { loop: 1 })).toThrow(TypeError)
@@ -249,7 +259,9 @@ describe('AudioBufferSourceNode — offset and duration playback', () => {
     expect(out[1]).toBe(15)
     expect(out[5]).toBe(55)
     expect(out[6]).toBe(65) // (60 + 70)/2 at cursor 6.5
-    expect(out[7]).toBe(70) // cursor 7.5 < duration still reads; past-the-end neighbor holds buf[7]
+    // cursor 7.5: the last sample buf[7]=70 with its continuation linearly
+    // extrapolated past the buffer end (2·70 − buf[6] = 80) at frac 0.5 → 75.
+    expect(out[7]).toBe(75)
     expect(out[8]).toBe(0) // cursor 8.5 ≥ len → exhausted
   })
 

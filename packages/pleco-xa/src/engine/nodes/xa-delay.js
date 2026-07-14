@@ -19,11 +19,16 @@
  * frame i, readPos = writeIndex + i − delaySamples(i), sample =
  * ring[⌊readPos⌋] + frac·(ring[⌊readPos⌋+1] − ring[⌊readPos⌋]). Ring buffers
  * are Float32Array, so every write and every interpolated read result passes
- * the float32 boundary. When the input channel count changes, the retained
- * delayed samples are up/down-mixed to the prevailing layout via the spec
- * mixing tables (mixInto with this node's channelInterpretation), per
- * § DelayNode "all internal delay-line mixing takes place using the single
- * prevailing channel layout".
+ * the float32 boundary. The ring grows to the widest channel count ever seen
+ * and never shrinks, but a parallel per-frame channel-count map records how
+ * many channels each written frame carried (0 = never written = initial
+ * silence). The OUTPUT block's channel count is that of the DELAYED input
+ * being read this quantum — the max recorded count over the block's read
+ * positions, unwritten frames counting as mono (spec § DelayNode, resolution
+ * of web-audio-api issue #25: "DelayNode output channelCount matches that of
+ * the delayed input"). So a delay reading back its still-silent history emits
+ * a single channel, and only widens to stereo once it reads frames that were
+ * written as stereo — instead of forcing every read to the widest layout.
  *
  * THE CYCLE RULE, delay half (spec § rendering-loop step 4.2 — a cycle is
  * legal only if it contains a DelayNode, which is then split into a
@@ -51,17 +56,11 @@
  * re-entrant read falls back to a k-rate snapshot of delayTime.value for
  * that quantum — documented engine behavior, never a silent failure.
  */
-import { PlecoNode } from '../xa-node.js'
+import { PlecoNode, coerceNodeOptions } from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
-import { mixInto } from '../xa-channel-mixing.js'
 import { notSupportedError } from '../xa-errors.js'
-
-/** Wrap per-channel ring Float32Arrays as an AudioBuffer-shaped object for mixInto(). */
-function ringView(channels, length) {
-  return { numberOfChannels: channels.length, length, getChannelData: (c) => channels[c] }
-}
 
 /**
  * The context's deferred-DelayWriter queue (engine-internal registry,
@@ -109,7 +108,9 @@ export class PlecoDelayNode extends PlecoNode {
    *   NotSupportedError; non-finite members → TypeError.
    */
   constructor(context, options = {}) {
-    options = options ?? {} // WebIDL dictionary conversion: null is the empty dictionary
+    // WebIDL dictionary conversion: null/undefined → empty dictionary; a
+    // non-object 2nd argument (e.g. new DelayNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     super(context, { ...options, numberOfInputs: 1, numberOfOutputs: 1 })
     const { maxDelayTime = 1, delayTime = 0 } = options
     if (typeof maxDelayTime !== 'number' || !Number.isFinite(maxDelayTime)) {
@@ -131,13 +132,18 @@ export class PlecoDelayNode extends PlecoNode {
     // advances when a quantum is actually written (immediately outside a
     // cycle, at the deferred flush inside one).
     this._ringLength = Math.ceil(maxDelayTime * context.sampleRate) + RENDER_QUANTUM
-    this._ring = [] // per-channel Float32Array(this._ringLength)
+    this._ring = [] // per-channel Float32Array(this._ringLength), grow-only
+    // Per-frame channel count of the input written at each ring position
+    // (0 = never written = initial mono silence). Drives the output block's
+    // channel width (spec issue #25 — see the file header).
+    this._ringChannelCount = new Uint8Array(this._ringLength)
     this._writeIndex = 0
     // Per-quantum working state, keyed by currentTime so it self-expires.
     this._delayBlock = new Float32Array(RENDER_QUANTUM)
     this._delayBlockTime = -1
     this._readBlock = null
     this._readTime = -1
+    this._readPos = new Float64Array(RENDER_QUANTUM) // reused per-quantum read-position scratch
     this._inCycleAt = -1
     // The marker xa-node.js's cycle detection looks for (spec: a cycle is
     // legal only if it contains at least one DelayNode).
@@ -176,25 +182,39 @@ export class PlecoDelayNode extends PlecoNode {
   _computeRead(now) {
     if (this._readTime === now) return this._readBlock
     const sr = this.context.sampleRate
+    const ringLen = this._ringLength
+    const w = this._writeIndex
     const minDelaySamples = this._inCycleAt === now ? RENDER_QUANTUM : 0
     const aRateReady = this._delayBlockTime === now
     const kSnapshot = aRateReady
       ? 0
       : Math.min(this.#maxDelayTime, Math.max(0, this.#delayTime.value))
-    const channels = this._ring.length === 0 ? 1 : this._ring.length
-    const out = createPlecoAudioBuffer(channels, RENDER_QUANTUM, sr)
-    const ringLen = this._ringLength
-    const w = this._writeIndex
-    for (let c = 0; c < this._ring.length; c++) {
+    const counts = this._ringChannelCount
+    const pos = this._readPos
+    // First pass: fractional read position per output frame + the block's
+    // output channel width. The width is the channel count of the DELAYED
+    // input being read (spec issue #25); an unwritten (initial-silence) ring
+    // frame counts as mono, so a delay reading its still-empty history stays
+    // single-channel instead of adopting the widest layout ever written.
+    let outChannels = 1
+    for (let i = 0; i < RENDER_QUANTUM; i++) {
+      const seconds = aRateReady ? this._delayBlock[i] : kSnapshot
+      const d = Math.max(seconds * sr, minDelaySamples)
+      let p = (w + i - d) % ringLen
+      if (p < 0) p += ringLen
+      pos[i] = p
+      const cc = counts[Math.floor(p)]
+      if (cc > outChannels) outChannels = cc
+    }
+    const out = createPlecoAudioBuffer(outChannels, RENDER_QUANTUM, sr)
+    for (let c = 0; c < outChannels; c++) {
       const ring = this._ring[c]
+      if (ring === undefined) continue // channel never allocated → stays silent
       const dst = out.getChannelData(c)
       for (let i = 0; i < RENDER_QUANTUM; i++) {
-        const seconds = aRateReady ? this._delayBlock[i] : kSnapshot
-        const d = Math.max(seconds * sr, minDelaySamples)
-        let pos = (w + i - d) % ringLen
-        if (pos < 0) pos += ringLen
-        const k = Math.floor(pos)
-        const frac = pos - k
+        const p = pos[i]
+        const k = Math.floor(p)
+        const frac = p - k
         const a = ring[k]
         const b = ring[(k + 1) % ringLen]
         dst[i] = a + frac * (b - a) // Float32Array store — the float32 boundary
@@ -206,36 +226,37 @@ export class PlecoDelayNode extends PlecoNode {
   }
 
   /**
-   * Match the ring's channel layout to `channels`, up/down-mixing any
-   * retained delayed samples into the prevailing layout via the spec mixing
-   * tables (§ DelayNode channel-count-change rule). Fresh channels start
-   * silent; mixInto accumulates into them.
+   * Grow the ring to at least `channels` per-channel buffers (never shrinks —
+   * the delay line retains the widest layout it has seen so historic wide
+   * frames survive; the per-frame channel-count map, not the ring width,
+   * decides how many channels each read emits). Fresh channels start silent.
    */
-  _ensureRing(channels) {
-    if (this._ring.length === channels) return
-    const old = this._ring
-    const next = []
-    for (let c = 0; c < channels; c++) next.push(new Float32Array(this._ringLength))
-    if (old.length > 0) {
-      mixInto(ringView(next, this._ringLength), ringView(old, this._ringLength), this.channelInterpretation)
+  _ensureCapacity(channels) {
+    for (let c = this._ring.length; c < channels; c++) {
+      this._ring.push(new Float32Array(this._ringLength))
     }
-    this._ring = next
   }
 
   /**
-   * The DelayWriter: write one input quantum at _writeIndex. Does NOT advance
-   * the index — the reader computes offsets relative to the same quantum base,
-   * so the caller advances only after the quantum's read has resolved
-   * (_advanceQuantum).
+   * The DelayWriter: write one input quantum at _writeIndex and record its
+   * per-frame channel count. Does NOT advance the index — the reader computes
+   * offsets relative to the same quantum base, so the caller advances only
+   * after the quantum's read has resolved (_advanceQuantum). Ring channels
+   * beyond the input's width are zeroed for these frames so stale wide data
+   * from an earlier quantum cannot leak into a now-narrower block.
    */
   _writeQuantum(input) {
     const w = this._writeIndex
     const len = this._ringLength
+    const inCh = input.numberOfChannels
+    this._ensureCapacity(inCh)
+    const counts = this._ringChannelCount
     for (let c = 0; c < this._ring.length; c++) {
       const ring = this._ring[c]
-      const src = input.getChannelData(c)
-      for (let i = 0; i < RENDER_QUANTUM; i++) ring[(w + i) % len] = src[i]
+      const src = c < inCh ? input.getChannelData(c) : null
+      for (let i = 0; i < RENDER_QUANTUM; i++) ring[(w + i) % len] = src === null ? 0 : src[i]
     }
+    for (let i = 0; i < RENDER_QUANTUM; i++) counts[(w + i) % len] = inCh
   }
 
   /** Move the ring's quantum base forward once this quantum's write is committed. */
@@ -255,7 +276,6 @@ export class PlecoDelayNode extends PlecoNode {
     }
     // Not in a cycle: write-then-read, so delayTime 0 is exact passthrough
     // and the output channel count equals the input's (spec § DelayNode).
-    this._ensureRing(input.numberOfChannels)
     this._writeQuantum(input)
     const out = this._computeRead(now)
     this._advanceQuantum()
@@ -265,7 +285,6 @@ export class PlecoDelayNode extends PlecoNode {
   /** Post-pull DelayWriter flush: re-pull the settled input and commit it to the ring. */
   _flushDeferredWrite() {
     const input = this._inputs[0]._pull()
-    this._ensureRing(input.numberOfChannels)
     this._writeQuantum(input)
     this._advanceQuantum()
   }

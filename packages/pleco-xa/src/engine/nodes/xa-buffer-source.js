@@ -63,15 +63,22 @@
  * back to one silent channel at the first quantum after the source ends.
  *
  * Ended semantics (through the P05 base): stop time, duration reached, or
- * content exhausted. Documented pleco choice: a non-looping playhead LEAVING
- * [0, buffer.duration) ends the source in BOTH directions — the spec prose
- * only names "the end of the buffer has been reached" (forward); its
- * algorithm would render silence forever for a backward playhead passing 0,
- * which would strand the source in the tail set. Similarly spec-literal:
- * bufferTimeElapsed accumulates SIGNED (dt·computedPlaybackRate), so a
- * negative rate never advances toward `duration`.
+ * content exhausted. A non-looping playhead OUTSIDE [0, buffer.duration) ends
+ * the source only when it can never re-enter — i.e. it has left in its
+ * direction of travel (forward past the end, or backward past 0). A playhead
+ * that is out of range but heading BACK toward the buffer (a negative rate
+ * whose start offset lands at/after the buffer end, per this file's
+ * playbackrate-negative edge cases) renders silence and keeps advancing until
+ * it re-enters, rather than ending prematurely; a zero rate outside the buffer
+ * can never return and ends. Similarly spec-literal:
+ * bufferTimeElapsed accumulates SIGNED (Σ computedPlaybackRate per rendered
+ * frame, i.e. duration·contextSampleRate units), so a negative rate never
+ * advances toward `duration`. The sub-sample start offset (_startFrame −
+ * _startFrameExact) seeds both the playhead cursor and this sum, so a grain
+ * that begins at a fractional frame is interpolated from its true start and
+ * ends on the exact spec-computed frame (§ sub-sample accurate scheduling).
  */
-import { PlecoScheduledSourceNode } from '../xa-node.js'
+import { PlecoScheduledSourceNode, coerceNodeOptions } from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { PlecoAudioBuffer, createPlecoAudioBuffer } from '../xa-buffer.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
@@ -100,6 +107,10 @@ export class PlecoAudioBufferSourceNode extends PlecoScheduledSourceNode {
    *   here (unknown members are ignored, WebIDL dictionary behavior).
    */
   constructor(context, options = {}) {
+    // WebIDL dictionary conversion: a non-object 2nd argument is a TypeError
+    // (spec-aligned conversion seam — must precede the spread below, which
+    // would otherwise silently swallow a primitive).
+    options = coerceNodeOptions(options)
     const { buffer, detune, loop = false, loopEnd = 0, loopStart = 0, playbackRate } = options
     // Spec node table: 0 inputs, 1 output, channelCount 2, mode 'max',
     // interpretation 'speakers' — exactly the PlecoNode defaults. The
@@ -140,7 +151,13 @@ export class PlecoAudioBufferSourceNode extends PlecoScheduledSourceNode {
     this._enteredLoop = false
     this._cursor = 0 // playhead in BUFFER-SAMPLE units (fractional; spec bufferTime × bufSr)
     this._offsetSamples = 0 // the algorithm's (clamped) `offset`, for the enteredLoop checks
-    this._elapsed = 0 // bufferTimeElapsed, seconds of buffer content
+    // bufferTimeElapsed, measured as Σ computedPlaybackRate over rendered
+    // frames (content-seconds × contextSampleRate). Accumulating the raw rate
+    // sum — not the per-frame seconds (rate/sr) — keeps the duration boundary
+    // EXACT for the common constant/block-constant integer rates (2·N, 0.5·N
+    // are exact doubles), so a grain ends on precisely the spec-computed frame
+    // instead of one late from float drift. Compared against duration·sr.
+    this._elapsedRateSum = 0
     this._startOffset = 0 // start()'s offset argument, seconds
     this._startDuration = Infinity // start()'s duration argument, seconds of buffer content
     // k-rate scratch blocks for the compound parameter (one alloc, reused).
@@ -309,10 +326,31 @@ export class PlecoAudioBufferSourceNode extends PlecoScheduledSourceNode {
       let cursor = Math.min(this._startOffset, buf.duration) * bufSr
       if (loop && computedRate >= 0 && cursor >= loopEndS) cursor = loopEndS
       if (loop && computedRate < 0 && cursor < loopStartS) cursor = loopStartS
+      // Sub-sample accurate start (spec § sub-sample scheduling): the source
+      // began at the fractional frame _startFrameExact, but the first rendered
+      // frame is its ceil (_startFrame). By that frame the playhead has already
+      // advanced (_startFrame − _startFrameExact) context frames of content, so
+      // seed the cursor and the elapsed sum with that partial step instead of
+      // snapping the start to the integer frame.
+      // Clamp to ≥ 0: when the exact start sits a hair ABOVE the integer frame
+      // that frameCeil snapped it to, the raw difference is a sub-ULP negative
+      // that would push the cursor below 0 and trip the buffer-bounds check,
+      // dropping the grain's first frame entirely (an aligned start has no real
+      // sub-sample offset).
+      const subFrame = Math.max(0, this._startFrame - this._startFrameExact) // ∈ [0, 1)
+      cursor += subFrame * step
+      this._elapsedRateSum = subFrame * computedRate
       this._cursor = cursor
       this._offsetSamples = cursor // the algorithm mutates `offset`; entered checks use the clamped value
       this._playheadStarted = true
     }
+
+    // Grain end target in the elapsed-sum's units (duration·sr). Infinity when
+    // duration was omitted. A small tolerance absorbs the single rounding of
+    // the multiply so a frame-aligned boundary resolves as "reached" (the sum
+    // itself is exact for integer rates); it is orders of magnitude below one
+    // frame's rate step, so it never silences a legitimately-playing frame.
+    const durationTarget = this._startDuration * this.context.sampleRate - 1e-6
 
     const channels = buf.numberOfChannels
     const srcs = []
@@ -325,7 +363,7 @@ export class PlecoAudioBufferSourceNode extends PlecoScheduledSourceNode {
     for (let j = 0; j < count; j++) {
       // duration reached → this frame (and all after) silent; producing
       // j < count frames makes the base end the source.
-      if (this._elapsed >= this._startDuration) return j
+      if (this._elapsedRateSum >= durationTarget) return j
 
       if (loop) {
         if (!this._enteredLoop) {
@@ -343,46 +381,62 @@ export class PlecoAudioBufferSourceNode extends PlecoScheduledSourceNode {
 
       const cursor = this._cursor
       if (!(cursor >= 0 && cursor < len)) {
-        // Non-loop playhead left the buffer (either direction) — content
-        // exhausted (see header on the backward case).
-        return j
-      }
-
-      const i0 = Math.floor(cursor)
-      const frac = cursor - i0
-      if (frac === 0) {
-        // Exact frame — lossless copy (the rate-1 path stays bit-exact).
-        for (let c = 0; c < channels; c++) dsts[c][offset + j] = srcs[c][i0]
+        // Playhead outside the buffer. If it is moving further away (or the
+        // rate is 0) it can never re-enter → content exhausted, end here. If it
+        // is instead heading back toward the buffer — a negative rate whose
+        // start offset lands at or past the buffer end — emit silence this
+        // frame (dst is already 0) and keep advancing until the playhead
+        // re-enters (spec § Playback: out-of-range frames are silent, not the
+        // end of playback, unless the playhead can never return).
+        const heading = (cursor < 0 && step > 0) || (cursor >= len && step < 0)
+        if (!heading) return j
       } else {
-        const i1 = i0 + 1
-        // Loop splice (spec playbackSignal): a neighbor at/after actualLoopEnd
-        // wraps to the equivalent position after loopStart, itself interpolated.
-        const splice = loop && this._enteredLoop && i1 >= loopEndS
-        let p = 0
-        let k = 0
-        let kf = 0
-        if (splice) {
-          p = loopStartS + (i1 - loopEndS)
-          k = Math.floor(p)
-          kf = p - k
-        }
-        for (let c = 0; c < channels; c++) {
-          const data = srcs[c]
-          const a = data[i0]
-          let b
+        const i0 = Math.floor(cursor)
+        const frac = cursor - i0
+        if (frac === 0) {
+          // Exact frame — lossless copy (the rate-1 path stays bit-exact).
+          for (let c = 0; c < channels; c++) dsts[c][offset + j] = srcs[c][i0]
+        } else {
+          const i1 = i0 + 1
+          // Loop splice (spec playbackSignal): a neighbor at/after actualLoopEnd
+          // wraps to the equivalent position after loopStart, itself interpolated.
+          const splice = loop && this._enteredLoop && i1 >= loopEndS
+          let p = 0
+          let k = 0
+          let kf = 0
           if (splice) {
-            const s0 = k >= 0 && k < len ? data[k] : 0
-            const s1 = k + 1 < len ? data[k + 1] : s0
-            b = kf === 0 ? s0 : s0 + (s1 - s0) * kf
-          } else {
-            b = i1 < len ? data[i1] : a
+            p = loopStartS + (i1 - loopEndS)
+            k = Math.floor(p)
+            kf = p - k
           }
-          dsts[c][offset + j] = a + (b - a) * frac
+          for (let c = 0; c < channels; c++) {
+            const data = srcs[c]
+            const a = data[i0]
+            let b
+            if (splice) {
+              const s0 = k >= 0 && k < len ? data[k] : 0
+              const s1 = k + 1 < len ? data[k + 1] : s0
+              b = kf === 0 ? s0 : s0 + (s1 - s0) * kf
+            } else if (i1 < len) {
+              b = data[i1]
+            } else if (i0 >= 1) {
+              // Past the last frame of a non-looping buffer: linearly
+              // extrapolate the continuation (2·data[i0] − data[i0−1]) rather
+              // than holding data[i0]. A buffer stitched to a successor ABSN
+              // then keeps the signal's slope across the seam instead of
+              // plateauing (spec resamples across the buffer end; WPT
+              // "Extrapolation at end of AudioBuffer").
+              b = 2 * a - data[i0 - 1]
+            } else {
+              b = a // single-frame buffer — nothing to extrapolate from
+            }
+            dsts[c][offset + j] = a + (b - a) * frac
+          }
         }
       }
 
       this._cursor += step
-      this._elapsed += step / bufSr // dt·computedRate: SIGNED, spec-literal
+      this._elapsedRateSum += computedRate // Σ computedPlaybackRate; SIGNED, spec-literal
     }
     return count
   }

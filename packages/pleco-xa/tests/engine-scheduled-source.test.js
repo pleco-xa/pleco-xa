@@ -392,9 +392,15 @@ describe('AudioScheduledSourceNode — the upgraded base through PlecoAudioBuffe
     s.start(t(100.5))
     const out = ctx.renderQuantum().getChannelData(0)
     expect(out[100]).toBe(0)
-    expect(out[101]).toBe(1) // buf[0] at frame ceil(100.5) = 101
-    expect(out[116]).toBe(16) // buf[15] at frame 116
-    expect(out[117]).toBe(0) // exhausted
+    // Sub-sample accurate start (spec § sub-sample scheduling): the source
+    // begins at frame 100.5, so the first rendered frame (101) is already half
+    // a sample in — buf[0]=1, buf[1]=2 interpolated at 0.5 → 1.5 — not a snap
+    // to buf[0]. Each later frame steps one sample: out[101+k] = k + 1.5.
+    expect(out[101]).toBe(1.5)
+    // Frame 116 reads cursor 15.5: the last sample buf[15]=16 linearly
+    // extrapolated past the buffer end (2·16 − 15 = 17) at frac 0.5 → 16.5.
+    expect(out[116]).toBe(16.5)
+    expect(out[117]).toBe(0) // playhead left the buffer forward → exhausted
     expect(() => s.start(0)).toThrow(DOMException) // InvalidStateError on restart
     expect(ended).toBe(0)
     await flushMicrotasks()

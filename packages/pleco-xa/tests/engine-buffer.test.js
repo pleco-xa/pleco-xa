@@ -74,16 +74,38 @@ describe('PlecoAudioBuffer — spec-shaped validation (NotSupportedError / Index
     throwsName(() => new PlecoAudioBuffer({ numberOfChannels: 0, length: 10, sampleRate: 44100 }), 'NotSupportedError')
     throwsName(() => new PlecoAudioBuffer({ numberOfChannels: -1, length: 10, sampleRate: 44100 }), 'NotSupportedError')
     throwsName(() => new PlecoAudioBuffer({ numberOfChannels: 33, length: 10, sampleRate: 44100 }), 'NotSupportedError')
-    throwsName(() => new PlecoAudioBuffer({ numberOfChannels: 1.5, length: 10, sampleRate: 44100 }), 'NotSupportedError')
     // 32 channels MUST be supported (spec floor)
     expect(new PlecoAudioBuffer({ numberOfChannels: 32, length: 10, sampleRate: 44100 }).numberOfChannels).toBe(32)
   })
 
-  it('throws NotSupportedError for zero/negative/non-integer length', () => {
+  it('truncates a fractional numberOfChannels to an unsigned long (WebIDL), not a throw', () => {
+    // WebIDL `unsigned long` conversion: ToNumber then truncate toward zero, so
+    // 1.5 → 1 (a valid single channel), not the old NotSupportedError.
+    expect(new PlecoAudioBuffer({ numberOfChannels: 1.5, length: 10, sampleRate: 44100 }).numberOfChannels).toBe(1)
+    expect(new PlecoAudioBuffer({ numberOfChannels: 2.9, length: 10, sampleRate: 44100 }).numberOfChannels).toBe(2)
+  })
+
+  it('throws NotSupportedError for zero/negative length', () => {
     throwsName(() => new PlecoAudioBuffer({ numberOfChannels: 1, length: 0, sampleRate: 44100 }), 'NotSupportedError')
     throwsName(() => new PlecoAudioBuffer({ numberOfChannels: 1, length: -8, sampleRate: 44100 }), 'NotSupportedError')
-    throwsName(() => new PlecoAudioBuffer({ numberOfChannels: 1, length: 7.5, sampleRate: 44100 }), 'NotSupportedError')
-    throwsName(() => new PlecoAudioBuffer({ numberOfChannels: 1, sampleRate: 44100 }), 'NotSupportedError')
+  })
+
+  it('truncates a fractional length to an unsigned long (WebIDL), not a throw', () => {
+    // WebIDL `unsigned long`: 7.5 → 7 (reclaims the biquad/panner render files
+    // that build buffers at 0.1·sampleRate); 3276.8 → 3276.
+    expect(new PlecoAudioBuffer({ numberOfChannels: 1, length: 7.5, sampleRate: 44100 }).length).toBe(7)
+    expect(new PlecoAudioBuffer({ numberOfChannels: 1, length: 3276.8, sampleRate: 44100 }).length).toBe(3276)
+  })
+
+  it('throws TypeError (not NotSupportedError) for a missing required member or a non-dictionary argument', () => {
+    // WebIDL: `length`/`sampleRate` are REQUIRED members → missing is a TypeError;
+    // a non-object argument fails dictionary conversion with a TypeError.
+    expect(() => new PlecoAudioBuffer({ numberOfChannels: 1, sampleRate: 44100 })).toThrow(TypeError) // missing length
+    expect(() => new PlecoAudioBuffer({ numberOfChannels: 1, length: 10 })).toThrow(TypeError) // missing sampleRate
+    expect(() => new PlecoAudioBuffer()).toThrow(TypeError)
+    expect(() => new PlecoAudioBuffer({})).toThrow(TypeError)
+    expect(() => new PlecoAudioBuffer(1)).toThrow(TypeError)
+    expect(() => new PlecoAudioBuffer('nope')).toThrow(TypeError)
   })
 
   it("throws NotSupportedError for sampleRate outside the spec's nominal range [3000, 768000] Hz", () => {
@@ -100,17 +122,35 @@ describe('PlecoAudioBuffer — spec-shaped validation (NotSupportedError / Index
   it('throws IndexSizeError (not RangeError) for a bad channel index in all three channel accessors', () => {
     const b = createPlecoAudioBuffer(2, 8, 44100)
     throwsName(() => b.getChannelData(2), 'IndexSizeError')
+    // WebIDL `unsigned long`: -1 wraps to 2^32−1, which is >= numberOfChannels.
     throwsName(() => b.getChannelData(-1), 'IndexSizeError')
     throwsName(() => b.copyToChannel(new Float32Array(4), 2), 'IndexSizeError')
     throwsName(() => b.copyFromChannel(new Float32Array(4), 2), 'IndexSizeError')
+    throwsName(() => b.copyToChannel(new Float32Array(4), -1), 'IndexSizeError')
+    throwsName(() => b.copyFromChannel(new Float32Array(4), -1), 'IndexSizeError')
   })
 
-  it('keeps native TypeError / RangeError where the spec does not mandate a DOMException', () => {
+  it('throws TypeError for a non-Float32Array or SharedArrayBuffer-backed source/destination (plain IDL Float32Array)', () => {
     const b = createPlecoAudioBuffer(1, 8, 44100)
     expect(() => b.copyToChannel([1, 2, 3], 0)).toThrow(TypeError)
     expect(() => b.copyFromChannel([1, 2, 3], 0)).toThrow(TypeError)
-    expect(() => b.copyToChannel(new Float32Array(2), 0, -1)).toThrow(RangeError)
-    expect(() => b.copyFromChannel(new Float32Array(2), 0, -1)).toThrow(RangeError)
+    // A view over a SharedArrayBuffer is rejected by a plain `Float32Array` IDL
+    // type (only `[AllowShared]` accepts shared) — TypeError, per WPT.
+    const shared = new Float32Array(new SharedArrayBuffer(8))
+    expect(() => b.copyToChannel(shared, 0)).toThrow(TypeError)
+    expect(() => b.copyFromChannel(shared, 0)).toThrow(TypeError)
+  })
+
+  it('a negative bufferOffset wraps to an unsigned long and copies 0 frames without throwing (WebIDL)', () => {
+    // The old house rule threw RangeError; the browser wraps -1 to 2^32−1 so the
+    // spec clipping formula max(0, min(Nb−k, Nf)) yields 0 frames, no throw.
+    const b = createPlecoAudioBuffer(1, 4, 44100)
+    b.getChannelData(0).set([1, 2, 3, 4])
+    expect(() => b.copyToChannel(Float32Array.from([9, 9]), 0, -1)).not.toThrow()
+    expect(Array.from(b.getChannelData(0))).toEqual([1, 2, 3, 4]) // untouched
+    const out = Float32Array.from([7, 7, 7, 7])
+    expect(() => b.copyFromChannel(out, 0, -1)).not.toThrow()
+    expect(Array.from(out)).toEqual([7, 7, 7, 7]) // untouched
   })
 
   it('numberOfChannels / length / sampleRate / duration are readonly', () => {
