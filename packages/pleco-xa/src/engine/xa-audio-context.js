@@ -113,6 +113,12 @@
 import { PlecoBaseContext } from './xa-base-context.js'
 import { RENDER_QUANTUM } from './xa-constants.js'
 import { PlecoAudioDestinationNode } from './nodes/xa-destination.js'
+import {
+  PlecoMediaElementAudioSourceNode,
+  PlecoMediaStreamAudioSourceNode,
+  PlecoMediaStreamTrackAudioSourceNode,
+  PlecoMediaStreamAudioDestinationNode,
+} from './nodes/xa-media-nodes.js'
 import { PlecoNullSink } from './xa-sink.js'
 import { invalidStateError, invalidAccessError, notSupportedError } from './xa-errors.js'
 
@@ -795,6 +801,33 @@ export class PlecoAudioContext extends PlecoBaseContext {
       this.dispatchEvent(new Event('sinkchange'))
       if (wasRunning) this._setState('running')
     })
+  }
+
+  // ── The four AudioContext-only media-node factories (P22) ────────────────
+  // Spec IDL places these on AudioContext, NOT BaseAudioContext (index.bs
+  // § The AudioContext Interface) — the media types they take are realtime
+  // concerns. Each factory algorithm sets only the passed parameter; all
+  // validation (required members, InvalidStateError track rules, the pleco
+  // missing-feed gate) lives in the node constructors (nodes/xa-media-nodes.js).
+
+  /** Spec § createMediaElementSource(mediaElement). */
+  createMediaElementSource(mediaElement) {
+    return new PlecoMediaElementAudioSourceNode(this, { mediaElement })
+  }
+
+  /** Spec § createMediaStreamSource(mediaStream). */
+  createMediaStreamSource(mediaStream) {
+    return new PlecoMediaStreamAudioSourceNode(this, { mediaStream })
+  }
+
+  /** Spec § createMediaStreamTrackSource(mediaStreamTrack). */
+  createMediaStreamTrackSource(mediaStreamTrack) {
+    return new PlecoMediaStreamTrackAudioSourceNode(this, { mediaStreamTrack })
+  }
+
+  /** Spec § createMediaStreamDestination() — no parameters; spec node-table defaults. */
+  createMediaStreamDestination() {
+    return new PlecoMediaStreamAudioDestinationNode(this)
   }
 
   // ── Host-facing interruption primitives (pleco host API — see header) ─────
