@@ -23,13 +23,15 @@
  * from it — so fanning several outputs to several consumers still computes
  * the split exactly once per quantum.
  */
-import { PlecoNode, CHANNEL_COUNT_MODES, CHANNEL_INTERPRETATIONS } from '../xa-node.js'
+import { PlecoNode, CHANNEL_COUNT_MODES, CHANNEL_INTERPRETATIONS, coerceNodeOptions} from '../xa-node.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
 import { indexSizeError, invalidStateError } from '../xa-errors.js'
 
 export class PlecoChannelSplitterNode extends PlecoNode {
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     const { numberOfOutputs = 6 } = options
     if (!Number.isInteger(numberOfOutputs) || numberOfOutputs < 1 || numberOfOutputs > 32) {
       throw indexSizeError(

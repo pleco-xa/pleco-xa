@@ -50,7 +50,7 @@
  * TypeError (WebIDL restricted double conversion precedes the algorithm —
  * the P05 house pattern).
  */
-import { PlecoNode } from '../xa-node.js'
+import { PlecoNode, coerceNodeOptions} from '../xa-node.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
 import { mixInto } from '../xa-channel-mixing.js'
@@ -97,6 +97,8 @@ export class PlecoAnalyserNode extends PlecoNode {
    *   minDecibels, smoothingTimeConstant) merged with AudioNodeOptions.
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     super(context, { ...options, numberOfInputs: 1, numberOfOutputs: 1 })
     const {
       fftSize = 2048,

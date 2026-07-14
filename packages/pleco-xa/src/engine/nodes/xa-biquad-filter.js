@@ -56,7 +56,7 @@
  * values outright instead of coercing via WebIDL ToNumber is deliberate pleco
  * strictness, not spec behavior.
  */
-import { PlecoNode } from '../xa-node.js'
+import { PlecoNode, coerceNodeOptions} from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
@@ -247,6 +247,8 @@ export class PlecoBiquadFilterNode extends PlecoNode {
    *   default (350 / 0 / 1 / 0) regardless of options.
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     // WebIDL dictionary conversion: null (like undefined) is the empty dictionary.
     const { type = 'lowpass', frequency, detune, Q, gain, ...nodeOptions } = options ?? {}
     super(context, { ...nodeOptions, numberOfInputs: 1, numberOfOutputs: 1 })

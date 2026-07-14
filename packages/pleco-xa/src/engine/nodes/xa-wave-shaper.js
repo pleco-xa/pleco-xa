@@ -49,7 +49,7 @@
  * delay lines flush their remaining ≈ tail-length of signal into the next
  * blocks — no explicit tail registration needed.
  */
-import { PlecoNode } from '../xa-node.js'
+import { PlecoNode, coerceNodeOptions} from '../xa-node.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
 import { invalidStateError } from '../xa-errors.js'
@@ -163,6 +163,8 @@ export class PlecoWaveShaperNode extends PlecoNode {
    *   mode 'max', interpretation 'speakers' (the PlecoNode defaults).
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     const { curve, oversample = 'none', ...nodeOptions } = options
     super(context, { ...nodeOptions, numberOfInputs: 1, numberOfOutputs: 1 })
     // Constructor dictionary path: an invalid OverSampleType is a WebIDL

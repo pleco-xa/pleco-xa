@@ -45,7 +45,7 @@
  * per-quantum allocation (the engine already allocates blocks per quantum;
  * checklist divergence #16).
  */
-import { PlecoScheduledSourceNode } from '../xa-node.js'
+import { PlecoScheduledSourceNode, coerceNodeOptions} from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
@@ -59,6 +59,8 @@ export class PlecoConstantSourceNode extends PlecoScheduledSourceNode {
    *   AudioNodeOptions members, per the spec IDL — unknown members are ignored).
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     // Spec node table defaults (channelCount 2, mode 'max', interpretation
     // 'speakers') are the PlecoNode defaults; the base forces numberOfInputs 0.
     super(context, { numberOfOutputs: 1 })

@@ -119,7 +119,7 @@
  * delay lines flush their remaining 6 ms naturally after the input goes
  * silent — no explicit tail registration needed.
  */
-import { PlecoNode, CHANNEL_COUNT_MODES } from '../xa-node.js'
+import { PlecoNode, CHANNEL_COUNT_MODES, coerceNodeOptions} from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
@@ -164,6 +164,8 @@ export class PlecoDynamicsCompressorNode extends PlecoNode {
    *   mode 'clamped-max' ('max' forbidden), interpretation 'speakers'.
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     // WebIDL dictionary conversion: null (like undefined) is the empty dictionary.
     const { attack, knee, ratio, release, threshold, ...nodeOptions } = options ?? {}
     // The constructor dictionary must respect the same channelCountMode

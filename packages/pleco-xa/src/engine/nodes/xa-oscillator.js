@@ -51,7 +51,7 @@
  * base an output-channel-count hook, this override collapses into it.
  */
 
-import { PlecoScheduledSourceNode } from '../xa-node.js'
+import { PlecoScheduledSourceNode, coerceNodeOptions} from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
@@ -78,6 +78,8 @@ export class PlecoOscillatorNode extends PlecoScheduledSourceNode {
    *   ({type, frequency, detune, periodicWave} + AudioNodeOptions).
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     options = options ?? {} // WebIDL dictionary conversion: null is the empty dictionary
     if (typeof options !== 'object') {
       throw new TypeError(`PlecoOscillatorNode: options must be an OscillatorOptions dictionary, got ${options}`)

@@ -83,7 +83,7 @@
  * convolution surfaces the FFT kernel's non-finite diagnostic instead of
  * laundering NaN through the overlap state.
  */
-import { PlecoNode, CHANNEL_COUNT_MODES } from '../xa-node.js'
+import { PlecoNode, CHANNEL_COUNT_MODES, coerceNodeOptions} from '../xa-node.js'
 import { PlecoAudioBuffer, createPlecoAudioBuffer } from '../xa-buffer.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { notSupportedError } from '../xa-errors.js'
@@ -154,6 +154,8 @@ export class PlecoConvolverNode extends PlecoNode {
    *   interpretation 'speakers'. Null options are the empty dictionary.
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     // WebIDL dictionary conversion: null (like undefined) is the empty dictionary.
     const { buffer, disableNormalization = false, ...nodeOptions } = options ?? {}
     // The constructor dictionary must respect the same channelCountMode

@@ -27,7 +27,7 @@
  * `gain` is a readonly attribute (getter only — assignment throws in strict
  * mode), matching `readonly attribute AudioParam gain`.
  */
-import { PlecoNode } from '../xa-node.js'
+import { PlecoNode, coerceNodeOptions} from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
@@ -40,6 +40,8 @@ export class PlecoGainNode extends PlecoNode {
    * @param {object} [options] — GainOptions: {gain} merged with AudioNodeOptions.
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     // WebIDL dictionary conversion: null (like undefined) is the empty dictionary.
     const { gain, ...nodeOptions } = options ?? {}
     super(context, { ...nodeOptions, numberOfInputs: 1, numberOfOutputs: 1 })

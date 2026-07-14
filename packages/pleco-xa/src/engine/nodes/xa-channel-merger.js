@@ -19,13 +19,15 @@
  * input-port machinery deliver each input already downmixed to exactly one
  * channel, so _process just lays input i's mono block into output channel i.
  */
-import { PlecoNode, CHANNEL_COUNT_MODES } from '../xa-node.js'
+import { PlecoNode, CHANNEL_COUNT_MODES, coerceNodeOptions} from '../xa-node.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
 import { indexSizeError, invalidStateError } from '../xa-errors.js'
 
 export class PlecoChannelMergerNode extends PlecoNode {
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     const { numberOfInputs = 6 } = options
     if (!Number.isInteger(numberOfInputs) || numberOfInputs < 1 || numberOfInputs > 32) {
       throw indexSizeError(

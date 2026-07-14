@@ -84,7 +84,7 @@
  * atomically across all three before any write — same policy as
  * PlecoAudioListener).
  */
-import { PlecoNode, CHANNEL_COUNT_MODES } from '../xa-node.js'
+import { PlecoNode, CHANNEL_COUNT_MODES, coerceNodeOptions} from '../xa-node.js'
 import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
@@ -132,6 +132,8 @@ export class PlecoPannerNode extends PlecoNode {
    *   'speakers'.
    */
   constructor(context, options = {}) {
+    // WebIDL: a non-object 2nd argument (e.g. new XNode(ctx, 42)) is a TypeError.
+    options = coerceNodeOptions(options)
     options = options ?? {} // WebIDL dictionary conversion: null is the empty dictionary
     const {
       panningModel,
