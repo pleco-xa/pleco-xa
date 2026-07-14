@@ -507,6 +507,162 @@ describe('PlecoDynamicsCompressorNode — reduction metering', () => {
   })
 })
 
+describe('PlecoDynamicsCompressorNode — spec-pinned behavior (independent closed form)', () => {
+  // These pins assert the SPEC-DEFINED, non-delegated semantics against values
+  // derived from first principles — NOT via makeShape/referenceCompress (the
+  // node's own mirror). They are the honest "we match the spec algorithm, not
+  // Chrome's private kernel" guarantee: the spec delegates the knee SHAPE, the
+  // detector curve and the envelope-rate shape to the UA, but it pins these
+  // exactly, and pleco meets them to float32 precision.
+
+  /**
+   * Spec § compression curve, hard-knee (knee 0) closed form, written directly
+   * from the normative law (identity below the linear threshold; slope 1/ratio
+   * in dB above, anchored continuous at threshold) — structurally independent
+   * of the node's makeShape.
+   */
+  function specHardKnee(threshold, ratio) {
+    const linTh = Math.pow(10, threshold / 20)
+    return (x) => {
+      if (x <= linTh) return x
+      const inDb = 20 * Math.log10(x)
+      const outDb = threshold + (inDb - threshold) / ratio
+      return Math.pow(10, outDb / 20)
+    }
+  }
+  /** Spec § computing the makeup gain, from the independent hard-knee curve. */
+  function specMakeup(threshold, ratio) {
+    return Math.pow(1 / specHardKnee(threshold, ratio)(1), 0.6)
+  }
+  /** Mean |output| over the settled tail of a constant-input render. */
+  function steadyMeanAbs(x, options) {
+    const length = 4096
+    const input = new Float32Array(length).fill(x)
+    const { out } = renderCompressed([input], options)
+    const data = out.getChannelData(0)
+    let s = 0
+    let n = 0
+    for (let i = 3500; i < length; i++) {
+      s += Math.abs(data[i])
+      n++
+    }
+    return s / n
+  }
+
+  it('below the linear threshold there is NO reduction: envelope gain is exactly 1, reduction exactly 0', () => {
+    // Spec § compression curve part 1: f(x) = x (identity) up to the linear
+    // threshold ⇒ attenuation 1 ⇒ compressor gain pinned at 1 ⇒ meter 0 dB.
+    const threshold = -24
+    const x = Math.pow(10, threshold / 20) * 0.99 // 1% below the linear threshold
+    const input = new Float32Array(2048).fill(x)
+    const { out, comp } = renderCompressed([input], { threshold, knee: 0, ratio: 12 })
+    expect(comp.reduction).toBe(0)
+    // Output is the input × makeup only (unity envelope gain), after look-ahead.
+    const makeup = specMakeup(threshold, 12)
+    const data = out.getChannelData(0)
+    for (let i = LOOK_AHEAD; i < 2048; i++) expect(data[i]).toBeCloseTo(x * makeup, 6)
+  })
+
+  it('the ratio law holds exactly: a `ratio` dB change in input yields a 1 dB change in output (§ ratio)', () => {
+    // Spec § ratio attribute: "The amount of dB change in input for a 1 dB
+    // change in output." Two over-threshold constants spaced `ratio` dB apart
+    // must sit exactly 1 dB apart at the output (makeup cancels — same params).
+    const threshold = -40
+    const ratio = 4
+    const options = { threshold, knee: 0, ratio, attack: 0.001, release: 0.25 }
+    const inDbA = 20 * Math.log10(0.1)
+    const xA = 0.1
+    const xB = Math.pow(10, (inDbA + ratio) / 20)
+    const outDbA = 20 * Math.log10(steadyMeanAbs(xA, options))
+    const outDbB = 20 * Math.log10(steadyMeanAbs(xB, options))
+    expect(outDbB - outDbA).toBeCloseTo(1, 2)
+  })
+
+  it('the soft-knee curve is monotonically increasing and continuous across the knee (§ compression curve MUST)', () => {
+    // Spec § compression curve: the whole function MUST be monotonically
+    // increasing and continuous (and piece-wise differentiable). Probe the
+    // effective curve via settled output across a fine sweep spanning the knee
+    // (threshold -40, knee 24 ⇒ knee end -16 dB): output must strictly increase,
+    // with no discontinuity (bounded second difference of the output level).
+    const options = { threshold: -40, knee: 24, ratio: 6, attack: 0.0005, release: 0.3 }
+    const pts = []
+    for (let db = -60; db <= -6; db += 1) {
+      pts.push([db, steadyMeanAbs(Math.pow(10, db / 20), options)])
+    }
+    for (let i = 1; i < pts.length; i++) {
+      expect(pts[i][1], `output must increase at ${pts[i][0]} dB`).toBeGreaterThan(pts[i - 1][1])
+    }
+    let maxSlopeJump = 0
+    for (let i = 1; i < pts.length - 1; i++) {
+      const s1 = 20 * Math.log10(pts[i][1] / pts[i - 1][1])
+      const s2 = 20 * Math.log10(pts[i + 1][1] / pts[i][1])
+      maxSlopeJump = Math.max(maxSlopeJump, Math.abs(s2 - s1))
+    }
+    // A continuous, piece-wise-differentiable curve has no slope discontinuity;
+    // on a 1 dB grid the second difference stays small (observed ≈ 0.035).
+    expect(maxSlopeJump).toBeLessThan(0.1)
+  })
+
+  it('attack timing: the gain–target gap shrinks by exactly 10 dB per `attack` seconds (§ attack attribute)', () => {
+    // Spec § attack: "The amount of time (in seconds) to reduce the gain by
+    // 10 dB." With a constant over-threshold input the detector average is fixed,
+    // so the envelope gain closes on its target geometrically; the residual gap
+    // measured `attack` seconds apart must be a 10 dB ratio (10^-0.5).
+    const threshold = -40
+    const ratio = 4
+    const attack = 0.02
+    const attackFrames = Math.round(attack * SR)
+    const length = LOOK_AHEAD + 4 * attackFrames + 256
+    const input = new Float32Array(length).fill(0.5)
+    const { out } = renderCompressed([input], { threshold, knee: 0, ratio, attack, release: 0.5 })
+    const data = out.getChannelData(0)
+    const makeup = specMakeup(threshold, ratio)
+    const gTarget = specHardKnee(threshold, ratio)(0.5) / 0.5
+    // Recover the envelope gain from the settled delayed carrier (input = 0.5).
+    const gAt = (i) => data[i] / (0.5 * makeup)
+    const i1 = LOOK_AHEAD + 40
+    const gap1 = gAt(i1) - gTarget
+    const gap2 = gAt(i1 + attackFrames) - gTarget
+    expect(gap2 / gap1).toBeCloseTo(Math.pow(10, -0.5), 3)
+  })
+
+  it('release timing: the gain rises by exactly 10 dB per `release` seconds (§ release attribute)', () => {
+    // Spec § release: "The amount of time (in seconds) to increase the gain by
+    // 10 dB." After the signal drops to a sub-threshold-but-nonzero carrier the
+    // envelope gain rises multiplicatively toward unity; sampled `release`
+    // seconds apart the ratio must be +10 dB (10^0.5).
+    const threshold = -40
+    const ratio = 4
+    const release = 0.02
+    const releaseFrames = Math.round(release * SR)
+    const loud = 2048
+    const length = loud + LOOK_AHEAD + 4 * releaseFrames + 256
+    const input = new Float32Array(length)
+    input.fill(0.5, 0, loud)
+    input.fill(0.02, loud) // -34 dB carrier: below threshold ⇒ attenuation 1
+    const { out } = renderCompressed([input], { threshold, knee: 0, ratio, attack: 0.001, release })
+    const data = out.getChannelData(0)
+    const makeup = specMakeup(threshold, ratio)
+    const gAt = (i) => data[i] / (0.02 * makeup)
+    const i1 = loud + LOOK_AHEAD + 20
+    expect(gAt(i1 + releaseFrames) / gAt(i1)).toBeCloseTo(Math.pow(10, 0.5), 3)
+  })
+
+  it('reduction metering equals 20·log10(steady envelope gain), from the independent spec curve', () => {
+    // Spec § metering + the reduction attribute: the meter reports the envelope
+    // gain in dB. At steady state that gain is the attenuation curve(x)/x, so
+    // reduction must equal 20·log10(curve(x)/x) computed from the independent
+    // hard-knee law — pinning threshold, ratio AND the metering conversion.
+    const threshold = -40
+    const ratio = 8
+    const x = 0.9
+    const input = new Float32Array(8192).fill(x)
+    const { comp } = renderCompressed([input], { threshold, knee: 0, ratio, attack: 0.001, release: 0.05 })
+    const gTarget = specHardKnee(threshold, ratio)(x) / x
+    expect(comp.reduction).toBeCloseTo(20 * Math.log10(gTarget), 3)
+  })
+})
+
 describe('PlecoDynamicsCompressorNode — k-rate automation', () => {
   it('automating threshold down mid-render increases compression for later blocks', () => {
     const length = 8192

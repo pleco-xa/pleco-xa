@@ -26,15 +26,20 @@
  * (The ≥-Nyquist cutoff mirrors the reference implementation; the spec leaves
  * the anti-aliasing strategy implementation-defined.)
  *
- * Synthesis reads the PlecoPeriodicWave wavetable (built-in tables from
- * xa-periodic-wave.js for the four named types — spec § Basic Waveform Phase
- * requires them to equal the § Oscillator Coefficients series with
- * normalization on) with Catmull-Rom cubic interpolation at position
- * phase·N, N the table length (power of two → wraparound by mask), matching
- * the reference implementation's readout. Output is computed in double
- * precision and stored at the float32 boundary. A per-block cache of
- * 2^(detune/1200) keyed on the detune sample keeps the common constant-detune
- * case pow-free without any first-equals-last shortcut that could misread a
+ * Synthesis reads the PlecoPeriodicWave band-limited mip-map (built-in sets
+ * from xa-periodic-wave.js for the four named types — spec § Basic Waveform
+ * Phase requires them to equal the § Oscillator Coefficients series with
+ * normalization on). Per sample the |computedOscFrequency| selects the two
+ * bracketing range tables and an interpolation factor (xa-periodic-wave.js
+ * § BandLimitedWave — the anti-aliasing mip-map keeps only sub-Nyquist
+ * partials, matching Chrome's per-pitch band-limiting); each table is read with
+ * Catmull-Rom cubic interpolation at position phase·N (N the table length,
+ * power of two → wraparound by mask) and the two reads are blended by the
+ * factor to avoid a zipper artifact as the pitch sweeps between ranges. Output
+ * is computed in double precision and stored at the float32 boundary. Per-block
+ * caches of 2^(detune/1200) and of the table selection, keyed on the detune and
+ * computed-frequency samples, keep the common constant-parameter case pow-free
+ * and lookup-free without any first-equals-last shortcut that could misread a
  * value curve.
  *
  * DEVIATION (base-class shape, not spec): PlecoScheduledSourceNode._process
@@ -51,7 +56,7 @@ import { PlecoAudioParam } from '../xa-param.js'
 import { RENDER_QUANTUM } from '../xa-constants.js'
 import { createPlecoAudioBuffer } from '../xa-buffer.js'
 import { invalidStateError } from '../xa-errors.js'
-import { PlecoPeriodicWave, builtinPeriodicWaveTable } from './xa-periodic-wave.js'
+import { PlecoPeriodicWave, builtinPeriodicWaveSet } from './xa-periodic-wave.js'
 
 const OSCILLATOR_TYPES = ['sine', 'square', 'sawtooth', 'triangle', 'custom']
 
@@ -185,8 +190,8 @@ export class PlecoOscillatorNode extends PlecoScheduledSourceNode {
     const now = this.context.currentTime
     const freq = this.#frequency.fillBlock(this.#freqBlock, now)
     const det = this.#detune.fillBlock(this.#detuneBlock, now)
-    const table = this.#wave !== null ? this.#wave._table : builtinPeriodicWaveTable(this.#type)
-    const N = table.length
+    const waveSet = this.#wave !== null ? this.#wave._waveSet : builtinPeriodicWaveSet(this.#type)
+    const N = waveSet.size
     const mask = N - 1 // power-of-two table → wraparound by bitwise AND
     const out = output.getChannelData(0)
     let phase = this.#phase
@@ -195,6 +200,14 @@ export class PlecoOscillatorNode extends PlecoScheduledSourceNode {
     // for the constant-detune common case.
     let lastDetune = NaN
     let detuneFactor = 1
+
+    // Band-limited table selection cached per distinct computedOscFrequency —
+    // one mip-map lookup for the constant-pitch common case (spec § OscillatorNode
+    // anti-aliasing; xa-periodic-wave.js § BandLimitedWave).
+    let lastFreq = NaN
+    let lower = null
+    let higher = null
+    let blend = 0
 
     for (let j = 0; j < count; j++) {
       const d = det[offset + j]
@@ -207,18 +220,25 @@ export class PlecoOscillatorNode extends PlecoScheduledSourceNode {
       if (Math.abs(f) >= nyquist) {
         out[offset + j] = 0 // silent, but the phase integral keeps running
       } else {
-        // Catmull-Rom cubic readout at pos = phase·N, phase ∈ [0, 1) ⇒ idx ∈ [0, N).
+        if (f !== lastFreq) {
+          lastFreq = f
+          const wd = waveSet.waveDataForFundamentalFrequency(f, sr)
+          lower = wd.lower
+          higher = wd.higher
+          blend = wd.factor
+        }
+        // Catmull-Rom cubic readout at pos = phase·N, phase ∈ [0, 1) ⇒ idx ∈ [0, N),
+        // performed on both bracketing range tables and blended by the pitch-range
+        // interpolation factor.
         const pos = phase * N
         const idx = pos | 0
         const frac = pos - idx
-        const y0 = table[(idx + mask) & mask]
-        const y1 = table[idx]
-        const y2 = table[(idx + 1) & mask]
-        const y3 = table[(idx + 2) & mask]
-        const c1 = 0.5 * (y2 - y0)
-        const c2 = y0 - 2.5 * y1 + 2 * y2 - 0.5 * y3
-        const c3 = 0.5 * (y3 - y0) + 1.5 * (y1 - y2)
-        out[offset + j] = ((c3 * frac + c2) * frac + c1) * frac + y1 // float32 boundary at the store
+        const i0 = (idx + mask) & mask
+        const i2 = (idx + 1) & mask
+        const i3 = (idx + 2) & mask
+        const lo = cubic(lower[i0], lower[idx], lower[i2], lower[i3], frac)
+        const s = blend === 0 ? lo : lo + blend * (cubic(higher[i0], higher[idx], higher[i2], higher[i3], frac) - lo)
+        out[offset + j] = s // float32 boundary at the store
       }
       phase += f / sr
       phase -= Math.floor(phase) // keep phase in [0, 1), including negative f
@@ -226,4 +246,12 @@ export class PlecoOscillatorNode extends PlecoScheduledSourceNode {
     this.#phase = phase
     return count
   }
+}
+
+/** Catmull-Rom cubic interpolation between y1 and y2 (neighbours y0, y3) at fraction `frac`. */
+function cubic(y0, y1, y2, y3, frac) {
+  const c1 = 0.5 * (y2 - y0)
+  const c2 = y0 - 2.5 * y1 + 2 * y2 - 0.5 * y3
+  const c3 = 0.5 * (y3 - y0) + 1.5 * (y1 - y2)
+  return ((c3 * frac + c2) * frac + c1) * frac + y1
 }

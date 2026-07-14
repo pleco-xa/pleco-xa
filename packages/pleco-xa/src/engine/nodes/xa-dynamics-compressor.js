@@ -17,6 +17,32 @@
  * a transient emerges from the delay line. The delay lines are Float32Array
  * (a real DelayNode carries float32 blocks); envelope state stays double.
  *
+ * Cross-implementation note — pinned to the SPEC, not to any browser's kernel.
+ * The spec's processing model is exactly that: a MODEL. It explicitly delegates
+ * THREE shapes to the User-Agent — the soft-knee curve (§ compression curve
+ * step 6: "User-Agents can choose the curve shape"), the detector curve
+ * (§ detector-curve), and the envelope-rate function (§ computing envelope rate:
+ * "User-agents are allowed to choose the shape of the envelope function") — and
+ * it self-contradicts on metering (algorithm step 10 vs the `reduction`
+ * attribute prose; see the metering-conflict note below). Every shipping browser
+ * fills those freedoms with a different PRIVATE kernel: Chrome's
+ * DynamicsCompressorKernel interpolates the gain across 32-frame sub-divisions,
+ * uses an exponential knee table and an adaptive envelope, and on the P23
+ * compressor-burst fixture compresses ~1.8 dB harder than this model (measured
+ * block-RMS delta up to 81.7 %); Firefox's kernel differs again; NONE of the
+ * three match each other bit-for-bit. Bit-exact Chrome parity is therefore
+ * unachievable BY CONSTRUCTION — it is not a pleco defect, and no browser meets
+ * it either. Pleco is instead pinned step-for-step to the NORMATIVE algorithm
+ * traced below, with the three delegated shapes chosen as the documented
+ * degenerate/attribute-prose readings. The compressor UNIT tests
+ * (tests/engine-compressor.test.js) pin the spec-DEFINED, non-delegated behavior
+ * exactly against independent closed-form values — identity below threshold,
+ * knee monotonicity + continuity, the ratio law (§ ratio: "dB change in input
+ * for a 1 dB change in output"), the attack/release 10 dB timing (the attribute
+ * definitions), and the `reduction` metering formula. The browser-bounce golden
+ * keeps the Chrome delta VISIBLE as an it.fails, honestly labelled as
+ * implementation-defined divergence rather than hidden under a loose tolerance.
+ *
  * Spec surface:
  * - Five k-rate AudioParams with the automation rate constraint (§ automation
  *   rate constraints — changing the rate throws InvalidStateError):

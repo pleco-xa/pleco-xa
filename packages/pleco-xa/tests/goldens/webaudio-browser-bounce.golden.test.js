@@ -20,16 +20,16 @@
  *     clone (adaptive release curve, lookahead rounding differ), so it gets a
  *     block-RMS envelope check instead of a sample diff.
  *
- * Known structural divergences (kept honest via it.fails, not hidden under a
- * tolerance — each flips red the day the gap closes):
- *   - oscillator-square: pleco synthesizes built-ins from ONE 64-harmonic
- *     wavetable (xa-periodic-wave.js BUILTIN_HARMONICS); at SR 8192 a 256 Hz
- *     square keeps partials 17..63 which alias below Nyquist, while Chrome
- *     band-limits per pitch range. Measured maxAbsDiff 1.36e-1.
- *   - compressor-burst at the 20% RMS parity bar: Chrome's kernel applies
- *     ~1.8 dB more gain reduction with an adaptive attack dip the spec model
- *     lacks. Measured per-block RMS error up to 81.7%. A coarse (2×) envelope
- *     sanity test still passes and guards timing/compression behavior.
+ * Divergence ledger:
+ *   - oscillator-square: RESOLVED 2026-07-14 — pleco now band-limits per pitch
+ *     range (Blink-style mip-map wavetables, xa-periodic-wave.js), so the former
+ *     1.36e-1 aliasing gap is closed (maxAbsDiff 3.58e-7, a tolerance pass).
+ *   - compressor-burst: INHERENT, not a defect (kept as it.fails). pleco is
+ *     faithful to the W3C compressor algorithm step-for-step, but the spec
+ *     delegates the knee/detector/envelope-rate curve shapes to the UA, so
+ *     Chrome ≠ spec ≠ Firefox — no two browsers match bit-for-bit, and bit-exact
+ *     Chrome parity is unachievable by construction. Chrome compresses ~1.8 dB
+ *     harder; a coarse (2×) envelope sanity test guards timing/compression.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -287,14 +287,11 @@ describe('golden: Chrome OfflineAudioContext browser bounces (P23 parity corpus)
     })
   }
 
-  // STRUCTURAL DIVERGENCE — deliberately NOT given a tolerance that would pass.
-  // Pleco's built-in square is one 64-harmonic table for all pitches; at
-  // SR 8192 / 256 Hz the partials above n=15 alias (Chrome band-limits per
-  // pitch range and keeps only sub-Nyquist partials). Observed maxAbsDiff
-  // 1.36e-1 near the waveform discontinuities — a synthesis-method gap, not
-  // noise. `it.fails` keeps the fixture wired so the gap is measured on every
-  // run and the test flips red the day per-range band-limited tables land.
-  it.fails('oscillator-square: KNOWN GAP — single-table synthesis aliases vs Chrome band-limiting', () => {
+  // RESOLVED (2026-07-14): pleco now band-limits per pitch range (Blink-style
+  // mip-map wavetables — see xa-periodic-wave.js), keeping only the sub-Nyquist
+  // partials Chrome keeps. The former 1.36e-1 aliasing gap is closed: observed
+  // maxAbsDiff 3.58e-7 vs the Chrome bounce — a genuine tolerance pass.
+  it('oscillator-square: band-limited synthesis matches Chrome within tolerance', () => {
     const { fixture, rendered } = renderFixture('oscillator-square')
     const worst = maxAbsDiff(rendered, fixture)
     expect(worst.diff).toBeLessThanOrEqual(1e-3)

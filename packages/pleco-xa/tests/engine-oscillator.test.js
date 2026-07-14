@@ -30,7 +30,7 @@ import { PlecoOscillatorNode } from '../src/engine/nodes/xa-oscillator.js'
 import {
   PlecoPeriodicWave,
   PERIODIC_WAVE_TABLE_SIZE,
-  BUILTIN_HARMONICS,
+  BUILTIN_SERIES_LENGTH,
 } from '../src/engine/nodes/xa-periodic-wave.js'
 
 const SR = 48000
@@ -501,8 +501,8 @@ describe('PlecoOscillatorNode — built-in waveforms', () => {
         const osc = new PlecoOscillatorNode(c, { frequency: 375 })
         osc.setPeriodicWave(
           new PlecoPeriodicWave(c, {
-            real: new Float32Array(BUILTIN_HARMONICS),
-            imag: builtinSeries(type, BUILTIN_HARMONICS),
+            real: new Float32Array(BUILTIN_SERIES_LENGTH),
+            imag: builtinSeries(type, BUILTIN_SERIES_LENGTH),
             disableNormalization: false,
           }),
         )
@@ -562,5 +562,101 @@ describe('PlecoOscillatorNode — built-in waveforms', () => {
       return osc
     })
     expect(custom).toEqual(builtIn)
+  })
+})
+
+describe('PlecoOscillatorNode — band-limited synthesis (anti-aliasing)', () => {
+  const BLSR = 8192 // low rate so a 256 Hz square's naïve upper partials would alias
+
+  /** Render `length` mono frames of a `type` oscillator at `freq`, sample rate BLSR. */
+  function renderBL(type, freq, length) {
+    const c = new PlecoOfflineContext({ numberOfChannels: 1, length, sampleRate: BLSR })
+    const osc = new PlecoOscillatorNode(c, { type, frequency: freq })
+    osc.connect(c.destination)
+    osc.start(0)
+    return c.renderSync().getChannelData(0)
+  }
+
+  /**
+   * Amplitude of the `harmonic`-th partial via a direct DFT bin, given the signal
+   * spans `periods` whole fundamental cycles (bin = harmonic·periods). Only valid
+   * BELOW the Nyquist bin N/2 — bins above it are conjugate mirror images.
+   */
+  function harmonicAmp(x, harmonic, periods) {
+    const N = x.length
+    const k = harmonic * periods
+    let re = 0
+    let im = 0
+    for (let i = 0; i < N; i++) {
+      const a = (-2 * Math.PI * k * i) / N
+      re += x[i] * Math.cos(a)
+      im += x[i] * Math.sin(a)
+    }
+    return (2 * Math.hypot(re, im)) / N
+  }
+
+  it('256 Hz square at 8192 Hz keeps harmonics 1..11 and culls the rest below Nyquist (Chrome band-limit)', () => {
+    // period = 8192/256 = 32 frames; 512 frames = 16 whole cycles ⇒ exact DFT bins.
+    const out = renderBL('square', 256, 512)
+    const periods = 16
+    // Kept partials follow the ideal square series b[n] = 4/(nπ), scaled by the
+    // shared normalization — present and in the right ratio.
+    for (const [h, ideal] of [
+      [1, 4 / Math.PI],
+      [3, 4 / (3 * Math.PI)],
+      [5, 4 / (5 * Math.PI)],
+      [7, 4 / (7 * Math.PI)],
+      [9, 4 / (9 * Math.PI)],
+      [11, 4 / (11 * Math.PI)],
+    ]) {
+      const amp = harmonicAmp(out, h, periods)
+      expect(amp).toBeGreaterThan(0.05)
+      // ratio to the fundamental matches the ideal square (band-limit only caps
+      // the harmonic count; it does not reshape the retained partials).
+      const ratio = amp / harmonicAmp(out, 1, periods)
+      expect(Math.abs(ratio - ideal / (4 / Math.PI))).toBeLessThan(1e-3)
+    }
+    // Harmonics 13 and 15 sit BELOW Nyquist (3328, 3840 Hz < 4096) yet are culled
+    // for the mip-map's inter-range headroom — a single 64-harmonic table would
+    // keep them AND alias partials 17..63 back on top of these bins. Their being
+    // silent proves the synthesis is band-limited, not aliased.
+    expect(harmonicAmp(out, 13, periods)).toBeLessThan(1e-4)
+    expect(harmonicAmp(out, 15, periods)).toBeLessThan(1e-4)
+  })
+
+  it('the harmonic ceiling adapts to pitch: a 128 Hz square keeps partials that 256 Hz culls', () => {
+    // Same waveform an octave lower ⇒ twice the sub-Nyquist headroom ⇒ ~twice the
+    // partials. period = 64 frames, 512 frames = 8 whole cycles.
+    const out = renderBL('square', 128, 512)
+    const periods = 8
+    // h13, h15, h21, h23 — culled at 256 Hz — are now retained.
+    for (const h of [13, 15, 21, 23]) {
+      expect(harmonicAmp(out, h, periods)).toBeGreaterThan(0.02)
+    }
+    // …and the ceiling still bites: h25 and above are culled.
+    expect(harmonicAmp(out, 25, periods)).toBeLessThan(1e-4)
+    expect(harmonicAmp(out, 27, periods)).toBeLessThan(1e-4)
+  })
+
+  it('a high-fundamental square collapses to its fundamental (no aliased partials), amplitude bounded', () => {
+    // 1024 Hz at 8192 Hz: only harmonics 1..2 clear the anti-aliasing headroom,
+    // and the square has no even partials, so the output reduces to a clean sine.
+    // period = 8 frames, 512 frames = 64 whole cycles.
+    const out = renderBL('square', 1024, 512)
+    const periods = 64
+    expect(harmonicAmp(out, 1, periods)).toBeGreaterThan(0.5)
+    expect(harmonicAmp(out, 3, periods)).toBeLessThan(1e-4) // 3072 Hz < Nyquist, still culled
+    // No aliasing means no runaway: the peak stays at the normalized sine level.
+    for (const v of out) expect(Math.abs(v)).toBeLessThanOrEqual(1.1)
+  })
+
+  it('the fundamental is NEVER culled to silence, even at very high fundamentals below Nyquist', () => {
+    // Regression: the mip-map must not over-cull — a high fundamental (still
+    // below the 4096 Hz Nyquist at SR 8192) must retain its fundamental partial.
+    for (const f of [1500, 3000, 3900]) {
+      const out = renderBL('sine', f, 512)
+      const peak = Math.max(...Array.from(out).map((v) => Math.abs(v)))
+      expect(peak, `sine ${f}Hz fundamental`).toBeGreaterThan(0.9) // ~1.0, not silenced
+    }
   })
 })
