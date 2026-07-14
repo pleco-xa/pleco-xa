@@ -7,6 +7,11 @@
 // Debug gate
 export { setDebug, debugLog, isDebugEnabled } from './scripts/debug.js'
 
+// Web Audio API parity engine (pleco-xa/engine) — the spec-shaped, zero-dep
+// reimplementation of the W3C Web Audio API. `import * as engine` mirrors the
+// subpath entry in rollup.subpaths.config.js.
+export * as engine from './engine/index.js'
+
 // Audio utilities
 export {
   createLoopBuffer, exportBufferAsWav, computeRMS, computePeak,

@@ -36,6 +36,10 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/pleco-xa.js"
     },
+    "./engine": {
+      "types": "./dist/types/engine/index.d.ts",
+      "import": "./dist/engine.js"
+    },
     "./feature": {
       "types": "./dist/types/feature/index.d.ts",
       "import": "./dist/feature.js"
