@@ -43,6 +43,7 @@ import { PlecoPeriodicWave } from './nodes/xa-periodic-wave.js'
 import { PlecoConvolverNode } from './nodes/xa-convolver.js'
 import { PlecoPannerNode } from './nodes/xa-panner.js'
 import { getContextListener } from './xa-listener.js'
+import { getContextAudioWorklet } from './xa-audio-worklet.js'
 import { createPlecoAudioBuffer } from './xa-buffer.js'
 import { decodeWavArrayBuffer, resampleLinearChannels } from './xa-decode.js'
 import { invalidStateError, notSupportedError } from './xa-errors.js'
@@ -180,6 +181,11 @@ export class PlecoBaseContext extends EventTarget {
   /** Spec § BaseAudioContext.listener — the context's AudioListener singleton (lazy). */
   get listener() {
     return getContextListener(this)
+  }
+
+  /** Spec § BaseAudioContext.audioWorklet — the context's AudioWorklet singleton (lazy). */
+  get audioWorklet() {
+    return getContextAudioWorklet(this)
   }
 
   /** Spec § createConvolver() — no parameters. */
