@@ -49,12 +49,39 @@ import { debugError } from '../debug.js'
  * player.on('loopchange', (loop) => console.log('Loop changed:', loop));
  */
 
+interface AudioPlayerConstructorOptions {
+  audioContext?: AudioContext
+  volume?: number
+  autoplay?: boolean
+  loop?: boolean
+}
+
+interface AudioPlayerLoopRegion {
+  start: number
+  end: number
+}
+
 export class AudioPlayer {
+  _audioContext: AudioContext | null
+  _audioBuffer: AudioBuffer | null
+  _source: AudioBufferSourceNode | null
+  _gainNode: GainNode | null
+  _isPlaying: boolean
+  _isPaused: boolean
+  _startTime: number
+  _pauseTime: number
+  _currentTime: number
+  _duration: number
+  _volume: number
+  _loop: AudioPlayerLoopRegion | null
+  _animationFrame: number | null
+  _eventListeners: Map<string, Function[]>
+
   /**
    * Create a new AudioPlayer instance
    * @param {AudioPlayerOptions} [options={}] - Configuration options
    */
-  constructor(options = {}) {
+  constructor(options: AudioPlayerConstructorOptions = {}) {
     // Private properties
     this._audioContext = options.audioContext || null
     this._audioBuffer = null
@@ -487,7 +514,7 @@ export class AudioPlayer {
    * @param {string} event - Event name
    * @param {*} data - Event data
    */
-  _emit(event, data) {
+  _emit(event, data?) {
     const listeners = this._eventListeners.get(event)
     if (listeners) {
       listeners.forEach((callback) => {

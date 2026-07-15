@@ -172,7 +172,7 @@ export function dtwDistanceMatrix(sequences, metric = 'cosine') {
  * @param {Array} sequences - Array of sequences to cluster
  * @param {number} k - Number of clusters
  * @param {number} maxIterations - Maximum iterations
- * @returns {Array} Cluster assignments
+ * @returns {{ assignments: number[], centers: unknown[], clusters: Array<{ center: unknown, members: unknown[] }> }} Cluster assignments, centers, and enriched clusters
  */
 export function dtwKMeans(sequences, k = 3, maxIterations = 10) {
   const n = sequences.length

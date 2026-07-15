@@ -61,6 +61,28 @@
  * });
  * ```
  */
+interface WaveformExtractionOptions {
+  width?: number
+  height?: number
+  peaks?: number | null
+  type?: string
+  normalize?: boolean
+  channel?: number
+  precision?: number
+  resolution?: number
+  windowSize?: number
+}
+
+interface WaveformMetadata {
+  samplesPerPeak: number
+  originalLength: number
+  method: string
+  startTime?: number
+  endTime?: number
+  startSample?: number
+  endSample?: number
+}
+
 export function getWaveformPeaks(audioBuffer, options = {}) {
   const opts = {
     width: 800,
@@ -79,7 +101,7 @@ export function getWaveformPeaks(audioBuffer, options = {}) {
   const samplesPerPeak = Math.floor(channelData.length / numPeaks)
 
   let data
-  let metadata = {
+  const metadata: WaveformMetadata = {
     samplesPerPeak,
     originalLength: channelData.length,
     method: opts.type,
@@ -257,7 +279,7 @@ export function getWaveformRange(
   audioBuffer,
   startTime,
   endTime,
-  options = {},
+  options: WaveformExtractionOptions = {},
 ) {
   const sampleRate = audioBuffer.sampleRate
   const startSample = Math.floor(startTime * sampleRate)

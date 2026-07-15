@@ -372,8 +372,19 @@ function extractOnsets(audioData, sampleRate, options) {
 /**
  * BPMDetector class for object-oriented usage
  */
+interface BPMDetectorOptions {
+  minBPM?: number
+  maxBPM?: number
+  hopLength?: number
+  windowSize?: number
+  useOnsetStrength?: boolean
+  threshold?: number
+}
+
 export class BPMDetector {
-  constructor(options = {}) {
+  options: BPMDetectorOptions
+
+  constructor(options: BPMDetectorOptions = {}) {
     this.options = {
       minBPM: 60,
       maxBPM: 180,
