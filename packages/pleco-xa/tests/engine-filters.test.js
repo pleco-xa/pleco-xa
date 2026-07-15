@@ -283,6 +283,63 @@ describe('PlecoBiquadFilterNode — all eight coefficient formulas (bit-exact vs
   })
 })
 
+describe('PlecoBiquadFilterNode — degenerate coefficients (z-transform limits, browser/WPT parity)', () => {
+  // The linear-Q types (bandpass/notch/allpass/peaking) carry α_Q = sin(ω₀)/(2Q).
+  // At Q = 0 the raw spec formula is ∞ → NaN; at f₀ = 0 or f₀ = Nyquist it is
+  // degenerate. Browsers (and the WPT biquad-filters.js reference) substitute
+  // the analytic z-transform limits, producing finite output. These assert
+  // pleco does the same, matching WPT biquad-{allpass,bandpass,notch,peaking}.
+  const impulse = Float32Array.from({ length: 64 }, (_, n) => (n === 0 ? 1 : 0))
+
+  const finiteRender = (type, frequency, Q, gain) => {
+    const out = renderMono(impulse, (c) => new PlecoBiquadFilterNode(c, { type, frequency, Q, gain }), 64)
+    for (let i = 0; i < out.length; i++) expect(Number.isFinite(out[i])).toBe(true)
+    return out
+  }
+
+  it('Q = 0 never yields non-finite output (the WPT "Got 19662 non-finite values" failure)', () => {
+    for (const type of ['bandpass', 'notch', 'allpass', 'peaking']) {
+      finiteRender(type, NYQUIST * 0.5, 0, 1)
+    }
+  })
+
+  it('Q = 0 z-transform limits: bandpass→wire, notch→silence, allpass→−1, peaking→A² (impulse[0])', () => {
+    const g = 10
+    const A = Math.pow(10, g / 40)
+    expect(finiteRender('bandpass', NYQUIST * 0.5, 0, g)[0]).toBe(1) // wire: b0 = 1
+    expect(finiteRender('notch', NYQUIST * 0.5, 0, g)[0]).toBe(0) // silence: all zero
+    expect(finiteRender('allpass', NYQUIST * 0.5, 0, g)[0]).toBe(-1) // sign flip: b0 = −1
+    expect(finiteRender('peaking', NYQUIST * 0.5, 0, g)[0]).toBe(Math.fround(A * A)) // fixed gain A²
+  })
+
+  it('frequency boundaries f₀ = 0 and f₀ = Nyquist give the reference degenerate filters', () => {
+    // bandpass/notch/allpass/peaking at the boundaries: reference maps to
+    // {bandpass→0, notch→wire, allpass→wire, peaking→wire}.
+    for (const f0 of [0, NYQUIST]) {
+      expect(finiteRender('bandpass', f0, 10, 1)[0]).toBe(0)
+      expect(finiteRender('notch', f0, 10, 1)[0]).toBe(1)
+      expect(finiteRender('allpass', f0, 10, 1)[0]).toBe(1)
+      expect(finiteRender('peaking', f0, 10, 10)[0]).toBe(1)
+    }
+  })
+
+  it('detune automation past Nyquist stays finite (WPT biquad-automation automate-detune)', () => {
+    // computedFrequency = frequency · 2^(detune/1200) is clamped to Nyquist;
+    // beyond that the bandpass degenerates to the reference zero filter.
+    const out = renderMono(
+      TEST_INPUT,
+      (c) => {
+        const node = new PlecoBiquadFilterNode(c, { type: 'bandpass', frequency: 4400 })
+        node.detune.setValueAtTime(-12000, 0)
+        node.detune.linearRampToValueAtTime(12000, 128 / SR)
+        return node
+      },
+      256,
+    )
+    for (let i = 0; i < out.length; i++) expect(Number.isFinite(out[i])).toBe(true)
+  })
+})
+
 describe('PlecoBiquadFilterNode — a-rate automation (per-sample coefficient recompute)', () => {
   it('a frequency ramp matches a full per-sample mirror of param timeline + coefficients + DFI', () => {
     const LENGTH = 256 // two render quanta — the ramp spans both

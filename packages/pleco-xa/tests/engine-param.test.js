@@ -374,6 +374,33 @@ describe('PlecoAudioParam — cancelAndHoldAtTime (spec algorithm + float32 hold
     expect(p._intrinsicValueAt(1)).toBe(2) // event exactly at t_c is kept
     expect(p._intrinsicValueAt(3)).toBe(2)
   })
+
+  it('cancelAndHold EXACTLY at a setValueCurve start drops the curve and holds the pre-curve value (WPT parity)', () => {
+    // WPT audioparam-cancel-and-hold "cancel setValueCurve now": a setValue
+    // then a setValueCurve whose start == t_c. Browsers hold the PRE-curve
+    // value (0.5), not the curve's V[0] (−1) that the spec's literal
+    // zero-duration truncation would sample.
+    const p = makeParam(makeCtx())
+    p.setValueAtTime(0.5, 0)
+    p.setValueCurveAtTime([-1, 1], 0.25, 0.1)
+    p.cancelAndHoldAtTime(0.25)
+    expect(p._intrinsicValueAt(0)).toBe(0.5)
+    expect(p._intrinsicValueAt(0.25)).toBe(0.5) // curve start: pre-curve value, NOT V[0] = −1
+    expect(p._intrinsicValueAt(0.3)).toBe(0.5)
+    expect(p._intrinsicValueAt(9)).toBe(0.5)
+  })
+
+  it('cancelAndHold STRICTLY inside a setValueCurve still truncates (start < t_c) — the curve is retained', () => {
+    // Contrast with the boundary case above: t_c inside (T0, T0+TD) truncates
+    // and samples the curve value at t_c with the original duration.
+    const p = makeParam(makeCtx())
+    p.setValueAtTime(0.5, 0)
+    p.setValueCurveAtTime([0, 4], 1, 4) // v(t) = t − 1 on [1, 5]
+    p.cancelAndHoldAtTime(2.5)
+    expect(p._intrinsicValueAt(2)).toBe(1) // still on the original curve
+    expect(p._intrinsicValueAt(2.5)).toBe(1.5)
+    expect(p._intrinsicValueAt(9)).toBe(1.5) // held at the truncation value
+  })
 })
 
 describe('PlecoAudioParam — automationRate', () => {

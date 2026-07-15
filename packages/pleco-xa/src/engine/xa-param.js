@@ -431,6 +431,7 @@ export class PlecoAudioParam {
     const E2 = i2 === -1 ? null : events[i2]
     const E1 = i2 === -1 ? (events.length > 0 ? events[events.length - 1] : null) : i2 > 0 ? events[i2 - 1] : null
 
+    let dropCurve = null
     if (E2 !== null && (E2.type === 'linearRamp' || E2.type === 'exponentialRamp')) {
       // Rewrite E2 to the same kind of ramp ending at tc with the value the
       // original ramp would have had there — float32-rounded, because held
@@ -442,12 +443,24 @@ export class PlecoAudioParam {
         // Implicit setValueAtTime at tc with the setTarget's value there.
         this._insertEvent({ type: 'setValue', time: tc, value: Math.fround(evaluate(events, tc, this.#directValue)) })
       } else if (E1.type === 'setValueCurve' && tc < E1.time + E1.duration) {
-        // Truncate the curve window to [t3, tc] — sampleDuration keeps the
-        // original duration so the truncated span reproduces the original output.
-        E1.duration = tc - E1.time
+        if (tc <= E1.time) {
+          // cancelAndHold exactly at the curve's START (tc === E1.time): the
+          // curve never takes effect. Browsers (and the WPT audioparam-cancel-
+          // and-hold "cancel setValueCurve now" case) hold the value the
+          // timeline had just BEFORE the curve, not the curve's V[0]. The
+          // spec's literal "new duration = tc − t₃ = 0" would instead sample
+          // V[0]; pleco resolves toward observable browser behavior by dropping
+          // the curve so the preceding events supply the held value.
+          dropCurve = E1
+        } else {
+          // Truncate the curve window to [t3, tc] — sampleDuration keeps the
+          // original duration so the truncated span reproduces the original output.
+          E1.duration = tc - E1.time
+        }
       }
     }
-    this._events = this._events.filter((e) => e.time <= tc)
+    // Remove all events after tc; also drop a curve cancelled at its own start.
+    this._events = this._events.filter((e) => e.time <= tc && e !== dropCurve)
     return this
   }
 

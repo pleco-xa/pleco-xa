@@ -83,10 +83,22 @@ const GAIN_MAX = Math.fround(40 * Math.log10(F32_MAX))
  * The spec's six-coefficient formulas (§ Filters Characteristics), normalized
  * by a₀ before returning. `f0` is the already-clamped computedFrequency; all
  * math in double precision.
+ *
+ * The bandpass / notch / allpass / peaking types carry α_Q = sin(ω₀)/(2Q),
+ * which the spec's raw formula leaves as ∞ (→ NaN coefficients) at Q = 0 and
+ * degenerate at the normalized-frequency boundaries f₀ = 0 or f₀ = Nyquist.
+ * Real implementations (and the normative WPT reference `biquad-filters.js`)
+ * substitute the analytic z-transform LIMITS there — a wire, silence, or a
+ * fixed gain — rather than propagating non-finite values. pleco follows that
+ * observable browser behavior for the four linear-Q types (the dB-Q lowpass /
+ * highpass and the shelf types never divide by Q, so they keep the spec
+ * formula verbatim). `freqRatio` is the normalized frequency f₀/Nyquist in
+ * [0, 1]; the spec's per-type formula applies only for 0 < freqRatio < 1.
  * @returns {{b0: number, b1: number, b2: number, a1: number, a2: number}}
  */
 function biquadCoefficients(type, f0, Fs, Q, G) {
   const A = Math.pow(10, G / 40)
+  const freqRatio = (2 * f0) / Fs // normalized frequency in [0, 1]; f0 arrives clamped to [0, Nyquist]
   const w0 = (2 * Math.PI * f0) / Fs
   const cosw0 = Math.cos(w0)
   const sinw0 = Math.sin(w0)
@@ -113,6 +125,9 @@ function biquadCoefficients(type, f0, Fs, Q, G) {
       break
     }
     case 'bandpass': {
+      // z-transform limits: Q → 0 is a wire (b₀ = 1); f₀ at a boundary is 0.
+      if (!(freqRatio > 0 && freqRatio < 1)) return { b0: 0, b1: 0, b2: 0, a1: 0, a2: 0 }
+      if (!(Q > 0)) return { b0: 1, b1: 0, b2: 0, a1: 0, a2: 0 }
       const alpha = sinw0 / (2 * Q)
       b0 = alpha
       b1 = 0
@@ -123,6 +138,9 @@ function biquadCoefficients(type, f0, Fs, Q, G) {
       break
     }
     case 'notch': {
+      // z-transform limits: Q → 0 is silence (all zero); f₀ at a boundary is a wire.
+      if (!(freqRatio > 0 && freqRatio < 1)) return { b0: 1, b1: 0, b2: 0, a1: 0, a2: 0 }
+      if (!(Q > 0)) return { b0: 0, b1: 0, b2: 0, a1: 0, a2: 0 }
       const alpha = sinw0 / (2 * Q)
       b0 = 1
       b1 = -2 * cosw0
@@ -133,6 +151,9 @@ function biquadCoefficients(type, f0, Fs, Q, G) {
       break
     }
     case 'allpass': {
+      // z-transform limits: Q → 0 is a sign flip (b₀ = −1); f₀ at a boundary is a wire.
+      if (!(freqRatio > 0 && freqRatio < 1)) return { b0: 1, b1: 0, b2: 0, a1: 0, a2: 0 }
+      if (!(Q > 0)) return { b0: -1, b1: 0, b2: 0, a1: 0, a2: 0 }
       const alpha = sinw0 / (2 * Q)
       b0 = 1 - alpha
       b1 = -2 * cosw0
@@ -143,6 +164,9 @@ function biquadCoefficients(type, f0, Fs, Q, G) {
       break
     }
     case 'peaking': {
+      // z-transform limits: Q → 0 is a fixed gain A² (b₀ = A²); f₀ at a boundary is a wire.
+      if (!(freqRatio > 0 && freqRatio < 1)) return { b0: 1, b1: 0, b2: 0, a1: 0, a2: 0 }
+      if (!(Q > 0)) return { b0: A * A, b1: 0, b2: 0, a1: 0, a2: 0 }
       const alpha = sinw0 / (2 * Q)
       b0 = 1 + alpha * A
       b1 = -2 * cosw0
