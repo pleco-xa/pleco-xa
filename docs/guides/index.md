@@ -20,6 +20,13 @@ section says so precisely.
 - **[Loop detection](./loop.md)** — Pleco-Xa's signature capability: one
   entry point, four strategies, and a single honest confidence score.
 
+### Audio engine
+
+- **[Studio](./studio.md)** — Pleco-Xa's own audio graph: a zero-dependency,
+  headless reimplementation of the Web Audio API wearing pleco's names
+  (`offline()`, `Osc`, `Gain`, `s.filter()`). Build and render node graphs in
+  the browser or in Node, verified bit-for-bit against the browser.
+
 ### Musical timing
 
 - **[Beat & tempo](./beat.md)** — the Ellis dynamic-programming beat tracker

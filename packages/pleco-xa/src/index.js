@@ -12,6 +12,11 @@ export { setDebug, debugLog, isDebugEnabled } from './scripts/debug.js'
 // subpath entry in rollup.subpaths.config.js.
 export * as engine from './engine/index.js'
 
+// pleco-xa/studio — the plecoized public surface over the same engine: clean
+// pleco node names (Osc/Gain/Delay/Filter…) plus offline()/live() factories.
+// Nothing reinvented; every name aliases the verified engine class.
+export * as studio from './studio/index.js'
+
 // Audio utilities
 export {
   createLoopBuffer, exportBufferAsWav, computeRMS, computePeak,

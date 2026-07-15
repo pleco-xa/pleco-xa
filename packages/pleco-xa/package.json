@@ -40,6 +40,10 @@
       "types": "./dist/types/engine/index.d.ts",
       "import": "./dist/engine.js"
     },
+    "./studio": {
+      "types": "./dist/types/studio/index.d.ts",
+      "import": "./dist/studio.js"
+    },
     "./feature": {
       "types": "./dist/types/feature/index.d.ts",
       "import": "./dist/feature.js"

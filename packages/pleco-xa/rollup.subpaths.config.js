@@ -10,6 +10,7 @@ import { tsExtensionResolve } from './ts-extension-resolve.mjs'
 // subpath -> source entry (mirrors the `export * as <ns>` lines in src/index.js)
 const entries = {
   engine: 'src/engine/index.js',
+  studio: 'src/studio/index.js',
   feature: 'src/feature/index.js',
   loop: 'src/loop/index.js',
   segment: 'src/segment/index.js',
