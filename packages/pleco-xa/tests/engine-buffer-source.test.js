@@ -561,4 +561,83 @@ describe('AudioBufferSourceNode — null buffer and output-width lifecycle', () 
     expect(s._cacheBlock.numberOfChannels).toBe(1) // next quantum: one channel of silence
     await flushMicrotasks()
   })
+
+  it('a null buffer with an already-scheduled stop force-stops at the block start (min of the two)', async () => {
+    // start() then stop() at a future frame, all while the buffer is still null:
+    // the null-buffer branch schedules a stop at this block's start and takes the
+    // MIN against the pending stop frame — force-zero output for all time, ended.
+    const ctx = makeCtx()
+    const s = makeSource(ctx, null)
+    let ended = 0
+    s.onended = () => ended++
+    s.start(0)
+    s.stop(t(200)) // a real stop frame is already recorded before the first render
+    const out = renderOne(ctx)
+    expect(Array.from(out)).toEqual(new Array(RENDER_QUANTUM).fill(0))
+    await flushMicrotasks()
+    expect(ended).toBe(1)
+  })
+})
+
+describe('AudioBufferSourceNode — playhead edge cases (negative-rate loop entry, splice tail, single-frame)', () => {
+  it('negative rate, loop, start offset BELOW loopStart: the initial cursor clamps up to loopStart', () => {
+    // start offset 2 < loopStart 4 with a negative rate: the algorithm's
+    // "started" branch clamps the cursor up to loopStart before playback.
+    const ctx = makeCtx()
+    const s = makeSource(ctx, ramp(16), { loop: true, loopStart: t(4), loopEnd: t(8), playbackRate: -1 })
+    s.start(0, t(2))
+    const out = renderOne(ctx)
+    // cursor seeded at 4 (=loopStart): reads buf[4]=5, then steps -1 and wraps
+    // 3 → loopStart + ((3-4) mod 4) = 7 → buf[7]=8, 6→7, 5→6, back to 4.
+    expect(Array.from(out.slice(0, 8))).toEqual([5, 8, 7, 6, 5, 8, 7, 6])
+  })
+
+  it('negative rate, start offset PAST loopEnd: the loop is entered when the playhead re-crosses loopEnd going down', () => {
+    // offset 12 ≥ loopEnd 8: playback begins after the loop and heads down; the
+    // enteredLoop latch flips the moment the cursor first drops below loopEnd.
+    const ctx = makeCtx()
+    const s = makeSource(ctx, ramp(16), { loop: true, loopStart: t(4), loopEnd: t(8), playbackRate: -1 })
+    s.start(0, t(12))
+    const out = renderOne(ctx)
+    // 13,12,11,10,9 (cursors 12..8, still above/at loopEnd), then cursor 7 < 8
+    // enters the loop: 8,7,6,5 (buf[7..4]) then wraps 3 → buf[7]=8.
+    expect(Array.from(out.slice(0, 10))).toEqual([13, 12, 11, 10, 9, 8, 7, 6, 5, 8])
+  })
+
+  it('splice against the wrapped neighbor at the very end of the buffer: k+1 falls off the tail (s1 = s0)', () => {
+    // A one-frame loop region [7,8) at the buffer's tail. When a fractional
+    // read at cursor 7.5 splices, the wrapped neighbor lands on frame 7 (k=7),
+    // whose successor k+1=8 is past the buffer end — the splice reuses s0, and
+    // the integer wrap (kf = 0) takes the exact-sample branch.
+    const ctx = makeCtx()
+    const s = makeSource(ctx, [10, 11, 12, 13, 14, 15, 16, 17], {
+      loop: true,
+      loopStart: t(7),
+      loopEnd: t(8),
+      playbackRate: 0.5,
+    })
+    s.start(0)
+    const out = renderOne(ctx)
+    // Head plays 0..7 at half steps; the loop pins to frame 7 (span 1), so the
+    // spliced reads at and after cursor 7 all resolve to buf[7]=17.
+    expect(out[14]).toBe(17) // cursor 7.0 (exact)
+    expect(out[15]).toBe(17) // cursor 7.5 (splice: k=7, k+1 off-end, kf=0 → buf[7])
+    expect(out[16]).toBe(17) // cursor wraps back to 7.0
+  })
+
+  it('single-frame buffer with a sub-sample offset: nothing to extrapolate, the lone sample holds', async () => {
+    // A 1-frame buffer read at cursor 0.5: i0=0, i1=1 is off-end, and i0 < 1 so
+    // there is no prior sample to extrapolate a slope from — b = a (the sample
+    // itself), and the interpolation returns exactly that value.
+    const ctx = makeCtx()
+    const s = makeSource(ctx, [42])
+    let ended = 0
+    s.onended = () => ended++
+    s.start(0, 0.5 / SR)
+    const out = renderOne(ctx)
+    expect(out[0]).toBe(42) // 42 + (42 - 42)·0.5
+    expect(out[1]).toBe(0) // cursor 1.5 ≥ len → exhausted
+    await flushMicrotasks()
+    expect(ended).toBe(1)
+  })
 })

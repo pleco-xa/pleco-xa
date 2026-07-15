@@ -635,6 +635,22 @@ describe('PlecoPannerNode — sound cone (spec § Sound Cones)', () => {
     })
     expect(outL[0]).toBe(center) // orientation (0,0,0): spec's "no cone specified" exit
   })
+
+  it('source AT the listener with an active cone → unity cone gain (no defined direction, inside every cone)', () => {
+    // Default positions (0,0,0) place the source exactly on the listener, so the
+    // listener→source vector has zero magnitude: the cone algorithm has no
+    // direction to measure an angle against and returns unity, regardless of a
+    // narrow, low-gain cone that would otherwise attenuate.
+    const [outL, outR] = renderSpatial({
+      mono: monoIn,
+      options: { coneInnerAngle: 10, coneOuterAngle: 20, coneOuterGain: 0 },
+    })
+    // Azimuth 0 (sMag 0 → center) and distance 0 (inverse gain 1); cone gain 1
+    // leaves the equal-power center image fully intact rather than silencing it.
+    const centerCenter = Math.fround(0.5 * COS45)
+    expect(outL[0]).toBe(centerCenter)
+    expect(outR[0]).toBe(centerCenter)
+  })
 })
 
 describe('PlecoPannerNode — a-rate/k-rate automation (spec: equalpower params are a-rate)', () => {
@@ -794,5 +810,108 @@ describe('PlecoAudioListener — context guard', () => {
   it('requires a context (TypeError on null / non-context)', () => {
     expect(() => new PlecoAudioListener(null)).toThrow(TypeError)
     expect(() => new PlecoAudioListener({})).toThrow(TypeError)
+  })
+})
+
+describe('PlecoPannerNode — azimuth quadrant coverage (equalpower wrap branches)', () => {
+  // A source BEHIND and to the RIGHT of the default listener (forward (0,0,-1),
+  // right (1,0,0)): the source→listener projection lands in the rear-right
+  // quadrant, so _azimuth's internal angle is > 270° (the `450 - azimuth`
+  // return branch) and the resulting azimuth of +135° trips the `azimuth > 90`
+  // wrap to 45° — a still-right-biased image, not a front-center one.
+  it('rear-right source wraps to a right-biased equal-power pan (azimuth 135 → 45)', () => {
+    const [outL, outR] = renderSpatial({ mono: monoIn, options: { positionX: 1, positionZ: 1 } })
+    expect(outL[0]).toBeGreaterThan(0)
+    expect(outR[0]).toBeGreaterThan(outL[0]) // right-biased
+    // Post-wrap azimuth 45° → mono x = (45+90)/180 = 0.75 → gainR/gainL = tan(3π/8),
+    // a ratio the distance gain (equal on both channels) cannot change.
+    expect(outR[0] / outL[0]).toBeCloseTo(Math.tan((3 * Math.PI) / 8), 5)
+  })
+})
+
+describe('PlecoPannerNode — spatialization with a tilted listener-up vector', () => {
+  // Tilt the listener up to (1,1,1): listenerRight = forward × up = (1,-1,0), a
+  // diagonal right axis. A source placed exactly along ±that axis must still pan
+  // fully to that side — the azimuth math resolves to ±90° even when the right
+  // vector is not world-axis-aligned. (This drives the same acos-argument path
+  // as the equal-power gains; the defensive dotR clamps there never fire because
+  // q is renormalized to a unit vector immediately before the dot — see report.)
+  const tiltUp = (_, l) => {
+    l.upX.value = 1
+    l.upY.value = 1
+    l.upZ.value = 1
+  }
+
+  it('source along the diagonal +right axis pans hard RIGHT (azimuth +90)', () => {
+    const [outL, outR] = renderSpatial({
+      mono: monoIn,
+      options: { positionX: 1, positionY: -1, positionZ: 0, refDistance: 2 },
+      setup: tiltUp,
+    })
+    expect(outR[0]).toBeCloseTo(0.5, 12) // distance gain 1 (d < refDistance)
+    expect(Math.abs(outL[0])).toBeLessThan(1e-15)
+  })
+
+  it('source along the diagonal -right axis pans hard LEFT (azimuth -90)', () => {
+    const [outL, outR] = renderSpatial({
+      mono: monoIn,
+      options: { positionX: -1, positionY: 1, positionZ: 0, refDistance: 2 },
+      setup: tiltUp,
+    })
+    expect(outL[0]).toBeCloseTo(0.5, 12)
+    expect(Math.abs(outR[0])).toBeLessThan(1e-15)
+  })
+})
+
+describe('PlecoPannerNode — sound cone acos clamp (float-safety at exact (anti)parallel)', () => {
+  // A source at (-1,-1,-1) gives a listener→source vector t = (1,1,1); an
+  // orientation of ±(1,1,1) is exactly (anti)parallel to it. The normalized dot
+  // (t·o)/(|t||o|) = ±3 / (√3·√3) rounds to ±1.0000000000000002 in float64, so
+  // BOTH acos-argument clamps in _coneGain fire. Rendering the two orientations
+  // against an identical position isolates the cone gain: the only difference is
+  // coneGain 1 (inside the inner cone) vs coneOuterGain (past the outer cone).
+  it('parallel orientation clamps to +1 (inside inner cone → unity); antiparallel clamps to -1 (past outer → coneOuterGain)', () => {
+    const base = {
+      positionX: -1,
+      positionY: -1,
+      positionZ: -1,
+      coneInnerAngle: 0,
+      coneOuterAngle: 90,
+      coneOuterGain: 0.5,
+    }
+    const [aL, aR] = renderSpatial({
+      mono: monoIn,
+      options: { ...base, orientationX: 1, orientationY: 1, orientationZ: 1 },
+    })
+    const [bL, bR] = renderSpatial({
+      mono: monoIn,
+      options: { ...base, orientationX: -1, orientationY: -1, orientationZ: -1 },
+    })
+    let compared = 0
+    for (let i = 0; i < 128; i++) {
+      if (Math.abs(aL[i]) > 1e-12) {
+        expect(bL[i] / aL[i]).toBeCloseTo(0.5, 6)
+        compared++
+      }
+      if (Math.abs(aR[i]) > 1e-12) {
+        expect(bR[i] / aR[i]).toBeCloseTo(0.5, 6)
+        compared++
+      }
+    }
+    expect(compared).toBeGreaterThan(0) // guard against an all-silent comparison
+  })
+})
+
+describe('PlecoPannerNode — linear distance below refDistance (near-field clamp)', () => {
+  // A source CLOSER than refDistance clamps d up to d'ref, so the linear-model
+  // numerator (d − d'ref) is zero and the distance gain is exactly 1 — no
+  // attenuation, no boost. (The complementary d > d'max clamp is covered above.)
+  it('d < refDistance clamps to refDistance → distance gain 1 (unattenuated)', () => {
+    const [, outR] = renderSpatial({
+      mono: monoIn,
+      options: { distanceModel: 'linear', refDistance: 5, maxDistance: 10, rolloffFactor: 1, positionX: 2 },
+    })
+    // Source hard right (azimuth +90) → mono outR = 0.5·sin(π/2) = 0.5; gain 1 leaves it.
+    expect(outR[0]).toBe(0.5)
   })
 })

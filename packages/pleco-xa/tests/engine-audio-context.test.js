@@ -69,6 +69,17 @@ describe('PlecoAudioContext construction — AudioContextOptions validation', ()
     expect(() => new PlecoAudioContext()).toThrow(/sink adapter/)
   })
 
+  it('a sink adapter omitting the optional maxChannelCount / outputLatency members falls back to 2 / 0', () => {
+    // maxChannelCount and outputLatency are OPTIONAL readable members of the
+    // adapter contract; an adapter that ships neither must still construct a
+    // stereo destination (ceiling 2) and report zero output latency.
+    const bareSink = { open() {}, close() {} }
+    const ctx = new PlecoAudioContext({ sink: bareSink })
+    expect(ctx.destination.maxChannelCount).toBe(2) // maxChannelCount ?? 2
+    expect(ctx.destination.channelCount).toBe(2)
+    expect(ctx.outputLatency).toBe(0) // outputLatency ?? 0
+  })
+
   it('null contextOptions is the empty dictionary (house WebIDL rule)', () => {
     // Empty dict ⇒ default '' sinkId ⇒ device-bound ⇒ the same missing-adapter error.
     expect(() => new PlecoAudioContext(null)).toThrowError(
@@ -371,6 +382,25 @@ describe("PlecoAudioContext 'interrupted' state (spec § Handling an interruptio
     await closedCtx.close()
     await closedCtx._beginInterruption()
     expect(closedCtx.state).toBe('closed')
+  })
+
+  it('ending an interruption whose reacquire fails rejects and reverts the control intent to suspended', async () => {
+    // Masked interruption (begun while suspended) + a resume() during it records
+    // the 'running' restore intent. If the sink then fails to open when the
+    // interruption ends, _endInterruption rejects with the adapter error and
+    // the control state unwinds from 'running' back to 'suspended' — the visible
+    // attribute stays 'interrupted' (it never reached the running _setState).
+    const { ctx, sink } = mockContext()
+    await ctx._beginInterruption() // masked: visible state stays 'suspended'
+    await expect(ctx.resume()).rejects.toMatchObject({ name: 'InvalidStateError' })
+    expect(ctx.state).toBe('interrupted') // uncovered
+    sink.failOpen = true
+    await expect(ctx._endInterruption()).rejects.toThrow()
+    expect(ctx.state).toBe('interrupted') // reacquire threw before the running _setState
+    // The control intent reverted, so a later successful resume() still works.
+    sink.failOpen = false
+    await ctx.resume()
+    expect(ctx.state).toBe('running')
   })
 })
 
@@ -687,6 +717,54 @@ describe('PlecoAudioContext sinkId / setSinkId() / onsinkchange', () => {
     await expect(ctx.setSinkId('')).rejects.toMatchObject({ name: 'InvalidAccessError' })
     expect(ctx.state).toBe('suspended')
     expect(ctx.sinkId.type).toBe('none') // [[sink ID]] not updated on failure
+  })
+
+  it('acquisition failure wraps a non-Error cause into the InvalidAccessError message', async () => {
+    // The InvalidAccessError message interpolates `err.message` when present,
+    // else the raw thrown value — a device adapter that throws a bare string
+    // exercises the latter branch and must still surface a clean DOMException.
+    let opens = 0
+    const stringThrower = {
+      maxChannelCount: 2,
+      outputLatency: 0,
+      open() {
+        opens++
+        if (opens >= 2) throw 'raw-string-failure' // second open() is the setSinkId reacquire
+      },
+      close() {},
+    }
+    const ctx = new PlecoAudioContext({ sink: stringThrower })
+    await ctx.resume() // first open() succeeds → running
+    await expect(ctx.setSinkId('device-x')).rejects.toMatchObject({
+      name: 'InvalidAccessError',
+      message: expect.stringContaining('raw-string-failure'),
+    })
+    expect(ctx.state).toBe('suspended')
+  })
+
+  it("setSinkId('') on a deviceless context whose [[sink ID]] is a 'none' AudioSinkInfo rejects NotSupportedError", async () => {
+    // A 'none'-constructed context has no device adapter. Once its [[sink ID]]
+    // has been advanced to an AudioSinkInfo (so the '' equality short-circuit no
+    // longer fires), asking for the default DEVICE output ('') has nowhere to go.
+    const ctx = new PlecoAudioContext({ sinkId: { type: 'none' } })
+    await ctx.setSinkId({ type: 'none' }) // [[sink ID]] becomes an AudioSinkInfo
+    expect(ctx.sinkId.type).toBe('none')
+    await expect(ctx.setSinkId('')).rejects.toMatchObject({ name: 'NotSupportedError' })
+  })
+
+  it('onsinkchange handler attribute follows the assign/replace/clear EventHandler pattern', () => {
+    const { ctx } = mockContext()
+    const calls = []
+    const h1 = () => calls.push('h1')
+    const h2 = () => calls.push('h2')
+    ctx.onsinkchange = h1
+    expect(ctx.onsinkchange).toBe(h1)
+    ctx.onsinkchange = h2 // replaces h1 (removeEventListener path)
+    ctx.dispatchEvent(new Event('sinkchange'))
+    ctx.onsinkchange = null // clears h2, sets the null branch of the ternary
+    expect(ctx.onsinkchange).toBeNull()
+    ctx.dispatchEvent(new Event('sinkchange'))
+    expect(calls).toEqual(['h2']) // only the active handler ever fired
   })
 })
 

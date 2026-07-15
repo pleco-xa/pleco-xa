@@ -31,6 +31,7 @@ import {
   PlecoPeriodicWave,
   PERIODIC_WAVE_TABLE_SIZE,
   BUILTIN_SERIES_LENGTH,
+  builtinPeriodicWaveSet,
 } from '../src/engine/nodes/xa-periodic-wave.js'
 
 const SR = 48000
@@ -376,6 +377,42 @@ describe('PlecoPeriodicWave — mip-map range selection at frequency extremes', 
         expect(Number.isFinite(v)).toBe(true)
         expect(Math.abs(v)).toBeLessThanOrEqual(4)
       }
+    }
+  })
+
+  it('a zero fundamental selects range 0 with factor 0 (ratio → 0.5, pitchRange clamps to 0)', () => {
+    // Direct exercise of BandLimitedWave.waveDataForFundamentalFrequency's two
+    // low-end branches: freq 0 takes the ratio = 0.5 path, and the resulting
+    // pitchRange = 1 + 3·log2(0.5) = -2 clamps up to 0.
+    const wave = new PlecoPeriodicWave(ctx(), { real: [0, 1], imag: [0, 1] })
+    const sel = wave._waveSet.waveDataForFundamentalFrequency(0, SR)
+    expect(sel.factor).toBe(0)
+    expect(sel.lower).toBe(wave._table) // range 0 is the full-resolution table
+    expect(sel.higher).not.toBe(sel.lower) // the adjacent (range 1) table
+    expect(sel.higher.length).toBe(sel.lower.length)
+  })
+
+  it('an above-Nyquist fundamental clamps to the top range and folds higher onto lower (factor 0)', () => {
+    // The high-end branches: a huge fundamental drives pitchRange past
+    // numberOfRanges-1, clamping to the max, where lowerIndex === maxRange and
+    // higherIndex folds back onto it (no range above the last).
+    const wave = new PlecoPeriodicWave(ctx(), { real: [0, 1], imag: [0, 1] })
+    const sel = wave._waveSet.waveDataForFundamentalFrequency(1e9, SR)
+    expect(sel.factor).toBe(0)
+    expect(sel.higher).toBe(sel.lower) // top-of-range fold: no table above the last
+  })
+})
+
+describe('builtinPeriodicWaveSet — unknown built-in type', () => {
+  it('throws TypeError for a type outside the four oscillator waveforms', () => {
+    expect(() => builtinPeriodicWaveSet('bogus')).toThrow(TypeError)
+  })
+
+  it('caches and returns a shared band-limited set for each valid type', () => {
+    for (const type of ['sine', 'square', 'sawtooth', 'triangle']) {
+      const set = builtinPeriodicWaveSet(type)
+      expect(set).toBe(builtinPeriodicWaveSet(type)) // one synthesis, shared read-only
+      expect(set.fullTable.length).toBe(PERIODIC_WAVE_TABLE_SIZE)
     }
   })
 })
