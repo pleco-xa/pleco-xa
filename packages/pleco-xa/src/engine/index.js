@@ -82,5 +82,15 @@ export {
 // ── The swappable output sink — the one irreducible seam (samples→speaker) ──
 export { PlecoNullSink, PlecoMockSink } from './xa-sink.js'
 
+// ── Browser I/O adapters (P23 — the hardware seam, closed) ──────────────────
+// The real drop-ins that carry pleco to/from actual hardware in a browser:
+// PlecoBrowserAudioSink pulls pleco's rendered quanta out through one native
+// AudioContext to real speakers; createBrowserMicFeed streams a live
+// getUserMedia mic into a PlecoMediaStreamAudioSourceNode. Both are import-safe
+// in Node — they touch browser globals only when constructed/called, never at
+// module load — so the headless surface is unaffected.
+export { PlecoBrowserAudioSink } from './adapters/xa-browser-sink.js'
+export { createBrowserMicFeed } from './adapters/xa-mic-feed.js'
+
 // ── Constants ───────────────────────────────────────────────────────────────
 export { RENDER_QUANTUM } from './xa-constants.js'
