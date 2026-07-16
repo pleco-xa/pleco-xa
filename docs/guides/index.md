@@ -22,10 +22,32 @@ section says so precisely.
 
 ### Audio engine
 
-- **[Studio](./studio.md)** — Pleco-Xa's own audio graph: a zero-dependency,
-  headless reimplementation of the Web Audio API wearing pleco's names
-  (`offline()`, `Osc`, `Gain`, `s.filter()`). Build and render node graphs in
-  the browser or in Node, verified bit-for-bit against the browser.
+Pleco-Xa's zero-dependency reimplementation of the W3C Web Audio API — 37
+interfaces, spec-shaped and verified bit-exact against the browser, running
+headless in Node. Two tiers: the friendly `studio` skin and the spec-shaped
+`engine` it sits on.
+
+- **[Studio](./studio.md)** — the friendly front door: `offline()` / `live()`
+  factories and pleco's own node names (`Osc`, `Gain`, `s.filter()`). Start here
+  to make sound.
+- **[The audio engine](./engine.md)** — the anchor: why the engine exists
+  (headless, deterministic, verified), the context·node·param model, the render
+  loop, the swappable sink seam, and the verification story.
+- **[Sources](./engine-sources.md)** — Oscillator + PeriodicWave, AudioBufferSource
+  (loop, playbackRate/detune varispeed), ConstantSource.
+- **[Effects](./engine-effects.md)** — the AudioParam automation model, Gain,
+  Delay (+ the feedback-cycle rule), BiquadFilter (8 types) + IIR, WaveShaper,
+  DynamicsCompressor.
+- **[Spatial & routing](./engine-spatial.md)** — the channel up/down-mix model,
+  StereoPanner, Panner + Listener (3D), ChannelSplitter / ChannelMerger.
+- **[Analysis](./engine-analysis.md)** — Analyser (FFT + the four data methods,
+  the shared pleco kernel) and Convolver.
+- **[Worklets](./engine-worklet.md)** — the AudioWorklet cluster: your own DSP
+  in-graph via `addModule()` + a processor + a port.
+- **[Audio I/O](./engine-io.md)** — the realtime context, the sink adapter
+  contract, the media-node adapters, and `decodeAudioData()`.
+- **[Parity reference](./engine-parity.md)** — the interface-by-interface
+  completeness table, the two documented divergences, and the verification story.
 
 ### Musical timing
 
