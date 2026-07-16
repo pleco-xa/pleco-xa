@@ -206,9 +206,13 @@ regression-testable without an audio device. Both nodes are held to Chrome
 sample-for-sample by the engine's browser-bounce corpus — details in the
 [parity reference](./engine-parity.md).
 
-## Where to go next
+## API reference
 
-- Friendly names (`s.analyser()`, `s.convolver()`) and the Rosetta table → [Studio](./studio.md)
-- The reshaping nodes — gain, filters, delay, compressor → [Effects](./engine-effects.md)
-- The shared FFT / STFT kernel these tap into → [Core DSP](./core.md)
-- The conformance proof, node by node → [Parity reference](./engine-parity.md)
+These nodes follow the W3C Web Audio interface names; full per-member signatures
+are generated into the [API reference](../api-by-category.md) under the `engine`
+namespace, and the [parity reference](./engine-parity.md) is the
+interface-by-interface map.
+
+**See also:** [Studio](./studio.md) for the friendly `s.analyser()` /
+`s.convolver()` names · [Effects](./engine-effects.md) for the reshaping nodes ·
+[Core DSP](./core.md) for the shared FFT / STFT kernel these tap into.

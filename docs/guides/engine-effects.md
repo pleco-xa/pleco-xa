@@ -334,8 +334,13 @@ non-delegated behavior — identity below threshold, the ratio law, the timing, 
 [parity reference](./engine-parity.md) for the full divergence writeup (the other
 is oscillator band-limiting, a source-node concern).
 
-## Where to go next
+## API reference
 
-- The nodes that *make* the signal these effects process → [Sources](./engine-sources.md)
-- The friendly `s.gain()` / `s.delay()` / `s.filter()` names → [Studio](./studio.md)
-- The interface-by-interface completeness proof and both documented divergences → [Parity reference](./engine-parity.md)
+These nodes and `AudioParam` follow the W3C Web Audio interface names; full
+per-member signatures are generated into the [API reference](../api-by-category.md)
+under the `engine` namespace, and the [parity reference](./engine-parity.md) is the
+interface-by-interface map (with both documented divergences).
+
+**See also:** [Sources](./engine-sources.md) for the nodes that *make* the signal
+these effects process · [Studio](./studio.md) for the friendly `s.gain()` /
+`s.delay()` / `s.filter()` names.

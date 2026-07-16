@@ -166,8 +166,12 @@ The engine's claim is *parity*, and it is not asserted by hand:
 The full interface-by-interface parity table and the two documented divergences are
 in the [parity reference](./engine-parity.md).
 
-## Where to go next
+## API reference
 
-- Want the friendly names and `offline()` / `live()` factories? → [Studio](./studio.md)
-- Want to build a graph node by node? → [Sources](./engine-sources.md) and on down the list above.
-- Want the completeness proof? → [Parity reference](./engine-parity.md)
+The engine follows the W3C Web Audio interface names, `Pleco`-prefixed; full
+per-member signatures are generated into the [API reference](../api-by-category.md)
+under the `engine` namespace, and the [parity reference](./engine-parity.md) is the
+interface-by-interface map.
+
+**See also:** [Studio](./studio.md) for the friendly `offline()` / `live()` names,
+or build a graph node by node from [Sources](./engine-sources.md) on down.

@@ -263,11 +263,14 @@ a modulation chain. Its output is computed in double precision and crosses the
 float32 boundary exactly once, at the store into the render block, so the control
 signal it emits is as clean as the automation timeline behind it.
 
-## Where to go next
+## API reference
 
-- Automating any of these params (`frequency`, `playbackRate`, `offset`) end to
-  end → [Effects](./engine-effects.md)
-- The friendly `Osc` / `Player` / `Wave` / `Const` names → [Studio](./studio.md)
-- The two documented divergences and the full interface table →
-  [Parity reference](./engine-parity.md)
-- Back to the model every node builds on → [The audio engine](./engine.md)
+These nodes follow the W3C Web Audio interface names; full per-member signatures
+are generated into the [API reference](../api-by-category.md) under the `engine`
+namespace, and the [parity reference](./engine-parity.md) is the
+interface-by-interface map (with the two documented divergences).
+
+**See also:** [Effects](./engine-effects.md) to automate `frequency` /
+`playbackRate` / `offset` end to end · [Studio](./studio.md) for the friendly
+`Osc` / `Player` / `Wave` / `Const` names · [the audio engine](./engine.md) for
+the model every node builds on.

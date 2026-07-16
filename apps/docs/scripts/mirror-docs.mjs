@@ -37,10 +37,12 @@ rmSync(dest, { recursive: true, force: true })
 mkdirSync(dirname(dest), { recursive: true })
 cpSync(source, dest, {
   recursive: true,
-  // docs/README.md is the GitHub-facing index of /docs (plain markdown, no
-  // Starlight frontmatter) — it is not site content, so keep it out of the
-  // content collection.
-  filter: (src) => !src.endsWith('/README.md'),
+  // Exclude non-site content that would fail the Starlight schema:
+  //  - docs/README.md — the GitHub-facing index of /docs (plain markdown, no
+  //    Starlight frontmatter).
+  //  - docs/superpowers/ — brainstorming specs and implementation plans
+  //    (process documentation, not public site pages; no Starlight frontmatter).
+  filter: (src) => !src.endsWith('/README.md') && !src.includes('/superpowers'),
 })
 
 console.log(`[mirror-docs] docs/ -> ${dest.replace(`${repoRoot}/`, '')}`)

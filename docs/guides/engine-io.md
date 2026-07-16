@@ -274,8 +274,13 @@ without draining (re-enabling resumes where it left off); an `ended` track
 outputs the spec's one channel of silence; CORS muting is host/adapter scope — a
 cross-origin resource simply yields no feed here.
 
-## Where to go next
+## API reference
 
-- The tier underneath, and why the sink seam exists → [Engine](./engine.md)
-- The friendly `live()` / `NullSink` names → [Studio](./studio.md)
-- The interface-by-interface completeness proof → [Parity reference](./engine-parity.md)
+The realtime context, sink adapters, and media nodes follow the W3C Web Audio
+interface names; full per-member signatures are generated into the
+[API reference](../api-by-category.md) under the `engine` namespace, and the
+[parity reference](./engine-parity.md) is the interface-by-interface map.
+
+**See also:** [the audio engine](./engine.md) for the tier underneath and why the
+sink seam exists · [Studio](./studio.md) for the friendly `live()` / `NullSink`
+names.

@@ -235,11 +235,13 @@ path.)
   this is inaudible — but it is a documented divergence, catalogued in the
   [parity reference](./engine-parity.md).
 
-## Where to go next
+## API reference
 
-- The tier this builds on, and the render loop your `process()` runs in →
-  [The audio engine](./engine.md)
-- The friendly `studio` names (`Processor`, `s.audioWorklet.addModule()`) →
-  [Studio](./studio.md)
-- The full interface-by-interface conformance and the documented divergences →
-  [Parity reference](./engine-parity.md)
+The worklet cluster follows the W3C Web Audio interface names; full per-member
+signatures are generated into the [API reference](../api-by-category.md) under the
+`engine` namespace, and the [parity reference](./engine-parity.md) is the
+interface-by-interface map (with the documented divergences).
+
+**See also:** [the audio engine](./engine.md) for the render loop your
+`process()` runs in · [Studio](./studio.md) for the friendly `Processor` /
+`s.audioWorklet.addModule()` names.

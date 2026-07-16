@@ -275,9 +275,13 @@ Scale each leg by `0.5` if you want the energy-preserving convention. Decoding
 back to L/R is the same trick in reverse — `L = M + S`, `R = M − S` — through a
 merger.
 
-## Where to go next
+## API reference
 
-- The channel model in action across every node → back to [the engine anchor](./engine.md)
-- The friendlier names for all of this → [Studio](./studio.md)
-- Gain, delay, filters, and param automation → [Effects](./engine-effects.md)
-- The HRTF gap and the full interface-by-interface divergence list → [Parity reference](./engine-parity.md)
+These nodes and `AudioListener` follow the W3C Web Audio interface names; full
+per-member signatures are generated into the [API reference](../api-by-category.md)
+under the `engine` namespace, and the [parity reference](./engine-parity.md) is the
+interface-by-interface map (with the HRTF gap and the full divergence list).
+
+**See also:** [Studio](./studio.md) for the friendlier names · [Effects](./engine-effects.md)
+for gain, delay, filters, and param automation · [the audio engine](./engine.md) for
+the channel model in action across every node.

@@ -303,11 +303,14 @@ None of these are Web Audio spec interfaces; each is excluded on purpose:
   `AudioSinkInfo`/`AudioSinkOptions` with device binding delegated to the host
   adapter.
 
-## Where to go next
+## API reference
 
-- The verification story in prose → [The audio engine](./engine.md)
-- The friendly pleco names → [Studio](./studio.md)
-- Build a graph node by node → [Sources](./engine-sources.md) ·
-  [Effects](./engine-effects.md) · [Spatial & routing](./engine-spatial.md) ·
-  [Analysis](./engine-analysis.md) · [Worklets](./engine-worklet.md) ·
-  [Audio I/O](./engine-io.md)
+Full per-member signatures are generated into the [API reference](../api-by-category.md)
+under the `engine` and `studio` namespaces, following the W3C Web Audio interface
+names catalogued above. [The audio engine](./engine.md) tells the verification
+story in prose.
+
+**See also:** [Studio](./studio.md) for the friendly pleco names, or build a graph
+node by node → [Sources](./engine-sources.md) · [Effects](./engine-effects.md) ·
+[Spatial & routing](./engine-spatial.md) · [Analysis](./engine-analysis.md) ·
+[Worklets](./engine-worklet.md) · [Audio I/O](./engine-io.md).

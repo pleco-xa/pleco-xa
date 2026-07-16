@@ -208,3 +208,12 @@ render identical samples in CI. The engine tier is held to the spec by a
 browser-bounce corpus (bit-exact against Chrome) and by the web-platform-tests
 `webaudio/` behavioral suite. When you build on `studio`, you are building on
 that verification — the friendly names do not cost you any fidelity.
+
+## API reference
+
+Full per-member signatures are generated into the [API reference](../api-by-category.md)
+under the `studio` namespace; the [Rosetta table](#coming-from-web-audio--the-rosetta-table)
+above maps every pleco name to its Web Audio original.
+
+**See also:** [The audio engine](./engine.md) for the spec-shaped tier underneath,
+and the [parity reference](./engine-parity.md) for the completeness proof.
